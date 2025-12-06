@@ -1,0 +1,452 @@
+[
+  {
+    "id": 1,
+    "tenantId": null,
+    "name": "Bench Press",
+    "nameAr": "بنش بريس",
+    "targetMuscleId": 1,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 2,
+    "tenantId": null,
+    "name": "Incline Bench Press",
+    "nameAr": "بنش بريس مائل علوي",
+    "targetMuscleId": 1,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 3,
+    "tenantId": null,
+    "name": "Decline Bench Press",
+    "nameAr": "بنش بريس مائل سفلي",
+    "targetMuscleId": 1,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 4,
+    "tenantId": null,
+    "name": "Dumbbell Fly",
+    "nameAr": "فلاي دمبل",
+    "targetMuscleId": 1,
+    "equipment": "Dumbbells",
+    "isHighImpact": false
+  },
+  {
+    "id": 5,
+    "tenantId": null,
+    "name": "Cable Crossover",
+    "nameAr": "كابل كروس أوفر",
+    "targetMuscleId": 1,
+    "equipment": "Cable Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 6,
+    "tenantId": null,
+    "name": "Push Ups",
+    "nameAr": "ضغط",
+    "targetMuscleId": 1,
+    "equipment": "Bodyweight",
+    "isHighImpact": false
+  },
+  {
+    "id": 7,
+    "tenantId": null,
+    "name": "Deadlift",
+    "nameAr": "ديدليفت",
+    "targetMuscleId": 2,
+    "equipment": "Barbell",
+    "isHighImpact": true
+  },
+  {
+    "id": 8,
+    "tenantId": null,
+    "name": "Bent Over Row",
+    "nameAr": "تجديف منحني",
+    "targetMuscleId": 2,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 9,
+    "tenantId": null,
+    "name": "Lat Pulldown",
+    "nameAr": "سحب علوي",
+    "targetMuscleId": 15,
+    "equipment": "Cable Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 10,
+    "tenantId": null,
+    "name": "Seated Cable Row",
+    "nameAr": "تجديف كابل جالس",
+    "targetMuscleId": 2,
+    "equipment": "Cable Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 11,
+    "tenantId": null,
+    "name": "Pull Ups",
+    "nameAr": "عقلة",
+    "targetMuscleId": 15,
+    "equipment": "Bodyweight",
+    "isHighImpact": false
+  },
+  {
+    "id": 12,
+    "tenantId": null,
+    "name": "T-Bar Row",
+    "nameAr": "تي بار رو",
+    "targetMuscleId": 2,
+    "equipment": "T-Bar",
+    "isHighImpact": false
+  },
+  {
+    "id": 13,
+    "tenantId": null,
+    "name": "Overhead Press",
+    "nameAr": "ضغط كتف",
+    "targetMuscleId": 3,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 14,
+    "tenantId": null,
+    "name": "Lateral Raise",
+    "nameAr": "رفرفة جانبية",
+    "targetMuscleId": 3,
+    "equipment": "Dumbbells",
+    "isHighImpact": false
+  },
+  {
+    "id": 15,
+    "tenantId": null,
+    "name": "Front Raise",
+    "nameAr": "رفرفة أمامية",
+    "targetMuscleId": 3,
+    "equipment": "Dumbbells",
+    "isHighImpact": false
+  },
+  {
+    "id": 16,
+    "tenantId": null,
+    "name": "Rear Delt Fly",
+    "nameAr": "فلاي خلفي للكتف",
+    "targetMuscleId": 3,
+    "equipment": "Dumbbells",
+    "isHighImpact": false
+  },
+  {
+    "id": 17,
+    "tenantId": null,
+    "name": "Arnold Press",
+    "nameAr": "أرنولد بريس",
+    "targetMuscleId": 3,
+    "equipment": "Dumbbells",
+    "isHighImpact": false
+  },
+  {
+    "id": 18,
+    "tenantId": null,
+    "name": "Barbell Curl",
+    "nameAr": "بار كيرل",
+    "targetMuscleId": 4,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 19,
+    "tenantId": null,
+    "name": "Dumbbell Curl",
+    "nameAr": "دمبل كيرل",
+    "targetMuscleId": 4,
+    "equipment": "Dumbbells",
+    "isHighImpact": false
+  },
+  {
+    "id": 20,
+    "tenantId": null,
+    "name": "Hammer Curl",
+    "nameAr": "هامر كيرل",
+    "targetMuscleId": 4,
+    "equipment": "Dumbbells",
+    "isHighImpact": false
+  },
+  {
+    "id": 21,
+    "tenantId": null,
+    "name": "Preacher Curl",
+    "nameAr": "بريشر كيرل",
+    "targetMuscleId": 4,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 22,
+    "tenantId": null,
+    "name": "Cable Curl",
+    "nameAr": "كابل كيرل",
+    "targetMuscleId": 4,
+    "equipment": "Cable Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 23,
+    "tenantId": null,
+    "name": "Tricep Pushdown",
+    "nameAr": "تراي بوش داون",
+    "targetMuscleId": 5,
+    "equipment": "Cable Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 24,
+    "tenantId": null,
+    "name": "Skull Crusher",
+    "nameAr": "سكل كراشر",
+    "targetMuscleId": 5,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 25,
+    "tenantId": null,
+    "name": "Overhead Tricep Extension",
+    "nameAr": "تراي فوق الرأس",
+    "targetMuscleId": 5,
+    "equipment": "Dumbbells",
+    "isHighImpact": false
+  },
+  {
+    "id": 26,
+    "tenantId": null,
+    "name": "Dips",
+    "nameAr": "متوازي",
+    "targetMuscleId": 5,
+    "equipment": "Bodyweight",
+    "isHighImpact": false
+  },
+  {
+    "id": 27,
+    "tenantId": null,
+    "name": "Close Grip Bench Press",
+    "nameAr": "بنش ضيق",
+    "targetMuscleId": 5,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 28,
+    "tenantId": null,
+    "name": "Squat",
+    "nameAr": "سكوات",
+    "targetMuscleId": 7,
+    "equipment": "Barbell",
+    "isHighImpact": true
+  },
+  {
+    "id": 29,
+    "tenantId": null,
+    "name": "Leg Press",
+    "nameAr": "ليج بريس",
+    "targetMuscleId": 7,
+    "equipment": "Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 30,
+    "tenantId": null,
+    "name": "Leg Extension",
+    "nameAr": "تمديد رجل",
+    "targetMuscleId": 7,
+    "equipment": "Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 31,
+    "tenantId": null,
+    "name": "Lunges",
+    "nameAr": "طعن",
+    "targetMuscleId": 7,
+    "equipment": "Dumbbells",
+    "isHighImpact": false
+  },
+  {
+    "id": 32,
+    "tenantId": null,
+    "name": "Bulgarian Split Squat",
+    "nameAr": "سكوات بلغاري",
+    "targetMuscleId": 7,
+    "equipment": "Dumbbells",
+    "isHighImpact": false
+  },
+  {
+    "id": 33,
+    "tenantId": null,
+    "name": "Leg Curl",
+    "nameAr": "ليج كيرل",
+    "targetMuscleId": 8,
+    "equipment": "Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 34,
+    "tenantId": null,
+    "name": "Romanian Deadlift",
+    "nameAr": "رومانيان ديدليفت",
+    "targetMuscleId": 8,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 35,
+    "tenantId": null,
+    "name": "Good Morning",
+    "nameAr": "جود مورنينج",
+    "targetMuscleId": 8,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 36,
+    "tenantId": null,
+    "name": "Hip Thrust",
+    "nameAr": "هيب ثراست",
+    "targetMuscleId": 9,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 37,
+    "tenantId": null,
+    "name": "Glute Bridge",
+    "nameAr": "جلوت بريدج",
+    "targetMuscleId": 9,
+    "equipment": "Bodyweight",
+    "isHighImpact": false
+  },
+  {
+    "id": 38,
+    "tenantId": null,
+    "name": "Cable Kickback",
+    "nameAr": "كيك باك كابل",
+    "targetMuscleId": 9,
+    "equipment": "Cable Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 39,
+    "tenantId": null,
+    "name": "Standing Calf Raise",
+    "nameAr": "رفع سمانة واقف",
+    "targetMuscleId": 10,
+    "equipment": "Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 40,
+    "tenantId": null,
+    "name": "Seated Calf Raise",
+    "nameAr": "رفع سمانة جالس",
+    "targetMuscleId": 10,
+    "equipment": "Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 41,
+    "tenantId": null,
+    "name": "Crunches",
+    "nameAr": "كرانشز",
+    "targetMuscleId": 11,
+    "equipment": "Bodyweight",
+    "isHighImpact": false
+  },
+  {
+    "id": 42,
+    "tenantId": null,
+    "name": "Plank",
+    "nameAr": "بلانك",
+    "targetMuscleId": 11,
+    "equipment": "Bodyweight",
+    "isHighImpact": false
+  },
+  {
+    "id": 43,
+    "tenantId": null,
+    "name": "Leg Raise",
+    "nameAr": "رفع أرجل",
+    "targetMuscleId": 11,
+    "equipment": "Bodyweight",
+    "isHighImpact": false
+  },
+  {
+    "id": 44,
+    "tenantId": null,
+    "name": "Cable Crunch",
+    "nameAr": "كرانش كابل",
+    "targetMuscleId": 11,
+    "equipment": "Cable Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 45,
+    "tenantId": null,
+    "name": "Russian Twist",
+    "nameAr": "روسيان تويست",
+    "targetMuscleId": 12,
+    "equipment": "Bodyweight",
+    "isHighImpact": false
+  },
+  {
+    "id": 46,
+    "tenantId": null,
+    "name": "Side Plank",
+    "nameAr": "بلانك جانبي",
+    "targetMuscleId": 12,
+    "equipment": "Bodyweight",
+    "isHighImpact": false
+  },
+  {
+    "id": 47,
+    "tenantId": null,
+    "name": "Back Extension",
+    "nameAr": "تمديد ظهر",
+    "targetMuscleId": 13,
+    "equipment": "Machine",
+    "isHighImpact": false
+  },
+  {
+    "id": 48,
+    "tenantId": null,
+    "name": "Shrugs",
+    "nameAr": "شراجز",
+    "targetMuscleId": 14,
+    "equipment": "Dumbbells",
+    "isHighImpact": false
+  },
+  {
+    "id": 49,
+    "tenantId": null,
+    "name": "Upright Row",
+    "nameAr": "تجديف عمودي",
+    "targetMuscleId": 14,
+    "equipment": "Barbell",
+    "isHighImpact": false
+  },
+  {
+    "id": 50,
+    "tenantId": null,
+    "name": "Face Pull",
+    "nameAr": "فيس بول",
+    "targetMuscleId": 14,
+    "equipment": "Cable Machine",
+    "isHighImpact": false
+  }
+]

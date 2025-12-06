@@ -1,0 +1,13 @@
+[
+  {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "Top Gym",
+    "subdomain": "smarttrainer",
+    "status": 1,
+    "brandingSettings": {
+      "logoUrl": "https://example.com/logo.png",
+      "primaryColor": "#3B82F6",
+      "secondaryColor": "#1E40AF"
+    }
+  }
+]

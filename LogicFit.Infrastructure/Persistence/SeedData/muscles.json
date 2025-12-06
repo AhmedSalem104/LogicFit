@@ -1,0 +1,17 @@
+[
+  { "id": 1, "name": "Chest", "nameAr": "صدر", "bodyPart": "Upper Body" },
+  { "id": 2, "name": "Back", "nameAr": "ظهر", "bodyPart": "Upper Body" },
+  { "id": 3, "name": "Shoulders", "nameAr": "أكتاف", "bodyPart": "Upper Body" },
+  { "id": 4, "name": "Biceps", "nameAr": "باي", "bodyPart": "Arms" },
+  { "id": 5, "name": "Triceps", "nameAr": "تراي", "bodyPart": "Arms" },
+  { "id": 6, "name": "Forearms", "nameAr": "ساعد", "bodyPart": "Arms" },
+  { "id": 7, "name": "Quadriceps", "nameAr": "فخذ أمامي", "bodyPart": "Lower Body" },
+  { "id": 8, "name": "Hamstrings", "nameAr": "فخذ خلفي", "bodyPart": "Lower Body" },
+  { "id": 9, "name": "Glutes", "nameAr": "مؤخرة", "bodyPart": "Lower Body" },
+  { "id": 10, "name": "Calves", "nameAr": "سمانة", "bodyPart": "Lower Body" },
+  { "id": 11, "name": "Abs", "nameAr": "بطن", "bodyPart": "Core" },
+  { "id": 12, "name": "Obliques", "nameAr": "جوانب البطن", "bodyPart": "Core" },
+  { "id": 13, "name": "Lower Back", "nameAr": "أسفل الظهر", "bodyPart": "Core" },
+  { "id": 14, "name": "Traps", "nameAr": "ترابيس", "bodyPart": "Upper Body" },
+  { "id": 15, "name": "Lats", "nameAr": "مجنص", "bodyPart": "Upper Body" }
+]
