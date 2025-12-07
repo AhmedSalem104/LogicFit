@@ -27,7 +27,15 @@
       "Bash(git init:*)",
       "Bash(gh repo create:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(gh repo delete:*)",
+      "Bash(gh auth login:*)",
+      "Bash(git remote:*)",
+      "Bash(dotnet run)",
+      "Bash(timeout:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

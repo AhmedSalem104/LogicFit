@@ -21,7 +21,16 @@ public class TenantMiddleware
             return;
         }
 
-        // Try Header first (X-Tenant-Id)
+        // 1. First try from JWT claims (most reliable for authenticated requests)
+        var tenantClaim = context.User?.FindFirst("TenantId")?.Value;
+        if (!string.IsNullOrEmpty(tenantClaim) && Guid.TryParse(tenantClaim, out var tenantIdFromClaim))
+        {
+            await tenantService.SetTenantAsync(tenantIdFromClaim);
+            await _next(context);
+            return;
+        }
+
+        // 2. Try Header (X-Tenant-Id) for unauthenticated requests or when JWT doesn't have TenantId
         if (context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantIdHeader))
         {
             if (Guid.TryParse(tenantIdHeader, out var tenantId))
@@ -39,22 +48,13 @@ public class TenantMiddleware
                 }
             }
         }
-        // Try Subdomain
+        // 3. Try Subdomain
         else if (context.Request.Host.Host.Contains('.'))
         {
             var subdomain = context.Request.Host.Host.Split('.')[0];
             if (!string.IsNullOrEmpty(subdomain) && subdomain != "www")
             {
                 await tenantService.SetTenantBySubdomainAsync(subdomain);
-            }
-        }
-        // Try from JWT claims
-        else
-        {
-            var tenantClaim = context.User?.FindFirst("TenantId")?.Value;
-            if (!string.IsNullOrEmpty(tenantClaim) && Guid.TryParse(tenantClaim, out var tenantId))
-            {
-                await tenantService.SetTenantAsync(tenantId);
             }
         }
 

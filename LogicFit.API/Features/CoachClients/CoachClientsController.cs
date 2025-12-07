@@ -1,3 +1,4 @@
+using LogicFit.Application.Features.CoachClients.Commands.AddTrainee;
 using LogicFit.Application.Features.CoachClients.Commands.AssignClientToCoach;
 using LogicFit.Application.Features.CoachClients.Commands.UnassignClientFromCoach;
 using LogicFit.Application.Features.CoachClients.DTOs;
@@ -39,11 +40,22 @@ public class CoachClientsController : ControllerBase
     }
 
     /// <summary>
-    /// Assign a client to a coach
+    /// Add a new trainee and assign to current coach
+    /// Creates a new client account and automatically assigns to the logged-in coach
+    /// </summary>
+    [HttpPost]
+    public async Task<ActionResult<Guid>> AddTrainee(AddTraineeCommand command)
+    {
+        var id = await _mediator.Send(command);
+        return Ok(id);
+    }
+
+    /// <summary>
+    /// Assign an existing client to a coach
     /// - Owner: can assign to any coach
     /// - Coach: can only assign to self (leave coachId null)
     /// </summary>
-    [HttpPost]
+    [HttpPost("assign")]
     public async Task<ActionResult<Guid>> AssignClientToCoach(AssignClientToCoachCommand command)
     {
         var id = await _mediator.Send(command);
