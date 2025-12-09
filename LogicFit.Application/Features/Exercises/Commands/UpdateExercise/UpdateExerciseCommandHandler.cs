@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Domain.Entities;
 using LogicFit.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -57,6 +58,30 @@ public class UpdateExerciseCommandHandler : IRequestHandler<UpdateExerciseComman
         exercise.TargetMuscleId = request.TargetMuscleId;
         exercise.Equipment = request.Equipment;
         exercise.IsHighImpact = request.IsHighImpact;
+
+        // Update secondary muscles if provided (null means keep existing)
+        if (request.SecondaryMuscles != null)
+        {
+            // Remove existing secondary muscles
+            var existingSecondaryMuscles = await _context.ExerciseSecondaryMuscles
+                .Where(sm => sm.ExerciseId == exercise.Id)
+                .ToListAsync(cancellationToken);
+
+            _context.ExerciseSecondaryMuscles.RemoveRange(existingSecondaryMuscles);
+
+            // Add new secondary muscles if any
+            if (request.SecondaryMuscles.Any())
+            {
+                var newSecondaryMuscles = request.SecondaryMuscles.Select(sm => new ExerciseSecondaryMuscle
+                {
+                    ExerciseId = exercise.Id,
+                    MuscleId = sm.MuscleId,
+                    ContributionPercent = sm.ContributionPercent
+                });
+
+                _context.ExerciseSecondaryMuscles.AddRange(newSecondaryMuscles);
+            }
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
 

@@ -1,3 +1,4 @@
+using LogicFit.Application.Features.Exercises.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 
@@ -12,4 +13,12 @@ public class UpdateExerciseCommand : IRequest<bool>
     public IFormFile? Video { get; set; }
     public string? Equipment { get; set; }
     public bool IsHighImpact { get; set; }
+
+    /// <summary>
+    /// Secondary muscles with contribution percentages.
+    /// If provided, replaces all existing secondary muscles.
+    /// If null, existing secondary muscles are preserved.
+    /// If empty list, all secondary muscles are removed.
+    /// </summary>
+    public List<SecondaryMuscleInputDto>? SecondaryMuscles { get; set; }
 }

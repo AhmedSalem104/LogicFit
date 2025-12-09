@@ -1,452 +1,1474 @@
 [
   {
-    "id": 1,
-    "tenantId": null,
     "name": "Bench Press",
     "nameAr": "بنش بريس",
     "targetMuscleId": 1,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 25 },
+      { "muscleId": 3, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 2,
-    "tenantId": null,
     "name": "Incline Bench Press",
     "nameAr": "بنش بريس مائل علوي",
     "targetMuscleId": 1,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 25 },
+      { "muscleId": 5, "contributionPercent": 20 }
+    ]
   },
   {
-    "id": 3,
-    "tenantId": null,
     "name": "Decline Bench Press",
     "nameAr": "بنش بريس مائل سفلي",
     "targetMuscleId": 1,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 30 },
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 4,
-    "tenantId": null,
+    "name": "Dumbbell Bench Press",
+    "nameAr": "بنش دمبل",
+    "targetMuscleId": 1,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 25 },
+      { "muscleId": 3, "contributionPercent": 15 }
+    ]
+  },
+  {
     "name": "Dumbbell Fly",
     "nameAr": "فلاي دمبل",
     "targetMuscleId": 1,
     "equipment": "Dumbbells",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 5,
-    "tenantId": null,
     "name": "Cable Crossover",
     "nameAr": "كابل كروس أوفر",
     "targetMuscleId": 1,
     "equipment": "Cable Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 6,
-    "tenantId": null,
     "name": "Push Ups",
     "nameAr": "ضغط",
     "targetMuscleId": 1,
     "equipment": "Bodyweight",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 25 },
+      { "muscleId": 3, "contributionPercent": 15 },
+      { "muscleId": 11, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 7,
-    "tenantId": null,
+    "name": "Chest Dips",
+    "nameAr": "متوازي صدر",
+    "targetMuscleId": 1,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 30 },
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Machine Chest Press",
+    "nameAr": "جهاز ضغط صدر",
+    "targetMuscleId": 1,
+    "equipment": "Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 20 },
+      { "muscleId": 3, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Pec Deck Fly",
+    "nameAr": "فلاي جهاز",
+    "targetMuscleId": 1,
+    "equipment": "Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Incline Dumbbell Fly",
+    "nameAr": "فلاي دمبل مائل",
+    "targetMuscleId": 1,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Landmine Press",
+    "nameAr": "لاندماين بريس",
+    "targetMuscleId": 1,
+    "equipment": "Barbell",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 25 },
+      { "muscleId": 5, "contributionPercent": 15 }
+    ]
+  },
+  {
     "name": "Deadlift",
     "nameAr": "ديدليفت",
     "targetMuscleId": 2,
     "equipment": "Barbell",
-    "isHighImpact": true
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 8, "contributionPercent": 20 },
+      { "muscleId": 9, "contributionPercent": 15 },
+      { "muscleId": 13, "contributionPercent": 15 },
+      { "muscleId": 7, "contributionPercent": 10 },
+      { "muscleId": 6, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 8,
-    "tenantId": null,
     "name": "Bent Over Row",
     "nameAr": "تجديف منحني",
     "targetMuscleId": 2,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 20 },
+      { "muscleId": 13, "contributionPercent": 10 },
+      { "muscleId": 14, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 9,
-    "tenantId": null,
     "name": "Lat Pulldown",
     "nameAr": "سحب علوي",
     "targetMuscleId": 15,
     "equipment": "Cable Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 25 },
+      { "muscleId": 2, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 10,
-    "tenantId": null,
     "name": "Seated Cable Row",
     "nameAr": "تجديف كابل جالس",
     "targetMuscleId": 2,
     "equipment": "Cable Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 20 },
+      { "muscleId": 15, "contributionPercent": 15 },
+      { "muscleId": 14, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 11,
-    "tenantId": null,
     "name": "Pull Ups",
     "nameAr": "عقلة",
     "targetMuscleId": 15,
     "equipment": "Bodyweight",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 25 },
+      { "muscleId": 2, "contributionPercent": 15 },
+      { "muscleId": 11, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 12,
-    "tenantId": null,
+    "name": "Chin Ups",
+    "nameAr": "عقلة عكسية",
+    "targetMuscleId": 15,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 35 },
+      { "muscleId": 2, "contributionPercent": 15 }
+    ]
+  },
+  {
     "name": "T-Bar Row",
     "nameAr": "تي بار رو",
     "targetMuscleId": 2,
     "equipment": "T-Bar",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 20 },
+      { "muscleId": 15, "contributionPercent": 15 },
+      { "muscleId": 14, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 13,
-    "tenantId": null,
+    "name": "Single Arm Dumbbell Row",
+    "nameAr": "تجديف دمبل فردي",
+    "targetMuscleId": 2,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 20 },
+      { "muscleId": 15, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Wide Grip Lat Pulldown",
+    "nameAr": "سحب علوي قبضة واسعة",
+    "targetMuscleId": 15,
+    "equipment": "Cable Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 20 },
+      { "muscleId": 2, "contributionPercent": 15 },
+      { "muscleId": 14, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Close Grip Lat Pulldown",
+    "nameAr": "سحب علوي قبضة ضيقة",
+    "targetMuscleId": 15,
+    "equipment": "Cable Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 30 },
+      { "muscleId": 2, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Pendlay Row",
+    "nameAr": "تجديف بيندلاي",
+    "targetMuscleId": 2,
+    "equipment": "Barbell",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 20 },
+      { "muscleId": 15, "contributionPercent": 15 },
+      { "muscleId": 13, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Inverted Row",
+    "nameAr": "تجديف معكوس",
+    "targetMuscleId": 2,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 25 },
+      { "muscleId": 15, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Straight Arm Pulldown",
+    "nameAr": "سحب ذراع مستقيم",
+    "targetMuscleId": 15,
+    "equipment": "Cable Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 15 },
+      { "muscleId": 11, "contributionPercent": 10 }
+    ]
+  },
+  {
     "name": "Overhead Press",
     "nameAr": "ضغط كتف",
     "targetMuscleId": 3,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 30 },
+      { "muscleId": 14, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 14,
-    "tenantId": null,
+    "name": "Dumbbell Shoulder Press",
+    "nameAr": "ضغط كتف دمبل",
+    "targetMuscleId": 3,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 30 },
+      { "muscleId": 14, "contributionPercent": 10 }
+    ]
+  },
+  {
     "name": "Lateral Raise",
     "nameAr": "رفرفة جانبية",
     "targetMuscleId": 3,
     "equipment": "Dumbbells",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 14, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 15,
-    "tenantId": null,
     "name": "Front Raise",
     "nameAr": "رفرفة أمامية",
     "targetMuscleId": 3,
     "equipment": "Dumbbells",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 1, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 16,
-    "tenantId": null,
     "name": "Rear Delt Fly",
     "nameAr": "فلاي خلفي للكتف",
     "targetMuscleId": 3,
     "equipment": "Dumbbells",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 14, "contributionPercent": 15 },
+      { "muscleId": 2, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 17,
-    "tenantId": null,
     "name": "Arnold Press",
     "nameAr": "أرنولد بريس",
     "targetMuscleId": 3,
     "equipment": "Dumbbells",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 25 },
+      { "muscleId": 14, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 18,
-    "tenantId": null,
+    "name": "Cable Lateral Raise",
+    "nameAr": "رفرفة جانبية كابل",
+    "targetMuscleId": 3,
+    "equipment": "Cable Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 14, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Machine Shoulder Press",
+    "nameAr": "جهاز ضغط كتف",
+    "targetMuscleId": 3,
+    "equipment": "Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 25 },
+      { "muscleId": 14, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Push Press",
+    "nameAr": "بوش بريس",
+    "targetMuscleId": 3,
+    "equipment": "Barbell",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 25 },
+      { "muscleId": 7, "contributionPercent": 15 },
+      { "muscleId": 14, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Reverse Pec Deck",
+    "nameAr": "فلاي خلفي جهاز",
+    "targetMuscleId": 3,
+    "equipment": "Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 14, "contributionPercent": 15 },
+      { "muscleId": 2, "contributionPercent": 10 }
+    ]
+  },
+  {
     "name": "Barbell Curl",
     "nameAr": "بار كيرل",
     "targetMuscleId": 4,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 6, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 19,
-    "tenantId": null,
     "name": "Dumbbell Curl",
     "nameAr": "دمبل كيرل",
     "targetMuscleId": 4,
     "equipment": "Dumbbells",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 6, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 20,
-    "tenantId": null,
     "name": "Hammer Curl",
     "nameAr": "هامر كيرل",
     "targetMuscleId": 4,
     "equipment": "Dumbbells",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 6, "contributionPercent": 30 }
+    ]
   },
   {
-    "id": 21,
-    "tenantId": null,
     "name": "Preacher Curl",
     "nameAr": "بريشر كيرل",
     "targetMuscleId": 4,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 6, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 22,
-    "tenantId": null,
     "name": "Cable Curl",
     "nameAr": "كابل كيرل",
     "targetMuscleId": 4,
     "equipment": "Cable Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 6, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 23,
-    "tenantId": null,
+    "name": "Concentration Curl",
+    "nameAr": "كيرل تركيز",
+    "targetMuscleId": 4,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Incline Dumbbell Curl",
+    "nameAr": "كيرل دمبل مائل",
+    "targetMuscleId": 4,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 6, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "EZ Bar Curl",
+    "nameAr": "إي زد بار كيرل",
+    "targetMuscleId": 4,
+    "equipment": "EZ Bar",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 6, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Spider Curl",
+    "nameAr": "سبايدر كيرل",
+    "targetMuscleId": 4,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Reverse Curl",
+    "nameAr": "كيرل عكسي",
+    "targetMuscleId": 6,
+    "equipment": "Barbell",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 25 }
+    ]
+  },
+  {
     "name": "Tricep Pushdown",
     "nameAr": "تراي بوش داون",
     "targetMuscleId": 5,
     "equipment": "Cable Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": []
   },
   {
-    "id": 24,
-    "tenantId": null,
     "name": "Skull Crusher",
     "nameAr": "سكل كراشر",
     "targetMuscleId": 5,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 1, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 25,
-    "tenantId": null,
     "name": "Overhead Tricep Extension",
     "nameAr": "تراي فوق الرأس",
     "targetMuscleId": 5,
     "equipment": "Dumbbells",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": []
   },
   {
-    "id": 26,
-    "tenantId": null,
-    "name": "Dips",
-    "nameAr": "متوازي",
+    "name": "Tricep Dips",
+    "nameAr": "متوازي تراي",
     "targetMuscleId": 5,
     "equipment": "Bodyweight",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 1, "contributionPercent": 20 },
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 27,
-    "tenantId": null,
     "name": "Close Grip Bench Press",
     "nameAr": "بنش ضيق",
     "targetMuscleId": 5,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 1, "contributionPercent": 30 },
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 28,
-    "tenantId": null,
+    "name": "Tricep Kickback",
+    "nameAr": "كيك باك تراي",
+    "targetMuscleId": 5,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Diamond Push Ups",
+    "nameAr": "ضغط ماسي",
+    "targetMuscleId": 5,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 1, "contributionPercent": 25 },
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Rope Pushdown",
+    "nameAr": "بوش داون حبل",
+    "targetMuscleId": 5,
+    "equipment": "Cable Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Cable Overhead Extension",
+    "nameAr": "تراي فوق الرأس كابل",
+    "targetMuscleId": 5,
+    "equipment": "Cable Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Wrist Curl",
+    "nameAr": "كيرل معصم",
+    "targetMuscleId": 6,
+    "equipment": "Barbell",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Reverse Wrist Curl",
+    "nameAr": "كيرل معصم عكسي",
+    "targetMuscleId": 6,
+    "equipment": "Barbell",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Farmer's Walk",
+    "nameAr": "مشية المزارع",
+    "targetMuscleId": 6,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 14, "contributionPercent": 20 },
+      { "muscleId": 11, "contributionPercent": 15 }
+    ]
+  },
+  {
     "name": "Squat",
     "nameAr": "سكوات",
     "targetMuscleId": 7,
     "equipment": "Barbell",
-    "isHighImpact": true
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 25 },
+      { "muscleId": 8, "contributionPercent": 15 },
+      { "muscleId": 13, "contributionPercent": 10 },
+      { "muscleId": 11, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 29,
-    "tenantId": null,
+    "name": "Front Squat",
+    "nameAr": "سكوات أمامي",
+    "targetMuscleId": 7,
+    "equipment": "Barbell",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 20 },
+      { "muscleId": 11, "contributionPercent": 15 },
+      { "muscleId": 13, "contributionPercent": 10 }
+    ]
+  },
+  {
     "name": "Leg Press",
     "nameAr": "ليج بريس",
     "targetMuscleId": 7,
     "equipment": "Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 20 },
+      { "muscleId": 8, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 30,
-    "tenantId": null,
     "name": "Leg Extension",
     "nameAr": "تمديد رجل",
     "targetMuscleId": 7,
     "equipment": "Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": []
   },
   {
-    "id": 31,
-    "tenantId": null,
     "name": "Lunges",
     "nameAr": "طعن",
     "targetMuscleId": 7,
     "equipment": "Dumbbells",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 25 },
+      { "muscleId": 8, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 32,
-    "tenantId": null,
+    "name": "Walking Lunges",
+    "nameAr": "طعن متحرك",
+    "targetMuscleId": 7,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 25 },
+      { "muscleId": 8, "contributionPercent": 15 },
+      { "muscleId": 11, "contributionPercent": 10 }
+    ]
+  },
+  {
     "name": "Bulgarian Split Squat",
     "nameAr": "سكوات بلغاري",
     "targetMuscleId": 7,
     "equipment": "Dumbbells",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 30 },
+      { "muscleId": 8, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 33,
-    "tenantId": null,
+    "name": "Goblet Squat",
+    "nameAr": "جوبلت سكوات",
+    "targetMuscleId": 7,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 25 },
+      { "muscleId": 11, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Hack Squat",
+    "nameAr": "هاك سكوات",
+    "targetMuscleId": 7,
+    "equipment": "Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 20 },
+      { "muscleId": 8, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Sissy Squat",
+    "nameAr": "سيسي سكوات",
+    "targetMuscleId": 7,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Step Ups",
+    "nameAr": "صعود درج",
+    "targetMuscleId": 7,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 25 },
+      { "muscleId": 8, "contributionPercent": 15 }
+    ]
+  },
+  {
     "name": "Leg Curl",
     "nameAr": "ليج كيرل",
     "targetMuscleId": 8,
     "equipment": "Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 10, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 34,
-    "tenantId": null,
     "name": "Romanian Deadlift",
     "nameAr": "رومانيان ديدليفت",
     "targetMuscleId": 8,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 25 },
+      { "muscleId": 13, "contributionPercent": 20 },
+      { "muscleId": 6, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 35,
-    "tenantId": null,
+    "name": "Stiff Leg Deadlift",
+    "nameAr": "ديدليفت رجل مستقيمة",
+    "targetMuscleId": 8,
+    "equipment": "Barbell",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 25 },
+      { "muscleId": 13, "contributionPercent": 20 }
+    ]
+  },
+  {
     "name": "Good Morning",
     "nameAr": "جود مورنينج",
     "targetMuscleId": 8,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 20 },
+      { "muscleId": 13, "contributionPercent": 25 }
+    ]
   },
   {
-    "id": 36,
-    "tenantId": null,
+    "name": "Nordic Curl",
+    "nameAr": "نوردك كيرل",
+    "targetMuscleId": 8,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Seated Leg Curl",
+    "nameAr": "ليج كيرل جالس",
+    "targetMuscleId": 8,
+    "equipment": "Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 10, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Single Leg Romanian Deadlift",
+    "nameAr": "رومانيان ديدليفت رجل واحدة",
+    "targetMuscleId": 8,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 25 },
+      { "muscleId": 13, "contributionPercent": 15 }
+    ]
+  },
+  {
     "name": "Hip Thrust",
     "nameAr": "هيب ثراست",
     "targetMuscleId": 9,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 8, "contributionPercent": 20 },
+      { "muscleId": 7, "contributionPercent": 10 }
+    ]
   },
   {
-    "id": 37,
-    "tenantId": null,
     "name": "Glute Bridge",
     "nameAr": "جلوت بريدج",
     "targetMuscleId": 9,
     "equipment": "Bodyweight",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 8, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 38,
-    "tenantId": null,
     "name": "Cable Kickback",
     "nameAr": "كيك باك كابل",
     "targetMuscleId": 9,
     "equipment": "Cable Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 8, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 39,
-    "tenantId": null,
+    "name": "Sumo Deadlift",
+    "nameAr": "سومو ديدليفت",
+    "targetMuscleId": 9,
+    "equipment": "Barbell",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 7, "contributionPercent": 20 },
+      { "muscleId": 8, "contributionPercent": 15 },
+      { "muscleId": 2, "contributionPercent": 10 },
+      { "muscleId": 13, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Cable Pull Through",
+    "nameAr": "سحب كابل للمؤخرة",
+    "targetMuscleId": 9,
+    "equipment": "Cable Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 8, "contributionPercent": 20 },
+      { "muscleId": 13, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Donkey Kicks",
+    "nameAr": "ركلة الحمار",
+    "targetMuscleId": 9,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Fire Hydrants",
+    "nameAr": "فاير هايدرانت",
+    "targetMuscleId": 9,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
     "name": "Standing Calf Raise",
     "nameAr": "رفع سمانة واقف",
     "targetMuscleId": 10,
     "equipment": "Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": []
   },
   {
-    "id": 40,
-    "tenantId": null,
     "name": "Seated Calf Raise",
     "nameAr": "رفع سمانة جالس",
     "targetMuscleId": 10,
     "equipment": "Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": []
   },
   {
-    "id": 41,
-    "tenantId": null,
+    "name": "Donkey Calf Raise",
+    "nameAr": "رفع سمانة حمار",
+    "targetMuscleId": 10,
+    "equipment": "Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Single Leg Calf Raise",
+    "nameAr": "رفع سمانة رجل واحدة",
+    "targetMuscleId": 10,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Leg Press Calf Raise",
+    "nameAr": "رفع سمانة ليج بريس",
+    "targetMuscleId": 10,
+    "equipment": "Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
     "name": "Crunches",
     "nameAr": "كرانشز",
     "targetMuscleId": 11,
     "equipment": "Bodyweight",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": []
   },
   {
-    "id": 42,
-    "tenantId": null,
     "name": "Plank",
     "nameAr": "بلانك",
     "targetMuscleId": 11,
     "equipment": "Bodyweight",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 12, "contributionPercent": 15 },
+      { "muscleId": 13, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 43,
-    "tenantId": null,
     "name": "Leg Raise",
     "nameAr": "رفع أرجل",
     "targetMuscleId": 11,
     "equipment": "Bodyweight",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 7, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 44,
-    "tenantId": null,
+    "name": "Hanging Leg Raise",
+    "nameAr": "رفع أرجل معلق",
+    "targetMuscleId": 11,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 7, "contributionPercent": 15 },
+      { "muscleId": 6, "contributionPercent": 10 }
+    ]
+  },
+  {
     "name": "Cable Crunch",
     "nameAr": "كرانش كابل",
     "targetMuscleId": 11,
     "equipment": "Cable Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": []
   },
   {
-    "id": 45,
-    "tenantId": null,
+    "name": "Ab Rollout",
+    "nameAr": "أب رول أوت",
+    "targetMuscleId": 11,
+    "equipment": "Ab Wheel",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 15 },
+      { "muscleId": 5, "contributionPercent": 10 },
+      { "muscleId": 15, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Reverse Crunch",
+    "nameAr": "كرانش عكسي",
+    "targetMuscleId": 11,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Mountain Climbers",
+    "nameAr": "متسلق الجبل",
+    "targetMuscleId": 11,
+    "equipment": "Bodyweight",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 7, "contributionPercent": 20 },
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Dead Bug",
+    "nameAr": "ديد بج",
+    "targetMuscleId": 11,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 13, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Bicycle Crunch",
+    "nameAr": "كرانش دراجة",
+    "targetMuscleId": 11,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 12, "contributionPercent": 25 }
+    ]
+  },
+  {
     "name": "Russian Twist",
     "nameAr": "روسيان تويست",
     "targetMuscleId": 12,
     "equipment": "Bodyweight",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 11, "contributionPercent": 20 }
+    ]
   },
   {
-    "id": 46,
-    "tenantId": null,
     "name": "Side Plank",
     "nameAr": "بلانك جانبي",
     "targetMuscleId": 12,
     "equipment": "Bodyweight",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 47,
-    "tenantId": null,
+    "name": "Woodchoppers",
+    "nameAr": "وود تشوبر",
+    "targetMuscleId": 12,
+    "equipment": "Cable Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 11, "contributionPercent": 20 },
+      { "muscleId": 3, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Pallof Press",
+    "nameAr": "بالوف بريس",
+    "targetMuscleId": 12,
+    "equipment": "Cable Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 11, "contributionPercent": 20 }
+    ]
+  },
+  {
+    "name": "Side Bend",
+    "nameAr": "ثني جانبي",
+    "targetMuscleId": 12,
+    "equipment": "Dumbbells",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
     "name": "Back Extension",
     "nameAr": "تمديد ظهر",
     "targetMuscleId": 13,
     "equipment": "Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 20 },
+      { "muscleId": 8, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 48,
-    "tenantId": null,
+    "name": "Hyperextension",
+    "nameAr": "هايبر اكستنشن",
+    "targetMuscleId": 13,
+    "equipment": "Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 25 },
+      { "muscleId": 8, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Superman",
+    "nameAr": "سوبرمان",
+    "targetMuscleId": 13,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 20 }
+    ]
+  },
+  {
+    "name": "Bird Dog",
+    "nameAr": "بيرد دوج",
+    "targetMuscleId": 13,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 15 },
+      { "muscleId": 11, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Reverse Hyperextension",
+    "nameAr": "هايبر عكسي",
+    "targetMuscleId": 13,
+    "equipment": "Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 30 },
+      { "muscleId": 8, "contributionPercent": 15 }
+    ]
+  },
+  {
     "name": "Shrugs",
     "nameAr": "شراجز",
     "targetMuscleId": 14,
     "equipment": "Dumbbells",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": []
   },
   {
-    "id": 49,
-    "tenantId": null,
+    "name": "Barbell Shrugs",
+    "nameAr": "شراجز بار",
+    "targetMuscleId": 14,
+    "equipment": "Barbell",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 6, "contributionPercent": 10 }
+    ]
+  },
+  {
     "name": "Upright Row",
     "nameAr": "تجديف عمودي",
     "targetMuscleId": 14,
     "equipment": "Barbell",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 30 },
+      { "muscleId": 4, "contributionPercent": 15 }
+    ]
   },
   {
-    "id": 50,
-    "tenantId": null,
     "name": "Face Pull",
     "nameAr": "فيس بول",
     "targetMuscleId": 14,
     "equipment": "Cable Machine",
-    "isHighImpact": false
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 25 },
+      { "muscleId": 2, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Cable Shrugs",
+    "nameAr": "شراجز كابل",
+    "targetMuscleId": 14,
+    "equipment": "Cable Machine",
+    "isHighImpact": false,
+    "secondaryMuscles": []
+  },
+  {
+    "name": "Power Clean",
+    "nameAr": "باور كلين",
+    "targetMuscleId": 14,
+    "equipment": "Barbell",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 7, "contributionPercent": 20 },
+      { "muscleId": 9, "contributionPercent": 15 },
+      { "muscleId": 8, "contributionPercent": 10 },
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Snatch",
+    "nameAr": "سناتش",
+    "targetMuscleId": 14,
+    "equipment": "Barbell",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 7, "contributionPercent": 20 },
+      { "muscleId": 9, "contributionPercent": 15 },
+      { "muscleId": 3, "contributionPercent": 15 },
+      { "muscleId": 2, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Clean and Jerk",
+    "nameAr": "كلين اند جيرك",
+    "targetMuscleId": 14,
+    "equipment": "Barbell",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 7, "contributionPercent": 20 },
+      { "muscleId": 9, "contributionPercent": 15 },
+      { "muscleId": 3, "contributionPercent": 15 },
+      { "muscleId": 5, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Burpees",
+    "nameAr": "بربيز",
+    "targetMuscleId": 11,
+    "equipment": "Bodyweight",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 1, "contributionPercent": 15 },
+      { "muscleId": 7, "contributionPercent": 20 },
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Battle Ropes",
+    "nameAr": "حبال المعركة",
+    "targetMuscleId": 3,
+    "equipment": "Battle Ropes",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 20 },
+      { "muscleId": 11, "contributionPercent": 15 },
+      { "muscleId": 6, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Box Jumps",
+    "nameAr": "قفز على الصندوق",
+    "targetMuscleId": 7,
+    "equipment": "Box",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 25 },
+      { "muscleId": 10, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Kettlebell Swing",
+    "nameAr": "كيتل بيل سوينج",
+    "targetMuscleId": 9,
+    "equipment": "Kettlebell",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 8, "contributionPercent": 20 },
+      { "muscleId": 13, "contributionPercent": 15 },
+      { "muscleId": 3, "contributionPercent": 10 },
+      { "muscleId": 6, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Turkish Get Up",
+    "nameAr": "تركش جت أب",
+    "targetMuscleId": 11,
+    "equipment": "Kettlebell",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 20 },
+      { "muscleId": 9, "contributionPercent": 15 },
+      { "muscleId": 7, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Kettlebell Clean",
+    "nameAr": "كيتل بيل كلين",
+    "targetMuscleId": 9,
+    "equipment": "Kettlebell",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 8, "contributionPercent": 15 },
+      { "muscleId": 14, "contributionPercent": 15 },
+      { "muscleId": 6, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Kettlebell Snatch",
+    "nameAr": "كيتل بيل سناتش",
+    "targetMuscleId": 3,
+    "equipment": "Kettlebell",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 20 },
+      { "muscleId": 8, "contributionPercent": 15 },
+      { "muscleId": 14, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Thruster",
+    "nameAr": "ثراستر",
+    "targetMuscleId": 7,
+    "equipment": "Barbell",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 25 },
+      { "muscleId": 9, "contributionPercent": 15 },
+      { "muscleId": 5, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Wall Balls",
+    "nameAr": "وول بولز",
+    "targetMuscleId": 7,
+    "equipment": "Medicine Ball",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 20 },
+      { "muscleId": 9, "contributionPercent": 15 },
+      { "muscleId": 11, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Medicine Ball Slam",
+    "nameAr": "ضرب كرة طبية",
+    "targetMuscleId": 11,
+    "equipment": "Medicine Ball",
+    "isHighImpact": true,
+    "secondaryMuscles": [
+      { "muscleId": 3, "contributionPercent": 20 },
+      { "muscleId": 15, "contributionPercent": 15 },
+      { "muscleId": 5, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Sled Push",
+    "nameAr": "دفع الزحافة",
+    "targetMuscleId": 7,
+    "equipment": "Sled",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 25 },
+      { "muscleId": 10, "contributionPercent": 15 },
+      { "muscleId": 11, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Sled Pull",
+    "nameAr": "سحب الزحافة",
+    "targetMuscleId": 8,
+    "equipment": "Sled",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 20 },
+      { "muscleId": 2, "contributionPercent": 15 },
+      { "muscleId": 4, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Rope Climb",
+    "nameAr": "تسلق الحبل",
+    "targetMuscleId": 15,
+    "equipment": "Rope",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 25 },
+      { "muscleId": 6, "contributionPercent": 20 },
+      { "muscleId": 11, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Muscle Up",
+    "nameAr": "ماسل أب",
+    "targetMuscleId": 15,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 1, "contributionPercent": 20 },
+      { "muscleId": 4, "contributionPercent": 20 },
+      { "muscleId": 5, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Handstand Push Up",
+    "nameAr": "ضغط وقوف على اليدين",
+    "targetMuscleId": 3,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 25 },
+      { "muscleId": 14, "contributionPercent": 15 },
+      { "muscleId": 11, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "L-Sit",
+    "nameAr": "إل سيت",
+    "targetMuscleId": 11,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 7, "contributionPercent": 20 },
+      { "muscleId": 5, "contributionPercent": 15 },
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Dragon Flag",
+    "nameAr": "دراجون فلاج",
+    "targetMuscleId": 11,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 15, "contributionPercent": 15 },
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Front Lever",
+    "nameAr": "فرونت ليفر",
+    "targetMuscleId": 15,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 11, "contributionPercent": 25 },
+      { "muscleId": 4, "contributionPercent": 15 },
+      { "muscleId": 3, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Back Lever",
+    "nameAr": "باك ليفر",
+    "targetMuscleId": 1,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 4, "contributionPercent": 20 },
+      { "muscleId": 3, "contributionPercent": 20 },
+      { "muscleId": 11, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Planche",
+    "nameAr": "بلانش",
+    "targetMuscleId": 3,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 1, "contributionPercent": 25 },
+      { "muscleId": 11, "contributionPercent": 20 },
+      { "muscleId": 5, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Toes to Bar",
+    "nameAr": "لمس العارضة بالقدم",
+    "targetMuscleId": 11,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 6, "contributionPercent": 15 },
+      { "muscleId": 15, "contributionPercent": 15 },
+      { "muscleId": 7, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "Pistol Squat",
+    "nameAr": "سكوات رجل واحدة",
+    "targetMuscleId": 7,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 9, "contributionPercent": 25 },
+      { "muscleId": 11, "contributionPercent": 15 }
+    ]
+  },
+  {
+    "name": "Archer Push Up",
+    "nameAr": "ضغط آرتشر",
+    "targetMuscleId": 1,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 20 },
+      { "muscleId": 3, "contributionPercent": 15 },
+      { "muscleId": 11, "contributionPercent": 10 }
+    ]
+  },
+  {
+    "name": "One Arm Push Up",
+    "nameAr": "ضغط يد واحدة",
+    "targetMuscleId": 1,
+    "equipment": "Bodyweight",
+    "isHighImpact": false,
+    "secondaryMuscles": [
+      { "muscleId": 5, "contributionPercent": 25 },
+      { "muscleId": 3, "contributionPercent": 15 },
+      { "muscleId": 11, "contributionPercent": 15 },
+      { "muscleId": 12, "contributionPercent": 10 }
+    ]
   }
 ]

@@ -1,3 +1,4 @@
+using LogicFit.Application.Features.Exercises.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 
@@ -11,4 +12,9 @@ public class CreateExerciseCommand : IRequest<int>
     public IFormFile? Video { get; set; }
     public string? Equipment { get; set; }
     public bool IsHighImpact { get; set; }
+
+    /// <summary>
+    /// Optional secondary muscles with contribution percentages.
+    /// </summary>
+    public List<SecondaryMuscleInputDto>? SecondaryMuscles { get; set; }
 }

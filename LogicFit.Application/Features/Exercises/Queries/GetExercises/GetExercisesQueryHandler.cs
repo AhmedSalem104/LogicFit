@@ -22,6 +22,8 @@ public class GetExercisesQueryHandler : IRequestHandler<GetExercisesQuery, List<
 
         var query = _context.Exercises
             .Include(e => e.TargetMuscle)
+            .Include(e => e.SecondaryMuscles)
+                .ThenInclude(sm => sm.Muscle)
             .Where(e => e.TenantId == null || e.TenantId == tenantId)
             .AsQueryable();
 
@@ -42,6 +44,15 @@ public class GetExercisesQueryHandler : IRequestHandler<GetExercisesQuery, List<
                 Name = e.Name,
                 TargetMuscleId = e.TargetMuscleId,
                 TargetMuscleName = e.TargetMuscle.Name,
+                TargetMuscleBodyPart = e.TargetMuscle.BodyPart,
+                PrimaryMuscleContributionPercent = 100 - e.SecondaryMuscles.Sum(sm => sm.ContributionPercent),
+                SecondaryMuscles = e.SecondaryMuscles.Select(sm => new SecondaryMuscleDto
+                {
+                    MuscleId = sm.MuscleId,
+                    MuscleName = sm.Muscle.Name,
+                    BodyPart = sm.Muscle.BodyPart,
+                    ContributionPercent = sm.ContributionPercent
+                }).ToList(),
                 ImageUrl = e.ImageUrl,
                 VideoUrl = e.VideoUrl,
                 Equipment = e.Equipment,

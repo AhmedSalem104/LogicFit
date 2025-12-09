@@ -53,6 +53,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ClientSubscription> ClientSubscriptions => Set<ClientSubscription>();
     public DbSet<SubscriptionFreeze> SubscriptionFreezes => Set<SubscriptionFreeze>();
     public DbSet<CoachClient> CoachClients => Set<CoachClient>();
+    public DbSet<ExerciseSecondaryMuscle> ExerciseSecondaryMuscles => Set<ExerciseSecondaryMuscle>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder builder)

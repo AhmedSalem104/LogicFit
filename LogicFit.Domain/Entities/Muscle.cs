@@ -15,4 +15,5 @@ public class Muscle : ISoftDeletable
 
     // Navigation Properties
     public virtual ICollection<Exercise> Exercises { get; set; } = new List<Exercise>();
+    public virtual ICollection<ExerciseSecondaryMuscle> SecondaryExercises { get; set; } = new List<ExerciseSecondaryMuscle>();
 }

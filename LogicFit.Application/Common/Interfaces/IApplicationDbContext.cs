@@ -19,6 +19,7 @@ public interface IApplicationDbContext
     DbSet<MealLog> MealLogs { get; }
     DbSet<Muscle> Muscles { get; }
     DbSet<Exercise> Exercises { get; }
+    DbSet<ExerciseSecondaryMuscle> ExerciseSecondaryMuscles { get; }
     DbSet<WorkoutProgram> WorkoutPrograms { get; }
     DbSet<ProgramRoutine> ProgramRoutines { get; }
     DbSet<RoutineExercise> RoutineExercises { get; }

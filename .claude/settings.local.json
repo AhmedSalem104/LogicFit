@@ -35,7 +35,9 @@
       "Bash(git remote:*)",
       "Bash(dotnet run)",
       "Bash(timeout:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

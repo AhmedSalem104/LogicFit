@@ -26,4 +26,5 @@ public class Exercise : ISoftDeletable
     public virtual Muscle TargetMuscle { get; set; } = null!;
     public virtual ICollection<RoutineExercise> RoutineExercises { get; set; } = new List<RoutineExercise>();
     public virtual ICollection<SessionSet> SessionSets { get; set; } = new List<SessionSet>();
+    public virtual ICollection<ExerciseSecondaryMuscle> SecondaryMuscles { get; set; } = new List<ExerciseSecondaryMuscle>();
 }

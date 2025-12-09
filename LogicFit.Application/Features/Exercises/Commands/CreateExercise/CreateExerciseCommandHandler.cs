@@ -51,6 +51,20 @@ public class CreateExerciseCommandHandler : IRequestHandler<CreateExerciseComman
         _context.Exercises.Add(exercise);
         await _context.SaveChangesAsync(cancellationToken);
 
+        // Add secondary muscles if provided
+        if (request.SecondaryMuscles?.Any() == true)
+        {
+            var secondaryMuscles = request.SecondaryMuscles.Select(sm => new ExerciseSecondaryMuscle
+            {
+                ExerciseId = exercise.Id,
+                MuscleId = sm.MuscleId,
+                ContributionPercent = sm.ContributionPercent
+            });
+
+            _context.ExerciseSecondaryMuscles.AddRange(secondaryMuscles);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
         return exercise.Id;
     }
 }
