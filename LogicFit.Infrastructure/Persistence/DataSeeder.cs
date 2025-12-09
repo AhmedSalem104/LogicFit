@@ -132,12 +132,6 @@ public class DataSeeder
 
     private async Task SeedExercisesAsync()
     {
-        if (await _context.Exercises.AnyAsync())
-        {
-            _logger.LogInformation("Exercises already seeded, skipping...");
-            return;
-        }
-
         var jsonPath = Path.Combine(_seedDataPath, "exercises.json");
         if (!File.Exists(jsonPath))
         {
@@ -157,34 +151,98 @@ public class DataSeeder
         var muscles = await _context.Muscles.ToListAsync();
         var muscleNameToId = muscles.ToDictionary(m => m.Name, m => m.Id);
 
+        // Get existing global exercises for upsert
+        var existingExercises = await _context.Exercises
+            .Include(e => e.SecondaryMuscles)
+            .Where(e => e.TenantId == null)
+            .ToListAsync();
+        var existingByName = existingExercises.ToDictionary(e => e.Name, e => e);
+
+        int added = 0, updated = 0;
+        var newExercisesWithSecondary = new List<(Exercise exercise, List<SecondaryMuscleSeedDto> secondary)>();
+
         foreach (var item in seedData)
         {
             // Map muscle name to auto-generated ID
             var targetMuscleId = muscleNameToId.GetValueOrDefault(GetMuscleNameById(item.TargetMuscleId), 1);
 
-            var exercise = new Exercise
+            if (existingByName.TryGetValue(item.Name, out var existing))
             {
-                TenantId = item.TenantId,
-                Name = item.Name,
-                TargetMuscleId = targetMuscleId,
-                Equipment = item.Equipment,
-                IsHighImpact = item.IsHighImpact
-            };
-            _context.Exercises.Add(exercise);
+                // UPDATE existing
+                existing.TargetMuscleId = targetMuscleId;
+                existing.Equipment = item.Equipment;
+                existing.IsHighImpact = item.IsHighImpact;
+
+                // Update secondary muscles - remove old, add new
+                if (existing.SecondaryMuscles.Any())
+                {
+                    _context.ExerciseSecondaryMuscles.RemoveRange(existing.SecondaryMuscles);
+                }
+
+                if (item.SecondaryMuscles != null && item.SecondaryMuscles.Any())
+                {
+                    foreach (var sm in item.SecondaryMuscles)
+                    {
+                        var secondaryMuscleId = muscleNameToId.GetValueOrDefault(GetMuscleNameById(sm.MuscleId), 1);
+                        existing.SecondaryMuscles.Add(new ExerciseSecondaryMuscle
+                        {
+                            ExerciseId = existing.Id,
+                            MuscleId = secondaryMuscleId,
+                            ContributionPercent = sm.ContributionPercent
+                        });
+                    }
+                }
+                updated++;
+            }
+            else
+            {
+                // INSERT new
+                var exercise = new Exercise
+                {
+                    TenantId = item.TenantId,
+                    Name = item.Name,
+                    TargetMuscleId = targetMuscleId,
+                    Equipment = item.Equipment,
+                    IsHighImpact = item.IsHighImpact
+                };
+                _context.Exercises.Add(exercise);
+
+                // Store for second pass (need ID after SaveChanges)
+                if (item.SecondaryMuscles != null && item.SecondaryMuscles.Any())
+                {
+                    newExercisesWithSecondary.Add((exercise, item.SecondaryMuscles));
+                }
+                added++;
+            }
         }
 
         await _context.SaveChangesAsync();
-        _logger.LogInformation("Seeded {Count} exercises", seedData.Count);
+
+        // Second pass: Add secondary muscles for new exercises (now they have IDs)
+        foreach (var (exercise, secondaryMuscles) in newExercisesWithSecondary)
+        {
+            foreach (var sm in secondaryMuscles)
+            {
+                var secondaryMuscleId = muscleNameToId.GetValueOrDefault(GetMuscleNameById(sm.MuscleId), 1);
+                _context.ExerciseSecondaryMuscles.Add(new ExerciseSecondaryMuscle
+                {
+                    ExerciseId = exercise.Id,
+                    MuscleId = secondaryMuscleId,
+                    ContributionPercent = sm.ContributionPercent
+                });
+            }
+        }
+
+        if (newExercisesWithSecondary.Any())
+        {
+            await _context.SaveChangesAsync();
+        }
+
+        _logger.LogInformation("Exercises: {Added} added, {Updated} updated", added, updated);
     }
 
     private async Task SeedFoodsAsync()
     {
-        if (await _context.Foods.AnyAsync())
-        {
-            _logger.LogInformation("Foods already seeded, skipping...");
-            return;
-        }
-
         var jsonPath = Path.Combine(_seedDataPath, "foods.json");
         if (!File.Exists(jsonPath))
         {
@@ -200,25 +258,49 @@ public class DataSeeder
 
         if (seedData == null || !seedData.Any()) return;
 
+        // Get existing global foods for upsert
+        var existingFoods = await _context.Foods
+            .Where(f => f.TenantId == null)
+            .ToListAsync();
+        var existingByName = existingFoods.ToDictionary(f => f.Name, f => f);
+
+        int added = 0, updated = 0;
+
         foreach (var item in seedData)
         {
-            var food = new Food
+            if (existingByName.TryGetValue(item.Name, out var existing))
             {
-                TenantId = item.TenantId,
-                Name = item.NameEn,
-                Category = item.Category,
-                CaloriesPer100g = (double)item.Calories,
-                ProteinPer100g = (double)item.Protein,
-                CarbsPer100g = (double)item.Carbs,
-                FatsPer100g = (double)item.Fat,
-                FiberPer100g = (double)item.Fiber,
-                IsVerified = true
-            };
-            _context.Foods.Add(food);
+                // UPDATE existing
+                existing.Category = item.Category;
+                existing.CaloriesPer100g = (double)item.CaloriesPer100g;
+                existing.ProteinPer100g = (double)item.ProteinPer100g;
+                existing.CarbsPer100g = (double)item.CarbsPer100g;
+                existing.FatsPer100g = (double)item.FatsPer100g;
+                existing.FiberPer100g = (double)item.FiberPer100g;
+                updated++;
+            }
+            else
+            {
+                // INSERT new
+                var food = new Food
+                {
+                    TenantId = item.TenantId,
+                    Name = item.Name,
+                    Category = item.Category,
+                    CaloriesPer100g = (double)item.CaloriesPer100g,
+                    ProteinPer100g = (double)item.ProteinPer100g,
+                    CarbsPer100g = (double)item.CarbsPer100g,
+                    FatsPer100g = (double)item.FatsPer100g,
+                    FiberPer100g = (double)item.FiberPer100g,
+                    IsVerified = true
+                };
+                _context.Foods.Add(food);
+                added++;
+            }
         }
 
         await _context.SaveChangesAsync();
-        _logger.LogInformation("Seeded {Count} foods", seedData.Count);
+        _logger.LogInformation("Foods: {Added} added, {Updated} updated", added, updated);
     }
 
     private async Task SeedUsersAsync()
@@ -277,24 +359,24 @@ public class DataSeeder
 
     private string GetMuscleNameById(int id)
     {
-        // Map from seed file IDs to muscle names
+        // Map from seed file IDs to muscle names (matches muscles.json)
         return id switch
         {
             1 => "Chest",
-            2 => "Upper Back",
-            3 => "Lats",
-            4 => "Shoulders",
-            5 => "Biceps",
-            6 => "Triceps",
-            7 => "Forearms",
-            8 => "Abs",
-            9 => "Obliques",
-            10 => "Lower Back",
-            11 => "Glutes",
-            12 => "Quadriceps",
-            13 => "Hamstrings",
-            14 => "Calves",
-            15 => "Hip Flexors",
+            2 => "Back",
+            3 => "Shoulders",
+            4 => "Biceps",
+            5 => "Triceps",
+            6 => "Forearms",
+            7 => "Quadriceps",
+            8 => "Hamstrings",
+            9 => "Glutes",
+            10 => "Calves",
+            11 => "Abs",
+            12 => "Obliques",
+            13 => "Lower Back",
+            14 => "Traps",
+            15 => "Lats",
             _ => "Chest"
         };
     }
@@ -327,29 +409,31 @@ public class MuscleSeedDto
 
 public class ExerciseSeedDto
 {
-    public int Id { get; set; }
     public Guid? TenantId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? NameAr { get; set; }
     public int TargetMuscleId { get; set; }
     public string? Equipment { get; set; }
     public bool IsHighImpact { get; set; }
+    public List<SecondaryMuscleSeedDto>? SecondaryMuscles { get; set; }
+}
+
+public class SecondaryMuscleSeedDto
+{
+    public int MuscleId { get; set; }
+    public int ContributionPercent { get; set; }
 }
 
 public class FoodSeedDto
 {
-    public Guid Id { get; set; }
     public Guid? TenantId { get; set; }
-    public string NameAr { get; set; } = string.Empty;
-    public string NameEn { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
     public string? Category { get; set; }
-    public decimal Calories { get; set; }
-    public decimal Protein { get; set; }
-    public decimal Carbs { get; set; }
-    public decimal Fat { get; set; }
-    public decimal Fiber { get; set; }
-    public decimal ServingSize { get; set; }
-    public string? ServingUnit { get; set; }
+    public decimal CaloriesPer100g { get; set; }
+    public decimal ProteinPer100g { get; set; }
+    public decimal CarbsPer100g { get; set; }
+    public decimal FatsPer100g { get; set; }
+    public decimal FiberPer100g { get; set; }
 }
 
 public class UserSeedDto

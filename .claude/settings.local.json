@@ -37,7 +37,8 @@
       "Bash(timeout:*)",
       "Bash(python:*)",
       "Bash(cat:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(dotnet run:*)"
     ],
     "deny": [],
     "ask": []
