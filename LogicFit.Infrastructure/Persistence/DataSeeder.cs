@@ -270,15 +270,15 @@ public class DataSeeder
 
         foreach (var item in seedData)
         {
-            if (existingByName.TryGetValue(item.Name, out var existing))
+            if (existingByName.TryGetValue(item.NameEn, out var existing))
             {
                 // UPDATE existing
                 existing.Category = item.Category;
-                existing.CaloriesPer100g = (double)item.CaloriesPer100g;
-                existing.ProteinPer100g = (double)item.ProteinPer100g;
-                existing.CarbsPer100g = (double)item.CarbsPer100g;
-                existing.FatsPer100g = (double)item.FatsPer100g;
-                existing.FiberPer100g = (double)item.FiberPer100g;
+                existing.CaloriesPer100g = (double)item.Calories;
+                existing.ProteinPer100g = (double)item.Protein;
+                existing.CarbsPer100g = (double)item.Carbs;
+                existing.FatsPer100g = (double)item.Fat;
+                existing.FiberPer100g = (double)item.Fiber;
                 updated++;
             }
             else
@@ -287,13 +287,13 @@ public class DataSeeder
                 var food = new Food
                 {
                     TenantId = item.TenantId,
-                    Name = item.Name,
+                    Name = item.NameEn,
                     Category = item.Category,
-                    CaloriesPer100g = (double)item.CaloriesPer100g,
-                    ProteinPer100g = (double)item.ProteinPer100g,
-                    CarbsPer100g = (double)item.CarbsPer100g,
-                    FatsPer100g = (double)item.FatsPer100g,
-                    FiberPer100g = (double)item.FiberPer100g,
+                    CaloriesPer100g = (double)item.Calories,
+                    ProteinPer100g = (double)item.Protein,
+                    CarbsPer100g = (double)item.Carbs,
+                    FatsPer100g = (double)item.Fat,
+                    FiberPer100g = (double)item.Fiber,
                     IsVerified = true
                 };
                 _context.Foods.Add(food);
@@ -429,13 +429,16 @@ public class SecondaryMuscleSeedDto
 public class FoodSeedDto
 {
     public Guid? TenantId { get; set; }
-    public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
+    public string NameEn { get; set; } = string.Empty;
     public string? Category { get; set; }
-    public decimal CaloriesPer100g { get; set; }
-    public decimal ProteinPer100g { get; set; }
-    public decimal CarbsPer100g { get; set; }
-    public decimal FatsPer100g { get; set; }
-    public decimal FiberPer100g { get; set; }
+    public decimal Calories { get; set; }
+    public decimal Protein { get; set; }
+    public decimal Carbs { get; set; }
+    public decimal Fat { get; set; }
+    public decimal Fiber { get; set; }
+    public decimal ServingSize { get; set; }
+    public string? ServingUnit { get; set; }
 }
 
 public class UserSeedDto
