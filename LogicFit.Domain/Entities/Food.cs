@@ -8,6 +8,7 @@ public class Food : ISoftDeletable
     public int Id { get; set; }
     public Guid? TenantId { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
     public string? Category { get; set; }
 
     // Macros (Fixed for performance)
@@ -16,6 +17,10 @@ public class Food : ISoftDeletable
     public double CarbsPer100g { get; set; }
     public double FatsPer100g { get; set; }
     public double? FiberPer100g { get; set; }
+
+    // Serving info
+    public double? ServingSize { get; set; }
+    public string? ServingUnit { get; set; }
 
     // Alternative Logic
     public string? AlternativeGroupId { get; set; }

@@ -273,12 +273,15 @@ public class DataSeeder
             if (existingByName.TryGetValue(item.NameEn, out var existing))
             {
                 // UPDATE existing
+                existing.NameAr = item.NameAr;
                 existing.Category = item.Category;
                 existing.CaloriesPer100g = (double)item.Calories;
                 existing.ProteinPer100g = (double)item.Protein;
                 existing.CarbsPer100g = (double)item.Carbs;
                 existing.FatsPer100g = (double)item.Fat;
                 existing.FiberPer100g = (double)item.Fiber;
+                existing.ServingSize = (double?)item.ServingSize;
+                existing.ServingUnit = item.ServingUnit;
                 updated++;
             }
             else
@@ -288,12 +291,15 @@ public class DataSeeder
                 {
                     TenantId = item.TenantId,
                     Name = item.NameEn,
+                    NameAr = item.NameAr,
                     Category = item.Category,
                     CaloriesPer100g = (double)item.Calories,
                     ProteinPer100g = (double)item.Protein,
                     CarbsPer100g = (double)item.Carbs,
                     FatsPer100g = (double)item.Fat,
                     FiberPer100g = (double)item.Fiber,
+                    ServingSize = (double?)item.ServingSize,
+                    ServingUnit = item.ServingUnit,
                     IsVerified = true
                 };
                 _context.Foods.Add(food);
