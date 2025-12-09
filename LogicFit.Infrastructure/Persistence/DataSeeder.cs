@@ -258,11 +258,13 @@ public class DataSeeder
 
         if (seedData == null || !seedData.Any()) return;
 
-        // Get existing global foods for upsert
+        // Get existing global foods for upsert (use first if duplicates exist)
         var existingFoods = await _context.Foods
             .Where(f => f.TenantId == null)
             .ToListAsync();
-        var existingByName = existingFoods.ToDictionary(f => f.Name, f => f);
+        var existingByName = existingFoods
+            .GroupBy(f => f.Name)
+            .ToDictionary(g => g.Key, g => g.First());
 
         int added = 0, updated = 0;
 
