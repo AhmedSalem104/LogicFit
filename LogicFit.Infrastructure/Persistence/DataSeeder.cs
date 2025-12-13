@@ -258,57 +258,42 @@ public class DataSeeder
 
         if (seedData == null || !seedData.Any()) return;
 
-        // Get existing global foods for upsert (use first if duplicates exist)
-        var existingFoods = await _context.Foods
+        // Delete all global foods and reseed fresh
+        var existingGlobalFoods = await _context.Foods
+            .IgnoreQueryFilters()
             .Where(f => f.TenantId == null)
             .ToListAsync();
-        var existingByName = existingFoods
-            .GroupBy(f => f.Name)
-            .ToDictionary(g => g.Key, g => g.First());
 
-        int added = 0, updated = 0;
+        if (existingGlobalFoods.Any())
+        {
+            _context.Foods.RemoveRange(existingGlobalFoods);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Deleted {Count} existing global foods for fresh reseed", existingGlobalFoods.Count);
+        }
 
+        // Insert all foods from JSON
         foreach (var item in seedData)
         {
-            if (existingByName.TryGetValue(item.NameEn, out var existing))
+            var food = new Food
             {
-                // UPDATE existing
-                existing.NameAr = item.NameAr;
-                existing.Category = item.Category;
-                existing.CaloriesPer100g = (double)item.Calories;
-                existing.ProteinPer100g = (double)item.Protein;
-                existing.CarbsPer100g = (double)item.Carbs;
-                existing.FatsPer100g = (double)item.Fat;
-                existing.FiberPer100g = (double)item.Fiber;
-                existing.ServingSize = (double?)item.ServingSize;
-                existing.ServingUnit = item.ServingUnit;
-                updated++;
-            }
-            else
-            {
-                // INSERT new
-                var food = new Food
-                {
-                    TenantId = item.TenantId,
-                    Name = item.NameEn,
-                    NameAr = item.NameAr,
-                    Category = item.Category,
-                    CaloriesPer100g = (double)item.Calories,
-                    ProteinPer100g = (double)item.Protein,
-                    CarbsPer100g = (double)item.Carbs,
-                    FatsPer100g = (double)item.Fat,
-                    FiberPer100g = (double)item.Fiber,
-                    ServingSize = (double?)item.ServingSize,
-                    ServingUnit = item.ServingUnit,
-                    IsVerified = true
-                };
-                _context.Foods.Add(food);
-                added++;
-            }
+                TenantId = item.TenantId,
+                Name = item.NameEn,
+                NameAr = item.NameAr,
+                Category = item.Category,
+                CaloriesPer100g = (double)item.Calories,
+                ProteinPer100g = (double)item.Protein,
+                CarbsPer100g = (double)item.Carbs,
+                FatsPer100g = (double)item.Fat,
+                FiberPer100g = (double?)item.Fiber,
+                ServingSize = (double?)item.ServingSize,
+                ServingUnit = item.ServingUnit,
+                IsVerified = true
+            };
+            _context.Foods.Add(food);
         }
 
         await _context.SaveChangesAsync();
-        _logger.LogInformation("Foods: {Added} added, {Updated} updated", added, updated);
+        _logger.LogInformation("Foods: {Count} seeded successfully", seedData.Count);
     }
 
     private async Task SeedUsersAsync()
