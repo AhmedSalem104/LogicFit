@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 
@@ -14,8 +15,13 @@ public class CreateBodyMeasurementCommand : IRequest<Guid>
     public double? TotalBodyWater { get; set; }
     public double? Bmr { get; set; }
     public int? VisceralFatLevel { get; set; }
+
+    [JsonIgnore]
     public IFormFile? InbodyImage { get; set; }
+    [JsonIgnore]
     public IFormFile? FrontPhoto { get; set; }
+    [JsonIgnore]
     public IFormFile? SidePhoto { get; set; }
+    [JsonIgnore]
     public IFormFile? BackPhoto { get; set; }
 }

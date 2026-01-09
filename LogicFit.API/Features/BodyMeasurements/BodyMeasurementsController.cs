@@ -35,9 +35,22 @@ public class BodyMeasurementsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Create body measurement (JSON - without images)
+    /// </summary>
     [HttpPost]
+    public async Task<ActionResult<Guid>> CreateBodyMeasurement([FromBody] CreateBodyMeasurementCommand command)
+    {
+        var id = await _mediator.Send(command);
+        return Ok(id);
+    }
+
+    /// <summary>
+    /// Create body measurement with images (multipart/form-data)
+    /// </summary>
+    [HttpPost("with-images")]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<Guid>> CreateBodyMeasurement([FromForm] CreateBodyMeasurementCommand command)
+    public async Task<ActionResult<Guid>> CreateBodyMeasurementWithImages([FromForm] CreateBodyMeasurementCommand command)
     {
         var id = await _mediator.Send(command);
         return Ok(id);
