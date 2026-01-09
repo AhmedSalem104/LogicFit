@@ -1,236 +1,384 @@
 # LogicFit API Documentation
+# دليل واجهة برمجة التطبيقات (API)
 
-## Complete Backend API Reference
-
-**Base URL:** `https://your-domain.com/api`
-**Authentication:** JWT Bearer Token
-**Content-Type:** `application/json` (unless specified otherwise)
-
----
-
-# Table of Contents
-
-1. [Authentication](#1-authentication)
-2. [Tenants](#2-tenants)
-3. [Users](#3-users)
-4. [Clients](#4-clients)
-5. [Exercises](#5-exercises)
-6. [Muscles](#6-muscles)
-7. [Foods](#7-foods)
-8. [Workout Programs](#8-workout-programs)
-9. [Workout Sessions](#9-workout-sessions)
-10. [Diet Plans](#10-diet-plans)
-11. [Body Measurements](#11-body-measurements)
-12. [Subscriptions](#12-subscriptions)
-13. [Coach Clients](#13-coach-clients)
-14. [Gym Profile](#14-gym-profile)
-15. [Reports](#15-reports)
-16. [Enums Reference](#16-enums-reference)
-17. [Error Handling](#17-error-handling)
+> **Base URL:** `https://your-domain.com/api`
+>
+> **Authentication:** JWT Bearer Token (ما عدا Auth endpoints)
 
 ---
 
-# 1. Authentication
+## فهرس المحتويات
 
-**Base Route:** `/api/auth`
-**Authorization:** Public (No token required)
+1. [Authentication (المصادقة)](#1-authentication-المصادقة)
+2. [Profile (الملف الشخصي)](#2-profile-الملف-الشخصي)
+3. [Tenants (المنشآت)](#3-tenants-المنشآت)
+4. [Gym Profile (ملف الصالة)](#4-gym-profile-ملف-الصالة)
+5. [Users (المستخدمين)](#5-users-المستخدمين)
+6. [Clients (العملاء)](#6-clients-العملاء)
+7. [Coach-Clients (ربط المدرب بالعملاء)](#7-coach-clients-ربط-المدرب-بالعملاء)
+8. [Muscles (العضلات)](#8-muscles-العضلات)
+9. [Exercises (التمارين)](#9-exercises-التمارين)
+10. [Foods (الأطعمة)](#10-foods-الأطعمة)
+11. [Workout Programs (برامج التدريب)](#11-workout-programs-برامج-التدريب)
+12. [Diet Plans (خطط التغذية)](#12-diet-plans-خطط-التغذية)
+13. [Workout Sessions (جلسات التدريب)](#13-workout-sessions-جلسات-التدريب)
+14. [Body Measurements (قياسات الجسم)](#14-body-measurements-قياسات-الجسم)
+15. [Subscriptions (الاشتراكات)](#15-subscriptions-الاشتراكات)
+16. [Reports (التقارير)](#16-reports-التقارير)
 
-## 1.1 Register
+---
 
-Creates a new user account. Used for registering gym owners, coaches, or clients.
+## إعداد الـ Frontend
 
+### Headers المطلوبة
+
+```javascript
+// للـ endpoints المحمية
+const headers = {
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${accessToken}`
+};
+
+// لرفع الملفات
+const fileHeaders = {
+  'Authorization': `Bearer ${accessToken}`
+  // لا تضع Content-Type - سيتم تعيينه تلقائياً
+};
 ```
+
+### مثال على Axios Instance
+
+```javascript
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'https://your-domain.com/api',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Interceptor لإضافة Token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('accessToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Interceptor للتعامل مع الأخطاء
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // إعادة التوجيه لصفحة تسجيل الدخول
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+```
+
+---
+
+## 1. Authentication (المصادقة)
+
+> **ملاحظة:** جميع endpoints المصادقة لا تحتاج Token
+
+### 1.1 تسجيل حساب جديد
+
+```http
 POST /api/auth/register
 ```
 
-### Request Body
-
+**Request Body:**
 ```json
 {
   "email": "user@example.com",
   "phoneNumber": "01012345678",
-  "password": "SecurePass123!",
-  "confirmPassword": "SecurePass123!",
+  "password": "Password123!",
+  "confirmPassword": "Password123!",
   "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "role": 0,
+  "role": 3,
   "fullName": "Ahmed Mohamed"
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| email | string | Yes | Valid email address |
-| phoneNumber | string | No | Phone number (unique per tenant) |
-| password | string | Yes | Min 8 chars, uppercase, lowercase, digit |
-| confirmPassword | string | Yes | Must match password |
-| tenantId | GUID | Yes | The gym/tenant ID |
-| role | integer | Yes | 0=Owner, 1=Coach, 2=Client |
-| fullName | string | Yes | User's full name |
+**Role Values:**
+| Value | Role |
+|-------|------|
+| 1 | Owner (مالك) |
+| 2 | Coach (مدرب) |
+| 3 | Client (عميل) |
 
-### Response (200 OK)
-
+**Response (200):**
 ```json
 {
   "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "email": "user@example.com",
   "phoneNumber": "01012345678",
-  "role": 0,
+  "role": "Client",
   "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
   "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...",
-  "expiresAt": "2024-12-06T18:00:00Z"
+  "expiresAt": "2024-01-15T10:30:00Z"
 }
 ```
 
-### Validation Rules
+**Frontend Example:**
+```javascript
+const register = async (userData) => {
+  try {
+    const response = await api.post('/auth/register', userData);
 
-- Email: Required, valid email format
-- Password: Required, minimum 8 characters, must contain uppercase, lowercase, and digits
-- ConfirmPassword: Must match Password
-- TenantId: Required, non-empty GUID
+    // حفظ الـ tokens
+    localStorage.setItem('accessToken', response.data.accessToken);
+    localStorage.setItem('refreshToken', response.data.refreshToken);
+    localStorage.setItem('user', JSON.stringify(response.data));
+
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+```
 
 ---
 
-## 1.2 Login
+### 1.2 تسجيل الدخول
 
-Authenticates a user and returns JWT tokens.
-
-```
+```http
 POST /api/auth/login
 ```
 
-### Request Body
-
+**Request Body:**
 ```json
 {
   "phoneNumber": "01012345678",
-  "password": "SecurePass123!",
+  "password": "Password123!",
   "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 }
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| phoneNumber | string | Yes | User's phone number |
-| password | string | Yes | User's password |
-| tenantId | GUID | Yes | The gym/tenant ID |
-
-### Response (200 OK)
-
+**Response (200):**
 ```json
 {
   "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "email": "user@example.com",
   "phoneNumber": "01012345678",
-  "role": 0,
+  "role": "Client",
   "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
   "refreshToken": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...",
-  "expiresAt": "2024-12-06T18:00:00Z"
+  "expiresAt": "2024-01-15T10:30:00Z"
 }
 ```
 
-### Role-Based Redirect
+**Frontend Example:**
+```javascript
+const login = async (phoneNumber, password, tenantId) => {
+  try {
+    const response = await api.post('/auth/login', {
+      phoneNumber,
+      password,
+      tenantId
+    });
 
-| Role Value | Role Name | Redirect URL |
-|------------|-----------|--------------|
-| 0 | Owner | `/owner/dashboard` |
-| 1 | Coach | `/coach/dashboard` |
-| 2 | Client | `/client/my-program` |
+    localStorage.setItem('accessToken', response.data.accessToken);
+    localStorage.setItem('refreshToken', response.data.refreshToken);
+    localStorage.setItem('user', JSON.stringify(response.data));
 
-### Error Response (401 Unauthorized)
-
-```json
-{
-  "type": "https://tools.ietf.org/html/rfc7231#section-6.5.1",
-  "title": "Unauthorized",
-  "status": 401,
-  "detail": "Invalid phone number or password"
-}
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 401) {
+      throw new Error('رقم الهاتف أو كلمة المرور غير صحيحة');
+    }
+    throw error;
+  }
+};
 ```
 
 ---
 
-## 1.3 Forget Password
+### 1.3 نسيت كلمة المرور
 
-Requests a password reset token.
-
-```
+```http
 POST /api/auth/forget-password
 ```
 
-### Request Body
-
+**Request Body:**
 ```json
 {
-  "phoneNumber": "01012345678",
+  "email": "user@example.com",
   "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-}
-```
-
-### Response (200 OK)
-
-```json
-{
-  "success": true,
-  "message": "Password reset token generated",
-  "resetToken": "abc123xyz789"
 }
 ```
 
 ---
 
-## 1.4 Reset Password
+### 1.4 إعادة تعيين كلمة المرور
 
-Resets the password using a reset token.
-
-```
+```http
 POST /api/auth/reset-password
 ```
 
-### Request Body
-
+**Request Body:**
 ```json
 {
-  "phoneNumber": "01012345678",
-  "resetToken": "abc123xyz789",
-  "newPassword": "NewSecurePass123!",
-  "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-}
-```
-
-### Response (200 OK)
-
-```json
-{
-  "success": true,
-  "message": "Password reset successfully"
+  "email": "user@example.com",
+  "token": "reset-token-from-email",
+  "newPassword": "NewPassword123!",
+  "confirmPassword": "NewPassword123!"
 }
 ```
 
 ---
 
-# 2. Tenants
+## 2. Profile (الملف الشخصي)
 
-**Base Route:** `/api/tenants`
-**Authorization:** Required (JWT Bearer Token)
+> **Authorization:** مطلوب
 
-## 2.1 Get All Tenants
+### 2.1 الحصول على الملف الشخصي
 
-Returns a list of all gyms/tenants.
-
+```http
+GET /api/profile
 ```
+
+**Response (200):**
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "email": "user@example.com",
+  "phoneNumber": "01012345678",
+  "role": 3,
+  "isActive": true,
+  "walletBalance": 0.00,
+  "profile": {
+    "fullName": "Ahmed Mohamed",
+    "profilePictureUrl": "https://storage.com/images/profile.jpg",
+    "gender": 1,
+    "birthDate": "1995-05-15",
+    "heightCm": 175.5,
+    "weightKg": 80.0,
+    "activityLevel": "Moderate",
+    "fitnessGoal": "Build Muscle",
+    "medicalHistory": null
+  }
+}
+```
+
+**Frontend Example:**
+```javascript
+const getProfile = async () => {
+  const response = await api.get('/profile');
+  return response.data;
+};
+
+// في React Component
+const ProfilePage = () => {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getProfile()
+      .then(setProfile)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div>
+      <h1>{profile.profile?.fullName}</h1>
+      <img src={profile.profile?.profilePictureUrl} alt="Profile" />
+    </div>
+  );
+};
+```
+
+---
+
+### 2.2 تحديث الملف الشخصي
+
+```http
+PUT /api/profile
+```
+
+**Request Body:**
+```json
+{
+  "fullName": "Ahmed Mohamed Ali",
+  "gender": 1,
+  "birthDate": "1995-05-15",
+  "heightCm": 175.5,
+  "weightKg": 78.0,
+  "activityLevel": "Active",
+  "fitnessGoal": "Lose Weight",
+  "medicalHistory": "لا يوجد"
+}
+```
+
+**Gender Values:**
+| Value | Gender |
+|-------|--------|
+| 1 | Male (ذكر) |
+| 2 | Female (أنثى) |
+
+**Response:** `204 No Content`
+
+---
+
+### 2.3 رفع صورة الملف الشخصي
+
+```http
+POST /api/profile/picture
+Content-Type: multipart/form-data
+```
+
+**Frontend Example:**
+```javascript
+const uploadProfilePicture = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await api.post('/profile/picture', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+
+  return response.data.url;
+};
+```
+
+---
+
+### 2.4 حذف صورة الملف الشخصي
+
+```http
+DELETE /api/profile/picture
+```
+
+---
+
+## 3. Tenants (المنشآت)
+
+### 3.1 الحصول على قائمة المنشآت
+
+```http
 GET /api/tenants
 ```
 
-### Response (200 OK)
-
+**Response (200):**
 ```json
 [
   {
     "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "name": "FitZone Gym",
-    "subdomain": "fitzone-gym",
+    "name": "Fitness Club",
+    "subdomain": "fitness-club",
     "status": 1,
     "createdAt": "2024-01-01T00:00:00Z"
   }
@@ -239,1599 +387,49 @@ GET /api/tenants
 
 ---
 
-## 2.2 Create Tenant
+### 3.2 إنشاء منشأة جديدة
 
-Creates a new gym/tenant.
-
-```
+```http
 POST /api/tenants
 ```
 
-### Request Body
-
+**Request Body:**
 ```json
 {
-  "name": "FitZone Gym",
-  "subdomain": "fitzone-gym",
-  "logoUrl": "https://example.com/logo.png",
-  "primaryColor": "#FF5722",
-  "secondaryColor": "#2196F3"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| name | string | Yes | Gym name |
-| subdomain | string | Yes | Unique subdomain identifier |
-| logoUrl | string | No | Logo image URL |
-| primaryColor | string | No | Primary brand color (hex) |
-| secondaryColor | string | No | Secondary brand color (hex) |
-
-### Response (201 Created)
-
-```json
-{
-  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "name": "FitZone Gym",
-  "subdomain": "fitzone-gym",
-  "status": 1,
-  "createdAt": "2024-12-06T12:00:00Z"
+  "name": "New Gym",
+  "subdomain": "new-gym"
 }
 ```
 
 ---
 
-# 3. Users
+## 4. Gym Profile (ملف الصالة)
 
-**Base Route:** `/api/users`
-**Authorization:** Required (JWT Bearer Token)
+> **Authorization:** مطلوب (Owner فقط)
 
-## 3.1 Get All Users
+### 4.1 الحصول على ملف الصالة
 
-Returns a list of users with optional filters.
-
-```
-GET /api/users
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| role | integer | No | Filter by role (0=Owner, 1=Coach, 2=Client) |
-| isActive | boolean | No | Filter by active status |
-| searchTerm | string | No | Search by name or phone |
-
-### Example Request
-
-```
-GET /api/users?role=1&isActive=true&searchTerm=ahmed
-```
-
-### Response (200 OK)
-
-```json
-[
-  {
-    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "email": "coach@fitzone.com",
-    "phoneNumber": "01012345678",
-    "role": 1,
-    "isActive": true,
-    "walletBalance": 0.00,
-    "profile": {
-      "fullName": "Ahmed Coach",
-      "gender": 1,
-      "birthDate": "1990-01-15T00:00:00Z",
-      "heightCm": 180.0,
-      "activityLevel": "Active",
-      "medicalHistory": null
-    }
-  }
-]
-```
-
----
-
-## 3.2 Get User by ID
-
-Returns a specific user by ID.
-
-```
-GET /api/users/{id}
-```
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| id | GUID | Yes | User ID |
-
-### Response (200 OK)
-
-Same structure as Get All Users (single object)
-
-### Response (404 Not Found)
-
-```json
-{
-  "type": "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-  "title": "Not Found",
-  "status": 404,
-  "detail": "User not found"
-}
-```
-
----
-
-## 3.3 Update User
-
-Updates a user's basic information.
-
-```
-PUT /api/users/{id}
-```
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| id | GUID | Yes | User ID |
-
-### Request Body
-
-```json
-{
-  "phoneNumber": "01098765432",
-  "isActive": true
-}
-```
-
-### Response (204 No Content)
-
-No response body
-
----
-
-## 3.4 Update User Profile
-
-Updates a user's profile information.
-
-```
-PUT /api/users/{id}/profile
-```
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| id | GUID | Yes | User ID |
-
-### Request Body
-
-```json
-{
-  "fullName": "Ahmed Mohamed",
-  "gender": 1,
-  "birthDate": "1990-01-15",
-  "heightCm": 180.0,
-  "activityLevel": "Active",
-  "medicalHistory": "No known allergies"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| fullName | string | No | User's full name |
-| gender | integer | No | 1=Male, 2=Female |
-| birthDate | date | No | Date of birth |
-| heightCm | double | No | Height in centimeters |
-| activityLevel | string | No | Activity level description |
-| medicalHistory | string | No | Medical history notes |
-
-### Response (204 No Content)
-
-No response body
-
----
-
-# 4. Clients
-
-**Base Route:** `/api/clients`
-**Authorization:** Required (JWT Bearer Token)
-
-## 4.1 Get All Clients
-
-Returns a list of clients with optional filters.
-
-```
-GET /api/clients
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| searchTerm | string | No | Search by name or phone |
-| isActive | boolean | No | Filter by active status |
-
-### Response (200 OK)
-
-```json
-[
-  {
-    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "email": "client@email.com",
-    "phoneNumber": "01055555555",
-    "isActive": true,
-    "walletBalance": 150.00,
-    "profile": {
-      "fullName": "Mohamed Client",
-      "gender": 1,
-      "birthDate": "1995-05-20T00:00:00Z",
-      "heightCm": 175.0,
-      "activityLevel": "Moderate",
-      "medicalHistory": null
-    },
-    "activeSubscription": {
-      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "planName": "Monthly",
-      "startDate": "2024-12-01T00:00:00Z",
-      "endDate": "2025-01-01T00:00:00Z",
-      "status": "Active"
-    }
-  }
-]
-```
-
----
-
-## 4.2 Get Client by ID
-
-```
-GET /api/clients/{id}
-```
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| id | GUID | Yes | Client ID |
-
-### Response (200 OK)
-
-Same structure as Get All Clients (single object)
-
----
-
-## 4.3 Create Client
-
-Creates a new client account.
-
-```
-POST /api/clients
-```
-
-### Request Body
-
-```json
-{
-  "phoneNumber": "01055555555",
-  "email": "client@email.com",
-  "password": "ClientPass123",
-  "fullName": "Mohamed Client",
-  "gender": 1,
-  "birthDate": "1995-05-20",
-  "heightCm": 175.0,
-  "activityLevel": "Moderate",
-  "medicalHistory": "No allergies"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| phoneNumber | string | Yes | Unique phone number (per tenant) |
-| email | string | No | Email address |
-| password | string | Yes | Min 6 characters |
-| fullName | string | No | Client's full name |
-| gender | integer | No | 1=Male, 2=Female |
-| birthDate | date | No | Date of birth |
-| heightCm | double | No | Height in centimeters |
-| activityLevel | string | No | Activity level |
-| medicalHistory | string | No | Medical notes |
-
-### Response (200 OK)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-## 4.4 Update Client
-
-```
-PUT /api/clients/{id}
-```
-
-### Request Body
-
-```json
-{
-  "email": "newemail@email.com",
-  "phoneNumber": "01055555555",
-  "isActive": true,
-  "fullName": "Mohamed Ahmed",
-  "gender": 1,
-  "birthDate": "1995-05-20",
-  "heightCm": 176.0,
-  "activityLevel": "Active",
-  "medicalHistory": "Updated notes"
-}
-```
-
-### Response (204 No Content)
-
----
-
-## 4.5 Delete Client
-
-Soft deletes a client.
-
-```
-DELETE /api/clients/{id}
-```
-
-### Response (204 No Content)
-
----
-
-# 5. Exercises
-
-**Base Route:** `/api/exercises`
-**Authorization:** Required (JWT Bearer Token)
-
-## 5.1 Get All Exercises
-
-```
-GET /api/exercises
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| targetMuscleId | integer | No | Filter by target muscle |
-| equipment | string | No | Filter by equipment type |
-| isHighImpact | boolean | No | Filter by impact level |
-
-### Response (200 OK)
-
-```json
-[
-  {
-    "id": 1,
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "name": "Bench Press",
-    "targetMuscleId": 1,
-    "targetMuscleName": "Chest",
-    "imageUrl": "/uploads/images/2024/12/exercises/bench-press.jpg",
-    "videoUrl": "/uploads/videos/2024/12/exercises/bench-press.mp4",
-    "equipment": "Barbell",
-    "isHighImpact": false
-  }
-]
-```
-
----
-
-## 5.2 Get Exercise by ID
-
-```
-GET /api/exercises/{id}
-```
-
-### Response (200 OK)
-
-Single exercise object
-
----
-
-## 5.3 Create Exercise
-
-```
-POST /api/exercises
-```
-
-**Content-Type:** `multipart/form-data`
-
-### Form Data
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| name | string | Yes | Exercise name |
-| targetMuscleId | integer | Yes | Target muscle ID |
-| image | file | No | Exercise image (JPG, PNG, GIF, WebP - max 10MB) |
-| video | file | No | Exercise video (MP4, AVI, MOV - max 100MB) |
-| equipment | string | No | Equipment needed |
-| isHighImpact | boolean | No | High impact exercise flag |
-
-### Response (201 Created)
-
-```json
-1
-```
-
----
-
-## 5.4 Update Exercise
-
-```
-PUT /api/exercises/{id}
-```
-
-**Content-Type:** `multipart/form-data`
-
-Same form data as Create Exercise
-
-### Response (204 No Content)
-
----
-
-## 5.5 Delete Exercise
-
-```
-DELETE /api/exercises/{id}
-```
-
-### Response (204 No Content)
-
----
-
-# 6. Muscles
-
-**Base Route:** `/api/muscles`
-**Authorization:** Required (JWT Bearer Token)
-
-## 6.1 Get All Muscles
-
-```
-GET /api/muscles
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| bodyPart | string | No | Filter by body part |
-
-### Response (200 OK)
-
-```json
-[
-  {
-    "id": 1,
-    "name": "Chest",
-    "bodyPart": "Upper Body"
-  },
-  {
-    "id": 2,
-    "name": "Back",
-    "bodyPart": "Upper Body"
-  },
-  {
-    "id": 3,
-    "name": "Quadriceps",
-    "bodyPart": "Lower Body"
-  }
-]
-```
-
----
-
-## 6.2 Get Muscle by ID
-
-```
-GET /api/muscles/{id}
-```
-
-### Response (200 OK)
-
-Single muscle object
-
----
-
-# 7. Foods
-
-**Base Route:** `/api/foods`
-**Authorization:** Required (JWT Bearer Token)
-
-## 7.1 Get All Foods
-
-```
-GET /api/foods
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| category | string | No | Filter by category |
-| searchTerm | string | No | Search by name |
-| isVerified | boolean | No | Filter by verification status |
-
-### Response (200 OK)
-
-```json
-[
-  {
-    "id": 1,
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "name": "Grilled Chicken Breast",
-    "category": "Protein",
-    "caloriesPer100g": 165.0,
-    "proteinPer100g": 31.0,
-    "carbsPer100g": 0.0,
-    "fatsPer100g": 3.6,
-    "fiberPer100g": 0.0,
-    "alternativeGroupId": "poultry",
-    "isVerified": true
-  }
-]
-```
-
----
-
-## 7.2 Get Food by ID
-
-```
-GET /api/foods/{id}
-```
-
----
-
-## 7.3 Create Food
-
-```
-POST /api/foods
-```
-
-### Request Body
-
-```json
-{
-  "name": "Grilled Chicken Breast",
-  "category": "Protein",
-  "caloriesPer100g": 165.0,
-  "proteinPer100g": 31.0,
-  "carbsPer100g": 0.0,
-  "fatsPer100g": 3.6,
-  "fiberPer100g": 0.0,
-  "alternativeGroupId": "poultry"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| name | string | Yes | Food name |
-| category | string | No | Food category |
-| caloriesPer100g | double | Yes | Calories per 100g |
-| proteinPer100g | double | Yes | Protein per 100g |
-| carbsPer100g | double | Yes | Carbs per 100g |
-| fatsPer100g | double | Yes | Fats per 100g |
-| fiberPer100g | double | No | Fiber per 100g |
-| alternativeGroupId | string | No | Group ID for alternatives |
-
-### Response (201 Created)
-
-```json
-1
-```
-
----
-
-## 7.4 Update Food
-
-```
-PUT /api/foods/{id}
-```
-
-Same body as Create Food
-
-### Response (204 No Content)
-
----
-
-## 7.5 Delete Food
-
-```
-DELETE /api/foods/{id}
-```
-
-### Response (204 No Content)
-
----
-
-# 8. Workout Programs
-
-**Base Route:** `/api/workoutprograms`
-**Authorization:** Required (JWT Bearer Token)
-
-## 8.1 Get All Workout Programs
-
-```
-GET /api/workoutprograms
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| coachId | GUID | No | Filter by coach |
-| clientId | GUID | No | Filter by client |
-
-### Example: Get Client's Programs
-
-```
-GET /api/workoutprograms?clientId=3fa85f64-5717-4562-b3fc-2c963f66afa6
-```
-
-### Response (200 OK)
-
-```json
-[
-  {
-    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "coachId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "coachName": "Ahmed Coach",
-    "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "clientName": "Mohamed Client",
-    "name": "Muscle Building Program",
-    "startDate": "2024-12-01T00:00:00Z",
-    "endDate": "2025-03-01T00:00:00Z",
-    "routines": [
-      {
-        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "programId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "name": "Day 1 - Chest & Triceps",
-        "dayOfWeek": 1,
-        "exercises": [
-          {
-            "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-            "routineId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-            "exerciseId": 1,
-            "exerciseName": "Bench Press",
-            "sets": 4,
-            "repsMin": 8,
-            "repsMax": 12,
-            "restSec": 90,
-            "supersetGroupId": null
-          }
-        ]
-      }
-    ]
-  }
-]
-```
-
----
-
-## 8.2 Get Workout Program by ID
-
-```
-GET /api/workoutprograms/{id}
-```
-
-### Response (200 OK)
-
-Single program with full routines and exercises
-
----
-
-## 8.3 Create Workout Program
-
-```
-POST /api/workoutprograms
-```
-
-### Request Body
-
-```json
-{
-  "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "name": "Muscle Building Program",
-  "startDate": "2024-12-01",
-  "endDate": "2025-03-01"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| clientId | GUID | Yes | Target client ID |
-| name | string | Yes | Program name |
-| startDate | date | Yes | Program start date |
-| endDate | date | No | Program end date |
-
-### Response (201 Created)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-## 8.4 Add Routine to Program
-
-```
-POST /api/workoutprograms/{programId}/routines
-```
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| programId | GUID | Yes | Program ID |
-
-### Request Body
-
-```json
-{
-  "name": "Day 1 - Chest & Triceps",
-  "dayOfWeek": 1
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| name | string | Yes | Routine name |
-| dayOfWeek | integer | Yes | Day of week (1-7) |
-
-### Response (200 OK)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-## 8.5 Add Exercise to Routine
-
-```
-POST /api/workoutprograms/routines/{routineId}/exercises
-```
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| routineId | GUID | Yes | Routine ID |
-
-### Request Body
-
-```json
-{
-  "exerciseId": 1,
-  "sets": 4,
-  "repsMin": 8,
-  "repsMax": 12,
-  "restSec": 90,
-  "supersetGroupId": null
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| exerciseId | integer | Yes | Exercise ID |
-| sets | integer | Yes | Number of sets |
-| repsMin | integer | Yes | Minimum reps |
-| repsMax | integer | Yes | Maximum reps |
-| restSec | integer | Yes | Rest time in seconds |
-| supersetGroupId | GUID | No | Superset group ID |
-
-### Response (200 OK)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-## 8.6 Delete Workout Program
-
-```
-DELETE /api/workoutprograms/{id}
-```
-
-### Response (204 No Content)
-
----
-
-# 9. Workout Sessions
-
-**Base Route:** `/api/workoutsessions`
-**Authorization:** Required (JWT Bearer Token)
-
-## 9.1 Get All Workout Sessions
-
-```
-GET /api/workoutsessions
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| clientId | GUID | No | Filter by client |
-| fromDate | datetime | No | Filter from date |
-| toDate | datetime | No | Filter to date |
-
-### Example
-
-```
-GET /api/workoutsessions?clientId=xxx&fromDate=2024-01-01&toDate=2024-12-31
-```
-
-### Response (200 OK)
-
-```json
-[
-  {
-    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "clientName": "Mohamed Client",
-    "routineId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "routineName": "Day 1 - Chest & Triceps",
-    "startTime": "2024-12-06T10:00:00Z",
-    "endTime": "2024-12-06T11:30:00Z",
-    "notes": "Great workout!",
-    "sets": [
-      {
-        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "sessionId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "exerciseId": 1,
-        "exerciseName": "Bench Press",
-        "setNumber": 1,
-        "weight": 80.0,
-        "reps": 10,
-        "rpe": 8,
-        "volumeLoad": 800.0,
-        "isPR": false
-      }
-    ]
-  }
-]
-```
-
----
-
-## 9.2 Get Workout Session by ID
-
-```
-GET /api/workoutsessions/{id}
-```
-
-### Response (200 OK)
-
-Single session with all sets
-
----
-
-## 9.3 Start Workout Session
-
-Starts a new workout session for a routine.
-
-```
-POST /api/workoutsessions/start
-```
-
-### Request Body
-
-```json
-{
-  "routineId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| routineId | GUID | Yes | The routine to start |
-
-### Response (201 Created)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-## 9.4 End Workout Session
-
-Ends an active workout session.
-
-```
-POST /api/workoutsessions/{sessionId}/end
-```
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| sessionId | GUID | Yes | Session ID |
-
-### Request Body
-
-```json
-{
-  "notes": "Great workout, felt strong today!"
-}
-```
-
-### Response (204 No Content)
-
----
-
-## 9.5 Log Set
-
-Records a set during a workout session.
-
-```
-POST /api/workoutsessions/{sessionId}/sets
-```
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| sessionId | GUID | Yes | Session ID |
-
-### Request Body
-
-```json
-{
-  "exerciseId": 1,
-  "setNumber": 1,
-  "weight": 80.0,
-  "reps": 10,
-  "rpe": 8
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| exerciseId | integer | Yes | Exercise ID |
-| setNumber | integer | Yes | Set number (1, 2, 3...) |
-| weight | double | Yes | Weight lifted (kg) |
-| reps | integer | Yes | Repetitions completed |
-| rpe | integer | No | Rate of Perceived Exertion (1-10) |
-
-### Response (200 OK)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-# 10. Diet Plans
-
-**Base Route:** `/api/dietplans`
-**Authorization:** Required (JWT Bearer Token)
-
-## 10.1 Get All Diet Plans
-
-```
-GET /api/dietplans
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| coachId | GUID | No | Filter by coach |
-| clientId | GUID | No | Filter by client |
-| status | integer | No | 0=Active, 1=Archived, 2=Draft |
-
-### Example: Get Client's Active Diet Plan
-
-```
-GET /api/dietplans?clientId=xxx&status=0
-```
-
-### Response (200 OK)
-
-```json
-[
-  {
-    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "coachId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "coachName": "Ahmed Coach",
-    "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "clientName": "Mohamed Client",
-    "name": "Weight Loss Plan",
-    "startDate": "2024-12-01T00:00:00Z",
-    "endDate": "2025-03-01T00:00:00Z",
-    "status": 0,
-    "targetCalories": 2000.0,
-    "targetProtein": 150.0,
-    "targetCarbs": 200.0,
-    "targetFats": 67.0,
-    "meals": [
-      {
-        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "planId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        "name": "Breakfast",
-        "orderIndex": 1,
-        "items": [
-          {
-            "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-            "mealId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-            "foodId": 1,
-            "foodName": "Eggs",
-            "assignedQuantity": 200.0,
-            "calcCalories": 310.0,
-            "calcProtein": 26.0,
-            "calcCarbs": 2.0,
-            "calcFats": 22.0
-          }
-        ]
-      }
-    ]
-  }
-]
-```
-
----
-
-## 10.2 Get Diet Plan by ID
-
-```
-GET /api/dietplans/{id}
-```
-
-### Response (200 OK)
-
-Single plan with full meals and items
-
----
-
-## 10.3 Create Diet Plan
-
-```
-POST /api/dietplans
-```
-
-### Request Body
-
-```json
-{
-  "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "name": "Weight Loss Plan",
-  "startDate": "2024-12-01",
-  "endDate": "2025-03-01",
-  "targetCalories": 2000.0,
-  "targetProtein": 150.0,
-  "targetCarbs": 200.0,
-  "targetFats": 67.0
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| clientId | GUID | Yes | Target client ID |
-| name | string | Yes | Plan name |
-| startDate | date | Yes | Plan start date |
-| endDate | date | No | Plan end date |
-| targetCalories | double | No | Daily calorie target |
-| targetProtein | double | No | Daily protein target (g) |
-| targetCarbs | double | No | Daily carbs target (g) |
-| targetFats | double | No | Daily fats target (g) |
-
-### Response (201 Created)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-## 10.4 Add Meal to Diet Plan
-
-```
-POST /api/dietplans/{planId}/meals
-```
-
-### Request Body
-
-```json
-{
-  "name": "Breakfast",
-  "orderIndex": 1
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| name | string | Yes | Meal name |
-| orderIndex | integer | Yes | Display order |
-
-### Response (200 OK)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-## 10.5 Add Food Item to Meal
-
-```
-POST /api/dietplans/meals/{mealId}/items
-```
-
-### Request Body
-
-```json
-{
-  "foodId": 1,
-  "assignedQuantity": 200.0
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| foodId | integer | Yes | Food ID |
-| assignedQuantity | double | Yes | Quantity in grams |
-
-### Response (200 OK)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
-**Note:** Calories, protein, carbs, and fats are calculated automatically based on food's per-100g values.
-
----
-
-## 10.6 Delete Diet Plan
-
-```
-DELETE /api/dietplans/{id}
-```
-
-### Response (204 No Content)
-
----
-
-# 11. Body Measurements
-
-**Base Route:** `/api/bodymeasurements`
-**Authorization:** Required (JWT Bearer Token)
-
-## 11.1 Get All Body Measurements
-
-```
-GET /api/bodymeasurements
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| clientId | GUID | No | Filter by client |
-| fromDate | datetime | No | Filter from date |
-| toDate | datetime | No | Filter to date |
-
-### Response (200 OK)
-
-```json
-[
-  {
-    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "dateRecorded": "2024-12-06T00:00:00Z",
-    "weightKg": 85.5,
-    "skeletalMuscleMass": 38.2,
-    "bodyFatMass": 15.3,
-    "bodyFatPercent": 17.9,
-    "totalBodyWater": 55.2,
-    "bmr": 1850,
-    "visceralFatLevel": 8,
-    "inbodyImageUrl": "/uploads/images/2024/12/measurements/inbody.jpg",
-    "frontPhotoUrl": "/uploads/images/2024/12/measurements/front.jpg",
-    "sidePhotoUrl": "/uploads/images/2024/12/measurements/side.jpg",
-    "backPhotoUrl": "/uploads/images/2024/12/measurements/back.jpg"
-  }
-]
-```
-
----
-
-## 11.2 Create Body Measurement
-
-```
-POST /api/bodymeasurements
-```
-
-**Content-Type:** `multipart/form-data`
-
-### Form Data
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| clientId | GUID | Yes | Client ID |
-| dateRecorded | date | Yes | Measurement date |
-| weightKg | double | Yes | Weight in kg |
-| skeletalMuscleMass | double | No | Skeletal muscle mass (kg) |
-| bodyFatMass | double | No | Body fat mass (kg) |
-| bodyFatPercent | double | No | Body fat percentage |
-| totalBodyWater | double | No | Total body water (%) |
-| bmr | integer | No | Basal Metabolic Rate |
-| visceralFatLevel | integer | No | Visceral fat level |
-| inbodyImage | file | No | InBody result image |
-| frontPhoto | file | No | Front progress photo |
-| sidePhoto | file | No | Side progress photo |
-| backPhoto | file | No | Back progress photo |
-
-### Response (200 OK)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-## 11.3 Delete Body Measurement
-
-```
-DELETE /api/bodymeasurements/{id}
-```
-
-### Response (204 No Content)
-
----
-
-# 12. Subscriptions
-
-**Base Route:** `/api/subscriptions`
-**Authorization:** Required (JWT Bearer Token)
-
-## 12.1 Get Subscription Plans
-
-```
-GET /api/subscriptions/plans
-```
-
-### Response (200 OK)
-
-```json
-[
-  {
-    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "name": "Monthly",
-    "price": 500.00,
-    "durationMonths": 1
-  },
-  {
-    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "name": "Quarterly",
-    "price": 1200.00,
-    "durationMonths": 3
-  }
-]
-```
-
----
-
-## 12.2 Create Subscription Plan
-
-```
-POST /api/subscriptions/plans
-```
-
-### Request Body
-
-```json
-{
-  "name": "Monthly",
-  "price": 500.00,
-  "durationMonths": 1
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| name | string | Yes | Plan name |
-| price | decimal | Yes | Plan price |
-| durationMonths | integer | Yes | Duration in months |
-
-### Response (200 OK)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-## 12.3 Get Client Subscriptions
-
-```
-GET /api/subscriptions
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| clientId | GUID | No | Filter by client |
-| status | integer | No | Filter by status |
-
-### Status Values
-
-| Value | Status |
-|-------|--------|
-| 0 | Active |
-| 1 | Suspended |
-| 2 | Trial |
-| 3 | Expired |
-| 4 | Cancelled |
-
-### Response (200 OK)
-
-```json
-[
-  {
-    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "clientName": "Mohamed Client",
-    "planId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "planName": "Monthly",
-    "startDate": "2024-12-01T00:00:00Z",
-    "endDate": "2025-01-01T00:00:00Z",
-    "status": 0,
-    "salesCoachId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "salesCoachName": "Ahmed Coach",
-    "freezes": []
-  }
-]
-```
-
----
-
-## 12.4 Create Client Subscription
-
-```
-POST /api/subscriptions
-```
-
-### Request Body
-
-```json
-{
-  "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "planId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "startDate": "2024-12-01"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| clientId | GUID | Yes | Client ID |
-| planId | GUID | Yes | Subscription plan ID |
-| startDate | date | Yes | Subscription start date |
-
-**Note:** End date is calculated automatically based on plan duration.
-
-### Response (200 OK)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-## 12.5 Freeze Subscription
-
-```
-POST /api/subscriptions/{subscriptionId}/freeze
-```
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| subscriptionId | GUID | Yes | Subscription ID |
-
-### Request Body
-
-```json
-{
-  "startDate": "2024-12-15",
-  "endDate": "2024-12-22",
-  "reason": "Travel"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| startDate | date | Yes | Freeze start date |
-| endDate | date | Yes | Freeze end date |
-| reason | string | No | Reason for freezing |
-
-### Response (200 OK)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-## 12.6 Cancel Subscription
-
-```
-POST /api/subscriptions/{subscriptionId}/cancel
-```
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| subscriptionId | GUID | Yes | Subscription ID |
-
-### Response (204 No Content)
-
----
-
-# 13. Coach Clients
-
-**Base Route:** `/api/coach-clients`
-**Authorization:** Required (JWT Bearer Token)
-
-## 13.1 Get Coach Clients
-
-Returns trainees assigned to a coach.
-
-```
-GET /api/coach-clients
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| coachId | GUID | No | Filter by coach (Owner only) |
-| isActive | boolean | No | Filter by active status (default: true) |
-
-### Authorization Notes
-
-- **Owner:** Can view any coach's trainees using coachId filter
-- **Coach:** Sees only their own trainees
-
-### Response (200 OK)
-
-```json
-[
-  {
-    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "coachId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "coachName": "Ahmed Coach",
-    "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "clientName": "Mohamed Client",
-    "clientPhone": "01055555555",
-    "clientEmail": "client@email.com",
-    "assignedAt": "2024-12-01T00:00:00Z",
-    "unassignedAt": null,
-    "isActive": true,
-    "notes": "Focus on weight loss",
-    "hasActiveSubscription": true,
-    "subscriptionEndDate": "2025-01-01T00:00:00Z",
-    "workoutProgramsCount": 2,
-    "dietPlansCount": 1,
-    "workoutSessionsCount": 15,
-    "lastSessionDate": "2024-12-05T10:00:00Z"
-  }
-]
-```
-
----
-
-## 13.2 Assign Client to Coach
-
-```
-POST /api/coach-clients
-```
-
-### Request Body
-
-```json
-{
-  "coachId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "notes": "Focus on weight loss"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| coachId | GUID | No | Coach ID (null = assign to self) |
-| clientId | GUID | Yes | Client to assign |
-| notes | string | No | Assignment notes |
-
-### Authorization Notes
-
-- **Owner:** Can assign to any coach
-- **Coach:** Can only assign to self (leave coachId null)
-
-### Response (200 OK)
-
-```json
-"3fa85f64-5717-4562-b3fc-2c963f66afa6"
-```
-
----
-
-## 13.3 Unassign Client from Coach
-
-```
-DELETE /api/coach-clients/{clientId}
-```
-
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| clientId | GUID | Yes | Client ID to unassign |
-
-### Authorization Notes
-
-- **Owner:** Can unassign any client
-- **Coach:** Can only unassign their own clients
-
-### Response (204 No Content)
-
----
-
-# 14. Gym Profile
-
-**Base Route:** `/api/gymprofile`
-**Authorization:** Required (JWT Bearer Token)
-
-## 14.1 Get Gym Profile
-
-```
+```http
 GET /api/gymprofile
 ```
 
-### Response (200 OK)
-
+**Response (200):**
 ```json
 {
   "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "name": "FitZone Gym",
-  "subdomain": "fitzone-gym",
-  "description": "Best gym in the city",
-  "address": "123 Main Street, Cairo",
+  "name": "Fitness Club",
+  "subdomain": "fitness-club",
+  "description": "أفضل صالة رياضية في المدينة",
+  "address": "123 شارع الرياضة",
   "phoneNumber": "01012345678",
-  "email": "info@fitzone.com",
-  "logoUrl": "/uploads/images/2024/12/gym-logos/logo.png",
-  "coverImageUrl": "/uploads/images/2024/12/gym-covers/cover.jpg",
-  "galleryImages": [
-    "/uploads/images/2024/12/gym-gallery/img1.jpg",
-    "/uploads/images/2024/12/gym-gallery/img2.jpg"
-  ],
+  "email": "info@fitnessclub.com",
+  "logoUrl": "https://storage.com/logo.png",
+  "coverImageUrl": "https://storage.com/cover.jpg",
+  "galleryImages": ["https://storage.com/gallery1.jpg"],
   "status": "Active",
   "brandingSettings": {
-    "primaryColor": "#FF5722",
-    "secondaryColor": "#2196F3",
-    "logoUrl": "/uploads/images/2024/12/gym-logos/logo.png"
+    "primaryColor": "#FF5733",
+    "secondaryColor": "#333333"
   },
   "statistics": {
     "totalClients": 150,
@@ -1845,130 +443,1026 @@ GET /api/gymprofile
 
 ---
 
-## 14.2 Update Gym Profile
+### 4.2 تحديث ملف الصالة
 
-```
+```http
 PUT /api/gymprofile
 ```
 
-### Request Body
-
-```json
-{
-  "name": "FitZone Gym",
-  "description": "Best gym in the city",
-  "address": "123 Main Street, Cairo",
-  "phoneNumber": "01012345678",
-  "email": "info@fitzone.com",
-  "primaryColor": "#FF5722",
-  "secondaryColor": "#2196F3"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| name | string | No | Gym name |
-| description | string | No | Gym description |
-| address | string | No | Physical address |
-| phoneNumber | string | No | Contact phone |
-| email | string | No | Contact email |
-| primaryColor | string | No | Primary brand color (hex) |
-| secondaryColor | string | No | Secondary brand color (hex) |
-
-### Response (204 No Content)
-
 ---
 
-## 14.3 Upload Logo
+### 4.3 رفع شعار الصالة
 
-```
+```http
 POST /api/gymprofile/logo
-```
-
-**Content-Type:** `multipart/form-data`
-
-### Form Data
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| file | file | Yes | Logo image file |
-
-### Response (200 OK)
-
-```json
-{
-  "url": "/uploads/images/2024/12/gym-logos/logo.png"
-}
+Content-Type: multipart/form-data
 ```
 
 ---
 
-## 14.4 Upload Cover Image
+### 4.4 رفع صورة الغلاف
 
-```
+```http
 POST /api/gymprofile/cover
+Content-Type: multipart/form-data
 ```
 
-**Content-Type:** `multipart/form-data`
+---
 
-### Form Data
+### 4.5 رفع صور المعرض
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| file | file | Yes | Cover image file |
+```http
+POST /api/gymprofile/gallery
+Content-Type: multipart/form-data
+```
 
-### Response (200 OK)
+---
 
+## 5. Users (المستخدمين)
+
+> **Authorization:** مطلوب (Owner فقط)
+
+### 5.1 الحصول على قائمة المستخدمين
+
+```http
+GET /api/users?role=2&isActive=true&searchTerm=ahmed
+```
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| role | int | 1=Owner, 2=Coach, 3=Client |
+| isActive | bool | فلترة حسب الحالة |
+| searchTerm | string | بحث بالاسم أو الهاتف |
+
+---
+
+### 5.2 الحصول على مستخدم بالـ ID
+
+```http
+GET /api/users/{id}
+```
+
+---
+
+### 5.3 تحديث مستخدم
+
+```http
+PUT /api/users/{id}
+```
+
+---
+
+### 5.4 تحديث ملف مستخدم
+
+```http
+PUT /api/users/{id}/profile
+```
+
+---
+
+## 6. Clients (العملاء)
+
+> **Authorization:** مطلوب
+
+### 6.1 الحصول على قائمة العملاء
+
+```http
+GET /api/clients?searchTerm=ahmed&isActive=true
+```
+
+**Response (200):**
+```json
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "tenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "email": "client@example.com",
+    "phoneNumber": "01012345678",
+    "isActive": true,
+    "walletBalance": 500.00,
+    "profile": {
+      "fullName": "Ahmed Client",
+      "gender": 1,
+      "birthDate": "1995-05-15",
+      "heightCm": 175,
+      "activityLevel": "Moderate",
+      "medicalHistory": null
+    },
+    "activeSubscription": {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "planName": "Premium Monthly",
+      "startDate": "2024-01-01",
+      "endDate": "2024-02-01",
+      "status": "Active"
+    }
+  }
+]
+```
+
+---
+
+### 6.2 الحصول على عميل بالـ ID
+
+```http
+GET /api/clients/{id}
+```
+
+---
+
+### 6.3 إنشاء عميل جديد
+
+```http
+POST /api/clients
+```
+
+**Request Body:**
 ```json
 {
-  "url": "/uploads/images/2024/12/gym-covers/cover.jpg"
+  "phoneNumber": "01012345678",
+  "email": "newclient@example.com",
+  "password": "Password123!",
+  "fullName": "New Client",
+  "gender": 1,
+  "birthDate": "1995-05-15",
+  "heightCm": 175,
+  "activityLevel": "Moderate"
 }
 ```
 
 ---
 
-## 14.5 Upload Gallery Images
+### 6.4 تحديث عميل
 
+```http
+PUT /api/clients/{id}
 ```
-POST /api/gymprofile/gallery
+
+---
+
+### 6.5 حذف عميل
+
+```http
+DELETE /api/clients/{id}
 ```
 
-**Content-Type:** `multipart/form-data`
+---
 
-### Form Data
+## 7. Coach-Clients (ربط المدرب بالعملاء)
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| files | files | Yes | Multiple gallery images |
+> **Authorization:** مطلوب
 
-### Response (200 OK)
+### 7.1 الحصول على عملاء المدرب
 
+```http
+GET /api/coach-clients?coachId={coachId}&isActive=true
+```
+
+**Response (200):**
+```json
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "coachId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "coachName": "Coach Ahmed",
+    "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "clientName": "Mohamed Ali",
+    "clientPhone": "01012345678",
+    "assignedAt": "2024-01-01T00:00:00Z",
+    "isActive": true,
+    "hasActiveSubscription": true,
+    "subscriptionEndDate": "2024-02-01",
+    "workoutProgramsCount": 2,
+    "dietPlansCount": 1,
+    "workoutSessionsCount": 15,
+    "lastSessionDate": "2024-01-14T10:00:00Z"
+  }
+]
+```
+
+---
+
+### 7.2 إضافة متدرب جديد للمدرب
+
+```http
+POST /api/coach-clients
+```
+
+---
+
+### 7.3 تعيين عميل موجود لمدرب
+
+```http
+POST /api/coach-clients/assign
+```
+
+---
+
+### 7.4 إلغاء تعيين عميل من مدرب
+
+```http
+DELETE /api/coach-clients/{clientId}
+```
+
+---
+
+## 8. Muscles (العضلات)
+
+> **Authorization:** مطلوب
+
+### 8.1 الحصول على قائمة العضلات
+
+```http
+GET /api/muscles?bodyPart=Chest
+```
+
+**Response (200):**
+```json
+[
+  {
+    "id": 1,
+    "name": "Chest",
+    "nameAr": "الصدر",
+    "bodyPart": "Upper Body",
+    "description": "The main chest muscle responsible for pushing movements",
+    "descriptionAr": "العضلة الرئيسية للصدر المسؤولة عن حركات الدفع",
+    "icon": "💪"
+  }
+]
+```
+
+---
+
+### 8.2 الحصول على عضلة بالـ ID
+
+```http
+GET /api/muscles/{id}
+```
+
+---
+
+## 9. Exercises (التمارين)
+
+> **Authorization:** مطلوب
+
+### 9.1 الحصول على قائمة التمارين
+
+```http
+GET /api/exercises?targetMuscleId=1&equipment=Barbell&isHighImpact=false
+```
+
+**Response (200):**
+```json
+[
+  {
+    "id": 1,
+    "name": "Bench Press",
+    "nameAr": "ضغط البنش",
+    "description": "Classic chest exercise for building strength",
+    "descriptionAr": "تمرين كلاسيكي للصدر لبناء القوة",
+    "targetMuscleId": 1,
+    "targetMuscleName": "Chest",
+    "primaryMuscleContributionPercent": 70,
+    "secondaryMuscles": [
+      { "muscleId": 5, "muscleName": "Triceps", "contributionPercent": 20 }
+    ],
+    "imageUrl": "https://storage.com/exercises/bench-press.jpg",
+    "videoUrl": "https://youtube.com/watch?v=...",
+    "equipment": "Barbell",
+    "difficulty": "Intermediate",
+    "category": "Strength",
+    "instructions": [
+      "استلقِ على البنش مع القدمين على الأرض",
+      "امسك البار بعرض أكبر من الكتفين",
+      "أنزل البار ببطء إلى منتصف الصدر",
+      "ادفع البار للأعلى حتى تمتد الذراعين"
+    ],
+    "tips": ["Keep your back slightly arched"],
+    "commonMistakes": ["Bouncing the bar off chest"],
+    "repsRange": "8-12",
+    "setsRange": "3-4",
+    "restSeconds": 90,
+    "tempo": "2-1-2-0"
+  }
+]
+```
+
+---
+
+### 9.2 الحصول على تمرين بالـ ID
+
+```http
+GET /api/exercises/{id}
+```
+
+---
+
+### 9.3 إنشاء تمرين جديد
+
+```http
+POST /api/exercises
+Content-Type: multipart/form-data
+```
+
+---
+
+### 9.4 تحديث تمرين
+
+```http
+PUT /api/exercises/{id}
+Content-Type: multipart/form-data
+```
+
+---
+
+### 9.5 حذف تمرين
+
+```http
+DELETE /api/exercises/{id}
+```
+
+---
+
+## 10. Foods (الأطعمة)
+
+> **Authorization:** مطلوب
+
+### 10.1 الحصول على قائمة الأطعمة
+
+```http
+GET /api/foods?category=Proteins&searchTerm=chicken&isVerified=true
+```
+
+**Response (200):**
+```json
+[
+  {
+    "id": 1,
+    "name": "Chicken Breast (Grilled)",
+    "nameAr": "صدر دجاج مشوي",
+    "category": "Proteins",
+    "caloriesPer100g": 165.0,
+    "proteinPer100g": 31.0,
+    "carbsPer100g": 0.0,
+    "fatsPer100g": 3.6,
+    "fiberPer100g": 0.0,
+    "sugarPer100g": 0.0,
+    "sodiumPer100g": 74.0,
+    "servingSize": 100.0,
+    "servingUnit": "g",
+    "isVerified": true
+  }
+]
+```
+
+---
+
+### 10.2 الحصول على طعام بالـ ID
+
+```http
+GET /api/foods/{id}
+```
+
+---
+
+### 10.3 إنشاء طعام جديد
+
+```http
+POST /api/foods
+```
+
+---
+
+### 10.4 تحديث طعام
+
+```http
+PUT /api/foods/{id}
+```
+
+---
+
+### 10.5 حذف طعام
+
+```http
+DELETE /api/foods/{id}
+```
+
+---
+
+## 11. Workout Programs (برامج التدريب)
+
+> **Authorization:** مطلوب
+
+### 11.1 الحصول على قائمة البرامج
+
+```http
+GET /api/workoutprograms?coachId={coachId}&clientId={clientId}
+```
+
+**Response (قائمة بدون routines للأداء)**
+
+---
+
+### 11.2 الحصول على برنامج بالـ ID (مع كل التفاصيل)
+
+```http
+GET /api/workoutprograms/{id}
+```
+
+**Response (200):**
 ```json
 {
-  "urls": [
-    "/uploads/images/2024/12/gym-gallery/img1.jpg",
-    "/uploads/images/2024/12/gym-gallery/img2.jpg"
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "coachId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "coachName": "Coach Ahmed",
+  "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "clientName": "Mohamed Ali",
+  "name": "برنامج بناء العضلات",
+  "startDate": "2024-01-01",
+  "endDate": "2024-03-01",
+  "routines": [
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "name": "يوم الصدر والترايسبس",
+      "dayOfWeek": 0,
+      "exercises": [
+        {
+          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "exerciseId": 1,
+          "exerciseName": "Bench Press",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 12,
+          "restSec": 90,
+          "supersetGroupId": null
+        }
+      ]
+    }
+  ]
+}
+```
+
+**dayOfWeek Values:**
+| Value | Day |
+|-------|-----|
+| 0 | الأحد |
+| 1 | الإثنين |
+| 2 | الثلاثاء |
+| 3 | الأربعاء |
+| 4 | الخميس |
+| 5 | الجمعة |
+| 6 | السبت |
+
+---
+
+### 11.3 إنشاء برنامج تدريب
+
+```http
+POST /api/workoutprograms
+```
+
+**Request Body:**
+```json
+{
+  "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "name": "برنامج جديد",
+  "startDate": "2024-01-15",
+  "endDate": "2024-04-15"
+}
+```
+
+---
+
+### 11.4 تحديث برنامج
+
+```http
+PUT /api/workoutprograms/{id}
+```
+
+---
+
+### 11.5 حذف برنامج
+
+```http
+DELETE /api/workoutprograms/{id}
+```
+
+---
+
+### 11.6 تكرار برنامج
+
+```http
+POST /api/workoutprograms/{id}/duplicate
+```
+
+---
+
+### 11.7 إضافة روتين للبرنامج
+
+```http
+POST /api/workoutprograms/{programId}/routines
+```
+
+**Request Body:**
+```json
+{
+  "name": "يوم الظهر والبايسبس",
+  "dayOfWeek": 1
+}
+```
+
+---
+
+### 11.8 تحديث روتين
+
+```http
+PUT /api/workoutprograms/routines/{routineId}
+```
+
+---
+
+### 11.9 حذف روتين
+
+```http
+DELETE /api/workoutprograms/routines/{routineId}
+```
+
+---
+
+### 11.10 إضافة تمرين للروتين
+
+```http
+POST /api/workoutprograms/routines/{routineId}/exercises
+```
+
+**Request Body:**
+```json
+{
+  "exerciseId": 1,
+  "sets": 4,
+  "repsMin": 8,
+  "repsMax": 12,
+  "restSec": 90,
+  "supersetGroupId": null
+}
+```
+
+---
+
+### 11.11 تحديث تمرين في الروتين
+
+```http
+PUT /api/workoutprograms/routines/exercises/{exerciseId}
+```
+
+---
+
+### 11.12 حذف تمرين من الروتين
+
+```http
+DELETE /api/workoutprograms/routines/exercises/{exerciseId}
+```
+
+---
+
+## 12. Diet Plans (خطط التغذية)
+
+> **Authorization:** مطلوب
+
+### 12.1 الحصول على قائمة الخطط
+
+```http
+GET /api/dietplans?coachId={coachId}&clientId={clientId}&status=Active
+```
+
+**Status Values:**
+| Value | Status |
+|-------|--------|
+| 0 | Draft (مسودة) |
+| 1 | Active (نشط) |
+| 2 | Archived (مؤرشف) |
+
+---
+
+### 12.2 الحصول على خطة بالـ ID (مع كل التفاصيل)
+
+```http
+GET /api/dietplans/{id}
+```
+
+**Response (200):**
+```json
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "coachId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "coachName": "Coach Ahmed",
+  "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "clientName": "Mohamed Ali",
+  "name": "خطة تنشيف",
+  "startDate": "2024-01-01",
+  "endDate": "2024-03-01",
+  "status": 1,
+  "targetCalories": 2000,
+  "targetProtein": 150,
+  "targetCarbs": 200,
+  "targetFats": 70,
+  "meals": [
+    {
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "name": "الإفطار",
+      "orderIndex": 1,
+      "items": [
+        {
+          "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+          "foodId": 1,
+          "foodName": "Oatmeal",
+          "assignedQuantity": 100,
+          "calcCalories": 389,
+          "calcProtein": 16.9,
+          "calcCarbs": 66.3,
+          "calcFats": 6.9
+        }
+      ]
+    }
   ]
 }
 ```
 
 ---
 
-# 15. Reports
+### 12.3 إنشاء خطة تغذية
 
-**Base Route:** `/api/reports`
-**Authorization:** Required (JWT Bearer Token)
-
-## 15.1 Dashboard Report
-
-Overview statistics for the gym.
-
+```http
+POST /api/dietplans
 ```
+
+**Request Body:**
+```json
+{
+  "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "name": "خطة جديدة",
+  "startDate": "2024-01-15",
+  "endDate": "2024-04-15",
+  "targetCalories": 2500,
+  "targetProtein": 180,
+  "targetCarbs": 250,
+  "targetFats": 80
+}
+```
+
+---
+
+### 12.4 تحديث خطة
+
+```http
+PUT /api/dietplans/{id}
+```
+
+---
+
+### 12.5 حذف خطة
+
+```http
+DELETE /api/dietplans/{id}
+```
+
+---
+
+### 12.6 تكرار خطة
+
+```http
+POST /api/dietplans/{id}/duplicate
+```
+
+---
+
+### 12.7 إضافة وجبة للخطة
+
+```http
+POST /api/dietplans/{planId}/meals
+```
+
+**Request Body:**
+```json
+{
+  "name": "وجبة خفيفة",
+  "orderIndex": 4
+}
+```
+
+---
+
+### 12.8 تحديث وجبة
+
+```http
+PUT /api/dietplans/meals/{mealId}
+```
+
+---
+
+### 12.9 حذف وجبة
+
+```http
+DELETE /api/dietplans/meals/{mealId}
+```
+
+---
+
+### 12.10 إضافة عنصر للوجبة
+
+```http
+POST /api/dietplans/meals/{mealId}/items
+```
+
+**Request Body:**
+```json
+{
+  "foodId": 1,
+  "assignedQuantity": 150
+}
+```
+
+**ملاحظة:** القيم الغذائية (calcCalories, calcProtein, etc.) تُحسب تلقائياً من الـ Food والكمية.
+
+---
+
+### 12.11 تحديث عنصر الوجبة
+
+```http
+PUT /api/dietplans/meals/items/{itemId}
+```
+
+---
+
+### 12.12 حذف عنصر من الوجبة
+
+```http
+DELETE /api/dietplans/meals/items/{itemId}
+```
+
+---
+
+## 13. Workout Sessions (جلسات التدريب)
+
+> **Authorization:** مطلوب
+
+### 13.1 الحصول على الجلسات
+
+```http
+GET /api/workoutsessions?clientId={clientId}&fromDate=2024-01-01&toDate=2024-01-31
+```
+
+**Response (200):**
+```json
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "clientName": "Mohamed Ali",
+    "routineId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "routineName": "يوم الصدر والترايسبس",
+    "startedAt": "2024-01-15T10:00:00Z",
+    "endedAt": "2024-01-15T11:30:00Z",
+    "totalVolumLifted": 5400.0,
+    "notes": "تمرين ممتاز!",
+    "sets": [
+      {
+        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "exerciseId": 1,
+        "exerciseName": "Bench Press",
+        "setNumber": 1,
+        "weightKg": 80.0,
+        "reps": 10,
+        "rpe": 8.0,
+        "volumeLoad": 800.0,
+        "isPr": false
+      }
+    ]
+  }
+]
+```
+
+---
+
+### 13.2 الحصول على جلسة بالـ ID
+
+```http
+GET /api/workoutsessions/{id}
+```
+
+---
+
+### 13.3 بدء جلسة تدريب
+
+```http
+POST /api/workoutsessions/start
+```
+
+**Request Body:**
+```json
+{
+  "routineId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+}
+```
+
+---
+
+### 13.4 إنهاء جلسة تدريب
+
+```http
+POST /api/workoutsessions/{sessionId}/end
+```
+
+**Request Body:**
+```json
+{
+  "notes": "تمرين ممتاز!"
+}
+```
+
+---
+
+### 13.5 إضافة مجموعة (Set) للجلسة
+
+```http
+POST /api/workoutsessions/{sessionId}/sets
+```
+
+**Request Body:**
+```json
+{
+  "exerciseId": 1,
+  "setNumber": 1,
+  "weightKg": 80.0,
+  "reps": 10,
+  "rpe": 8.0
+}
+```
+
+**RPE (Rate of Perceived Exertion):**
+| Value | Description |
+|-------|-------------|
+| 6-7 | سهل - يمكن عمل 4+ تكرارات إضافية |
+| 8 | معتدل - يمكن عمل 2-3 تكرارات إضافية |
+| 9 | صعب - يمكن عمل تكرار واحد إضافي |
+| 10 | أقصى جهد - لا يمكن عمل تكرارات إضافية |
+
+---
+
+## 14. Body Measurements (قياسات الجسم)
+
+> **Authorization:** مطلوب
+
+### 14.1 الحصول على القياسات
+
+```http
+GET /api/bodymeasurements?clientId={clientId}&fromDate=2024-01-01&toDate=2024-12-31
+```
+
+**Response (200):**
+```json
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "clientName": "Mohamed Ali",
+    "dateRecorded": "2024-01-15",
+    "weightKg": 80.0,
+    "skeletalMuscleMass": 35.0,
+    "bodyFatMass": 15.0,
+    "bodyFatPercent": 18.75,
+    "totalBodyWater": 45.0,
+    "bmr": 1800,
+    "visceralFatLevel": 8,
+    "inbodyImageUrl": "https://storage.com/inbody/123.jpg",
+    "frontPhotoUrl": "https://storage.com/photos/front.jpg",
+    "sidePhotoUrl": "https://storage.com/photos/side.jpg",
+    "backPhotoUrl": "https://storage.com/photos/back.jpg"
+  }
+]
+```
+
+---
+
+### 14.2 إضافة قياس جديد
+
+```http
+POST /api/bodymeasurements
+Content-Type: multipart/form-data
+```
+
+---
+
+### 14.3 حذف قياس
+
+```http
+DELETE /api/bodymeasurements/{id}
+```
+
+---
+
+## 15. Subscriptions (الاشتراكات)
+
+> **Authorization:** مطلوب
+
+### 15.1 الحصول على خطط الاشتراك
+
+```http
+GET /api/subscriptions/plans
+```
+
+**Response (200):**
+```json
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "name": "Premium Monthly",
+    "price": 500.00,
+    "durationMonths": 1
+  }
+]
+```
+
+---
+
+### 15.2 إنشاء خطة اشتراك
+
+```http
+POST /api/subscriptions/plans
+```
+
+---
+
+### 15.3 الحصول على اشتراكات العملاء
+
+```http
+GET /api/subscriptions?clientId={clientId}&status=Active
+```
+
+**Status Values:**
+| Value | Status |
+|-------|--------|
+| 0 | Pending (معلق) |
+| 1 | Active (نشط) |
+| 2 | Frozen (مجمد) |
+| 3 | Expired (منتهي) |
+| 4 | Cancelled (ملغي) |
+
+---
+
+### 15.4 إنشاء اشتراك لعميل
+
+```http
+POST /api/subscriptions
+```
+
+**Request Body:**
+```json
+{
+  "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "planId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "startDate": "2024-01-15"
+}
+```
+
+---
+
+### 15.5 تجميد اشتراك
+
+```http
+POST /api/subscriptions/{subscriptionId}/freeze
+```
+
+**Request Body:**
+```json
+{
+  "startDate": "2024-01-20",
+  "endDate": "2024-01-27",
+  "reason": "سفر عمل"
+}
+```
+
+---
+
+### 15.6 إلغاء اشتراك
+
+```http
+POST /api/subscriptions/{subscriptionId}/cancel
+```
+
+---
+
+## 16. Reports (التقارير)
+
+> **Authorization:** مطلوب
+
+### 16.1 لوحة التحكم الرئيسية (Dashboard)
+
+```http
 GET /api/reports/dashboard
 ```
 
-### Response (200 OK)
-
+**Response (200):**
 ```json
 {
   "totalClients": 150,
@@ -1977,8 +1471,8 @@ GET /api/reports/dashboard
   "totalCoaches": 5,
   "activeSubscriptions": 100,
   "expiringSubscriptions": 8,
-  "totalRevenueThisMonth": 50000.00,
-  "totalRevenueLastMonth": 45000.00,
+  "totalRevenueThisMonth": 75000.00,
+  "totalRevenueLastMonth": 65000.00,
   "totalWorkoutsThisMonth": 450,
   "totalDietPlansActive": 80
 }
@@ -1986,321 +1480,85 @@ GET /api/reports/dashboard
 
 ---
 
-## 15.2 Clients Report
+### 16.2 تقرير العملاء
 
-Detailed client analytics.
-
-```
-GET /api/reports/clients
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| fromDate | datetime | No | Report start date |
-| toDate | datetime | No | Report end date |
-
-### Response (200 OK)
-
-```json
-{
-  "totalClients": 150,
-  "activeClients": 120,
-  "inactiveClients": 30,
-  "newClientsThisMonth": 15,
-  "clientsWithActiveSubscription": 100,
-  "clientsWithoutSubscription": 50,
-  "topClients": [
-    {
-      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "name": "Mohamed Client",
-      "phoneNumber": "01055555555",
-      "totalSessions": 25,
-      "totalPaid": 5000.00
-    }
-  ],
-  "monthlyTrend": [
-    {
-      "month": "2024-12",
-      "newClients": 15,
-      "churnedClients": 3
-    }
-  ]
-}
+```http
+GET /api/reports/clients?fromDate=2024-01-01&toDate=2024-12-31
 ```
 
 ---
 
-## 15.3 Subscriptions Report
+### 16.3 تقرير الاشتراكات
 
-```
-GET /api/reports/subscriptions
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| fromDate | datetime | No | Report start date |
-| toDate | datetime | No | Report end date |
-
-### Response (200 OK)
-
-```json
-{
-  "totalSubscriptions": 200,
-  "activeSubscriptions": 100,
-  "expiredSubscriptions": 80,
-  "cancelledSubscriptions": 20,
-  "expiringIn7Days": 8,
-  "expiringIn30Days": 25,
-  "totalRevenue": 500000.00,
-  "revenueThisMonth": 50000.00,
-  "planStatistics": [
-    {
-      "planId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "planName": "Monthly",
-      "activeCount": 60,
-      "totalSold": 150,
-      "totalRevenue": 300000.00
-    }
-  ],
-  "monthlyRevenue": [
-    {
-      "month": "2024-12",
-      "revenue": 50000.00,
-      "subscriptionCount": 100
-    }
-  ]
-}
+```http
+GET /api/reports/subscriptions?fromDate=2024-01-01&toDate=2024-12-31
 ```
 
 ---
 
-## 15.4 Financial Report
+### 16.4 التقرير المالي
 
-```
-GET /api/reports/financial
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| fromDate | datetime | No | Report start date |
-| toDate | datetime | No | Report end date |
-
-### Response (200 OK)
-
-```json
-{
-  "totalRevenue": 500000.00,
-  "revenueThisMonth": 50000.00,
-  "revenueLastMonth": 45000.00,
-  "growthPercentage": 11.1,
-  "averageSubscriptionValue": 500.00,
-  "totalWalletBalance": 25000.00,
-  "monthlyRevenue": [
-    {
-      "month": "2024-12",
-      "revenue": 50000.00,
-      "subscriptionCount": 100
-    }
-  ],
-  "paymentMethods": [
-    {
-      "paymentMethod": "Cash",
-      "count": 150,
-      "totalAmount": 300000.00
-    }
-  ]
-}
+```http
+GET /api/reports/financial?fromDate=2024-01-01&toDate=2024-12-31
 ```
 
 ---
 
-## 15.5 Coach Dashboard Report
+### 16.5 لوحة تحكم المدرب
 
-```
-GET /api/reports/coach/dashboard
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| coachId | GUID | No | Coach ID (Owner can view any coach) |
-
-### Authorization Notes
-
-- **Owner:** Can view any coach's dashboard using coachId filter
-- **Coach:** Sees only their own dashboard
-
-### Response (200 OK)
-
-```json
-{
-  "totalTrainees": 25,
-  "activeTrainees": 22,
-  "newTraineesThisMonth": 5,
-  "activeWorkoutPrograms": 20,
-  "activeDietPlans": 15,
-  "totalSessionsThisMonth": 150,
-  "totalVolumeThisMonth": 125000.0,
-  "topTraineesByProgress": [
-    {
-      "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "clientName": "Mohamed Client",
-      "clientPhone": "01055555555",
-      "sessionsCount": 20,
-      "weightChange": -5.2,
-      "bodyFatChange": -3.1
-    }
-  ],
-  "topTraineesBySessions": [
-    {
-      "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "clientName": "Ahmed Client",
-      "clientPhone": "01066666666",
-      "sessionsCount": 25,
-      "weightChange": -3.0,
-      "bodyFatChange": -2.0
-    }
-  ]
-}
+```http
+GET /api/reports/coach/dashboard?coachId={coachId}
 ```
 
 ---
 
-## 15.6 Coach Trainees Report
+### 16.6 تقرير متدربي المدرب
 
-```
-GET /api/reports/coach/trainees
-```
-
-### Query Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| coachId | GUID | No | Coach ID (Owner can view any coach) |
-
-### Response (200 OK)
-
-```json
-{
-  "totalTrainees": 25,
-  "withActiveSubscription": 20,
-  "withoutSubscription": 5,
-  "trainees": [
-    {
-      "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "name": "Mohamed Client",
-      "phone": "01055555555",
-      "email": "client@email.com",
-      "assignedAt": "2024-12-01T00:00:00Z",
-      "hasActiveSubscription": true,
-      "subscriptionEndDate": "2025-01-01T00:00:00Z",
-      "activeWorkoutPrograms": 2,
-      "activeDietPlans": 1,
-      "totalSessions": 50,
-      "sessionsThisMonth": 12,
-      "lastSessionDate": "2024-12-05T10:00:00Z",
-      "currentWeight": 80.5,
-      "weightChange": -5.2,
-      "bodyFatPercent": 18.5,
-      "lastMeasurementDate": "2024-12-01T00:00:00Z"
-    }
-  ]
-}
+```http
+GET /api/reports/coach/trainees?coachId={coachId}
 ```
 
 ---
 
-## 15.7 Trainee Progress Report
+### 16.7 تقرير تقدم متدرب
 
-Detailed progress report for a specific trainee.
-
-```
+```http
 GET /api/reports/coach/trainee/{clientId}
 ```
 
-### Path Parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| clientId | GUID | Yes | Client ID |
-
-### Authorization Notes
-
-- **Owner:** Can view any trainee's progress
-- **Coach:** Can only view their own trainees
-
-### Response (200 OK)
-
+**Response (200):**
 ```json
 {
   "clientId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "clientName": "Mohamed Client",
-  "clientPhone": "01055555555",
+  "clientName": "Mohamed Ali",
+  "clientPhone": "01012345678",
   "assignedAt": "2024-01-01T00:00:00Z",
   "bodyMeasurements": [
     {
-      "dateRecorded": "2024-01-01T00:00:00Z",
-      "weightKg": 85.0,
-      "bodyFatPercent": 22.0,
-      "muscleMass": 35.0,
-      "bmr": 1800
-    },
-    {
-      "dateRecorded": "2024-12-01T00:00:00Z",
+      "dateRecorded": "2024-01-01",
       "weightKg": 80.0,
-      "bodyFatPercent": 18.0,
-      "muscleMass": 38.0,
-      "bmr": 1900
+      "bodyFatPercent": 20.0,
+      "muscleMass": 34.0,
+      "bmr": 1750
     }
   ],
-  "startWeight": 85.0,
-  "currentWeight": 80.0,
-  "totalWeightChange": -5.0,
-  "startBodyFat": 22.0,
-  "currentBodyFat": 18.0,
-  "totalBodyFatChange": -4.0,
-  "startMuscleMass": 35.0,
-  "currentMuscleMass": 38.0,
-  "totalMuscleMassChange": 3.0,
-  "totalSessions": 50,
-  "totalVolumeLifted": 150000.0,
-  "monthlySessions": [
-    {
-      "month": "2024-12",
-      "sessionCount": 12,
-      "totalVolume": 30000.0
-    }
-  ],
-  "workoutPrograms": [
-    {
-      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "name": "Muscle Building Program",
-      "startDate": "2024-01-01T00:00:00Z",
-      "routinesCount": 4
-    }
-  ],
-  "dietPlans": [
-    {
-      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "name": "Weight Loss Plan",
-      "startDate": "2024-01-01T00:00:00Z",
-      "targetCalories": 2000.0
-    }
-  ],
+  "startWeight": 80.0,
+  "currentWeight": 78.0,
+  "totalWeightChange": -2.0,
+  "startBodyFat": 20.0,
+  "currentBodyFat": 18.5,
+  "totalBodyFatChange": -1.5,
+  "totalSessions": 15,
+  "totalVolumeLifted": 45000.0,
+  "workoutPrograms": [],
+  "dietPlans": [],
   "personalRecords": [
     {
       "exerciseId": 1,
       "exerciseName": "Bench Press",
       "maxWeight": 100.0,
       "reps": 5,
-      "achievedAt": "2024-12-01T10:00:00Z"
+      "achievedAt": "2024-01-14T10:30:00Z"
     }
   ]
 }
@@ -2308,121 +1566,75 @@ GET /api/reports/coach/trainee/{clientId}
 
 ---
 
-# 16. Enums Reference
+## أكواد الخطأ الشائعة
 
-## User Roles
+| Code | Description | الوصف |
+|------|-------------|-------|
+| 200 | OK | نجاح |
+| 201 | Created | تم الإنشاء |
+| 204 | No Content | نجاح بدون محتوى |
+| 400 | Bad Request | طلب غير صحيح |
+| 401 | Unauthorized | غير مصرح |
+| 403 | Forbidden | ممنوع الوصول |
+| 404 | Not Found | غير موجود |
+| 409 | Conflict | تعارض (مثل بيانات مكررة) |
+| 500 | Internal Server Error | خطأ في الخادم |
 
-| Value | Name | Description |
-|-------|------|-------------|
-| 0 | Owner | Gym owner with full access |
-| 1 | Coach | Trainer with trainee management |
-| 2 | Client | Gym member/client |
+**مثال على معالجة الأخطاء:**
+```javascript
+const handleApiError = (error) => {
+  const status = error.response?.status;
+  const message = error.response?.data?.message || error.message;
 
-## Gender Types
-
-| Value | Name |
-|-------|------|
-| 1 | Male |
-| 2 | Female |
-
-## Subscription Status
-
-| Value | Name | Description |
-|-------|------|-------------|
-| 0 | Active | Currently active subscription |
-| 1 | Suspended | Temporarily suspended |
-| 2 | Trial | Trial period |
-| 3 | Expired | Subscription expired |
-| 4 | Cancelled | Subscription cancelled |
-
-## Plan Status (Diet Plans)
-
-| Value | Name | Description |
-|-------|------|-------------|
-| 0 | Active | Currently active plan |
-| 1 | Archived | Archived/completed plan |
-| 2 | Draft | Draft plan not yet active |
-
----
-
-# 17. Error Handling
-
-## Error Response Format
-
-```json
-{
-  "type": "https://tools.ietf.org/html/rfc7231#section-6.5.1",
-  "title": "Bad Request",
-  "status": 400,
-  "detail": "One or more validation errors occurred.",
-  "errors": {
-    "PhoneNumber": ["Phone number is required"],
-    "Password": ["Password must be at least 8 characters"]
+  switch (status) {
+    case 400:
+      toast.error(`خطأ في البيانات: ${message}`);
+      break;
+    case 401:
+      toast.error('انتهت الجلسة، يرجى تسجيل الدخول مرة أخرى');
+      logout();
+      break;
+    case 403:
+      toast.error('ليس لديك صلاحية لهذا الإجراء');
+      break;
+    case 404:
+      toast.error('العنصر المطلوب غير موجود');
+      break;
+    case 409:
+      toast.error('البيانات موجودة مسبقاً');
+      break;
+    default:
+      toast.error('حدث خطأ، يرجى المحاولة لاحقاً');
   }
-}
+};
 ```
-
-## HTTP Status Codes
-
-| Code | Description |
-|------|-------------|
-| 200 | OK - Request successful |
-| 201 | Created - Resource created successfully |
-| 204 | No Content - Request successful, no response body |
-| 400 | Bad Request - Validation error |
-| 401 | Unauthorized - Missing or invalid token |
-| 403 | Forbidden - Insufficient permissions |
-| 404 | Not Found - Resource not found |
-| 500 | Internal Server Error - Server error |
-
-## Common Validation Errors
-
-| Field | Error | Description |
-|-------|-------|-------------|
-| PhoneNumber | Required | Phone number is required |
-| PhoneNumber | Invalid format | Must contain only digits, +, -, spaces |
-| Password | Min length | Must be at least 8 characters |
-| Password | Complexity | Must contain uppercase, lowercase, and digit |
-| Email | Invalid format | Must be a valid email address |
-| TenantId | Required | Tenant ID is required |
-| TenantId | Invalid | Must be a valid GUID |
 
 ---
 
-# Authorization Summary
+## ملخص إحصائي
 
-## Public Endpoints (No Token Required)
-
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/forget-password`
-- `POST /api/auth/reset-password`
-
-## Protected Endpoints (JWT Bearer Token Required)
-
-All other endpoints require a valid JWT token in the Authorization header:
-
-```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-## Role-Based Access Control
-
-| Endpoint Category | Owner | Coach | Client |
-|-------------------|-------|-------|--------|
-| Tenants | Full | Read | - |
-| Users | Full | Read (own) | Read (self) |
-| Clients | Full | Assigned only | Self only |
-| Exercises | Full | Full | Read |
-| Foods | Full | Full | Read |
-| Workout Programs | Full | Assigned clients | Self only |
-| Diet Plans | Full | Assigned clients | Self only |
-| Body Measurements | Full | Assigned clients | Self only |
-| Subscriptions | Full | Create | Self only |
-| Coach Clients | Full | Own clients | - |
-| Gym Profile | Full | Read | Read |
-| Reports | Full | Coach reports | - |
+| Category | Endpoints |
+|----------|-----------|
+| Authentication | 4 |
+| Profile | 4 |
+| Tenants | 2 |
+| Gym Profile | 5 |
+| Users | 4 |
+| Clients | 5 |
+| Coach-Clients | 4 |
+| Muscles | 2 |
+| Exercises | 5 |
+| Foods | 5 |
+| Workout Programs | 12 |
+| Diet Plans | 12 |
+| Workout Sessions | 5 |
+| Body Measurements | 3 |
+| Subscriptions | 6 |
+| Reports | 7 |
+| **Total** | **85** |
 
 ---
 
-*Last Updated: December 2024*
+> تم إنشاء هذا التوثيق تلقائياً من كود المشروع.
+>
+> آخر تحديث: 2024-01-09
