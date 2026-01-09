@@ -28,7 +28,11 @@ public class GetMusclesQueryHandler : IRequestHandler<GetMusclesQuery, List<Musc
             {
                 Id = m.Id,
                 Name = m.Name,
-                BodyPart = m.BodyPart
+                NameAr = m.NameAr,
+                BodyPart = m.BodyPart,
+                Description = m.Description,
+                DescriptionAr = m.DescriptionAr,
+                Icon = m.Icon
             })
             .ToListAsync(cancellationToken);
     }

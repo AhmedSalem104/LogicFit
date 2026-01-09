@@ -5,12 +5,17 @@ public class FoodDto
     public int Id { get; set; }
     public Guid? TenantId { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
     public string? Category { get; set; }
     public double CaloriesPer100g { get; set; }
     public double ProteinPer100g { get; set; }
     public double CarbsPer100g { get; set; }
     public double FatsPer100g { get; set; }
     public double? FiberPer100g { get; set; }
+    public double? SugarPer100g { get; set; }
+    public double? SodiumPer100g { get; set; }
+    public double? ServingSize { get; set; }
+    public string? ServingUnit { get; set; }
     public string? AlternativeGroupId { get; set; }
     public bool IsVerified { get; set; }
 }
@@ -18,23 +23,33 @@ public class FoodDto
 public class CreateFoodDto
 {
     public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
     public string? Category { get; set; }
     public double CaloriesPer100g { get; set; }
     public double ProteinPer100g { get; set; }
     public double CarbsPer100g { get; set; }
     public double FatsPer100g { get; set; }
     public double? FiberPer100g { get; set; }
+    public double? SugarPer100g { get; set; }
+    public double? SodiumPer100g { get; set; }
+    public double? ServingSize { get; set; }
+    public string? ServingUnit { get; set; }
     public string? AlternativeGroupId { get; set; }
 }
 
 public class UpdateFoodDto
 {
     public string Name { get; set; } = string.Empty;
+    public string? NameAr { get; set; }
     public string? Category { get; set; }
     public double CaloriesPer100g { get; set; }
     public double ProteinPer100g { get; set; }
     public double CarbsPer100g { get; set; }
     public double FatsPer100g { get; set; }
     public double? FiberPer100g { get; set; }
+    public double? SugarPer100g { get; set; }
+    public double? SodiumPer100g { get; set; }
+    public double? ServingSize { get; set; }
+    public string? ServingUnit { get; set; }
     public string? AlternativeGroupId { get; set; }
 }

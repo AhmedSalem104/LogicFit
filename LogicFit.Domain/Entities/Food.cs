@@ -17,6 +17,8 @@ public class Food : ISoftDeletable
     public double CarbsPer100g { get; set; }
     public double FatsPer100g { get; set; }
     public double? FiberPer100g { get; set; }
+    public double? SugarPer100g { get; set; }
+    public double? SodiumPer100g { get; set; }
 
     // Serving info
     public double? ServingSize { get; set; }

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.Exercises.DTOs;
 using MediatR;
@@ -36,16 +37,19 @@ public class GetExercisesQueryHandler : IRequestHandler<GetExercisesQuery, List<
         if (request.IsHighImpact.HasValue)
             query = query.Where(e => e.IsHighImpact == request.IsHighImpact.Value);
 
-        return await query
-            .Select(e => new ExerciseDto
+        var exercises = await query
+            .Select(e => new
             {
-                Id = e.Id,
-                TenantId = e.TenantId,
-                Name = e.Name,
-                TargetMuscleId = e.TargetMuscleId,
+                e.Id,
+                e.TenantId,
+                e.Name,
+                e.NameAr,
+                e.Description,
+                e.DescriptionAr,
+                e.TargetMuscleId,
                 TargetMuscleName = e.TargetMuscle.Name,
                 TargetMuscleBodyPart = e.TargetMuscle.BodyPart,
-                PrimaryMuscleContributionPercent = 100 - e.SecondaryMuscles.Sum(sm => sm.ContributionPercent),
+                SecondaryMusclesSum = e.SecondaryMuscles.Sum(sm => sm.ContributionPercent),
                 SecondaryMuscles = e.SecondaryMuscles.Select(sm => new SecondaryMuscleDto
                 {
                     MuscleId = sm.MuscleId,
@@ -53,11 +57,75 @@ public class GetExercisesQueryHandler : IRequestHandler<GetExercisesQuery, List<
                     BodyPart = sm.Muscle.BodyPart,
                     ContributionPercent = sm.ContributionPercent
                 }).ToList(),
-                ImageUrl = e.ImageUrl,
-                VideoUrl = e.VideoUrl,
-                Equipment = e.Equipment,
-                IsHighImpact = e.IsHighImpact
+                e.ImageUrl,
+                e.VideoUrl,
+                e.Icon,
+                e.Equipment,
+                e.IsHighImpact,
+                e.Difficulty,
+                e.Category,
+                e.MovementPattern,
+                e.Mechanic,
+                e.Force,
+                e.Instructions,
+                e.InstructionsAr,
+                e.Tips,
+                e.TipsAr,
+                e.CommonMistakes,
+                e.CommonMistakesAr,
+                e.RepsRange,
+                e.SetsRange,
+                e.RestSeconds,
+                e.Tempo
             })
             .ToListAsync(cancellationToken);
+
+        return exercises.Select(e => new ExerciseDto
+        {
+            Id = e.Id,
+            TenantId = e.TenantId,
+            Name = e.Name,
+            NameAr = e.NameAr,
+            Description = e.Description,
+            DescriptionAr = e.DescriptionAr,
+            TargetMuscleId = e.TargetMuscleId,
+            TargetMuscleName = e.TargetMuscleName,
+            TargetMuscleBodyPart = e.TargetMuscleBodyPart,
+            PrimaryMuscleContributionPercent = 100 - e.SecondaryMusclesSum,
+            SecondaryMuscles = e.SecondaryMuscles,
+            ImageUrl = e.ImageUrl,
+            VideoUrl = e.VideoUrl,
+            Icon = e.Icon,
+            Equipment = e.Equipment,
+            IsHighImpact = e.IsHighImpact,
+            Difficulty = e.Difficulty,
+            Category = e.Category,
+            MovementPattern = e.MovementPattern,
+            Mechanic = e.Mechanic,
+            Force = e.Force,
+            Instructions = DeserializeJsonArray(e.Instructions),
+            InstructionsAr = DeserializeJsonArray(e.InstructionsAr),
+            Tips = DeserializeJsonArray(e.Tips),
+            TipsAr = DeserializeJsonArray(e.TipsAr),
+            CommonMistakes = DeserializeJsonArray(e.CommonMistakes),
+            CommonMistakesAr = DeserializeJsonArray(e.CommonMistakesAr),
+            RepsRange = e.RepsRange,
+            SetsRange = e.SetsRange,
+            RestSeconds = e.RestSeconds,
+            Tempo = e.Tempo
+        }).ToList();
+    }
+
+    private static List<string>? DeserializeJsonArray(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(json);
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

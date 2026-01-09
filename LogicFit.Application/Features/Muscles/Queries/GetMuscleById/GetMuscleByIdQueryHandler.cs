@@ -22,7 +22,11 @@ public class GetMuscleByIdQueryHandler : IRequestHandler<GetMuscleByIdQuery, Mus
             {
                 Id = m.Id,
                 Name = m.Name,
-                BodyPart = m.BodyPart
+                NameAr = m.NameAr,
+                BodyPart = m.BodyPart,
+                Description = m.Description,
+                DescriptionAr = m.DescriptionAr,
+                Icon = m.Icon
             })
             .FirstOrDefaultAsync(cancellationToken);
     }

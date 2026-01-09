@@ -39,12 +39,17 @@ public class GetFoodsQueryHandler : IRequestHandler<GetFoodsQuery, List<FoodDto>
                 Id = f.Id,
                 TenantId = f.TenantId,
                 Name = f.Name,
+                NameAr = f.NameAr,
                 Category = f.Category,
                 CaloriesPer100g = f.CaloriesPer100g,
                 ProteinPer100g = f.ProteinPer100g,
                 CarbsPer100g = f.CarbsPer100g,
                 FatsPer100g = f.FatsPer100g,
                 FiberPer100g = f.FiberPer100g,
+                SugarPer100g = f.SugarPer100g,
+                SodiumPer100g = f.SodiumPer100g,
+                ServingSize = f.ServingSize,
+                ServingUnit = f.ServingUnit,
                 AlternativeGroupId = f.AlternativeGroupId,
                 IsVerified = f.IsVerified
             })
