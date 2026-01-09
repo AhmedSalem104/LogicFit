@@ -43,4 +43,7 @@ public class User : AuditableEntity, ITenantEntity, ISoftDeletable
     // Coach-Client Relationships
     public virtual ICollection<CoachClient> Trainees { get; set; } = new List<CoachClient>(); // As Coach
     public virtual ICollection<CoachClient> AssignedCoaches { get; set; } = new List<CoachClient>(); // As Client
+
+    // Wallet Transactions
+    public virtual ICollection<WalletTransaction> WalletTransactions { get; set; } = new List<WalletTransaction>();
 }

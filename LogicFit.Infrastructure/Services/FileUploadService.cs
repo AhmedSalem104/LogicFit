@@ -1,6 +1,7 @@
 using LogicFit.Application.Common.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace LogicFit.Infrastructure.Services;
 
@@ -8,15 +9,20 @@ public class FileUploadService : IFileUploadService
 {
     private readonly IWebHostEnvironment _environment;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ILogger<FileUploadService> _logger;
     private readonly string[] _allowedImageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
     private readonly string[] _allowedVideoExtensions = { ".mp4", ".webm", ".mov", ".avi" };
     private const long MaxImageSize = 5 * 1024 * 1024; // 5MB
     private const long MaxVideoSize = 100 * 1024 * 1024; // 100MB
 
-    public FileUploadService(IWebHostEnvironment environment, IHttpContextAccessor httpContextAccessor)
+    public FileUploadService(
+        IWebHostEnvironment environment,
+        IHttpContextAccessor httpContextAccessor,
+        ILogger<FileUploadService> logger)
     {
         _environment = environment;
         _httpContextAccessor = httpContextAccessor;
+        _logger = logger;
     }
 
     public async Task<string> UploadImageAsync(IFormFile file, string? subfolder = null)
@@ -71,45 +77,74 @@ public class FileUploadService : IFileUploadService
 
     private async Task<string> SaveFileAsync(IFormFile file, string fileType, string? subfolder)
     {
-        // Create path: wwwroot/uploads/{fileType}/{year}/{month}/{subfolder?}
-        var now = DateTime.UtcNow;
-        var year = now.Year.ToString();
-        var month = now.Month.ToString("D2");
-
-        var pathParts = new List<string> { _environment.WebRootPath, "uploads", fileType, year, month };
-        if (!string.IsNullOrEmpty(subfolder))
+        try
         {
-            pathParts.Add(subfolder);
+            // Get base path with fallback
+            var webRootPath = _environment.WebRootPath;
+            if (string.IsNullOrEmpty(webRootPath))
+            {
+                webRootPath = Path.Combine(_environment.ContentRootPath, "wwwroot");
+                _logger.LogWarning("WebRootPath is null, using fallback: {Path}", webRootPath);
+            }
+
+            _logger.LogInformation("File upload started. WebRootPath: {WebRootPath}, FileType: {FileType}, Subfolder: {Subfolder}",
+                webRootPath, fileType, subfolder);
+
+            // Create path: wwwroot/uploads/{fileType}/{year}/{month}/{subfolder?}
+            var now = DateTime.UtcNow;
+            var year = now.Year.ToString();
+            var month = now.Month.ToString("D2");
+
+            var pathParts = new List<string> { webRootPath, "uploads", fileType, year, month };
+            if (!string.IsNullOrEmpty(subfolder))
+            {
+                pathParts.Add(subfolder);
+            }
+
+            var uploadPath = Path.Combine(pathParts.ToArray());
+            _logger.LogInformation("Upload path: {UploadPath}", uploadPath);
+
+            // Ensure directory exists
+            if (!Directory.Exists(uploadPath))
+            {
+                _logger.LogInformation("Creating directory: {UploadPath}", uploadPath);
+                Directory.CreateDirectory(uploadPath);
+            }
+
+            // Generate unique filename
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var fileName = $"{Guid.NewGuid()}{extension}";
+            var filePath = Path.Combine(uploadPath, fileName);
+
+            _logger.LogInformation("Saving file to: {FilePath}", filePath);
+
+            // Save file
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            _logger.LogInformation("File saved successfully: {FilePath}", filePath);
+
+            // Return relative URL
+            var relativePathParts = new List<string> { "/uploads", fileType, year, month };
+            if (!string.IsNullOrEmpty(subfolder))
+            {
+                relativePathParts.Add(subfolder);
+            }
+            relativePathParts.Add(fileName);
+
+            var relativeUrl = string.Join("/", relativePathParts);
+            _logger.LogInformation("Returning relative URL: {RelativeUrl}", relativeUrl);
+
+            return relativeUrl;
         }
-
-        var uploadPath = Path.Combine(pathParts.ToArray());
-
-        // Ensure directory exists
-        if (!Directory.Exists(uploadPath))
+        catch (Exception ex)
         {
-            Directory.CreateDirectory(uploadPath);
+            _logger.LogError(ex, "Failed to save file. FileName: {FileName}, FileType: {FileType}, Subfolder: {Subfolder}",
+                file.FileName, fileType, subfolder);
+            throw;
         }
-
-        // Generate unique filename
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        var fileName = $"{Guid.NewGuid()}{extension}";
-        var filePath = Path.Combine(uploadPath, fileName);
-
-        // Save file
-        using (var stream = new FileStream(filePath, FileMode.Create))
-        {
-            await file.CopyToAsync(stream);
-        }
-
-        // Return relative URL
-        var relativePathParts = new List<string> { "/uploads", fileType, year, month };
-        if (!string.IsNullOrEmpty(subfolder))
-        {
-            relativePathParts.Add(subfolder);
-        }
-        relativePathParts.Add(fileName);
-
-        return string.Join("/", relativePathParts);
     }
 
     private void ValidateImage(IFormFile file)

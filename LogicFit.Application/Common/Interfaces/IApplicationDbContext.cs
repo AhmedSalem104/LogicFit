@@ -31,6 +31,7 @@ public interface IApplicationDbContext
     DbSet<SubscriptionFreeze> SubscriptionFreezes { get; }
     DbSet<CoachClient> CoachClients { get; }
     DbSet<AuditLog> AuditLogs { get; }
+    DbSet<WalletTransaction> WalletTransactions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

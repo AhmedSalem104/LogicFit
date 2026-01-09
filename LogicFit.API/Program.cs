@@ -102,6 +102,14 @@ app.UseExceptionHandling();
 
 app.UseHttpsRedirection();
 
+// Ensure uploads directory exists
+var uploadsPath = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+    Log.Information("Created uploads directory: {UploadsPath}", uploadsPath);
+}
+
 // Enable static files for file uploads
 app.UseStaticFiles();
 
