@@ -5,29 +5,32 @@ using LogicFit.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace LogicFit.Application.Features.Users.Commands.UpdateUserProfile;
+namespace LogicFit.Application.Features.Profile.Commands.UpdateMyProfile;
 
-public class UpdateUserProfileCommandHandler : IRequestHandler<UpdateUserProfileCommand, bool>
+public class UpdateMyProfileCommandHandler : IRequestHandler<UpdateMyProfileCommand, bool>
 {
     private readonly IApplicationDbContext _context;
-    private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public UpdateUserProfileCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public UpdateMyProfileCommandHandler(IApplicationDbContext context, ICurrentUserService currentUserService)
     {
         _context = context;
-        _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
-    public async Task<bool> Handle(UpdateUserProfileCommand request, CancellationToken cancellationToken)
+    public async Task<bool> Handle(UpdateMyProfileCommand request, CancellationToken cancellationToken)
     {
-        var tenantId = _tenantService.GetCurrentTenantId();
+        if (string.IsNullOrEmpty(_currentUserService.UserId))
+            throw new UnauthorizedAccessException("User not authenticated");
+
+        var userId = Guid.Parse(_currentUserService.UserId);
 
         var user = await _context.Users
             .Include(u => u.Profile)
-            .FirstOrDefaultAsync(u => u.Id == request.UserId && u.TenantId == tenantId, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
         if (user == null)
-            throw new NotFoundException("User", request.UserId);
+            throw new NotFoundException("User", userId);
 
         if (user.Profile == null)
         {

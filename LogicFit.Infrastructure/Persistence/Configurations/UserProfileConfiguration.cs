@@ -15,10 +15,19 @@ public class UserProfileConfiguration : IEntityTypeConfiguration<UserProfile>
         builder.Property(e => e.FullName)
             .HasMaxLength(200);
 
+        builder.Property(e => e.ProfilePictureUrl)
+            .HasMaxLength(500);
+
         builder.Property(e => e.ActivityLevel)
             .HasMaxLength(50);
 
+        builder.Property(e => e.FitnessGoal)
+            .HasMaxLength(100);
+
         builder.Property(e => e.HeightCm)
+            .HasPrecision(5, 2);
+
+        builder.Property(e => e.WeightKg)
             .HasPrecision(5, 2);
     }
 }

@@ -3,26 +3,29 @@ using LogicFit.Application.Features.Users.DTOs;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace LogicFit.Application.Features.Users.Queries.GetUserById;
+namespace LogicFit.Application.Features.Profile.Queries.GetMyProfile;
 
-public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserDto?>
+public class GetMyProfileQueryHandler : IRequestHandler<GetMyProfileQuery, UserDto?>
 {
     private readonly IApplicationDbContext _context;
-    private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetUserByIdQueryHandler(IApplicationDbContext context, ITenantService tenantService)
+    public GetMyProfileQueryHandler(IApplicationDbContext context, ICurrentUserService currentUserService)
     {
         _context = context;
-        _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
-    public async Task<UserDto?> Handle(GetUserByIdQuery request, CancellationToken cancellationToken)
+    public async Task<UserDto?> Handle(GetMyProfileQuery request, CancellationToken cancellationToken)
     {
-        var tenantId = _tenantService.GetCurrentTenantId();
+        if (string.IsNullOrEmpty(_currentUserService.UserId))
+            return null;
+
+        var userId = Guid.Parse(_currentUserService.UserId);
 
         return await _context.Users
             .Include(u => u.Profile)
-            .Where(u => u.Id == request.Id && u.TenantId == tenantId)
+            .Where(u => u.Id == userId)
             .Select(u => new UserDto
             {
                 Id = u.Id,

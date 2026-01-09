@@ -48,10 +48,13 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, List<UserDto>
                 Profile = u.Profile != null ? new UserProfileDto
                 {
                     FullName = u.Profile.FullName,
+                    ProfilePictureUrl = u.Profile.ProfilePictureUrl,
                     Gender = (int?)u.Profile.Gender,
                     BirthDate = u.Profile.BirthDate,
                     HeightCm = u.Profile.HeightCm,
+                    WeightKg = u.Profile.WeightKg,
                     ActivityLevel = u.Profile.ActivityLevel,
+                    FitnessGoal = u.Profile.FitnessGoal,
                     MedicalHistory = u.Profile.MedicalHistory
                 } : null
             })

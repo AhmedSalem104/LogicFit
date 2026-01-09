@@ -1,10 +1,9 @@
 using MediatR;
 
-namespace LogicFit.Application.Features.Users.Commands.UpdateUserProfile;
+namespace LogicFit.Application.Features.Profile.Commands.UpdateMyProfile;
 
-public class UpdateUserProfileCommand : IRequest<bool>
+public class UpdateMyProfileCommand : IRequest<bool>
 {
-    public Guid UserId { get; set; }
     public string? FullName { get; set; }
     public int? Gender { get; set; }
     public DateTime? BirthDate { get; set; }

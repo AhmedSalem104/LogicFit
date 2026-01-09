@@ -17,10 +17,13 @@ public class UserDto
 public class UserProfileDto
 {
     public string? FullName { get; set; }
+    public string? ProfilePictureUrl { get; set; }
     public int? Gender { get; set; }
     public DateTime? BirthDate { get; set; }
     public double? HeightCm { get; set; }
+    public double? WeightKg { get; set; }
     public string? ActivityLevel { get; set; }
+    public string? FitnessGoal { get; set; }
     public string? MedicalHistory { get; set; }
 }
 
@@ -45,6 +48,8 @@ public class UpdateUserProfileDto
     public int? Gender { get; set; }
     public DateTime? BirthDate { get; set; }
     public double? HeightCm { get; set; }
+    public double? WeightKg { get; set; }
     public string? ActivityLevel { get; set; }
+    public string? FitnessGoal { get; set; }
     public string? MedicalHistory { get; set; }
 }
