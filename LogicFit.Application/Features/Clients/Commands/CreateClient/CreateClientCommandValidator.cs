@@ -11,8 +11,8 @@ public class CreateClientCommandValidator : AbstractValidator<CreateClientComman
             .Matches(@"^[\d\+\-\s]+$").WithMessage("Invalid phone number format");
 
         RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("Password is required")
-            .MinimumLength(6).WithMessage("Password must be at least 6 characters");
+            .MinimumLength(6).WithMessage("Password must be at least 6 characters")
+            .When(x => !string.IsNullOrEmpty(x.Password));
 
         RuleFor(x => x.Email)
             .EmailAddress().WithMessage("Invalid email format")
