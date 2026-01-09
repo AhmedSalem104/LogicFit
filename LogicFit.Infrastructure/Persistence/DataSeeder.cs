@@ -48,6 +48,56 @@ public class DataSeeder
         }
     }
 
+    /// <summary>
+    /// Force reset foods with identity reseed. Use this to fix the database if food IDs
+    /// have become out of sync due to previous delete/reseed cycles.
+    /// WARNING: This will delete all MealItems, RecipeIngredients, and FoodMicronutrients!
+    /// </summary>
+    public async Task ForceResetFoodsAsync()
+    {
+        _logger.LogWarning("Starting force reset of Foods table...");
+
+        // Delete related data first (foreign key constraints)
+        var mealItems = await _context.Set<MealItem>().IgnoreQueryFilters().ToListAsync();
+        if (mealItems.Any())
+        {
+            _context.Set<MealItem>().RemoveRange(mealItems);
+            _logger.LogInformation("Deleted {Count} meal items", mealItems.Count);
+        }
+
+        var recipeIngredients = await _context.Set<RecipeIngredient>().IgnoreQueryFilters().ToListAsync();
+        if (recipeIngredients.Any())
+        {
+            _context.Set<RecipeIngredient>().RemoveRange(recipeIngredients);
+            _logger.LogInformation("Deleted {Count} recipe ingredients", recipeIngredients.Count);
+        }
+
+        var foodMicronutrients = await _context.Set<FoodMicronutrient>().IgnoreQueryFilters().ToListAsync();
+        if (foodMicronutrients.Any())
+        {
+            _context.Set<FoodMicronutrient>().RemoveRange(foodMicronutrients);
+            _logger.LogInformation("Deleted {Count} food micronutrients", foodMicronutrients.Count);
+        }
+
+        // Delete all foods
+        var foods = await _context.Foods.IgnoreQueryFilters().ToListAsync();
+        if (foods.Any())
+        {
+            _context.Foods.RemoveRange(foods);
+            _logger.LogInformation("Deleted {Count} foods", foods.Count);
+        }
+
+        await _context.SaveChangesAsync();
+
+        // Reset identity seed using raw SQL
+        await _context.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Foods', RESEED, 0)");
+        _logger.LogInformation("Reset Foods identity seed to 0");
+
+        // Now seed fresh
+        await SeedFoodsAsync();
+        _logger.LogWarning("Force reset of Foods completed. New foods seeded with IDs starting from 1.");
+    }
+
     private async Task SeedTenantsAsync()
     {
         if (await _context.Tenants.AnyAsync())
@@ -258,42 +308,69 @@ public class DataSeeder
 
         if (seedData == null || !seedData.Any()) return;
 
-        // Delete all global foods and reseed fresh
+        // Get existing global foods for UPSERT (including soft-deleted ones)
         var existingGlobalFoods = await _context.Foods
             .IgnoreQueryFilters()
             .Where(f => f.TenantId == null)
             .ToListAsync();
 
-        if (existingGlobalFoods.Any())
-        {
-            _context.Foods.RemoveRange(existingGlobalFoods);
-            await _context.SaveChangesAsync();
-            _logger.LogInformation("Deleted {Count} existing global foods for fresh reseed", existingGlobalFoods.Count);
-        }
+        // Create lookup by name for efficient matching (handle duplicates by taking first)
+        var existingByName = existingGlobalFoods
+            .GroupBy(f => f.Name)
+            .ToDictionary(g => g.Key, g => g.First());
 
-        // Insert all foods from JSON
+        int added = 0, updated = 0, restored = 0;
+
         foreach (var item in seedData)
         {
-            var food = new Food
+            if (existingByName.TryGetValue(item.NameEn, out var existing))
             {
-                TenantId = item.TenantId,
-                Name = item.NameEn,
-                NameAr = item.NameAr,
-                Category = item.Category,
-                CaloriesPer100g = (double)item.Calories,
-                ProteinPer100g = (double)item.Protein,
-                CarbsPer100g = (double)item.Carbs,
-                FatsPer100g = (double)item.Fat,
-                FiberPer100g = (double?)item.Fiber,
-                ServingSize = (double?)item.ServingSize,
-                ServingUnit = item.ServingUnit,
-                IsVerified = true
-            };
-            _context.Foods.Add(food);
+                // UPDATE existing food (preserve ID)
+                existing.NameAr = item.NameAr;
+                existing.Category = item.Category;
+                existing.CaloriesPer100g = (double)item.Calories;
+                existing.ProteinPer100g = (double)item.Protein;
+                existing.CarbsPer100g = (double)item.Carbs;
+                existing.FatsPer100g = (double)item.Fat;
+                existing.FiberPer100g = (double?)item.Fiber;
+                existing.ServingSize = (double?)item.ServingSize;
+                existing.ServingUnit = item.ServingUnit;
+                existing.IsVerified = true;
+
+                // Restore if soft-deleted
+                if (existing.IsDeleted)
+                {
+                    existing.IsDeleted = false;
+                    existing.DeletedAt = null;
+                    restored++;
+                }
+                updated++;
+            }
+            else
+            {
+                // INSERT new food
+                var food = new Food
+                {
+                    TenantId = item.TenantId,
+                    Name = item.NameEn,
+                    NameAr = item.NameAr,
+                    Category = item.Category,
+                    CaloriesPer100g = (double)item.Calories,
+                    ProteinPer100g = (double)item.Protein,
+                    CarbsPer100g = (double)item.Carbs,
+                    FatsPer100g = (double)item.Fat,
+                    FiberPer100g = (double?)item.Fiber,
+                    ServingSize = (double?)item.ServingSize,
+                    ServingUnit = item.ServingUnit,
+                    IsVerified = true
+                };
+                _context.Foods.Add(food);
+                added++;
+            }
         }
 
         await _context.SaveChangesAsync();
-        _logger.LogInformation("Foods: {Count} seeded successfully", seedData.Count);
+        _logger.LogInformation("Foods: {Added} added, {Updated} updated ({Restored} restored from deleted)", added, updated, restored);
     }
 
     private async Task SeedUsersAsync()
