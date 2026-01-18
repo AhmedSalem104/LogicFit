@@ -1,7 +1,9 @@
 using LogicFit.Application.Features.CoachClients.Commands.AddTrainee;
 using LogicFit.Application.Features.CoachClients.Commands.AssignClientToCoach;
 using LogicFit.Application.Features.CoachClients.Commands.UnassignClientFromCoach;
+using LogicFit.Application.Features.CoachClients.Commands.UpdateCoachClient;
 using LogicFit.Application.Features.CoachClients.DTOs;
+using LogicFit.Application.Features.CoachClients.Queries.GetCoachClientById;
 using LogicFit.Application.Features.CoachClients.Queries.GetCoachClients;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -40,6 +42,18 @@ public class CoachClientsController : ControllerBase
     }
 
     /// <summary>
+    /// Get a specific coach-client relationship by ID
+    /// </summary>
+    [HttpGet("{id}")]
+    public async Task<ActionResult<CoachClientDto>> GetCoachClientById(Guid id)
+    {
+        var result = await _mediator.Send(new GetCoachClientByIdQuery { Id = id });
+        if (result == null)
+            return NotFound();
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Add a new trainee and assign to current coach
     /// Creates a new client account and automatically assigns to the logged-in coach
     /// </summary>
@@ -60,6 +74,21 @@ public class CoachClientsController : ControllerBase
     {
         var id = await _mediator.Send(command);
         return Ok(id);
+    }
+
+    /// <summary>
+    /// Update a coach-client relationship
+    /// - Transfer client to another coach (NewCoachId)
+    /// - Activate/deactivate the relationship (IsActive)
+    /// </summary>
+    [HttpPut("{id}")]
+    public async Task<ActionResult> UpdateCoachClient(Guid id, [FromBody] UpdateCoachClientCommand command)
+    {
+        command.Id = id;
+        var result = await _mediator.Send(command);
+        if (!result)
+            return NotFound();
+        return NoContent();
     }
 
     /// <summary>
