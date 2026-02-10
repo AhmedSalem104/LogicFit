@@ -24,8 +24,9 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
 
     public async Task<AuthResponseDto> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
-        // Find user by phone number
+        // Find user by phone number (include profile for FullName)
         var user = await _context.Users
+            .Include(u => u.Profile)
             .FirstOrDefaultAsync(u => u.TenantId == request.TenantId && u.PhoneNumber == request.PhoneNumber,
                 cancellationToken);
 
@@ -53,6 +54,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             UserId = user.Id,
             Email = user.Email,
             PhoneNumber = user.PhoneNumber,
+            FullName = user.Profile?.FullName,
             Role = user.Role.ToString(),
             TenantId = user.TenantId,
             AccessToken = accessToken,

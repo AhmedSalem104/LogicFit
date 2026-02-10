@@ -90,6 +90,8 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         {
             UserId = user.Id,
             Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            FullName = request.FullName,
             Role = user.Role.ToString(),
             TenantId = user.TenantId,
             AccessToken = accessToken,
