@@ -19,6 +19,27 @@ public class SubscriptionPlanConfiguration : IEntityTypeConfiguration<Subscripti
         builder.Property(e => e.Price)
             .HasPrecision(18, 2);
 
+        builder.Property(e => e.Description)
+            .HasMaxLength(1000);
+
+        builder.Property(e => e.Features)
+            .HasMaxLength(2000);
+
+        builder.Property(e => e.MaxFreezeDays)
+            .HasDefaultValue(0);
+
+        builder.Property(e => e.MaxFreezeCount)
+            .HasDefaultValue(0);
+
+        builder.Property(e => e.IsActive)
+            .HasDefaultValue(true);
+
+        builder.Property(e => e.InBodyIncluded)
+            .HasDefaultValue(false);
+
+        builder.Property(e => e.PrivateCoach)
+            .HasDefaultValue(false);
+
         builder.HasIndex(e => e.TenantId);
 
         builder.HasOne(e => e.Tenant)

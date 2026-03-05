@@ -49,14 +49,26 @@ public class SubscriptionsReportDto
 {
     public int TotalSubscriptions { get; set; }
     public int ActiveSubscriptions { get; set; }
+    public int SuspendedSubscriptions { get; set; }
+    public int TrialSubscriptions { get; set; }
     public int ExpiredSubscriptions { get; set; }
     public int CancelledSubscriptions { get; set; }
     public int ExpiringIn7Days { get; set; }
     public int ExpiringIn30Days { get; set; }
     public decimal TotalRevenue { get; set; }
     public decimal RevenueThisMonth { get; set; }
+    public decimal RenewalRate { get; set; }
+    public double AverageSubscriptionDurationDays { get; set; }
     public List<SubscriptionPlanStatsDto> PlanStatistics { get; set; } = new();
     public List<MonthlyRevenueDto> MonthlyRevenue { get; set; } = new();
+    public List<RevenueByPaymentMethodDto> RevenueByPaymentMethod { get; set; } = new();
+}
+
+public class RevenueByPaymentMethodDto
+{
+    public string PaymentMethod { get; set; } = string.Empty;
+    public int Count { get; set; }
+    public decimal TotalRevenue { get; set; }
 }
 
 public class SubscriptionPlanStatsDto

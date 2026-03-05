@@ -5,4 +5,5 @@ namespace LogicFit.Application.Features.Subscriptions.Queries.GetSubscriptionPla
 
 public class GetSubscriptionPlansQuery : IRequest<List<SubscriptionPlanDto>>
 {
+    public bool? IsActive { get; set; }
 }

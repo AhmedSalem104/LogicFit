@@ -5,4 +5,6 @@ namespace LogicFit.Application.Features.Subscriptions.Commands.CancelSubscriptio
 public class CancelSubscriptionCommand : IRequest<bool>
 {
     public Guid SubscriptionId { get; set; }
+    public bool RefundToWallet { get; set; }
+    public decimal? RefundAmount { get; set; }
 }

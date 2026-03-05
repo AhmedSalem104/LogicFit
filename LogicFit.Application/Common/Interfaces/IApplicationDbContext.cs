@@ -32,6 +32,13 @@ public interface IApplicationDbContext
     DbSet<CoachClient> CoachClients { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<WalletTransaction> WalletTransactions { get; }
+    DbSet<Notification> Notifications { get; }
+    DbSet<Attendance> Attendances { get; }
+    DbSet<Appointment> Appointments { get; }
+    DbSet<ChatConversation> ChatConversations { get; }
+    DbSet<ChatMessage> ChatMessages { get; }
+    DbSet<Challenge> Challenges { get; }
+    DbSet<ClientChallenge> ClientChallenges { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

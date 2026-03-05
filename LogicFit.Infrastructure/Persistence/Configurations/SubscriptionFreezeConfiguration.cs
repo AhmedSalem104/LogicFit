@@ -15,6 +15,9 @@ public class SubscriptionFreezeConfiguration : IEntityTypeConfiguration<Subscrip
         builder.Property(e => e.Reason)
             .HasMaxLength(500);
 
+        builder.Property(e => e.IsActive)
+            .HasDefaultValue(true);
+
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => e.SubscriptionId);
 

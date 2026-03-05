@@ -73,6 +73,9 @@ public static class DependencyInjection
         // Data Seeder
         services.AddScoped<DataSeeder>();
 
+        // Background Services
+        services.AddHostedService<SubscriptionLifecycleService>();
+
         return services;
     }
 }

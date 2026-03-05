@@ -56,6 +56,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ExerciseSecondaryMuscle> ExerciseSecondaryMuscles => Set<ExerciseSecondaryMuscle>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<Attendance> Attendances => Set<Attendance>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<ChatConversation> ChatConversations => Set<ChatConversation>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<Challenge> Challenges => Set<Challenge>();
+    public DbSet<ClientChallenge> ClientChallenges => Set<ClientChallenge>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -92,6 +99,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         builder.Entity<ClientSubscription>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<SubscriptionFreeze>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<CoachClient>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<Attendance>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<Appointment>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<ChatConversation>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<ChatMessage>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<Challenge>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<ClientChallenge>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
 
         // Global Foods and Exercises (can be null TenantId for global or specific tenant)
         builder.Entity<Food>().HasQueryFilter(e => !e.IsDeleted && (e.TenantId == null || _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));

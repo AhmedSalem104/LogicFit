@@ -12,9 +12,22 @@ public class ClientSubscriptionConfiguration : IEntityTypeConfiguration<ClientSu
 
         builder.HasKey(e => e.Id);
 
+        builder.Property(e => e.TotalAmount)
+            .HasPrecision(18, 2);
+
+        builder.Property(e => e.AmountPaid)
+            .HasPrecision(18, 2);
+
+        builder.Property(e => e.Discount)
+            .HasPrecision(18, 2);
+
+        builder.Property(e => e.Notes)
+            .HasMaxLength(500);
+
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => e.ClientId);
         builder.HasIndex(e => e.Status);
+        builder.HasIndex(e => e.RenewedFromId);
 
         builder.HasOne(e => e.Client)
             .WithMany(u => u.Subscriptions)
@@ -29,6 +42,11 @@ public class ClientSubscriptionConfiguration : IEntityTypeConfiguration<ClientSu
         builder.HasOne(e => e.SalesCoach)
             .WithMany(u => u.SalesSubscriptions)
             .HasForeignKey(e => e.SalesCoachId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.RenewedFrom)
+            .WithMany()
+            .HasForeignKey(e => e.RenewedFromId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

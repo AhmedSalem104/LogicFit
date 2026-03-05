@@ -8,6 +8,7 @@ public class SubscriptionFreeze : TenantAuditableEntity
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public string? Reason { get; set; }
+    public bool IsActive { get; set; } = true;
 
     // Navigation Properties
     public virtual ClientSubscription Subscription { get; set; } = null!;

@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.Subscriptions.DTOs;
+using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,7 +35,27 @@ public class GetClientSubscriptionsQueryHandler : IRequestHandler<GetClientSubsc
         if (request.Status.HasValue)
             query = query.Where(s => s.Status == request.Status.Value);
 
+        if (request.PlanId.HasValue)
+            query = query.Where(s => s.PlanId == request.PlanId.Value);
+
+        if (request.ExpiringWithinDays.HasValue)
+        {
+            var expiryDate = DateTime.UtcNow.AddDays(request.ExpiringWithinDays.Value);
+            query = query.Where(s => s.Status == SubscriptionStatus.Active
+                && s.EndDate <= expiryDate && s.EndDate > DateTime.UtcNow);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var term = request.SearchTerm.Trim().ToLower();
+            query = query.Where(s =>
+                (s.Client.Profile != null && s.Client.Profile.FullName.ToLower().Contains(term))
+                || (s.Client.PhoneNumber != null && s.Client.PhoneNumber.Contains(term))
+                || (s.Client.Email != null && s.Client.Email.ToLower().Contains(term)));
+        }
+
         return await query
+            .OrderByDescending(s => s.CreatedAt)
             .Select(s => new ClientSubscriptionDto
             {
                 Id = s.Id,
@@ -47,14 +68,24 @@ public class GetClientSubscriptionsQueryHandler : IRequestHandler<GetClientSubsc
                 EndDate = s.EndDate,
                 Status = s.Status,
                 SalesCoachId = s.SalesCoachId,
-                SalesCoachName = s.SalesCoach != null ? (s.SalesCoach.Profile != null ? s.SalesCoach.Profile.FullName : s.SalesCoach.Email) : null,
-                Freezes = s.Freezes.Select(f => new SubscriptionFreezeDto
+                SalesCoachName = s.SalesCoach != null
+                    ? (s.SalesCoach.Profile != null ? s.SalesCoach.Profile.FullName : s.SalesCoach.Email)
+                    : null,
+                PaymentMethod = s.PaymentMethod,
+                TotalAmount = s.TotalAmount,
+                AmountPaid = s.AmountPaid,
+                Discount = s.Discount,
+                Notes = s.Notes,
+                RenewedFromId = s.RenewedFromId,
+                TotalFreezeDays = s.Freezes.Where(f => !f.IsDeleted).Sum(f => (int)(f.EndDate - f.StartDate).TotalDays),
+                Freezes = s.Freezes.Where(f => !f.IsDeleted).Select(f => new SubscriptionFreezeDto
                 {
                     Id = f.Id,
                     SubscriptionId = f.SubscriptionId,
                     StartDate = f.StartDate,
                     EndDate = f.EndDate,
-                    Reason = f.Reason
+                    Reason = f.Reason,
+                    IsActive = f.IsActive
                 }).ToList()
             })
             .ToListAsync(cancellationToken);

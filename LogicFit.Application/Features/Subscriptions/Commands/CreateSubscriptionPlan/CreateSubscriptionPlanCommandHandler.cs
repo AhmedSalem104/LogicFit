@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Entities;
 using MediatR;
@@ -23,7 +24,15 @@ public class CreateSubscriptionPlanCommandHandler : IRequestHandler<CreateSubscr
             TenantId = _tenantService.GetCurrentTenantId(),
             Name = request.Name,
             Price = request.Price,
-            DurationMonths = request.DurationMonths
+            DurationMonths = request.DurationMonths,
+            Description = request.Description,
+            Features = request.Features != null ? JsonSerializer.Serialize(request.Features) : null,
+            MaxFreezeDays = request.MaxFreezeDays,
+            MaxFreezeCount = request.MaxFreezeCount,
+            IsActive = request.IsActive,
+            SessionsPerWeek = request.SessionsPerWeek,
+            InBodyIncluded = request.InBodyIncluded,
+            PrivateCoach = request.PrivateCoach
         };
 
         _context.SubscriptionPlans.Add(plan);
