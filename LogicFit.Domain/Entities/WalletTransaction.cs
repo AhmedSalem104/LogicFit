@@ -7,6 +7,7 @@ namespace LogicFit.Domain.Entities;
 public class WalletTransaction : AuditableEntity, ITenantEntity
 {
     public Guid TenantId { get; set; }
+    public Guid? BranchId { get; set; }
     public Guid UserId { get; set; }
     public TransactionType Type { get; set; }
     public decimal Amount { get; set; }
@@ -17,5 +18,6 @@ public class WalletTransaction : AuditableEntity, ITenantEntity
 
     // Navigation Properties
     public virtual Tenant Tenant { get; set; } = null!;
+    public virtual Branch? Branch { get; set; }
     public virtual User User { get; set; } = null!;
 }

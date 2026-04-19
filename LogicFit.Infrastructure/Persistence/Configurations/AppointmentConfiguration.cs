@@ -27,5 +27,12 @@ public class AppointmentConfiguration : IEntityTypeConfiguration<Appointment>
             .WithMany()
             .HasForeignKey(e => e.ClientId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Branch)
+            .WithMany()
+            .HasForeignKey(e => e.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(e => e.BranchId);
     }
 }

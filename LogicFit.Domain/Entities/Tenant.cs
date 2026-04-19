@@ -33,4 +33,5 @@ public class Tenant : AuditableEntity, ISoftDeletable
     public virtual ICollection<DietPlan> DietPlans { get; set; } = new List<DietPlan>();
     public virtual ICollection<Exercise> Exercises { get; set; } = new List<Exercise>();
     public virtual ICollection<SubscriptionPlan> SubscriptionPlans { get; set; } = new List<SubscriptionPlan>();
+    public virtual ICollection<Branch> Branches { get; set; } = new List<Branch>();
 }

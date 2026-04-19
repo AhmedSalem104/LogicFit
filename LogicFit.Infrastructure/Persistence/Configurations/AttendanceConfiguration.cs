@@ -20,5 +20,18 @@ public class AttendanceConfiguration : IEntityTypeConfiguration<Attendance>
             .WithMany()
             .HasForeignKey(e => e.ClientId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Branch)
+            .WithMany()
+            .HasForeignKey(e => e.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Subscription)
+            .WithMany()
+            .HasForeignKey(e => e.SubscriptionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(e => e.BranchId);
+        builder.HasIndex(e => e.SubscriptionId);
     }
 }

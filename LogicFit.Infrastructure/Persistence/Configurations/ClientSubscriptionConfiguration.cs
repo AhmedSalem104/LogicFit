@@ -48,5 +48,25 @@ public class ClientSubscriptionConfiguration : IEntityTypeConfiguration<ClientSu
             .WithMany()
             .HasForeignKey(e => e.RenewedFromId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Branch)
+            .WithMany()
+            .HasForeignKey(e => e.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Coupon)
+            .WithMany()
+            .HasForeignKey(e => e.CouponId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.Invoice)
+            .WithMany()
+            .HasForeignKey(e => e.InvoiceId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(e => e.TaxAmount).HasPrecision(18, 2);
+
+        builder.HasIndex(e => e.BranchId);
+        builder.HasIndex(e => e.InvoiceId);
     }
 }

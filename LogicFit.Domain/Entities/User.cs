@@ -7,6 +7,7 @@ namespace LogicFit.Domain.Entities;
 public class User : AuditableEntity, ITenantEntity, ISoftDeletable
 {
     public Guid TenantId { get; set; }
+    public Guid? PrimaryBranchId { get; set; }
     public string Email { get; set; } = string.Empty;
     public string? PhoneNumber { get; set; }
     public string PasswordHash { get; set; } = string.Empty;
@@ -26,6 +27,8 @@ public class User : AuditableEntity, ITenantEntity, ISoftDeletable
     // Navigation Properties
     public virtual Tenant Tenant { get; set; } = null!;
     public virtual UserProfile? Profile { get; set; }
+    public virtual Branch? PrimaryBranch { get; set; }
+    public virtual ICollection<UserBranchAccess> BranchAccesses { get; set; } = new List<UserBranchAccess>();
 
     // As Coach
     public virtual ICollection<DietPlan> CoachDietPlans { get; set; } = new List<DietPlan>();

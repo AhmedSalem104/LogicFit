@@ -32,8 +32,14 @@ public class WalletTransactionConfiguration : IEntityTypeConfiguration<WalletTra
             .HasForeignKey(t => t.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(t => t.Branch)
+            .WithMany()
+            .HasForeignKey(t => t.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(t => t.TenantId);
         builder.HasIndex(t => t.UserId);
         builder.HasIndex(t => t.CreatedAt);
+        builder.HasIndex(t => t.BranchId);
     }
 }

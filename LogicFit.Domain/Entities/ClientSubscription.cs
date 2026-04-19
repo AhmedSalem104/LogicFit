@@ -6,6 +6,7 @@ namespace LogicFit.Domain.Entities;
 public class ClientSubscription : TenantAuditableEntity
 {
     public Guid ClientId { get; set; }
+    public Guid? BranchId { get; set; }
     public Guid PlanId { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
@@ -22,10 +23,18 @@ public class ClientSubscription : TenantAuditableEntity
     // Renewal
     public Guid? RenewedFromId { get; set; }
 
+    // Finance links
+    public Guid? CouponId { get; set; }
+    public decimal TaxAmount { get; set; }
+    public Guid? InvoiceId { get; set; }
+
     // Navigation Properties
     public virtual User Client { get; set; } = null!;
+    public virtual Branch? Branch { get; set; }
     public virtual SubscriptionPlan Plan { get; set; } = null!;
     public virtual User? SalesCoach { get; set; }
     public virtual ClientSubscription? RenewedFrom { get; set; }
     public virtual ICollection<SubscriptionFreeze> Freezes { get; set; } = new List<SubscriptionFreeze>();
+    public virtual Coupon? Coupon { get; set; }
+    public virtual Invoice? Invoice { get; set; }
 }
