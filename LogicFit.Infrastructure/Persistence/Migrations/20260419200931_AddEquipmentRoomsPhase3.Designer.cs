@@ -3327,7 +3327,7 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.HasOne("LogicFit.Domain.Entities.User", "Client")
                         .WithMany()
                         .HasForeignKey("ClientId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Client");

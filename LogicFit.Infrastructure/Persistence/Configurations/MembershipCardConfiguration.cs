@@ -23,6 +23,6 @@ public class MembershipCardConfiguration : IEntityTypeConfiguration<MembershipCa
         builder.HasOne(e => e.Client)
             .WithMany()
             .HasForeignKey(e => e.ClientId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

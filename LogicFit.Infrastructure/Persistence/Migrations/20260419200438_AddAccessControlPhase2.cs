@@ -41,7 +41,7 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         column: x => x.ClientId,
                         principalTable: "DomainUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
