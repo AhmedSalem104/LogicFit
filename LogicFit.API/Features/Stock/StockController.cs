@@ -6,13 +6,14 @@ using LogicFit.Application.Features.Stock.Queries.GetStockMovements;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Stock;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageInventory)]
 public class StockController : ControllerBase
 {
     private readonly IMediator _mediator;

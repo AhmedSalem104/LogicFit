@@ -17,13 +17,14 @@ using LogicFit.Application.Features.Subscriptions.Queries.GetSubscriptionPlans;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Subscriptions;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageClientSubscriptions)]
 public class SubscriptionsController : ControllerBase
 {
     private readonly IMediator _mediator;

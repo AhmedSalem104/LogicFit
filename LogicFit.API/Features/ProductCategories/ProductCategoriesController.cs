@@ -5,13 +5,14 @@ using LogicFit.Application.Features.ProductCategories.Queries.GetProductCategori
 using LogicFit.Application.Features.Products.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.ProductCategories;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageInventory)]
 public class ProductCategoriesController : ControllerBase
 {
     private readonly IMediator _mediator;

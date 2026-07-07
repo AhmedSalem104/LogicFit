@@ -53,6 +53,16 @@ public class ExceptionHandlingMiddleware
                 exception.Message,
                 (IDictionary<string, string[]>?)null
             ),
+            SubscriptionLimitException => (
+                StatusCodes.Status402PaymentRequired,
+                exception.Message,
+                (IDictionary<string, string[]>?)null
+            ),
+            ConflictException => (
+                StatusCodes.Status409Conflict,
+                exception.Message,
+                (IDictionary<string, string[]>?)null
+            ),
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "An error occurred while processing your request",

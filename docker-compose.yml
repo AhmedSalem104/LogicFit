@@ -1,0 +1,46 @@
+# Local stack: SQL Server + tenant API + platform API.
+# Secrets are passed via environment (do NOT commit real values). Rotate the sample password.
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${DB_SA_PASSWORD:-Your_strong!Passw0rd}"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+
+  api:
+    build:
+      context: .
+      dockerfile: LogicFit.API/Dockerfile
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ConnectionStrings__DefaultConnection: "Server=db;Database=LogicFitDb;User Id=sa;Password=${DB_SA_PASSWORD:-Your_strong!Passw0rd};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+      JwtSettings__Secret: "${JWT_SECRET:?set JWT_SECRET}"
+      JwtSettings__Audience: "LogicFitUsers"
+      Cors__AllowedOrigins__0: "${TENANT_CORS_ORIGIN:-http://localhost:3000}"
+    ports:
+      - "8080:8080"
+
+  platform-api:
+    build:
+      context: .
+      dockerfile: LogicFit.Platform.API/Dockerfile
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ConnectionStrings__DefaultConnection: "Server=db;Database=LogicFitDb;User Id=sa;Password=${DB_SA_PASSWORD:-Your_strong!Passw0rd};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+      JwtSettings__Secret: "${PLATFORM_JWT_SECRET:?set PLATFORM_JWT_SECRET}"
+      JwtSettings__Audience: "LogicFitPlatform"
+      BackgroundJobs__Enabled: "false"
+      Cors__AllowedOrigins__0: "${PLATFORM_CORS_ORIGIN:-http://localhost:3001}"
+    ports:
+      - "8081:8080"
+
+volumes:
+  mssql-data:

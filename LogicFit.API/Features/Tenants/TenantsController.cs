@@ -1,13 +1,18 @@
 using LogicFit.Application.Features.Tenants.Commands.CreateTenant;
 using LogicFit.Application.Features.Tenants.DTOs;
 using LogicFit.Application.Features.Tenants.Queries.GetTenants;
+using LogicFit.Domain.Authorization;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Tenants;
 
 [ApiController]
 [Route("api/[controller]")]
+// Locked to platform admins. Tenant listing/creation is platform functionality and moves to
+// LogicFit.Platform.API in Phase 2; this closes the previously-anonymous exposure now.
+[Authorize(Policy = Permissions.ManageTenants)]
 public class TenantsController : ControllerBase
 {
     private readonly IMediator _mediator;

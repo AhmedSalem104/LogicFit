@@ -4,13 +4,14 @@ using LogicFit.Application.Features.Payments.Queries.GetPayments;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Payments;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageFinance)]
 public class PaymentsController : ControllerBase
 {
     private readonly IMediator _mediator;

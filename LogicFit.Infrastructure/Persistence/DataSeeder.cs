@@ -11,12 +11,16 @@ public class DataSeeder
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<DataSeeder> _logger;
+    private readonly RbacSeeder _rbacSeeder;
+    private readonly PlanSeeder _planSeeder;
     private readonly string _seedDataPath;
 
-    public DataSeeder(ApplicationDbContext context, ILogger<DataSeeder> logger)
+    public DataSeeder(ApplicationDbContext context, ILogger<DataSeeder> logger, RbacSeeder rbacSeeder, PlanSeeder planSeeder)
     {
         _context = context;
         _logger = logger;
+        _rbacSeeder = rbacSeeder;
+        _planSeeder = planSeeder;
         // Check multiple possible locations for seed data
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         _seedDataPath = Path.Combine(baseDir, "SeedData");
@@ -38,6 +42,8 @@ public class DataSeeder
             await SeedExercisesAsync();
             await SeedFoodsAsync();
             await SeedUsersAsync();
+            await _rbacSeeder.SeedAsync();
+            await _planSeeder.SeedAsync();
 
             _logger.LogInformation("Data seeding completed successfully");
         }
@@ -128,7 +134,7 @@ public class DataSeeder
                 Id = item.Id,
                 Name = item.Name,
                 Subdomain = item.Subdomain,
-                Status = (SubscriptionStatus)item.Status,
+                Status = (TenantStatus)item.Status,
                 BrandingSettings = item.BrandingSettings != null ? new BrandingSettings
                 {
                     LogoUrl = item.BrandingSettings.LogoUrl,

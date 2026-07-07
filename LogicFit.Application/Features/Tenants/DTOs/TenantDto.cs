@@ -7,6 +7,6 @@ public class TenantDto
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Subdomain { get; set; }
-    public SubscriptionStatus Status { get; set; }
+    public TenantStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
 }

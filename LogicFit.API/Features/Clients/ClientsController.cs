@@ -6,13 +6,14 @@ using LogicFit.Application.Features.Clients.Queries.GetClientById;
 using LogicFit.Application.Features.Clients.Queries.GetClients;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Clients;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageMembers)]
 public class ClientsController : ControllerBase
 {
     private readonly IMediator _mediator;

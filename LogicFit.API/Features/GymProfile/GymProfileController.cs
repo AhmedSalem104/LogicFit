@@ -4,13 +4,14 @@ using LogicFit.Application.Features.GymProfile.DTOs;
 using LogicFit.Application.Features.GymProfile.Queries.GetGymProfile;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.GymProfile;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageSettings)]
 public class GymProfileController : ControllerBase
 {
     private readonly IMediator _mediator;

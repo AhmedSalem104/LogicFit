@@ -4,13 +4,14 @@ using LogicFit.Application.Features.GateAccess.Queries.GetGateAccessLogs;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.GateAccess;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageAttendance)]
 public class GateAccessController : ControllerBase
 {
     private readonly IMediator _mediator;

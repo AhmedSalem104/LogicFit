@@ -23,6 +23,10 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
+// Health checks (readiness includes a DB connectivity probe).
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<ApplicationDbContext>("database");
+
 // Swagger configuration
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -60,14 +64,28 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// CORS
+// CORS — locked down by configuration. In production, list allowed origins in
+// Cors:AllowedOrigins; an empty list outside Development means no cross-origin access.
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("AppCors", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? Array.Empty<string>();
+
+        if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        }
+        else if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
     });
 });
 
@@ -113,13 +131,17 @@ if (!Directory.Exists(uploadsPath))
 // Enable static files for file uploads
 app.UseStaticFiles();
 
-app.UseCors("AllowAll");
+app.UseCors("AppCors");
 
 app.UseAuthentication();
-app.UseAuthorization();
 
+// Tenant must be resolved BEFORE authorization so permission checks and query filters
+// see the current tenant.
 app.UseTenant();
 
+app.UseAuthorization();
+
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();

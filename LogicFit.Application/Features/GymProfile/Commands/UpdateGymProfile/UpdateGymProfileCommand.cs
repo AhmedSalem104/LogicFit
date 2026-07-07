@@ -14,4 +14,13 @@ public class UpdateGymProfileCommand : IRequest<bool>
     public List<string>? GalleryImages { get; set; }
     public string? PrimaryColor { get; set; }
     public string? SecondaryColor { get; set; }
+
+    // White-label
+    public string? AppName { get; set; }
+    public string? FontFamily { get; set; }
+    public string? CustomCss { get; set; }
+    public string? InvoiceLogoUrl { get; set; }
+    public string? SupportPhone { get; set; }
+    public string? SupportEmail { get; set; }
+    public string? CustomDomain { get; set; }
 }

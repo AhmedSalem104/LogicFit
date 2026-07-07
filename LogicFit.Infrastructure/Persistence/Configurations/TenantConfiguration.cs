@@ -25,6 +25,13 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
             .IsUnique()
             .HasFilter("[Subdomain] IS NOT NULL");
 
+        builder.Property(e => e.CustomDomain)
+            .HasMaxLength(200);
+
+        builder.HasIndex(e => e.CustomDomain)
+            .IsUnique()
+            .HasFilter("[CustomDomain] IS NOT NULL");
+
         builder.Property(e => e.BrandingSettings)
             .HasConversion(
                 v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),

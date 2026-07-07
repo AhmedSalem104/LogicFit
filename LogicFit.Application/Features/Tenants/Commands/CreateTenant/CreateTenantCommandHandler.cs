@@ -22,7 +22,7 @@ public class CreateTenantCommandHandler : IRequestHandler<CreateTenantCommand, T
         {
             Name = request.Name,
             Subdomain = request.Subdomain.ToLower(),
-            Status = SubscriptionStatus.Active,
+            Status = TenantStatus.Active,
             BrandingSettings = new BrandingSettings
             {
                 LogoUrl = request.LogoUrl,

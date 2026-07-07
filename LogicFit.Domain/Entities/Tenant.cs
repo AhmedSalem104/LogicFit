@@ -9,7 +9,8 @@ public class Tenant : AuditableEntity, ISoftDeletable
 {
     public string Name { get; set; } = string.Empty;
     public string? Subdomain { get; set; }
-    public SubscriptionStatus Status { get; set; }
+    public string? CustomDomain { get; set; }
+    public TenantStatus Status { get; set; }
     public BrandingSettings? BrandingSettings { get; set; }
 
     // Gym Details

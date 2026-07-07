@@ -8,5 +8,9 @@ public enum UserRole
     Manager = 4,
     Receptionist = 5,
     Accountant = 6,
-    Trainer = 7
+    Trainer = 7,
+
+    // Platform-layer roles (users belong to the sentinel platform tenant)
+    PlatformOwner = 8,
+    PlatformAdmin = 9
 }

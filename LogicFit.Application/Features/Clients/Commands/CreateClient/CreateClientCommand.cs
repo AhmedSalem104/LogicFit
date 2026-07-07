@@ -1,9 +1,12 @@
+using LogicFit.Application.Common.Interfaces;
 using MediatR;
 
 namespace LogicFit.Application.Features.Clients.Commands.CreateClient;
 
-public class CreateClientCommand : IRequest<Guid>
+public class CreateClientCommand : IRequest<Guid>, IRequireQuota
 {
+    public string QuotaResource => QuotaResources.Members;
+
     public string PhoneNumber { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? Password { get; set; }  // Optional - auto-generated if not provided

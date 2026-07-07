@@ -6,5 +6,6 @@ public interface ITenantService
     Guid GetCurrentTenantId() => CurrentTenantId ?? throw new InvalidOperationException("Tenant not set");
     Task SetTenantAsync(Guid tenantId);
     Task SetTenantBySubdomainAsync(string subdomain);
+    Task<bool> SetTenantByCustomDomainAsync(string host);
     Task<bool> TenantExistsAsync(Guid tenantId);
 }

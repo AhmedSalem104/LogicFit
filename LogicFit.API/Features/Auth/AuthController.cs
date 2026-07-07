@@ -1,5 +1,7 @@
 using LogicFit.Application.Features.Auth.Commands.ForgetPassword;
 using LogicFit.Application.Features.Auth.Commands.Login;
+using LogicFit.Application.Features.Auth.Commands.LogoutAll;
+using LogicFit.Application.Features.Auth.Commands.RefreshToken;
 using LogicFit.Application.Features.Auth.Commands.Register;
 using LogicFit.Application.Features.Auth.Commands.ResetPassword;
 using LogicFit.Application.Features.Auth.DTOs;
@@ -38,6 +40,27 @@ public class AuthController : ControllerBase
     {
         var result = await _mediator.Send(command);
         return Ok(result);
+    }
+
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<AuthResponseDto>> Refresh([FromBody] RefreshTokenCommand command)
+    {
+        command.Surface = LogicFit.Application.Common.Services.RefreshTokenService.SurfaceTenant;
+        var result = await _mediator.Send(command);
+        return Ok(result);
+    }
+
+    [HttpPost("logout-all")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> LogoutAll()
+    {
+        await _mediator.Send(new LogoutAllCommand());
+        return NoContent();
     }
 
     [HttpPost("forget-password")]

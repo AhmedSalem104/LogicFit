@@ -7,13 +7,14 @@ using LogicFit.Application.Features.Transactions.Queries.GetTransactionSummary;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Transactions;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageFinance)]
 public class TransactionsController : ControllerBase
 {
     private readonly IMediator _mediator;

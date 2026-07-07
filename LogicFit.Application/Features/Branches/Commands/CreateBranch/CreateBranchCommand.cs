@@ -1,9 +1,12 @@
+using LogicFit.Application.Common.Interfaces;
 using MediatR;
 
 namespace LogicFit.Application.Features.Branches.Commands.CreateBranch;
 
-public class CreateBranchCommand : IRequest<Guid>
+public class CreateBranchCommand : IRequest<Guid>, IRequireQuota
 {
+    public string QuotaResource => QuotaResources.Branches;
+
     public string Name { get; set; } = string.Empty;
     public string? Code { get; set; }
     public string? Description { get; set; }

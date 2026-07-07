@@ -4,13 +4,14 @@ using LogicFit.Application.Features.Sales.Queries.GetSales;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Sales;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManagePOS)]
 public class SalesController : ControllerBase
 {
     private readonly IMediator _mediator;
