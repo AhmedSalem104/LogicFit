@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.Auth.DTOs;
+using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
@@ -13,15 +14,24 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
     private readonly IApplicationDbContext _context;
     private readonly IJwtService _jwtService;
     private readonly IDateTimeService _dateTimeService;
+    private readonly IRbacService _rbacService;
+    private readonly IRefreshTokenService _refreshTokenService;
+    private readonly ICurrentUserService _currentUserService;
 
     public RegisterCommandHandler(
         IApplicationDbContext context,
         IJwtService jwtService,
-        IDateTimeService dateTimeService)
+        IDateTimeService dateTimeService,
+        IRbacService rbacService,
+        IRefreshTokenService refreshTokenService,
+        ICurrentUserService currentUserService)
     {
         _context = context;
         _jwtService = jwtService;
         _dateTimeService = dateTimeService;
+        _rbacService = rbacService;
+        _refreshTokenService = refreshTokenService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<AuthResponseDto> Handle(RegisterCommand request, CancellationToken cancellationToken)
@@ -56,14 +66,14 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             }
         }
 
-        // Create user
+        // Public registration ALWAYS creates a Client (no privilege escalation via request body).
         var user = new User
         {
             TenantId = request.TenantId,
             Email = request.Email,
             PhoneNumber = request.PhoneNumber,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Role = request.Role,
+            Role = UserRole.Client,
             IsActive = true
         };
 
@@ -80,11 +90,19 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             _context.UserProfiles.Add(profile);
         }
 
+        // Assign the Client system role (RBAC source of truth)
+        await _rbacService.EnsureUserInRoleAsync(user.Id, user.TenantId, SystemRoles.Client, cancellationToken);
+
+        var refreshToken = _refreshTokenService.Issue(
+            user, _currentUserService.IpAddress, Common.Services.RefreshTokenService.SurfaceTenant);
+
         await _context.SaveChangesAsync(cancellationToken);
 
-        // Generate tokens
-        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, user.TenantId, user.Role);
-        var refreshToken = _jwtService.GenerateRefreshToken();
+        // Resolve roles + permissions for the token
+        var auth = await _rbacService.GetUserAuthorizationAsync(user.Id, cancellationToken);
+
+        var accessToken = _jwtService.GenerateAccessToken(
+            user.Id, user.Email, user.TenantId, auth.Roles, auth.Permissions, user.PermissionsVersion);
 
         return new AuthResponseDto
         {
@@ -93,9 +111,11 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             PhoneNumber = user.PhoneNumber,
             FullName = request.FullName,
             Role = user.Role.ToString(),
+            Roles = auth.Roles,
+            Permissions = auth.Permissions,
             TenantId = user.TenantId,
             AccessToken = accessToken,
-            RefreshToken = refreshToken,
+            RefreshToken = refreshToken.Token,
             ExpiresAt = _dateTimeService.UtcNow.AddMinutes(60)
         };
     }

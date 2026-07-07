@@ -7,13 +7,14 @@ using LogicFit.Application.Features.Branches.Queries.GetBranchById;
 using LogicFit.Application.Features.Branches.Queries.GetBranches;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Branches;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageBranches)]
 public class BranchesController : ControllerBase
 {
     private readonly IMediator _mediator;

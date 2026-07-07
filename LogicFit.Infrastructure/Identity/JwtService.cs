@@ -3,7 +3,6 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using LogicFit.Application.Common.Interfaces;
-using LogicFit.Domain.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -18,24 +17,46 @@ public class JwtService : IJwtService
         _configuration = configuration;
     }
 
-    public string GenerateAccessToken(Guid userId, string email, Guid tenantId, UserRole role)
+    public string GenerateAccessToken(
+        Guid userId,
+        string email,
+        Guid? tenantId,
+        IEnumerable<string> roles,
+        IEnumerable<string> permissions,
+        int permissionVersion)
     {
         var secret = _configuration["JwtSettings:Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
         var issuer = _configuration["JwtSettings:Issuer"] ?? "LogicFit";
+        // Audience is host-specific ("LogicFitUsers" for the tenant API, "LogicFitPlatform"
+        // for the platform API), which keeps a token minted for one host from being valid on the other.
         var audience = _configuration["JwtSettings:Audience"] ?? "LogicFitUsers";
         var expiryMinutes = int.Parse(_configuration["JwtSettings:ExpiryMinutes"] ?? "60");
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim(ClaimTypes.Email, email),
-            new Claim(ClaimTypes.Role, role.ToString()),
-            new Claim("TenantId", tenantId.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new(ClaimTypes.NameIdentifier, userId.ToString()),
+            new(ClaimTypes.Email, email),
+            new("perm_ver", permissionVersion.ToString()),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        if (tenantId.HasValue)
+        {
+            claims.Add(new Claim("TenantId", tenantId.Value.ToString()));
+        }
+
+        foreach (var role in roles.Distinct())
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        foreach (var permission in permissions.Distinct())
+        {
+            claims.Add(new Claim("permission", permission));
+        }
 
         var token = new JwtSecurityToken(
             issuer: issuer,
@@ -54,37 +75,5 @@ public class JwtService : IJwtService
         using var rng = RandomNumberGenerator.Create();
         rng.GetBytes(randomNumber);
         return Convert.ToBase64String(randomNumber);
-    }
-
-    public (Guid userId, Guid tenantId)? ValidateToken(string token)
-    {
-        var secret = _configuration["JwtSettings:Secret"] ?? throw new InvalidOperationException("JWT Secret not configured");
-        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
-
-        var tokenHandler = new JwtSecurityTokenHandler();
-        try
-        {
-            tokenHandler.ValidateToken(token, new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = securityKey,
-                ValidateIssuer = true,
-                ValidIssuer = _configuration["JwtSettings:Issuer"] ?? "LogicFit",
-                ValidateAudience = true,
-                ValidAudience = _configuration["JwtSettings:Audience"] ?? "LogicFitUsers",
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
-            }, out SecurityToken validatedToken);
-
-            var jwtToken = (JwtSecurityToken)validatedToken;
-            var userId = Guid.Parse(jwtToken.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value);
-            var tenantId = Guid.Parse(jwtToken.Claims.First(x => x.Type == "TenantId").Value);
-
-            return (userId, tenantId);
-        }
-        catch
-        {
-            return null;
-        }
     }
 }

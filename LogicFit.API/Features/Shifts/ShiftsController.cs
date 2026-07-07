@@ -5,13 +5,14 @@ using LogicFit.Application.Features.Shifts.Queries.GetShiftAssignments;
 using LogicFit.Application.Features.Shifts.Queries.GetShifts;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Shifts;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageEmployees)]
 public class ShiftsController : ControllerBase
 {
     private readonly IMediator _mediator;

@@ -11,15 +11,24 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
     private readonly IApplicationDbContext _context;
     private readonly IJwtService _jwtService;
     private readonly IDateTimeService _dateTimeService;
+    private readonly IRbacService _rbacService;
+    private readonly IRefreshTokenService _refreshTokenService;
+    private readonly ICurrentUserService _currentUserService;
 
     public LoginCommandHandler(
         IApplicationDbContext context,
         IJwtService jwtService,
-        IDateTimeService dateTimeService)
+        IDateTimeService dateTimeService,
+        IRbacService rbacService,
+        IRefreshTokenService refreshTokenService,
+        ICurrentUserService currentUserService)
     {
         _context = context;
         _jwtService = jwtService;
         _dateTimeService = dateTimeService;
+        _rbacService = rbacService;
+        _refreshTokenService = refreshTokenService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<AuthResponseDto> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -45,9 +54,15 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             throw new UnauthorizedException("Invalid credentials");
         }
 
-        // Generate tokens
-        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, user.TenantId, user.Role);
-        var refreshToken = _jwtService.GenerateRefreshToken();
+        // Resolve roles + permissions from RBAC tables
+        var auth = await _rbacService.GetUserAuthorizationAsync(user.Id, cancellationToken);
+
+        var accessToken = _jwtService.GenerateAccessToken(
+            user.Id, user.Email, user.TenantId, auth.Roles, auth.Permissions, user.PermissionsVersion);
+
+        var refreshToken = _refreshTokenService.Issue(
+            user, _currentUserService.IpAddress, Common.Services.RefreshTokenService.SurfaceTenant);
+        await _context.SaveChangesAsync(cancellationToken);
 
         return new AuthResponseDto
         {
@@ -56,9 +71,11 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             PhoneNumber = user.PhoneNumber,
             FullName = user.Profile?.FullName,
             Role = user.Role.ToString(),
+            Roles = auth.Roles,
+            Permissions = auth.Permissions,
             TenantId = user.TenantId,
             AccessToken = accessToken,
-            RefreshToken = refreshToken,
+            RefreshToken = refreshToken.Token,
             ExpiresAt = _dateTimeService.UtcNow.AddMinutes(60)
         };
     }

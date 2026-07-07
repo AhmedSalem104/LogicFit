@@ -6,13 +6,14 @@ using LogicFit.Application.Features.Attendance.Queries.GetAttendances;
 using LogicFit.Application.Features.Attendance.Queries.GetAttendanceSummary;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Attendance;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageAttendance)]
 public class AttendanceController : ControllerBase
 {
     private readonly IMediator _mediator;

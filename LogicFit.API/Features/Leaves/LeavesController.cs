@@ -5,13 +5,14 @@ using LogicFit.Application.Features.Leaves.Queries.GetLeaveRequests;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Leaves;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageEmployees)]
 public class LeavesController : ControllerBase
 {
     private readonly IMediator _mediator;

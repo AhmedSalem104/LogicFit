@@ -1,6 +1,8 @@
 using System.Reflection;
 using FluentValidation;
 using LogicFit.Application.Common.Behaviors;
+using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,15 +12,19 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        services.AddAutoMapper(Assembly.GetExecutingAssembly());
-
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+
+        services.AddScoped<IRbacService, RbacService>();
+        services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+        services.AddScoped<ITenantSubscriptionGuard, TenantSubscriptionGuard>();
+        services.AddScoped<ITenantUsageCalculator, TenantUsageCalculator>();
 
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(UnhandledExceptionBehavior<,>));
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(SubscriptionGuardBehavior<,>));
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
         });
 

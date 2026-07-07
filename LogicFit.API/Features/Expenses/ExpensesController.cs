@@ -5,13 +5,14 @@ using LogicFit.Application.Features.Expenses.DTOs;
 using LogicFit.Application.Features.Expenses.Queries.GetExpenses;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Expenses;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageFinance)]
 public class ExpensesController : ControllerBase
 {
     private readonly IMediator _mediator;

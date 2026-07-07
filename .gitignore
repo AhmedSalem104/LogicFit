@@ -55,3 +55,13 @@ coverage/
 
 # Misc
 nul
+
+# Publish output
+publish/
+
+# Runtime uploads (payment proofs, logos, user images)
+LogicFit.API/wwwroot/
+LogicFit.Platform.API/wwwroot/
+
+# Stray test artifacts
+test_profile.jpg

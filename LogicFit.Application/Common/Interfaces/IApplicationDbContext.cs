@@ -77,5 +77,24 @@ public interface IApplicationDbContext
     DbSet<PayrollRun> PayrollRuns { get; }
     DbSet<PayrollItem> PayrollItems { get; }
 
+    // RBAC & Auth
+    DbSet<Role> AppRoles { get; }
+    DbSet<Permission> Permissions { get; }
+    DbSet<RolePermission> RolePermissions { get; }
+    DbSet<UserRoleAssignment> UserRoleAssignments { get; }
+    DbSet<RefreshToken> RefreshTokens { get; }
+
+    // SaaS billing (platform-owned)
+    DbSet<Plan> Plans { get; }
+    DbSet<Feature> Features { get; }
+    DbSet<PlanFeature> PlanFeatures { get; }
+    DbSet<TenantSubscription> TenantSubscriptions { get; }
+    DbSet<TenantFeature> TenantFeatures { get; }
+    DbSet<TenantPaymentMethod> TenantPaymentMethods { get; }
+    DbSet<PaymentRequest> PaymentRequests { get; }
+    DbSet<SubscriptionPayment> SubscriptionPayments { get; }
+    DbSet<SubscriptionInvoice> SubscriptionInvoices { get; }
+    DbSet<TenantUsage> TenantUsages { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

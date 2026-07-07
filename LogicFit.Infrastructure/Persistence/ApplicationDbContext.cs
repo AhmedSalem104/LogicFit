@@ -101,6 +101,25 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<PayrollRun> PayrollRuns => Set<PayrollRun>();
     public DbSet<PayrollItem> PayrollItems => Set<PayrollItem>();
 
+    // RBAC & Auth (AppRoles avoids clashing with IdentityDbContext.Roles)
+    public DbSet<Role> AppRoles => Set<Role>();
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<UserRoleAssignment> UserRoleAssignments => Set<UserRoleAssignment>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    // SaaS billing (platform-owned)
+    public DbSet<Plan> Plans => Set<Plan>();
+    public DbSet<Feature> Features => Set<Feature>();
+    public DbSet<PlanFeature> PlanFeatures => Set<PlanFeature>();
+    public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
+    public DbSet<TenantFeature> TenantFeatures => Set<TenantFeature>();
+    public DbSet<TenantPaymentMethod> TenantPaymentMethods => Set<TenantPaymentMethod>();
+    public DbSet<PaymentRequest> PaymentRequests => Set<PaymentRequest>();
+    public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
+    public DbSet<SubscriptionInvoice> SubscriptionInvoices => Set<SubscriptionInvoice>();
+    public DbSet<TenantUsage> TenantUsages => Set<TenantUsage>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -185,6 +204,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         builder.Entity<Food>().HasQueryFilter(e => !e.IsDeleted && (e.TenantId == null || _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<Exercise>().HasQueryFilter(e => !e.IsDeleted && (e.TenantId == null || _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
 
+        // RBAC: Roles are system (null tenant) or tenant-custom, like Foods/Exercises.
+        builder.Entity<Role>().HasQueryFilter(e => !e.IsDeleted && (e.TenantId == null || _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        // UserRole assignments: tenant-scoped (null tenant = platform user, visible when no tenant set).
+        builder.Entity<UserRoleAssignment>().HasQueryFilter(e => e.TenantId == null || _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
+        // Permissions & RolePermissions are global reference data (no filter).
+        // RefreshTokens are looked up by their opaque token value (no filter).
+
+        // SaaS billing is platform-owned: soft-delete filter only (Plan/TenantSubscription),
+        // no tenant filter. Feature/PlanFeature/TenantFeature are global reference/config (no filter).
+        builder.Entity<Plan>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<TenantSubscription>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<TenantPaymentMethod>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<PaymentRequest>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<SubscriptionInvoice>().HasQueryFilter(e => !e.IsDeleted);
+
         // Non-tenant entities with soft delete only
         builder.Entity<Tenant>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<UserProfile>().HasQueryFilter(e => !e.IsDeleted);
@@ -252,7 +286,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             {
                 TableName = entry.Entity.GetType().Name,
                 UserId = _currentUserService.UserId,
-                TenantId = _tenantService.CurrentTenantId
+                TenantId = _tenantService.CurrentTenantId,
+                IpAddress = _currentUserService.IpAddress,
+                UserAgent = _currentUserService.UserAgent
             };
 
             auditEntries.Add(auditEntry);
@@ -330,6 +366,8 @@ public class AuditEntry
     public Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry Entry { get; }
     public string? UserId { get; set; }
     public Guid? TenantId { get; set; }
+    public string? IpAddress { get; set; }
+    public string? UserAgent { get; set; }
     public string TableName { get; set; } = string.Empty;
     public AuditAction Action { get; set; }
     public Dictionary<string, object?> KeyValues { get; } = new();
@@ -352,7 +390,9 @@ public class AuditEntry
             OldValues = OldValues.Count > 0 ? JsonSerializer.Serialize(OldValues) : null,
             NewValues = NewValues.Count > 0 ? JsonSerializer.Serialize(NewValues) : null,
             AffectedColumns = AffectedColumns.Count > 0 ? string.Join(",", AffectedColumns) : null,
-            Timestamp = DateTime.UtcNow
+            Timestamp = DateTime.UtcNow,
+            IpAddress = IpAddress,
+            UserAgent = UserAgent
         };
     }
 }

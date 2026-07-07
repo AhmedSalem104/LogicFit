@@ -13,6 +13,10 @@ public class User : AuditableEntity, ITenantEntity, ISoftDeletable
     public string PasswordHash { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public bool IsActive { get; set; } = true;
+
+    // Bumped whenever this user's roles/permissions change; embedded in the JWT as "perm_ver"
+    // so issued tokens can be invalidated on the next refresh.
+    public int PermissionsVersion { get; set; } = 0;
     public decimal WalletBalance { get; set; } = 0;
 
     // Password Reset
@@ -27,6 +31,8 @@ public class User : AuditableEntity, ITenantEntity, ISoftDeletable
     // Navigation Properties
     public virtual Tenant Tenant { get; set; } = null!;
     public virtual UserProfile? Profile { get; set; }
+    public virtual ICollection<UserRoleAssignment> UserRoles { get; set; } = new List<UserRoleAssignment>();
+    public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public virtual Branch? PrimaryBranch { get; set; }
     public virtual ICollection<UserBranchAccess> BranchAccesses { get; set; } = new List<UserBranchAccess>();
 

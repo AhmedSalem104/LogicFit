@@ -7,13 +7,14 @@ using LogicFit.Application.Features.CoachClients.Queries.GetCoachClientById;
 using LogicFit.Application.Features.CoachClients.Queries.GetCoachClients;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.CoachClients;
 
 [ApiController]
 [Route("api/coach-clients")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageCoaches)]
 public class CoachClientsController : ControllerBase
 {
     private readonly IMediator _mediator;

@@ -1,10 +1,15 @@
+using LogicFit.Application.Common.Interfaces;
+using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Enums;
 using MediatR;
 
 namespace LogicFit.Application.Features.Employees.Commands.CreateEmployee;
 
-public class CreateEmployeeCommand : IRequest<Guid>
+public class CreateEmployeeCommand : IRequest<Guid>, IRequireQuota, IRequireFeature
 {
+    public string QuotaResource => QuotaResources.Employees;
+    public string RequiredFeatureCode => FeatureCodes.EmployeeManagement;
+
     public Guid UserId { get; set; }
     public string? EmployeeCode { get; set; }
     public string? JobTitle { get; set; }

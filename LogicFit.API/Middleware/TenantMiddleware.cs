@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Domain.Authorization;
 
 namespace LogicFit.API.Middleware;
 
@@ -48,17 +50,46 @@ public class TenantMiddleware
                 }
             }
         }
-        // 3. Try Subdomain
-        else if (context.Request.Host.Host.Contains('.'))
+        // 3. Try a custom domain (full host), then fall back to subdomain.
+        else
         {
-            var subdomain = context.Request.Host.Host.Split('.')[0];
-            if (!string.IsNullOrEmpty(subdomain) && subdomain != "www")
+            var host = context.Request.Host.Host;
+            var matchedCustomDomain = await tenantService.SetTenantByCustomDomainAsync(host);
+
+            if (!matchedCustomDomain && host.Contains('.'))
             {
-                await tenantService.SetTenantBySubdomainAsync(subdomain);
+                var subdomain = host.Split('.')[0];
+                if (!string.IsNullOrEmpty(subdomain) && subdomain != "www")
+                {
+                    await tenantService.SetTenantBySubdomainAsync(subdomain);
+                }
             }
         }
 
+        // Hardening: an authenticated, non-platform user must have a resolved tenant.
+        // Otherwise CurrentTenantId stays null, which bypasses every tenant query filter
+        // (that null-bypass is reserved for platform users), leaking cross-tenant data.
+        var isAuthenticated = context.User?.Identity?.IsAuthenticated == true;
+        if (isAuthenticated && tenantService.CurrentTenantId == null && !IsPlatformUser(context.User!))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsJsonAsync(new { error = "Tenant could not be resolved" });
+            return;
+        }
+
         await _next(context);
+    }
+
+    private static bool IsPlatformUser(ClaimsPrincipal user)
+    {
+        // Platform users carry platform roles / permissions and no TenantId claim.
+        if (user.IsInRole(SystemRoles.PlatformOwner) || user.IsInRole(SystemRoles.PlatformAdmin))
+        {
+            return true;
+        }
+
+        return user.FindAll("permission")
+            .Any(c => Permissions.PlatformPermissions.Contains(c.Value));
     }
 }
 

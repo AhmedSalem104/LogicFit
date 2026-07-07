@@ -5,13 +5,14 @@ using LogicFit.Application.Features.TaxSettings.DTOs;
 using LogicFit.Application.Features.TaxSettings.Queries.GetTaxSettings;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.TaxSettings;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageSettings)]
 public class TaxSettingsController : ControllerBase
 {
     private readonly IMediator _mediator;

@@ -5,13 +5,14 @@ using LogicFit.Application.Features.Employees.DTOs;
 using LogicFit.Application.Features.Employees.Queries.GetEmployees;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Employees;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageEmployees)]
 public class EmployeesController : ControllerBase
 {
     private readonly IMediator _mediator;

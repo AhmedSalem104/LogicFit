@@ -6,13 +6,14 @@ using LogicFit.Application.Features.Users.Queries.GetUsers;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Users;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageSettings)]
 public class UsersController : ControllerBase
 {
     private readonly IMediator _mediator;

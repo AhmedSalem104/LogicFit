@@ -39,6 +39,24 @@ public class TenantService : ITenantService
         }
     }
 
+    public async Task<bool> SetTenantByCustomDomainAsync(string host)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var tenant = await dbContext.Tenants
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => t.CustomDomain == host && !t.IsDeleted);
+
+        if (tenant != null)
+        {
+            _currentTenantId = tenant.Id;
+            return true;
+        }
+
+        return false;
+    }
+
     public async Task<bool> TenantExistsAsync(Guid tenantId)
     {
         using var scope = _serviceProvider.CreateScope();

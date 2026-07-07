@@ -7,13 +7,14 @@ using LogicFit.Application.Features.Payroll.Queries.GetPayrollRuns;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LogicFit.API.Features.Payroll;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageEmployees)]
 public class PayrollController : ControllerBase
 {
     private readonly IMediator _mediator;
