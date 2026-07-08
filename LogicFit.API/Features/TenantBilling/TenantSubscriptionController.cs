@@ -1,3 +1,5 @@
+using LogicFit.Application.Features.Platform.Plans.DTOs;
+using LogicFit.Application.Features.Platform.Plans.Queries.GetPlans;
 using LogicFit.Application.Features.TenantBilling.Commands.ChooseSubscriptionPlan;
 using LogicFit.Application.Features.TenantBilling.Commands.RenewSubscription;
 using LogicFit.Application.Features.TenantBilling.DTOs;
@@ -20,6 +22,15 @@ public class TenantSubscriptionController : ControllerBase
     public TenantSubscriptionController(IMediator mediator)
     {
         _mediator = mediator;
+    }
+
+    /// <summary>Active plans the gym can subscribe to (for the plan picker / upgrade screen).</summary>
+    [HttpGet("plans")]
+    [ProducesResponseType(typeof(List<PlanDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<PlanDto>>> GetAvailablePlans()
+    {
+        var result = await _mediator.Send(new GetPlansQuery { ActiveOnly = true });
+        return Ok(result);
     }
 
     /// <summary>Current plan, status, expiry, remaining days, plan limits and live usage.</summary>
