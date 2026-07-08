@@ -2,25 +2,21 @@
 
 # LogicFit
 
-### Enterprise-Grade Gym Management Platform
+### Multi-Tenant SaaS Platform for Gym Management
 
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![C#](https://img.shields.io/badge/C%23-12.0-239120?style=flat-square&logo=csharp&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/csharp/)
 [![SQL Server](https://img.shields.io/badge/SQL%20Server-2022-CC2927?style=flat-square&logo=microsoftsqlserver&logoColor=white)](https://www.microsoft.com/sql-server)
 [![EF Core](https://img.shields.io/badge/EF%20Core-8.0-512BD4?style=flat-square&logo=nuget&logoColor=white)](https://docs.microsoft.com/en-us/ef/core/)
-[![JWT](https://img.shields.io/badge/JWT-Auth-000000?style=flat-square&logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
+[![JWT](https://img.shields.io/badge/JWT-Bearer-000000?style=flat-square&logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Tests](https://img.shields.io/badge/Tests-xUnit-5C2D91?style=flat-square)](https://xunit.net/)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/dotnetcore/dotnetcore-original.svg" alt="dotnet" width="60" height="60"/>
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/csharp/csharp-original.svg" alt="csharp" width="60" height="60"/>
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/microsoftsqlserver/microsoftsqlserver-plain-wordmark.svg" alt="sqlserver" width="60" height="60"/>
-  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/swagger/swagger-original.svg" alt="swagger" width="60" height="60"/>
-</p>
+**Two-tier SaaS platform** — a central console for the operator and an isolated, white-labeled app for every gym.
+Clean Architecture · CQRS · Dynamic RBAC · Manual-billing subscription engine.
 
-**A powerful Multi-Tenant SaaS platform for gym owners and fitness coaches**
-
-[Features](#-features) · [Tech Stack](#-tech-stack) · [Quick Start](#-quick-start) · [API Docs](#-api-documentation) · [Architecture](#-architecture)
+[Highlights](#-whats-new) · [Features](#-features) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Billing Model](#-saas-billing-model) · [Deployment](#-deployment)
 
 ---
 
@@ -28,17 +24,31 @@
 
 ## Overview
 
-**LogicFit** is a comprehensive gym management solution built with Clean Architecture principles. It enables gym owners to manage their entire operation - from client subscriptions and coach assignments to personalized workout programs and nutrition plans - all within a secure, multi-tenant environment.
+**LogicFit** is a comprehensive, multi-tenant **SaaS platform** for running fitness businesses. It ships as **two independently deployable APIs** that share one database:
 
-### Why LogicFit?
+| Layer | Audience | What it does |
+|-------|----------|--------------|
+| **Platform API** | Platform Owner / Admin (SaaS operator) | Onboards gyms, manages plans & features, reviews manual payments, activates/suspends tenants |
+| **Tenant API** | Owner / Manager / Receptionist / Accountant / Coach / Client | The full gym app — members, coaching, nutrition, POS, HR, attendance, and self-service subscription management |
 
-| Challenge | Solution |
-|-----------|----------|
-| Managing multiple gyms | Multi-tenant architecture with complete data isolation |
-| Complex role permissions | Granular RBAC (Owner, Coach, Client) |
-| Tracking client progress | Body measurements, workout sessions, and analytics |
-| Subscription management | Flexible plans with freeze/cancel capabilities |
-| Coach-client relationships | Dedicated assignment and progress tracking system |
+Both APIs are built on **Clean Architecture** with **CQRS + MediatR**, secured by **JWT** with a **dynamic, database-driven permission system**, and isolated per gym through **automatic tenant filtering**.
+
+---
+
+## What's New
+
+> LogicFit evolved from a single gym-management app into a full **SaaS platform**. The highlights of that transformation:
+
+- **Two-tier architecture** — a separate Platform API for the operator, isolated from the tenant app by **JWT audience**.
+- **Dynamic RBAC** — permissions live in the database (`Roles / Permissions / RolePermissions / UserRoles`); policies are synthesized at runtime, so access can change **without redeploying**.
+- **SaaS subscription engine** — plans, features, per-plan limits, and tenant subscriptions.
+- **Manual billing** — gym owners upload a payment proof, the operator approves it, and the subscription activates in a single atomic transaction (designed to drop in a payment gateway later, no rebuild).
+- **Feature gating & usage limits** — enforced centrally via a MediatR pipeline behavior with live counts.
+- **White-label & custom domains** — per-gym branding served publicly for pre-login theming.
+- **Automated lifecycle** — background jobs handle trial/expiry → past-due → suspension, reminders, and usage rollups.
+- **Notifications** — in-app + pluggable email channel wired into billing events.
+- **Production-ready** — health checks, Docker, GitHub Actions CI, and an xUnit test project.
+- **Hardened security** — refresh-token rotation & revocation, secrets out of source control, tenant-isolation guards, and no privilege escalation on public registration.
 
 ---
 
@@ -46,450 +56,292 @@
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" valign="top">
 
-### Client Management
-- Complete client profiles with health data
-- Subscription tracking and history
-- Body measurement records with progress photos
-- Personal records and achievements
+### Platform (Operator)
+- Gym (tenant) onboarding with owner provisioning
+- Tenant lifecycle: approve · activate · suspend · archive
+- SaaS **plans** & **features** management (CRUD)
+- Configurable manual **payment methods**
+- **Payment review** — approve / reject with reason
+- Platform-wide subscriptions & reporting
 
-### Workout System
-- Custom workout program builder
-- Day-by-day routine scheduling
-- Exercise library with muscle targeting
-- Session tracking with set logging
-- RPE and volume load calculations
-
-### Nutrition Planning
-- Personalized diet plans
-- Macro targets (calories, protein, carbs, fats)
-- Food database with nutritional info
-- Meal logging and alternatives
+### Membership & Coaching
+- Client profiles, health data, progress photos
+- Coach ↔ client assignment & progress tracking
+- Workout programs, routines, sessions (RPE / volume)
+- Diet plans, macros, food database, meal logging
+- Body measurements & personal records
 
 </td>
-<td width="50%">
+<td width="50%" valign="top">
 
-### Subscription Management
-- Flexible subscription plans
-- Auto-expiry tracking
-- Freeze/unfreeze capabilities
-- Sales attribution to coaches
-- Financial reporting
+### Operations & Commerce
+- Multi-branch, rooms, equipment, maintenance
+- Attendance & QR gate access, membership cards
+- POS sales, products, inventory, suppliers
+- Finance: invoices, payments, expenses, coupons, tax
+- HR: employees, shifts, leaves, commissions, payroll
 
-### Analytics & Reports
-- Real-time dashboard statistics
-- Client activity reports
-- Financial analytics
-- Coach performance metrics
-- Trainee progress reports
+### Subscription & Billing (per gym)
+- Browse plans · select · **upgrade** · **renew**
+- Live **usage vs. plan limits**
+- Upload payment proof, track request status
+- Subscription invoices & payment history
 
-### Multi-Tenant Security
-- Complete data isolation per gym
-- JWT-based authentication
-- Role-based access control
-- Secure password hashing (BCrypt)
+### Engagement & Branding
+- In-app chat, notifications, challenges
+- Appointments & group classes
+- **White-label** branding + custom domain
 
 </td>
 </tr>
 </table>
-
----
-
-## Tech Stack
-
-<table>
-<tr>
-<td align="center" width="96">
-<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/dotnetcore/dotnetcore-original.svg" width="48" height="48" alt=".NET" />
-<br><strong>.NET 8</strong>
-</td>
-<td align="center" width="96">
-<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/csharp/csharp-original.svg" width="48" height="48" alt="C#" />
-<br><strong>C# 12</strong>
-</td>
-<td align="center" width="96">
-<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/microsoftsqlserver/microsoftsqlserver-plain.svg" width="48" height="48" alt="SQL Server" />
-<br><strong>SQL Server</strong>
-</td>
-<td align="center" width="96">
-<img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/swagger/swagger-original.svg" width="48" height="48" alt="Swagger" />
-<br><strong>Swagger</strong>
-</td>
-</tr>
-</table>
-
-| Category | Technologies |
-|----------|-------------|
-| **Framework** | .NET 8, ASP.NET Core Web API |
-| **Language** | C# 12 |
-| **Database** | SQL Server, Entity Framework Core 8 |
-| **Architecture** | Clean Architecture, CQRS, Mediator Pattern |
-| **Libraries** | MediatR, AutoMapper, FluentValidation, Serilog |
-| **Security** | JWT Bearer Tokens, BCrypt Password Hashing |
-| **Documentation** | Swagger / OpenAPI |
 
 ---
 
 ## Architecture
 
+Two API hosts over four shared layers:
+
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          LogicFit Solution                          │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                    LogicFit.API                              │   │
-│  │                 (Presentation Layer)                         │   │
-│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐    │   │
-│  │  │ Controllers │ │ Middleware  │ │ Dependency Injection│    │   │
-│  │  └─────────────┘ └─────────────┘ └─────────────────────┘    │   │
-│  └──────────────────────────┬──────────────────────────────────┘   │
-│                             │                                       │
-│  ┌──────────────────────────▼──────────────────────────────────┐   │
-│  │                LogicFit.Application                          │   │
-│  │                  (Application Layer)                         │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐    │   │
-│  │  │ Commands │ │ Queries  │ │   DTOs   │ │  Validators  │    │   │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────────┘    │   │
-│  └──────────────────────────┬──────────────────────────────────┘   │
-│                             │                                       │
-│  ┌──────────────────────────▼──────────────────────────────────┐   │
-│  │                  LogicFit.Domain                             │   │
-│  │                   (Domain Layer)                             │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐    │   │
-│  │  │ Entities │ │  Enums   │ │Exceptions│ │ Value Objects│    │   │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────────┘    │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                             ▲                                       │
-│  ┌──────────────────────────┴──────────────────────────────────┐   │
-│  │              LogicFit.Infrastructure                         │   │
-│  │                (Infrastructure Layer)                        │   │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐    │   │
-│  │  │DbContext │ │ Identity │ │ Services │ │ Repositories │    │   │
-│  │  └──────────┘ └──────────┘ └──────────┘ └──────────────┘    │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
+                         ┌──────────────────────────────────────────┐
+   Platform Admin  ────► │  LogicFit.Platform.API   (aud: Platform)  │ ─┐
+                         └──────────────────────────────────────────┘  │
+                                                                        │  same
+   Gym users (Owner…    ┌──────────────────────────────────────────┐   ├─ Application
+   Coach, Client)  ────► │  LogicFit.API            (aud: Users)     │ ─┤  Infrastructure
+                         └──────────────────────────────────────────┘  │  Domain
+                                                                        │  + one Database
+                         ┌──────────────────────────────────────────┐  │
+                         │   Application (CQRS · MediatR · Behaviors) │  │
+                         │   Infrastructure (EF Core · JWT · Jobs)    │ ◄┘
+                         │   Domain (Entities · Enums · Rules)        │
+                         └──────────────────────────────────────────┘
 ```
+
+- **Isolation between APIs** — a token minted for one host fails audience validation on the other (`LogicFitPlatform` vs `LogicFitUsers`).
+- **Isolation between gyms** — EF Core global query filters scope every tenant entity by `TenantId`; platform users read cross-tenant via a null-tenant bypass, guarded so a tenant user can never do the same.
 
 ### Project Structure
 
 ```
 LogicFit/
-│
-├── LogicFit.API/                    # Presentation Layer
-│   ├── Features/                    # Feature-based Controllers
-│   │   ├── Auth/                    # Authentication endpoints
-│   │   ├── Clients/                 # Client management
-│   │   ├── WorkoutPrograms/         # Workout management
-│   │   ├── DietPlans/               # Nutrition management
-│   │   ├── Subscriptions/           # Subscription handling
-│   │   └── Reports/                 # Analytics & reporting
-│   ├── Middleware/                  # Custom middleware
-│   └── wwwroot/uploads/             # File storage
-│
-├── LogicFit.Application/            # Application Layer
-│   ├── Features/                    # CQRS Commands & Queries
-│   ├── Common/                      # Shared components
-│   │   ├── Behaviors/               # Pipeline behaviors
-│   │   ├── Interfaces/              # Abstractions
-│   │   └── Models/                  # Shared models
-│   └── Mappings/                    # AutoMapper profiles
-│
-├── LogicFit.Domain/                 # Domain Layer
-│   ├── Entities/                    # Domain entities
-│   ├── Enums/                       # Enumerations
-│   ├── Exceptions/                  # Domain exceptions
-│   └── Common/                      # Base classes
-│
-└── LogicFit.Infrastructure/         # Infrastructure Layer
-    ├── Identity/                    # JWT & Auth services
-    ├── Persistence/                 # EF Core & Database
-    │   ├── Configurations/          # Entity configurations
-    │   ├── Migrations/              # Database migrations
-    │   └── SeedData/                # Initial data
-    └── Services/                    # External services
+├── LogicFit.Domain/            # Entities, Enums, Value Objects, Authorization catalog, Exceptions
+├── LogicFit.Application/        # CQRS (Commands/Queries/Handlers), Behaviors, Interfaces, Services
+├── LogicFit.Infrastructure/     # EF Core DbContext, Configurations, Migrations, Identity/JWT,
+│                                #   Seeders (RBAC/Plans), Background jobs, Email/Notifications
+├── LogicFit.API/                # Tenant API  — gym app controllers, tenant middleware
+├── LogicFit.Platform.API/       # Platform API — operator console controllers
+└── LogicFit.Tests/              # xUnit tests
 ```
+
+---
+
+## Security & Multi-Tenancy
+
+| Concern | Implementation |
+|---------|----------------|
+| **Authentication** | JWT Bearer; access tokens short-lived (15 min) with **refresh-token rotation, revocation & surface-binding** |
+| **Authorization** | Dynamic, DB-driven permissions surfaced as `permission` claims; policies synthesized by a custom `IAuthorizationPolicyProvider` |
+| **Tenant isolation** | Automatic `TenantId` query filters + middleware that resolves the tenant **before** authorization and rejects unresolved tenant users |
+| **API isolation** | Distinct JWT **audience** per host |
+| **Passwords** | BCrypt hashing |
+| **Secrets** | Kept out of source — **user-secrets** (dev) / **environment variables** (prod); never in `appsettings.json` |
+| **Registration** | Public register **always** creates a `Client` — no role escalation; staff/owners are created through guarded flows |
+| **Auditing** | Automatic audit log (old/new values, IP, user-agent) on every change |
+
+---
+
+## Roles & Dynamic RBAC
+
+Permissions are data, not code. System roles ship seeded, and gyms can define custom roles.
+
+| Scope | Roles | Default access |
+|-------|-------|----------------|
+| **Platform** | `PlatformOwner`, `PlatformAdmin` | Manage tenants, plans, payment reviews, platform reports |
+| **Tenant** | `Owner` | All gym permissions |
+| | `Manager` | Everything except settings & billing |
+| | `Receptionist` | Members, attendance, client subscriptions, POS |
+| | `Accountant` | Finance, reports, tenant billing |
+| | `Coach` | View members, attendance, own trainee reports |
+| | `Client` | Self-service only |
+
+Permission catalog (tenant): `ManageMembers`, `ViewMembers`, `ManageCoaches`, `ManageAttendance`, `ManageClientSubscriptions`, `ManagePOS`, `ManageInventory`, `ManageEmployees`, `ManageBranches`, `ManageFinance`, `ViewReports`, `ManageReports`, `ManageSettings`, `ManageTenantBilling` — plus platform permissions (`ManagePlatform`, `ManageTenants`, `ManagePlans`, `ManagePaymentRequests`, `ManagePlatformReports`).
+
+---
+
+## SaaS Billing Model
+
+**Manual payment** — no gateway required, yet the schema is gateway-ready.
+
+```
+Owner:  browse plans → select plan (PendingPayment) → view payment methods
+        → pay out-of-band → upload proof (PaymentRequest)
+                                     │
+Operator: review → Approve ─────────┼─ atomic: activate/extend subscription,
+                                     │          set gym Active, create payment
+                                     │          record + paid invoice, notify owner
+                    Reject  ─────────┴─ record reason, keep PendingPayment, notify owner
+```
+
+- **Plans** carry price, billing cycle, and limits (`MaxMembers/Coaches/Branches/Employees`, `null = unlimited`) plus feature codes.
+- **Feature gating & limits** are enforced before create operations via a MediatR behavior using **live counts**; gyms without an active plan are grandfathered. Violations return **HTTP 402**.
+- **Lifecycle jobs** (daily) move subscriptions trial/active → past-due → suspended, send expiry reminders, expire stale payment requests, and refresh the usage cache.
+
+---
+
+## Tech Stack
+
+| Category | Technologies |
+|----------|-------------|
+| **Framework** | .NET 8 · ASP.NET Core Web API |
+| **Language** | C# 12 |
+| **Data** | SQL Server · Entity Framework Core 8 |
+| **Architecture** | Clean Architecture · CQRS · Mediator · Pipeline Behaviors |
+| **Libraries** | MediatR · FluentValidation · Serilog · BCrypt.Net |
+| **Security** | JWT Bearer · dynamic policy-based authorization · refresh-token rotation |
+| **Ops** | Health Checks · Docker · GitHub Actions CI · xUnit |
+| **Docs** | Swagger / OpenAPI (Development) |
 
 ---
 
 ## Quick Start
 
 ### Prerequisites
-
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [SQL Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) (LocalDB / Express / Full)
-- [Visual Studio 2022](https://visualstudio.microsoft.com/) or [VS Code](https://code.visualstudio.com/)
+- [SQL Server](https://www.microsoft.com/sql-server) (LocalDB / Express / remote)
 
-### Installation
-
+### 1) Clone & restore
 ```bash
-# Clone the repository
 git clone https://github.com/AhmedSalem104/LogicFit.git
-
-# Navigate to project directory
 cd LogicFit
-
-# Restore dependencies
 dotnet restore
-
-# Update connection string in LogicFit.API/appsettings.json
-# Then apply migrations
-cd LogicFit.API
-dotnet ef database update
-
-# Run the application
-dotnet run
 ```
 
-### Configuration
+### 2) Configure secrets (never commit these)
+```bash
+# Tenant API
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your-connection-string>" --project LogicFit.API
+dotnet user-secrets set "JwtSettings:Secret" "<64+ char random secret>"                  --project LogicFit.API
 
-Update `appsettings.json` with your settings:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=.;Database=LogicFitDb;Trusted_Connection=True;TrustServerCertificate=True;"
-  },
-  "JwtSettings": {
-    "Secret": "YourSuperSecretKeyHere_MustBe32CharsOrMore",
-    "Issuer": "LogicFit",
-    "Audience": "LogicFitUsers",
-    "ExpiryMinutes": 60
-  }
-}
+# Platform API (same DB; independent secret is fine)
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your-connection-string>" --project LogicFit.Platform.API
+dotnet user-secrets set "JwtSettings:Secret" "<64+ char random secret>"                  --project LogicFit.Platform.API
 ```
+> `appsettings.json` ships with **empty** `ConnectionStrings`/`Secret` by design. The tenant API uses audience `LogicFitUsers`; the platform API uses `LogicFitPlatform`.
+
+### 3) Apply migrations
+```bash
+# Development env is required so user-secrets are loaded at design time
+ASPNETCORE_ENVIRONMENT=Development dotnet ef database update \
+  --project LogicFit.Infrastructure --startup-project LogicFit.API
+```
+
+### 4) Run
+```bash
+dotnet run --project LogicFit.API            # Tenant API (seeds RBAC, plans, platform owner on first run)
+dotnet run --project LogicFit.Platform.API   # Platform API
+```
+
+**Default platform login** (change immediately): `owner@platform.local` / `ChangeMe#12345`
+**Health check**: `GET /health` on either API.
 
 ---
 
 ## API Documentation
 
-### Authentication Endpoints
-
-| Method | Endpoint | Description |
-|:------:|----------|-------------|
-| `POST` | `/api/auth/register` | Register new gym with owner account |
-| `POST` | `/api/auth/login` | Authenticate and receive JWT token |
-| `POST` | `/api/auth/forget-password` | Request password reset token |
-| `POST` | `/api/auth/reset-password` | Reset password with token |
-
-### Core API Endpoints
-
-<details>
-<summary><strong>Client Management</strong></summary>
-
-| Method | Endpoint | Description |
-|:------:|----------|-------------|
-| `GET` | `/api/clients` | Get all clients (paginated) |
-| `GET` | `/api/clients/{id}` | Get client by ID |
-| `POST` | `/api/clients` | Create new client |
-| `PUT` | `/api/clients/{id}` | Update client |
-| `DELETE` | `/api/clients/{id}` | Delete client (soft delete) |
-
-</details>
-
-<details>
-<summary><strong>Workout Programs</strong></summary>
-
-| Method | Endpoint | Description |
-|:------:|----------|-------------|
-| `GET` | `/api/workoutprograms` | Get all programs |
-| `GET` | `/api/workoutprograms/{id}` | Get program with routines |
-| `POST` | `/api/workoutprograms` | Create program |
-| `POST` | `/api/workoutprograms/{id}/routines` | Add routine to program |
-| `POST` | `/api/workoutprograms/routines/{id}/exercises` | Add exercise to routine |
-| `DELETE` | `/api/workoutprograms/{id}` | Delete program |
-
-</details>
-
-<details>
-<summary><strong>Diet Plans</strong></summary>
-
-| Method | Endpoint | Description |
-|:------:|----------|-------------|
-| `GET` | `/api/dietplans` | Get all diet plans |
-| `GET` | `/api/dietplans/{id}` | Get plan with meals |
-| `POST` | `/api/dietplans` | Create diet plan |
-| `POST` | `/api/dietplans/{id}/meals` | Add meal to plan |
-| `POST` | `/api/dietplans/meals/{id}/items` | Add food to meal |
-| `DELETE` | `/api/dietplans/{id}` | Delete plan |
-
-</details>
-
-<details>
-<summary><strong>Subscriptions</strong></summary>
-
-| Method | Endpoint | Description |
-|:------:|----------|-------------|
-| `GET` | `/api/subscriptions/plans` | Get subscription plans |
-| `POST` | `/api/subscriptions/plans` | Create subscription plan |
-| `GET` | `/api/subscriptions` | Get client subscriptions |
-| `POST` | `/api/subscriptions` | Create client subscription |
-| `POST` | `/api/subscriptions/{id}/freeze` | Freeze subscription |
-| `POST` | `/api/subscriptions/{id}/cancel` | Cancel subscription |
-
-</details>
-
-<details>
-<summary><strong>Reports & Analytics</strong></summary>
-
-| Method | Endpoint | Description |
-|:------:|----------|-------------|
-| `GET` | `/api/reports/dashboard` | Dashboard overview |
-| `GET` | `/api/reports/clients` | Clients report |
-| `GET` | `/api/reports/subscriptions` | Subscriptions report |
-| `GET` | `/api/reports/financial` | Financial report |
-| `GET` | `/api/reports/coach/dashboard` | Coach dashboard |
-| `GET` | `/api/reports/coach/trainees` | Coach trainees report |
-
-</details>
-
-### Response Format
-
-```json
-// Success Response (Paginated)
-{
-  "items": [...],
-  "pageNumber": 1,
-  "pageSize": 10,
-  "totalPages": 5,
-  "totalCount": 50,
-  "hasPreviousPage": false,
-  "hasNextPage": true
-}
-
-// Error Response
-{
-  "type": "https://tools.ietf.org/html/rfc7231#section-6.5.1",
-  "title": "Bad Request",
-  "status": 400,
-  "errors": {
-    "Field": ["Error message"]
-  }
-}
-```
-
----
-
-## User Roles & Permissions
-
-<table>
-<tr>
-<th width="33%">Owner</th>
-<th width="33%">Coach</th>
-<th width="33%">Client</th>
-</tr>
-<tr>
-<td>
-
-- Full system access
-- Manage gym profile
-- Create subscription plans
-- View all reports
-- Manage all users
-- Assign clients to coaches
-- Financial oversight
-
-</td>
-<td>
-
-- Manage assigned trainees
-- Create workout programs
-- Create diet plans
-- Track trainee progress
-- View coach reports
-- Self-assign clients
-- Manage exercises/foods
-
-</td>
-<td>
-
-- View assigned programs
-- Log workout sessions
-- Track body measurements
-- Log meals
-- View personal progress
-- Read-only resources
-
-</td>
-</tr>
-</table>
-
----
-
-## Multi-Tenant Architecture
-
-```
-┌────────────────────────────────────────────────────────────┐
-│                      LogicFit Platform                      │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
-│  │   Gym A     │  │   Gym B     │  │   Gym C     │        │
-│  │  (Tenant)   │  │  (Tenant)   │  │  (Tenant)   │        │
-│  ├─────────────┤  ├─────────────┤  ├─────────────┤        │
-│  │ • Users     │  │ • Users     │  │ • Users     │        │
-│  │ • Programs  │  │ • Programs  │  │ • Programs  │        │
-│  │ • Plans     │  │ • Plans     │  │ • Plans     │        │
-│  │ • Subs      │  │ • Subs      │  │ • Subs      │        │
-│  └─────────────┘  └─────────────┘  └─────────────┘        │
-│        ▲                ▲                ▲                 │
-│        │                │                │                 │
-│        └────────────────┼────────────────┘                 │
-│                         │                                  │
-│              ┌──────────┴──────────┐                       │
-│              │  TenantId Filtering │                       │
-│              │  (Automatic/Secure) │                       │
-│              └─────────────────────┘                       │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
-```
-
-**Key Features:**
-- Complete data isolation between tenants
-- Automatic tenant resolution from JWT claims
-- TenantId included in all entity queries
-- Cross-tenant access prevention at database level
-
----
-
-## Documentation
+Swagger UI is available in **Development** on each API. Detailed integration guides:
 
 | Document | Description |
 |----------|-------------|
-| [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md) | Complete system documentation (Arabic) |
-| [FRONTEND_DEVELOPER_GUIDE.md](FRONTEND_DEVELOPER_GUIDE.md) | Frontend integration guide |
+| [FRONTEND_SAAS_INTEGRATION.md](FRONTEND_SAAS_INTEGRATION.md) | **Frontend integration guide** — auth, RBAC map, subscription/billing flow, white-label, error contract, enums |
+| [GYM_MANAGEMENT_API.md](GYM_MANAGEMENT_API.md) | Gym-management endpoints reference |
+| [API_DOCUMENTATION.md](API_DOCUMENTATION.md) | Full API reference |
+| [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md) | System documentation (Arabic) |
+
+### Selected endpoints
+
+<details>
+<summary><strong>Authentication (Tenant API)</strong></summary>
+
+| Method | Endpoint | Description |
+|:------:|----------|-------------|
+| `POST` | `/api/auth/login` | Login by phone + password + `tenantId` → tokens + `roles[]` + `permissions[]` |
+| `POST` | `/api/auth/register` | Public registration — **Client only** |
+| `POST` | `/api/auth/refresh` | Rotate tokens |
+| `POST` | `/api/auth/logout-all` | Revoke all refresh tokens |
+| `GET`  | `/api/branding/{subdomain}` | Public white-label branding (pre-login theming) |
+</details>
+
+<details>
+<summary><strong>Subscription & Billing (Tenant API · <code>ManageTenantBilling</code>)</strong></summary>
+
+| Method | Endpoint | Description |
+|:------:|----------|-------------|
+| `GET`  | `/api/tenant/plans` | Available plans |
+| `GET`  | `/api/tenant/my-subscription` | Current plan, status, limits, live usage |
+| `GET`  | `/api/tenant/usage` | Usage vs. limits |
+| `GET`  | `/api/tenant/invoices` | Subscription invoices |
+| `GET`  | `/api/tenant/payment-methods` | Manual payment channels |
+| `POST` | `/api/tenant/subscription/select-plan` · `/upgrade` · `/renew` | Open a payable subscription |
+| `POST` | `/api/tenant/payment-requests` | Upload payment proof (multipart) |
+</details>
+
+<details>
+<summary><strong>Platform (Platform API)</strong></summary>
+
+| Method | Endpoint | Description |
+|:------:|----------|-------------|
+| `POST` | `/api/platform/auth/login` | Platform login |
+| `GET`/`POST` | `/api/platform/tenants` `…/{id}/approve\|suspend\|activate\|archive` | Tenant lifecycle |
+| `GET`/`POST`/`PUT`/`DELETE` | `/api/platform/plans` · `/features` · `/payment-methods` | SaaS catalog |
+| `GET` · `POST …/{id}/approve\|reject` | `/api/platform/payment-requests` | Review manual payments |
+</details>
+
+---
+
+## Deployment
+
+- **Docker** — `Dockerfile` per API + `docker-compose.yml` (SQL Server + both APIs). Config via environment variables; background jobs run in the tenant host only (`BackgroundJobs__Enabled=false` on the platform host).
+  ```bash
+  docker compose up --build
+  ```
+- **CI** — GitHub Actions (`.github/workflows/ci.yml`) restores, builds, and tests on every push/PR.
+- **Health** — `GET /health` (includes a DB connectivity probe) for readiness checks.
+- **Production config** — set `ConnectionStrings__DefaultConnection` and `JwtSettings__Secret` as environment variables; user-secrets are for local development only.
+
+---
+
+## Testing
+
+```bash
+dotnet test
+```
+`LogicFit.Tests` (xUnit) covers the permission catalog, notification templates, and the enum-value invariants that keep tenant status upgrades migration-safe.
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes
+4. Push and open a Pull Request
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Licensed under the MIT License — see [LICENSE](LICENSE).
 
 ---
 
 <div align="center">
 
-## Contact
-
 **Ahmed Salem** · [GitHub](https://github.com/AhmedSalem104)
 
 [![GitHub](https://img.shields.io/badge/GitHub-AhmedSalem104-181717?style=for-the-badge&logo=github)](https://github.com/AhmedSalem104)
-
----
 
 <sub>Built with passion for the fitness community</sub>
 
