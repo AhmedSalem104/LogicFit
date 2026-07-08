@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
@@ -11,11 +12,13 @@ public class CreateCoachCommandHandler : IRequestHandler<CreateCoachCommand, Gui
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly IRbacService _rbacService;
 
-    public CreateCoachCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public CreateCoachCommandHandler(IApplicationDbContext context, ITenantService tenantService, IRbacService rbacService)
     {
         _context = context;
         _tenantService = tenantService;
+        _rbacService = rbacService;
     }
 
     public async Task<Guid> Handle(CreateCoachCommand request, CancellationToken cancellationToken)
@@ -58,6 +61,9 @@ public class CreateCoachCommandHandler : IRequestHandler<CreateCoachCommand, Gui
             };
             _context.UserProfiles.Add(profile);
         }
+
+        // Assign the Coach RBAC role so the coach's permissions resolve at login.
+        await _rbacService.EnsureUserInRoleAsync(user.Id, tenantId, SystemRoles.Coach, cancellationToken);
 
         await _context.SaveChangesAsync(cancellationToken);
 
