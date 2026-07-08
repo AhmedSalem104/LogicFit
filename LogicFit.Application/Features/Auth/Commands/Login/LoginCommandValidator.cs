@@ -13,7 +13,10 @@ public class LoginCommandValidator : AbstractValidator<LoginCommand>
         RuleFor(x => x.Password)
             .NotEmpty().WithMessage("Password is required");
 
-        RuleFor(x => x.TenantId)
-            .NotEmpty().WithMessage("TenantId is required");
+        // Identify the gym by subdomain (preferred) OR tenantId.
+        RuleFor(x => x)
+            .Must(x => !string.IsNullOrWhiteSpace(x.Subdomain) || x.TenantId != Guid.Empty)
+            .WithName("subdomain")
+            .WithMessage("Provide the gym 'subdomain' (or 'tenantId').");
     }
 }

@@ -8,18 +8,23 @@ namespace LogicFit.Application.Features.Auth.Commands.ResetPassword;
 public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand, ResetPasswordResponse>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenantService;
 
-    public ResetPasswordCommandHandler(IApplicationDbContext context)
+    public ResetPasswordCommandHandler(IApplicationDbContext context, ITenantService tenantService)
     {
         _context = context;
+        _tenantService = tenantService;
     }
 
     public async Task<ResetPasswordResponse> Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
     {
+        var tenantId = await Common.TenantResolver.ResolveAsync(request.TenantId, request.Subdomain, _tenantService);
+
         var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.TenantId == request.TenantId &&
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.TenantId == tenantId &&
                                       u.PhoneNumber == request.PhoneNumber &&
-                                      u.IsActive,
+                                      u.IsActive && !u.IsDeleted,
                                  cancellationToken);
 
         if (user == null)

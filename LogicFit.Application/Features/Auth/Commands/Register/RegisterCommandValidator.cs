@@ -20,7 +20,10 @@ public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
         RuleFor(x => x.ConfirmPassword)
             .Equal(x => x.Password).WithMessage("Passwords do not match");
 
-        RuleFor(x => x.TenantId)
-            .NotEmpty().WithMessage("TenantId is required");
+        // Identify the gym by subdomain (preferred) OR tenantId.
+        RuleFor(x => x)
+            .Must(x => !string.IsNullOrWhiteSpace(x.Subdomain) || x.TenantId != Guid.Empty)
+            .WithName("subdomain")
+            .WithMessage("Provide the gym 'subdomain' (or 'tenantId').");
     }
 }

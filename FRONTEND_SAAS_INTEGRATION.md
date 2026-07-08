@@ -26,13 +26,14 @@ Authorization: Bearer <accessToken>
 
 ## 1) المصادقة (Authentication)
 
-### مفهوم مهم: تحديد الجيم (TenantId)
-كل مستخدم ينتمي لجيم (Tenant). تسجيل الدخول يحتاج **`tenantId`**. الفرونت يحصل عليه من الـ **subdomain** عبر endpoint الـ Branding العام (القسم 6) قبل شاشة الدخول.
+### مفهوم مهم: تحديد الجيم (بالـ subdomain)
+كل مستخدم ينتمي لجيم (Tenant). لتحديد الجيم في الدخول/التسجيل، **أرسل `subdomain` بتاع الجيم مباشرةً** (اللي في اللينك، مثل `goldgym`) — الـ API يحلّه تلقائياً. **مش محتاج تجيب أو تعرف الـ TenantId (GUID).**
+> بدائل مقبولة (اختياري): تمرير `tenantId` GUID في الجسم، أو هيدر `X-Tenant-Id: <GUID>`، أو الاستضافة على subdomain الجيم. الأبسط دايماً: حقل `subdomain`.
 
 ### 1.1 تسجيل الدخول
 `POST /api/auth/login` — **عام (Anonymous)**
 ```json
-{ "phoneNumber": "01000000000", "password": "P@ssw0rd", "tenantId": "GUID" }
+{ "phoneNumber": "01000000000", "password": "P@ssw0rd", "subdomain": "goldgym" }
 ```
 **الرد** (`AuthResponseDto`):
 ```json
@@ -56,14 +57,14 @@ Authorization: Bearer <accessToken>
 `POST /api/auth/register` — **عام**. **ينشئ عميل (Client) فقط دائماً** — لا يمكن اختيار الدور.
 ```json
 { "email": "c@gym.com", "phoneNumber": "0100...", "password": "P@ssw0rd",
-  "confirmPassword": "P@ssw0rd", "tenantId": "GUID", "fullName": "سارة" }
+  "confirmPassword": "P@ssw0rd", "subdomain": "goldgym", "fullName": "سارة" }
 ```
 الرد نفس `AuthResponseDto`.
 > إنشاء موظفين/مدربين يتم من داخل التطبيق عبر شاشات محمية (Clients/Coaches/Employees) — مش من التسجيل العام.
 
 ### 1.3 نسيت / إعادة تعيين كلمة المرور
-- `POST /api/auth/forget-password` → `{ "phoneNumber": "...", "tenantId": "GUID" }` → يرجّع `resetToken` (في الإنتاج يُرسل SMS/Email).
-- `POST /api/auth/reset-password` → `{ "phoneNumber", "resetToken", "newPassword", "tenantId" }`.
+- `POST /api/auth/forget-password` → `{ "phoneNumber": "...", "subdomain": "goldgym" }` → يرجّع `resetToken` (في الإنتاج يُرسل SMS/Email).
+- `POST /api/auth/reset-password` → `{ "phoneNumber", "resetToken", "newPassword", "subdomain": "goldgym" }`.
 
 ### 1.4 تجديد التوكن (Refresh) — **مهم**
 `POST /api/auth/refresh` — **عام**
@@ -298,8 +299,8 @@ FeatureCodes:              POS, Inventory, AdvancedReports, MultiBranch, WhiteLa
 
 ## 8) ملاحظات تنفيذية للفرونت (Checklist)
 
-- [ ] عند فتح التطبيق: `GET /api/branding/{subdomain}` → طبّق الثيم + احفظ `tenantId`.
-- [ ] تسجيل الدخول يمرّر `tenantId`. خزّن `accessToken` + `refreshToken` + `permissions[]`.
+- [ ] عند فتح التطبيق: `GET /api/branding/{subdomain}` → طبّق الثيم (اختياري).
+- [ ] تسجيل الدخول/التسجيل يمرّر **`subdomain`** الجيم (مش محتاج TenantId GUID). خزّن `accessToken` + `refreshToken` + `permissions[]`.
 - [ ] أرسل `Authorization: Bearer <token>` في كل طلب محمي.
 - [ ] فعّل **auto-refresh** عند `401` (التوكن 15 دقيقة).
 - [ ] ابنِ الـ Navigation/الأزرار حسب `permissions[]` (خريطة القسم 2.2).

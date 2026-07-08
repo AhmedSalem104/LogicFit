@@ -17,6 +17,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
     private readonly IRbacService _rbacService;
     private readonly IRefreshTokenService _refreshTokenService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ITenantService _tenantService;
 
     public RegisterCommandHandler(
         IApplicationDbContext context,
@@ -24,7 +25,8 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         IDateTimeService dateTimeService,
         IRbacService rbacService,
         IRefreshTokenService refreshTokenService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        ITenantService tenantService)
     {
         _context = context;
         _jwtService = jwtService;
@@ -32,33 +34,42 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         _rbacService = rbacService;
         _refreshTokenService = refreshTokenService;
         _currentUserService = currentUserService;
+        _tenantService = tenantService;
     }
 
     public async Task<AuthResponseDto> Handle(RegisterCommand request, CancellationToken cancellationToken)
     {
+        // Resolve the gym from subdomain (preferred) or an explicit tenantId.
+        var tenantId = await Common.TenantResolver.ResolveAsync(request.TenantId, request.Subdomain, _tenantService);
+
         // Check if tenant exists
         var tenantExists = await _context.Tenants
-            .AnyAsync(t => t.Id == request.TenantId, cancellationToken);
+            .AnyAsync(t => t.Id == tenantId, cancellationToken);
 
         if (!tenantExists)
         {
-            throw new NotFoundException(nameof(Tenant), request.TenantId);
+            throw new NotFoundException(nameof(Tenant), tenantId);
         }
 
         // Check if email already exists for this tenant
-        var emailExists = await _context.Users
-            .AnyAsync(u => u.TenantId == request.TenantId && u.Email == request.Email, cancellationToken);
-
-        if (emailExists)
+        if (!string.IsNullOrEmpty(request.Email))
         {
-            throw new ValidationException("Email", "Email already registered for this gym");
+            var emailExists = await _context.Users
+                .IgnoreQueryFilters()
+                .AnyAsync(u => u.TenantId == tenantId && u.Email == request.Email && !u.IsDeleted, cancellationToken);
+
+            if (emailExists)
+            {
+                throw new ValidationException("Email", "Email already registered for this gym");
+            }
         }
 
         // Check if phone already exists for this tenant
         if (!string.IsNullOrEmpty(request.PhoneNumber))
         {
             var phoneExists = await _context.Users
-                .AnyAsync(u => u.TenantId == request.TenantId && u.PhoneNumber == request.PhoneNumber, cancellationToken);
+                .IgnoreQueryFilters()
+                .AnyAsync(u => u.TenantId == tenantId && u.PhoneNumber == request.PhoneNumber && !u.IsDeleted, cancellationToken);
 
             if (phoneExists)
             {
@@ -69,7 +80,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         // Public registration ALWAYS creates a Client (no privilege escalation via request body).
         var user = new User
         {
-            TenantId = request.TenantId,
+            TenantId = tenantId,
             Email = request.Email,
             PhoneNumber = request.PhoneNumber,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
