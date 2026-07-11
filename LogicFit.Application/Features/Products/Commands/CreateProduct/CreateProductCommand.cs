@@ -1,9 +1,13 @@
+using LogicFit.Application.Common.Interfaces;
+using LogicFit.Domain.Authorization;
 using MediatR;
 
 namespace LogicFit.Application.Features.Products.Commands.CreateProduct;
 
-public class CreateProductCommand : IRequest<Guid>
+public class CreateProductCommand : IRequest<Guid>, IRequireFeature
 {
+    public string RequiredFeatureCode => FeatureCodes.Inventory;
+
     public Guid? CategoryId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }

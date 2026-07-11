@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -9,16 +10,31 @@ public class CreateBranchCommandHandler : IRequestHandler<CreateBranchCommand, G
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ITenantSubscriptionGuard _subscriptionGuard;
 
-    public CreateBranchCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public CreateBranchCommandHandler(
+        IApplicationDbContext context,
+        ITenantService tenantService,
+        ITenantSubscriptionGuard subscriptionGuard)
     {
         _context = context;
         _tenantService = tenantService;
+        _subscriptionGuard = subscriptionGuard;
     }
 
     public async Task<Guid> Handle(CreateBranchCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+
+        // The first branch is always allowed (the numeric limit is enforced by the Branches quota).
+        // The MultiBranch feature only gates creating a SECOND (or later) branch, so a plan can grant
+        // e.g. MaxBranches=3 yet still require the MultiBranch feature to actually open more than one.
+        var existingBranches = await _context.Branches
+            .CountAsync(b => b.TenantId == tenantId, cancellationToken);
+        if (existingBranches >= 1)
+        {
+            await _subscriptionGuard.EnsureFeatureAsync(FeatureCodes.MultiBranch, cancellationToken);
+        }
 
         if (request.IsDefault)
         {

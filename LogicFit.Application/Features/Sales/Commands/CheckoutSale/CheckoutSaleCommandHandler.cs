@@ -13,17 +13,20 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
     private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeService _dateTimeService;
+    private readonly ICommissionService _commissionService;
 
     public CheckoutSaleCommandHandler(
         IApplicationDbContext context,
         ITenantService tenantService,
         ICurrentUserService currentUserService,
-        IDateTimeService dateTimeService)
+        IDateTimeService dateTimeService,
+        ICommissionService commissionService)
     {
         _context = context;
         _tenantService = tenantService;
         _currentUserService = currentUserService;
         _dateTimeService = dateTimeService;
+        _commissionService = commissionService;
     }
 
     public async Task<Guid> Handle(CheckoutSaleCommand request, CancellationToken cancellationToken)
@@ -277,6 +280,11 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
                 DiscountApplied = totalDiscount - lineDiscounts - request.ExtraDiscount
             });
         }
+
+        // Accrue a sales commission for the cashier (staged on the same transaction).
+        await _commissionService.AccrueAsync(
+            tenantId, cashierId, CommissionSourceType.ProductSale, total, sale.Id, now,
+            $"Commission for Sale {saleNumber}", cancellationToken);
 
         await _context.SaveChangesAsync(cancellationToken);
         return sale.Id;

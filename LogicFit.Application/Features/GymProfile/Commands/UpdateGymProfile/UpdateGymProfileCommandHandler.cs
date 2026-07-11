@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Exceptions;
 using LogicFit.Domain.ValueObjects;
 using MediatR;
@@ -11,16 +12,38 @@ public class UpdateGymProfileCommandHandler : IRequestHandler<UpdateGymProfileCo
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ITenantSubscriptionGuard _subscriptionGuard;
 
-    public UpdateGymProfileCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public UpdateGymProfileCommandHandler(
+        IApplicationDbContext context,
+        ITenantService tenantService,
+        ITenantSubscriptionGuard subscriptionGuard)
     {
         _context = context;
         _tenantService = tenantService;
+        _subscriptionGuard = subscriptionGuard;
     }
 
     public async Task<bool> Handle(UpdateGymProfileCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+
+        // Basic profile edits (name, colors, logo) are available to everyone. The distinctive
+        // white-label fields (app name, custom fonts/CSS, invoice logo, support branding) require the
+        // WhiteLabel feature; pointing the gym at a custom domain requires the CustomDomain feature.
+        // Only enforce when those specific fields are actually being changed.
+        var setsWhiteLabel =
+            request.AppName != null || request.FontFamily != null || request.CustomCss != null ||
+            request.InvoiceLogoUrl != null || request.SupportPhone != null || request.SupportEmail != null;
+        if (setsWhiteLabel)
+        {
+            await _subscriptionGuard.EnsureFeatureAsync(FeatureCodes.WhiteLabel, cancellationToken);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.CustomDomain))
+        {
+            await _subscriptionGuard.EnsureFeatureAsync(FeatureCodes.CustomDomain, cancellationToken);
+        }
 
         var tenant = await _context.Tenants
             .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);

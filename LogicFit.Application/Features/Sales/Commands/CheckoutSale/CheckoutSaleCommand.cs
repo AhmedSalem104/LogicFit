@@ -1,10 +1,14 @@
+using LogicFit.Application.Common.Interfaces;
+using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Enums;
 using MediatR;
 
 namespace LogicFit.Application.Features.Sales.Commands.CheckoutSale;
 
-public class CheckoutSaleCommand : IRequest<Guid>
+public class CheckoutSaleCommand : IRequest<Guid>, IRequireFeature
 {
+    public string RequiredFeatureCode => FeatureCodes.POS;
+
     public Guid BranchId { get; set; }
     public Guid? ClientId { get; set; }
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;

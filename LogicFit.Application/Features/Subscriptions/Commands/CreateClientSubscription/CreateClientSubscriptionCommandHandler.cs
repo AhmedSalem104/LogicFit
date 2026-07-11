@@ -12,15 +12,18 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ICommissionService _commissionService;
 
     public CreateClientSubscriptionCommandHandler(
         IApplicationDbContext context,
         ITenantService tenantService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        ICommissionService commissionService)
     {
         _context = context;
         _tenantService = tenantService;
         _currentUserService = currentUserService;
+        _commissionService = commissionService;
     }
 
     public async Task<Guid> Handle(CreateClientSubscriptionCommand request, CancellationToken cancellationToken)
@@ -105,6 +108,13 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
         };
 
         _context.ClientSubscriptions.Add(subscription);
+
+        // Accrue a sales commission for the selling staff/coach (staged on the same transaction).
+        Guid? sellerUserId = Guid.TryParse(_currentUserService.UserId, out var sellerId) ? sellerId : null;
+        await _commissionService.AccrueAsync(
+            tenantId, sellerUserId, CommissionSourceType.SubscriptionSale, totalAmount, subscription.Id,
+            DateTime.UtcNow, $"Commission for subscription {subscription.Id}", cancellationToken);
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return subscription.Id;
