@@ -62,7 +62,7 @@ public class GetClientsQueryHandler : IRequestHandler<GetClientsQuery, List<Clie
                     PlanName = s.Plan.Name,
                     StartDate = s.StartDate,
                     EndDate = s.EndDate,
-                    Status = s.Status.ToString()
+                    Status = s.Status
                 }).FirstOrDefault()
             })
             .ToListAsync(cancellationToken);

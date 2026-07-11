@@ -17,7 +17,10 @@ public class ResetPasswordCommandValidator : AbstractValidator<ResetPasswordComm
             .NotEmpty().WithMessage("New password is required.")
             .MinimumLength(6).WithMessage("Password must be at least 6 characters.");
 
-        RuleFor(x => x.TenantId)
-            .NotEmpty().WithMessage("Tenant ID is required.");
+        // Identify the gym by subdomain (preferred) OR tenantId.
+        RuleFor(x => x)
+            .Must(x => !string.IsNullOrWhiteSpace(x.Subdomain) || x.TenantId != Guid.Empty)
+            .WithName("subdomain")
+            .WithMessage("Provide the gym 'subdomain' (or 'tenantId').");
     }
 }
