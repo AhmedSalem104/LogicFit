@@ -48,6 +48,18 @@ public class GeneratePayrollCommandHandler : IRequestHandler<GeneratePayrollComm
         var periodStart = new DateTime(request.Year, request.Month, 1);
         var periodEnd = periodStart.AddMonths(1);
 
+        // Shift assignments in the period, used to pay hourly/daily employees for time actually worked.
+        var employeeIds = employees.Select(e => e.Id).ToList();
+        var assignments = await _context.ShiftAssignments
+            .Include(a => a.Shift)
+            .Where(a => a.TenantId == tenantId
+                && employeeIds.Contains(a.EmployeeId)
+                && a.Date >= periodStart && a.Date < periodEnd)
+            .ToListAsync(cancellationToken);
+        var assignmentsByEmployee = assignments
+            .GroupBy(a => a.EmployeeId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         var run = new PayrollRun
         {
             Id = Guid.NewGuid(),
@@ -73,17 +85,42 @@ public class GeneratePayrollCommandHandler : IRequestHandler<GeneratePayrollComm
 
             var commissionTotal = commissions.Sum(c => c.Amount);
 
+            // Base earnings depend on how the employee is paid. Bonus/Deductions stay 0 here and are
+            // adjusted per employee via UpdatePayrollItem before the run is approved.
+            assignmentsByEmployee.TryGetValue(employee.Id, out var empAssignments);
+            empAssignments ??= new List<ShiftAssignment>();
+
+            decimal baseEarnings;
+            string? earningsNote = null;
+            switch (employee.SalaryType)
+            {
+                case SalaryType.Hourly:
+                    var hours = Math.Round(empAssignments.Sum(HoursWorked), 2, MidpointRounding.AwayFromZero);
+                    baseEarnings = Math.Round((employee.HourlyRate ?? 0m) * hours, 2, MidpointRounding.AwayFromZero);
+                    earningsNote = $"Hourly: {hours}h @ {employee.HourlyRate ?? 0m}";
+                    break;
+                case SalaryType.Daily:
+                    var days = empAssignments.Select(a => a.Date.Date).Distinct().Count();
+                    baseEarnings = Math.Round(employee.BaseSalary * days, 2, MidpointRounding.AwayFromZero);
+                    earningsNote = $"Daily: {days}d @ {employee.BaseSalary}";
+                    break;
+                default: // Monthly
+                    baseEarnings = employee.BaseSalary;
+                    break;
+            }
+
             var item = new PayrollItem
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
                 PayrollRunId = run.Id,
                 EmployeeId = employee.Id,
-                BaseSalary = employee.BaseSalary,
+                BaseSalary = baseEarnings,
                 CommissionTotal = commissionTotal,
                 Bonus = 0,
                 Deductions = 0,
-                NetSalary = employee.BaseSalary + commissionTotal
+                NetSalary = baseEarnings + commissionTotal,
+                Notes = earningsNote
             };
             _context.PayrollItems.Add(item);
             runTotal += item.NetSalary;
@@ -98,5 +135,23 @@ public class GeneratePayrollCommandHandler : IRequestHandler<GeneratePayrollComm
         run.TotalAmount = runTotal;
         await _context.SaveChangesAsync(cancellationToken);
         return run.Id;
+    }
+
+    /// <summary>
+    /// Hours credited for a shift assignment: the actual clocked span when the employee checked in and
+    /// out, otherwise the scheduled shift duration (overnight shifts wrap past midnight).
+    /// </summary>
+    private static decimal HoursWorked(ShiftAssignment a)
+    {
+        if (a.ActualCheckIn.HasValue && a.ActualCheckOut.HasValue && a.ActualCheckOut.Value > a.ActualCheckIn.Value)
+            return (decimal)(a.ActualCheckOut.Value - a.ActualCheckIn.Value).TotalHours;
+
+        if (a.Shift == null)
+            return 0m;
+
+        var duration = a.Shift.EndTime - a.Shift.StartTime;
+        if (duration < TimeSpan.Zero)
+            duration += TimeSpan.FromDays(1);
+        return (decimal)duration.TotalHours;
     }
 }
