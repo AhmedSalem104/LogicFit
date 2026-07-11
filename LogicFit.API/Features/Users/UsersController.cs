@@ -1,3 +1,4 @@
+using LogicFit.Application.Features.Users.Commands.CreateStaffUser;
 using LogicFit.Application.Features.Users.Commands.UpdateUser;
 using LogicFit.Application.Features.Users.Commands.UpdateUserProfile;
 using LogicFit.Application.Features.Users.DTOs;
@@ -45,6 +46,15 @@ public class UsersController : ControllerBase
         if (result == null)
             return NotFound();
         return Ok(result);
+    }
+
+    /// <summary>Create a back-office staff user (Manager / Receptionist / Accountant / Trainer).</summary>
+    [HttpPost("staff")]
+    [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
+    public async Task<ActionResult<Guid>> CreateStaff([FromBody] CreateStaffUserCommand command)
+    {
+        var id = await _mediator.Send(command);
+        return CreatedAtAction(nameof(GetUser), new { id }, id);
     }
 
     [HttpPut("{id}")]

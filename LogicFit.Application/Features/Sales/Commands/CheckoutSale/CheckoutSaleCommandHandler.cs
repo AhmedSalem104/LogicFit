@@ -13,17 +13,20 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
     private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeService _dateTimeService;
+    private readonly ICommissionService _commissionService;
 
     public CheckoutSaleCommandHandler(
         IApplicationDbContext context,
         ITenantService tenantService,
         ICurrentUserService currentUserService,
-        IDateTimeService dateTimeService)
+        IDateTimeService dateTimeService,
+        ICommissionService commissionService)
     {
         _context = context;
         _tenantService = tenantService;
         _currentUserService = currentUserService;
         _dateTimeService = dateTimeService;
+        _commissionService = commissionService;
     }
 
     public async Task<Guid> Handle(CheckoutSaleCommand request, CancellationToken cancellationToken)
@@ -78,7 +81,17 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
                 throw new DomainException("Coupon usage limit reached");
             if (coupon.ApplicableTo != CouponApplicability.All && coupon.ApplicableTo != CouponApplicability.Products)
                 throw new DomainException("Coupon is not applicable to product sales");
+            if (coupon.MaxUsesPerUser.HasValue && request.ClientId.HasValue)
+            {
+                var clientUses = await _context.CouponUsages.CountAsync(
+                    u => u.CouponId == coupon.Id && u.UserId == request.ClientId.Value, cancellationToken);
+                if (clientUses >= coupon.MaxUsesPerUser.Value)
+                    throw new DomainException("This client has reached the usage limit for this coupon");
+            }
         }
+
+        // Products with no explicit tax rate fall back to the gym's default tax setting (if configured).
+        var defaultTaxRate = await GetDefaultTaxRateAsync(tenantId, cancellationToken);
 
         decimal subtotal = 0;
         decimal tax = 0;
@@ -90,9 +103,10 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
         {
             var product = products.First(p => p.Id == item.ProductId);
             var unitPrice = item.UnitPriceOverride ?? product.SellingPrice;
+            var effectiveTaxRate = product.TaxRate > 0 ? product.TaxRate : defaultTaxRate;
             var gross = item.Quantity * unitPrice;
             var net = gross - item.DiscountAmount;
-            var lineTax = net * (product.TaxRate / 100m);
+            var lineTax = net * (effectiveTaxRate / 100m);
             var lineTotal = net + lineTax;
 
             subtotal += gross;
@@ -107,7 +121,7 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
                 ProductName = product.Name,
                 Quantity = item.Quantity,
                 UnitPrice = unitPrice,
-                TaxRate = product.TaxRate,
+                TaxRate = effectiveTaxRate,
                 DiscountAmount = item.DiscountAmount,
                 LineTotal = lineTotal
             });
@@ -278,8 +292,22 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
             });
         }
 
+        // Accrue a sales commission for the cashier (staged on the same transaction).
+        await _commissionService.AccrueAsync(
+            tenantId, cashierId, CommissionSourceType.ProductSale, total, sale.Id, now,
+            $"Commission for Sale {saleNumber}", cancellationToken);
+
         await _context.SaveChangesAsync(cancellationToken);
         return sale.Id;
+    }
+
+    private async Task<decimal> GetDefaultTaxRateAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        var setting = await _context.TaxSettings
+            .Where(t => t.TenantId == tenantId && t.IsActive && t.IsDefault)
+            .OrderByDescending(t => t.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        return setting?.Rate ?? 0m;
     }
 
     private async Task<string> GenerateSaleNumberAsync(Guid tenantId, CancellationToken cancellationToken)

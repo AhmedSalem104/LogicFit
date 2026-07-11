@@ -57,6 +57,22 @@ public class TenantService : ITenantService
         return false;
     }
 
+    public async Task<Guid?> ResolveTenantIdAsync(string identifier)
+    {
+        if (string.IsNullOrWhiteSpace(identifier)) return null;
+
+        var id = identifier.Trim().ToLowerInvariant();
+
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var tenant = await dbContext.Tenants
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => !t.IsDeleted && (t.Subdomain == id || t.CustomDomain == id));
+
+        return tenant?.Id;
+    }
+
     public async Task<bool> TenantExistsAsync(Guid tenantId)
     {
         using var scope = _serviceProvider.CreateScope();

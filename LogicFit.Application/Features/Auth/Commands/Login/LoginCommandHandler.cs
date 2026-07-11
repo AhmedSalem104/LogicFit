@@ -14,6 +14,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
     private readonly IRbacService _rbacService;
     private readonly IRefreshTokenService _refreshTokenService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ITenantService _tenantService;
 
     public LoginCommandHandler(
         IApplicationDbContext context,
@@ -21,7 +22,8 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
         IDateTimeService dateTimeService,
         IRbacService rbacService,
         IRefreshTokenService refreshTokenService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        ITenantService tenantService)
     {
         _context = context;
         _jwtService = jwtService;
@@ -29,14 +31,19 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
         _rbacService = rbacService;
         _refreshTokenService = refreshTokenService;
         _currentUserService = currentUserService;
+        _tenantService = tenantService;
     }
 
     public async Task<AuthResponseDto> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
+        // Resolve the gym from subdomain (preferred) or an explicit tenantId.
+        var tenantId = await Common.TenantResolver.ResolveAsync(request.TenantId, request.Subdomain, _tenantService);
+
         // Find user by phone number (include profile for FullName)
         var user = await _context.Users
+            .IgnoreQueryFilters()
             .Include(u => u.Profile)
-            .FirstOrDefaultAsync(u => u.TenantId == request.TenantId && u.PhoneNumber == request.PhoneNumber,
+            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.PhoneNumber == request.PhoneNumber && !u.IsDeleted,
                 cancellationToken);
 
         if (user == null)

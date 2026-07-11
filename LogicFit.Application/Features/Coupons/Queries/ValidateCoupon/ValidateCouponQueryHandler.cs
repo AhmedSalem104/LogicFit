@@ -40,6 +40,13 @@ public class ValidateCouponQueryHandler : IRequestHandler<ValidateCouponQuery, V
             return new ValidateCouponResultDto { IsValid = false, ErrorMessage = "Coupon has expired" };
         if (coupon.MaxUses.HasValue && coupon.UsedCount >= coupon.MaxUses.Value)
             return new ValidateCouponResultDto { IsValid = false, ErrorMessage = "Coupon usage limit reached" };
+        if (coupon.MaxUsesPerUser.HasValue && request.ClientId.HasValue)
+        {
+            var clientUses = await _context.CouponUsages.CountAsync(
+                u => u.CouponId == coupon.Id && u.UserId == request.ClientId.Value, cancellationToken);
+            if (clientUses >= coupon.MaxUsesPerUser.Value)
+                return new ValidateCouponResultDto { IsValid = false, ErrorMessage = "This client has reached the usage limit for this coupon" };
+        }
         if (coupon.MinimumAmount.HasValue && request.Amount < coupon.MinimumAmount.Value)
             return new ValidateCouponResultDto { IsValid = false, ErrorMessage = $"Minimum amount for this coupon is {coupon.MinimumAmount.Value:C}" };
         if (request.Context.HasValue && coupon.ApplicableTo != CouponApplicability.All && coupon.ApplicableTo != request.Context.Value)

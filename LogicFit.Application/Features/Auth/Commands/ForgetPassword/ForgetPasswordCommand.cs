@@ -5,6 +5,7 @@ namespace LogicFit.Application.Features.Auth.Commands.ForgetPassword;
 public class ForgetPasswordCommand : IRequest<ForgetPasswordResponse>
 {
     public string PhoneNumber { get; set; } = string.Empty;
+    public string? Subdomain { get; set; }
     public Guid TenantId { get; set; }
 }
 

@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
@@ -12,15 +13,18 @@ public class CreateClientCommandHandler : IRequestHandler<CreateClientCommand, G
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IRbacService _rbacService;
 
     public CreateClientCommandHandler(
         IApplicationDbContext context,
         ITenantService tenantService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IRbacService rbacService)
     {
         _context = context;
         _tenantService = tenantService;
         _currentUserService = currentUserService;
+        _rbacService = rbacService;
     }
 
     public async Task<Guid> Handle(CreateClientCommand request, CancellationToken cancellationToken)
@@ -96,6 +100,9 @@ public class CreateClientCommandHandler : IRequestHandler<CreateClientCommand, G
                 _context.CoachClients.Add(coachClient);
             }
         }
+
+        // Assign the Client RBAC role (consistency with public registration).
+        await _rbacService.EnsureUserInRoleAsync(user.Id, tenantId, SystemRoles.Client, cancellationToken);
 
         await _context.SaveChangesAsync(cancellationToken);
 

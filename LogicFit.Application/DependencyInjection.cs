@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<IRbacService, RbacService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         services.AddScoped<ITenantSubscriptionGuard, TenantSubscriptionGuard>();
+        services.AddScoped<ICommissionService, CommissionService>();
         services.AddScoped<ITenantUsageCalculator, TenantUsageCalculator>();
 
         services.AddMediatR(cfg =>
