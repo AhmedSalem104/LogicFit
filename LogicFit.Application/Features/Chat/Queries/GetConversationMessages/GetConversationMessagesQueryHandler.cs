@@ -10,25 +10,34 @@ public class GetConversationMessagesQueryHandler : IRequestHandler<GetConversati
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetConversationMessagesQueryHandler(IApplicationDbContext context, ITenantService tenantService)
+    public GetConversationMessagesQueryHandler(
+        IApplicationDbContext context,
+        ITenantService tenantService,
+        ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<List<ChatMessageDto>> Handle(GetConversationMessagesQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+        var userId = Guid.Parse(_currentUserService.UserId!);
 
-        // Verify conversation exists
-        var conversationExists = await _context.ChatConversations
-            .AnyAsync(c => c.Id == request.ConversationId
+        var conversation = await _context.ChatConversations
+            .FirstOrDefaultAsync(c => c.Id == request.ConversationId
                 && c.TenantId == tenantId
                 && !c.IsDeleted, cancellationToken);
 
-        if (!conversationExists)
+        if (conversation == null)
             throw new NotFoundException("ChatConversation", request.ConversationId);
+
+        // Only the two participants may read the conversation.
+        if (conversation.CoachId != userId && conversation.ClientId != userId)
+            throw new ForbiddenException("You are not a participant in this conversation");
 
         var messages = await _context.ChatMessages
             .Include(m => m.Sender).ThenInclude(s => s.Profile)
