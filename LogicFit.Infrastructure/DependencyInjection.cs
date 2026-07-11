@@ -69,7 +69,15 @@ public static class DependencyInjection
         // and evaluated against the "permission" claims embedded in the JWT at login.
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
         services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
-        services.AddAuthorization();
+        services.AddScoped<IAuthorizationHandler, ActiveTenantAuthorizationHandler>();
+        services.AddAuthorization(options =>
+        {
+            // Endpoints with a plain [Authorize] (no permission policy) still enforce the gym-status rule.
+            options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .AddRequirements(new ActiveTenantRequirement())
+                .Build();
+        });
 
         // Services
         services.AddScoped<ITenantService, TenantService>();

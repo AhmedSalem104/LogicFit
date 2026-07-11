@@ -33,6 +33,10 @@ public class SetTenantStatusCommandHandler : IRequestHandler<SetTenantStatusComm
         }
 
         tenant.Status = request.Status;
+        // Track why the gym is suspended (manual admin action) vs clear the reason once it's not suspended.
+        tenant.SuspensionReason = request.Status == Domain.Enums.TenantStatus.Suspended
+            ? Domain.Enums.SuspensionReason.ManualByAdmin
+            : Domain.Enums.SuspensionReason.None;
         await _context.SaveChangesAsync(cancellationToken);
 
         return new PlatformTenantDto

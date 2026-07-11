@@ -23,6 +23,14 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
+// Short-lived distributed cache backing the tenant-access gate. In-memory today; swap to
+// AddStackExchangeRedisCache for multi-instance scale (config only — no code change).
+builder.Services.AddDistributedMemoryCache();
+// Emits a typed TENANT_PENDING_APPROVAL body when the tenant authorization requirement fails.
+builder.Services.AddSingleton<
+    Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler,
+    LogicFit.API.Authorization.TenantAuthorizationResultHandler>();
+
 // Health checks (readiness includes a DB connectivity probe).
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ApplicationDbContext>("database");
@@ -138,6 +146,9 @@ app.UseAuthentication();
 // Tenant must be resolved BEFORE authorization so permission checks and query filters
 // see the current tenant.
 app.UseTenant();
+
+// Hard gate: block requests for suspended/expired/cancelled/archived gyms before authorization.
+app.UseTenantAccessGate();
 
 app.UseAuthorization();
 

@@ -22,6 +22,10 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
+// Required because the shared authorization handler constructs ITenantAccessGuard (which needs
+// IDistributedCache) per authorized request, even though platform users bypass the tenant checks.
+builder.Services.AddDistributedMemoryCache();
+
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ApplicationDbContext>("database");
 

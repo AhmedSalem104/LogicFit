@@ -1,3 +1,4 @@
+using LogicFit.Application.Common.Authorization;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.Platform.PaymentMethods.DTOs;
 using LogicFit.Application.Features.Platform.PaymentMethods.Queries.GetPaymentMethods;
@@ -14,6 +15,7 @@ namespace LogicFit.API.Features.TenantBilling;
 [ApiController]
 [Route("api/tenant")]
 [Authorize(Policy = Permissions.ManageTenantBilling)]
+[AllowWhenPendingApproval] // reachable while the gym is PendingApproval so the owner can pay & onboard
 public class TenantBillingController : ControllerBase
 {
     private readonly IMediator _mediator;

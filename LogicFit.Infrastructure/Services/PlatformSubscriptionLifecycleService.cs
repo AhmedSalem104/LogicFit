@@ -112,7 +112,11 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
                 {
                     sub.Status = TenantSubscriptionStatus.Expired;
                     sub.SuspendedAt = now;
-                    if (tenant != null) tenant.Status = TenantStatus.Suspended;
+                    if (tenant != null)
+                    {
+                        tenant.Status = TenantStatus.Suspended;
+                        tenant.SuspensionReason = SuspensionReason.NonPayment;
+                    }
                     suspended++;
                     await notificationService.NotifyTenantOwnerAsync(
                         sub.TenantId, NotificationTemplates.TenantSuspended, null, cancellationToken);
