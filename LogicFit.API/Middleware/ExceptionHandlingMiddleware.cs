@@ -63,6 +63,13 @@ public class ExceptionHandlingMiddleware
                 exception.Message,
                 (IDictionary<string, string[]>?)null
             ),
+            // Base domain/business-rule violations (insufficient stock, coupon limits, etc.) are bad
+            // requests, not server errors. Keep this AFTER the more specific subclasses above.
+            DomainException => (
+                StatusCodes.Status400BadRequest,
+                exception.Message,
+                (IDictionary<string, string[]>?)null
+            ),
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "An error occurred while processing your request",

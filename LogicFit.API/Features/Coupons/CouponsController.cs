@@ -47,6 +47,7 @@ public class CouponsController : ControllerBase
     public async Task<ActionResult<ValidateCouponResultDto>> Validate(
         [FromQuery] string code,
         [FromQuery] decimal amount,
-        [FromQuery] CouponApplicability? context)
-        => Ok(await _mediator.Send(new ValidateCouponQuery { Code = code, Amount = amount, Context = context }));
+        [FromQuery] CouponApplicability? context,
+        [FromQuery] Guid? clientId)
+        => Ok(await _mediator.Send(new ValidateCouponQuery { Code = code, Amount = amount, Context = context, ClientId = clientId }));
 }

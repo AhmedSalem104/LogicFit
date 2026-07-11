@@ -41,7 +41,17 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
                 throw new DomainException("Coupon has expired");
             if (coupon.MaxUses.HasValue && coupon.UsedCount >= coupon.MaxUses.Value)
                 throw new DomainException("Coupon usage limit reached");
+            if (coupon.MaxUsesPerUser.HasValue && request.ClientId.HasValue)
+            {
+                var clientUses = await _context.CouponUsages.CountAsync(
+                    u => u.CouponId == coupon.Id && u.UserId == request.ClientId.Value, cancellationToken);
+                if (clientUses >= coupon.MaxUsesPerUser.Value)
+                    throw new DomainException("This client has reached the usage limit for this coupon");
+            }
         }
+
+        // Items with no explicit tax rate fall back to the gym's default tax setting (if configured).
+        var defaultTaxRate = await GetDefaultTaxRateAsync(tenantId, cancellationToken);
 
         decimal subtotal = 0;
         decimal tax = 0;
@@ -50,10 +60,11 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
 
         foreach (var i in request.Items)
         {
+            var effectiveTaxRate = i.TaxRate > 0 ? i.TaxRate : defaultTaxRate;
             var gross = i.Quantity * i.UnitPrice;
             var lineDiscount = i.DiscountAmount;
             var net = gross - lineDiscount;
-            var lineTax = net * (i.TaxRate / 100m);
+            var lineTax = net * (effectiveTaxRate / 100m);
             var lineTotal = net + lineTax;
 
             subtotal += gross;
@@ -69,7 +80,7 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
                 Description = i.Description,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
-                TaxRate = i.TaxRate,
+                TaxRate = effectiveTaxRate,
                 DiscountAmount = lineDiscount,
                 LineTotal = lineTotal
             });
@@ -140,6 +151,15 @@ public class CreateInvoiceCommandHandler : IRequestHandler<CreateInvoiceCommand,
 
         await _context.SaveChangesAsync(cancellationToken);
         return invoice.Id;
+    }
+
+    private async Task<decimal> GetDefaultTaxRateAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        var setting = await _context.TaxSettings
+            .Where(t => t.TenantId == tenantId && t.IsActive && t.IsDefault)
+            .OrderByDescending(t => t.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        return setting?.Rate ?? 0m;
     }
 
     private async Task<string> GenerateInvoiceNumberAsync(Guid tenantId, CancellationToken cancellationToken)
