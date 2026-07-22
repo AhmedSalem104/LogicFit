@@ -88,6 +88,7 @@ public static class DependencyInjection
         services.AddScoped<IFileUploadService, FileUploadService>();
         services.AddScoped<IEmailService, LoggingEmailService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddSingleton<IBackupService, SqlServerBackupService>();
 
         // Data Seeder
         services.AddScoped<RbacSeeder>();

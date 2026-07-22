@@ -28,6 +28,7 @@ public static class Permissions
     public const string ManagePlans = "ManagePlans";
     public const string ManagePaymentRequests = "ManagePaymentRequests";
     public const string ManagePlatformReports = "ManagePlatformReports";
+    public const string ManagePlatformBackups = "ManagePlatformBackups";
 
     /// <summary>All tenant-scoped permission codes.</summary>
     public static readonly IReadOnlyList<string> TenantPermissions = new[]
@@ -40,7 +41,8 @@ public static class Permissions
     /// <summary>All platform-scoped permission codes.</summary>
     public static readonly IReadOnlyList<string> PlatformPermissions = new[]
     {
-        ManagePlatform, ManageTenants, ManagePlans, ManagePaymentRequests, ManagePlatformReports
+        ManagePlatform, ManageTenants, ManagePlans, ManagePaymentRequests, ManagePlatformReports,
+        ManagePlatformBackups
     };
 
     /// <summary>Every permission code in the system.</summary>
