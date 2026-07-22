@@ -52,7 +52,5 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
                 break;
             }
         }
-
-        return Task.CompletedTask;
     }
 }

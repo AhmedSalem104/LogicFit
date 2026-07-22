@@ -34,8 +34,11 @@ jobs:
       - name: Test
         run: dotnet test LogicFit.sln -c Release --no-build --verbosity normal
 
+      - name: Install EF CLI
+        run: dotnet tool install --global dotnet-ef --version 8.*
+
       - name: Validate EF migrations
-        run: dotnet ef migrations script --idempotent --no-build --project LogicFit.Infrastructure --startup-project LogicFit.API --output /tmp/logicfit-migrations.sql
+        run: dotnet ef migrations script --idempotent --configuration Release --project LogicFit.Infrastructure --startup-project LogicFit.API --output /tmp/logicfit-migrations.sql
 
   docker:
     runs-on: ubuntu-latest
