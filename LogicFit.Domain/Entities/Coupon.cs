@@ -13,6 +13,7 @@ public class Coupon : TenantAuditableEntity
     public decimal? MaxDiscountAmount { get; set; }
     public int? MaxUses { get; set; }
     public int UsedCount { get; set; }
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
     public int? MaxUsesPerUser { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }

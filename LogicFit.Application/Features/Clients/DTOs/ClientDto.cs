@@ -1,3 +1,5 @@
+using LogicFit.Domain.Enums;
+
 namespace LogicFit.Application.Features.Clients.DTOs;
 
 public class ClientDto
@@ -28,7 +30,8 @@ public class ClientSubscriptionInfoDto
     public string PlanName { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
-    public string Status { get; set; } = string.Empty;
+    /// <summary>Client membership status, same numeric SubscriptionStatus enum used by /api/subscriptions.</summary>
+    public SubscriptionStatus Status { get; set; }
 }
 
 public class CreateClientDto

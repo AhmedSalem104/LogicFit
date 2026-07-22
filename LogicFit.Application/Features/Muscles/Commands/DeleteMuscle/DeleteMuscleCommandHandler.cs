@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Exceptions;
+using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +19,11 @@ public class DeleteMuscleCommandHandler : IRequestHandler<DeleteMuscleCommand, b
 
     public async Task<bool> Handle(DeleteMuscleCommand request, CancellationToken cancellationToken)
     {
+        var userId = Guid.Parse(_currentUserService.UserId!);
+        var role = await _context.Users.Where(u => u.Id == userId).Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
+        if (role is not (UserRole.Owner or UserRole.Manager))
+            throw new ForbiddenException("Only gym owners or managers can modify the muscle catalog");
+
         var muscle = await _context.Muscles
             .FirstOrDefaultAsync(m => m.Id == request.Id, cancellationToken);
 

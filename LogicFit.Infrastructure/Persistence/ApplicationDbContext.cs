@@ -308,6 +308,21 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
                     continue;
                 }
 
+                if (IsSensitiveAuditProperty(propertyName))
+                {
+                    if (entry.State == EntityState.Added)
+                        auditEntry.NewValues[propertyName] = "[REDACTED]";
+                    else if (entry.State == EntityState.Modified && property.IsModified)
+                    {
+                        auditEntry.Action = AuditAction.Update;
+                        auditEntry.AffectedColumns.Add(propertyName);
+                        auditEntry.OldValues[propertyName] = "[REDACTED]";
+                        auditEntry.NewValues[propertyName] = "[REDACTED]";
+                    }
+
+                    continue;
+                }
+
                 switch (entry.State)
                 {
                     case EntityState.Added:
@@ -332,6 +347,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         }
 
         return auditEntries.Where(e => e.HasChanges).ToList();
+    }
+
+    private static bool IsSensitiveAuditProperty(string propertyName)
+    {
+        return propertyName.Equals("PasswordHash", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Equals("PasswordResetToken", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Equals("RefreshToken", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Equals("Token", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Equals("TokenHash", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task OnAfterSaveChanges(List<AuditEntry> auditEntries, CancellationToken cancellationToken)

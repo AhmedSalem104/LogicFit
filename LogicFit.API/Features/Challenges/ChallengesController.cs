@@ -5,6 +5,7 @@ using LogicFit.Application.Features.Challenges.Commands.UpdateChallenge;
 using LogicFit.Application.Features.Challenges.Commands.UpdateProgress;
 using LogicFit.Application.Features.Challenges.DTOs;
 using LogicFit.Application.Features.Challenges.Queries.GetChallengeById;
+using LogicFit.Application.Features.Challenges.Queries.GetChallengeLeaderboard;
 using LogicFit.Application.Features.Challenges.Queries.GetChallenges;
 using LogicFit.Application.Features.Challenges.Queries.GetMyChallenges;
 using LogicFit.Domain.Enums;
@@ -44,6 +45,13 @@ public class ChallengesController : ControllerBase
     public async Task<ActionResult<List<ClientChallengeDto>>> GetMyChallenges()
     {
         var result = await _mediator.Send(new GetMyChallengesQuery());
+        return Ok(result);
+    }
+
+    [HttpGet("{id}/leaderboard")]
+    public async Task<ActionResult<List<ChallengeLeaderboardEntryDto>>> GetLeaderboard(Guid id)
+    {
+        var result = await _mediator.Send(new GetChallengeLeaderboardQuery { ChallengeId = id });
         return Ok(result);
     }
 

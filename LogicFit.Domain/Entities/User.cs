@@ -18,6 +18,7 @@ public class User : AuditableEntity, ITenantEntity, ISoftDeletable
     // so issued tokens can be invalidated on the next refresh.
     public int PermissionsVersion { get; set; } = 0;
     public decimal WalletBalance { get; set; } = 0;
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     // Password Reset
     public string? PasswordResetToken { get; set; }

@@ -49,7 +49,7 @@ public class GetClientByIdQueryHandler : IRequestHandler<GetClientByIdQuery, Cli
                     PlanName = s.Plan.Name,
                     StartDate = s.StartDate,
                     EndDate = s.EndDate,
-                    Status = s.Status.ToString()
+                    Status = s.Status
                 }).FirstOrDefault()
             })
             .FirstOrDefaultAsync(cancellationToken);

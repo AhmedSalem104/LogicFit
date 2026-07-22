@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.WorkoutPrograms.DTOs;
+using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,11 +10,13 @@ public class GetWorkoutProgramsQueryHandler : IRequestHandler<GetWorkoutPrograms
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetWorkoutProgramsQueryHandler(IApplicationDbContext context, ITenantService tenantService)
+    public GetWorkoutProgramsQueryHandler(IApplicationDbContext context, ITenantService tenantService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<List<WorkoutProgramDto>> Handle(GetWorkoutProgramsQuery request, CancellationToken cancellationToken)
@@ -25,6 +28,15 @@ public class GetWorkoutProgramsQueryHandler : IRequestHandler<GetWorkoutPrograms
             .Include(p => p.Client).ThenInclude(c => c.Profile)
             .Where(p => p.TenantId == tenantId)
             .AsQueryable();
+
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var currentUserRole = await _context.Users
+            .Where(u => u.Id == currentUserId && u.TenantId == tenantId)
+            .Select(u => u.Role)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (currentUserRole == UserRole.Client)
+            query = query.Where(p => p.ClientId == currentUserId);
 
         if (request.CoachId.HasValue)
             query = query.Where(p => p.CoachId == request.CoachId.Value);

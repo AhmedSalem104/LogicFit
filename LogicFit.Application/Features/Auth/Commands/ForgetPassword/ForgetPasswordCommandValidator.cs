@@ -9,7 +9,10 @@ public class ForgetPasswordCommandValidator : AbstractValidator<ForgetPasswordCo
         RuleFor(x => x.PhoneNumber)
             .NotEmpty().WithMessage("Phone number is required.");
 
-        RuleFor(x => x.TenantId)
-            .NotEmpty().WithMessage("Tenant ID is required.");
+        // Identify the gym by subdomain (preferred) OR tenantId.
+        RuleFor(x => x)
+            .Must(x => !string.IsNullOrWhiteSpace(x.Subdomain) || x.TenantId != Guid.Empty)
+            .WithName("subdomain")
+            .WithMessage("Provide the gym 'subdomain' (or 'tenantId').");
     }
 }

@@ -54,8 +54,14 @@ public class FileUploadService : IFileUploadService
             return Task.FromResult(false);
 
         // Convert URL to file path
-        var relativePath = fileUrl.Replace("/uploads/", "");
-        var filePath = Path.Combine(_environment.WebRootPath, "uploads", relativePath);
+        if (!fileUrl.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+            return Task.FromResult(false);
+
+        var uploadsRoot = Path.GetFullPath(Path.Combine(_environment.WebRootPath, "uploads"));
+        var relativePath = fileUrl["/uploads/".Length..].Replace('/', Path.DirectorySeparatorChar);
+        var filePath = Path.GetFullPath(Path.Combine(uploadsRoot, relativePath));
+        if (!filePath.StartsWith(uploadsRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            return Task.FromResult(false);
 
         if (File.Exists(filePath))
         {
@@ -79,6 +85,10 @@ public class FileUploadService : IFileUploadService
     {
         try
         {
+            if (!string.IsNullOrWhiteSpace(subfolder)
+                && subfolder.Split('/', '\\').Any(part => part is "." or ".." || part.IndexOfAny(Path.GetInvalidPathChars()) >= 0))
+                throw new ArgumentException("Invalid upload subfolder");
+
             // Get base path with fallback
             var webRootPath = _environment.WebRootPath;
             if (string.IsNullOrEmpty(webRootPath))
@@ -158,6 +168,11 @@ public class FileUploadService : IFileUploadService
 
         if (file.Length > MaxImageSize)
             throw new ArgumentException($"Image size exceeds maximum allowed size of {MaxImageSize / 1024 / 1024}MB");
+
+        var allowedContentTypes = new[] { "image/jpeg", "image/png", "image/gif", "image/webp" };
+        if (!string.IsNullOrWhiteSpace(file.ContentType)
+            && !allowedContentTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
+            throw new ArgumentException("Image content type is not allowed");
     }
 
     private void ValidateVideo(IFormFile file)
@@ -171,5 +186,10 @@ public class FileUploadService : IFileUploadService
 
         if (file.Length > MaxVideoSize)
             throw new ArgumentException($"Video size exceeds maximum allowed size of {MaxVideoSize / 1024 / 1024}MB");
+
+        var allowedContentTypes = new[] { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo" };
+        if (!string.IsNullOrWhiteSpace(file.ContentType)
+            && !allowedContentTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
+            throw new ArgumentException("Video content type is not allowed");
     }
 }

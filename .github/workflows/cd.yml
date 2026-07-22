@@ -1,0 +1,90 @@
+name: CD - Production (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Git SHA or release tag to deploy'
+        required: true
+        type: string
+      confirm:
+        description: 'Type DEPLOY-PRODUCTION to confirm a production deployment'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    if: ${{ inputs.confirm == 'DEPLOY-PRODUCTION' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.image_tag }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet restore LogicFit.sln
+      - run: dotnet build LogicFit.sln -c Release --no-restore
+      - run: dotnet test LogicFit.sln -c Release --no-build --verbosity normal
+      - run: dotnet ef migrations script --idempotent --no-build --project LogicFit.Infrastructure --startup-project LogicFit.API --output /tmp/logicfit-migrations.sql
+
+  deploy:
+    if: ${{ inputs.confirm == 'DEPLOY-PRODUCTION' }}
+    needs: preflight
+    runs-on: windows-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.image_tag }}
+
+      - name: Require both WebDeploy profiles
+        shell: pwsh
+        env:
+          PLATFORM_PROFILE_B64: ${{ secrets.RUNASP_PLATFORM_PUBLISH_SETTINGS_B64 }}
+          TENANT_PROFILE_B64: ${{ secrets.RUNASP_TENANT_PUBLISH_SETTINGS_B64 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PLATFORM_PROFILE_B64) -or [string]::IsNullOrWhiteSpace($env:TENANT_PROFILE_B64)) {
+            throw "Both RUNASP_PLATFORM_PUBLISH_SETTINGS_B64 and RUNASP_TENANT_PUBLISH_SETTINGS_B64 are required."
+          }
+
+      - name: Build publish outputs
+        shell: pwsh
+        run: |
+          dotnet publish LogicFit.Platform.API/LogicFit.Platform.API.csproj -c Release -o "$env:RUNNER_TEMP/platform-publish" /p:UseAppHost=false
+          dotnet publish LogicFit.API/LogicFit.API.csproj -c Release -o "$env:RUNNER_TEMP/tenant-publish" /p:UseAppHost=false
+
+      - name: Decode protected publish profiles
+        shell: pwsh
+        env:
+          PLATFORM_PROFILE_B64: ${{ secrets.RUNASP_PLATFORM_PUBLISH_SETTINGS_B64 }}
+          TENANT_PROFILE_B64: ${{ secrets.RUNASP_TENANT_PUBLISH_SETTINGS_B64 }}
+        run: |
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP/platform.publishSettings", [Convert]::FromBase64String($env:PLATFORM_PROFILE_B64))
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP/tenant.publishSettings", [Convert]::FromBase64String($env:TENANT_PROFILE_B64))
+
+      - name: Deploy Platform API with WebDeploy
+        shell: pwsh
+        run: .\Scripts\deploy-webdeploy.ps1 -PublishSettingsPath "$env:RUNNER_TEMP/platform.publishSettings" -ContentPath "$env:RUNNER_TEMP/platform-publish"
+
+      - name: Deploy Tenant API with WebDeploy
+        shell: pwsh
+        run: .\Scripts\deploy-webdeploy.ps1 -PublishSettingsPath "$env:RUNNER_TEMP/tenant.publishSettings" -ContentPath "$env:RUNNER_TEMP/tenant-publish"
+
+      - name: Verify production health
+        shell: pwsh
+        env:
+          PLATFORM_HEALTH_URL: ${{ secrets.RUNASP_PLATFORM_HEALTHCHECK_URL }}
+          TENANT_HEALTH_URL: ${{ secrets.RUNASP_TENANT_HEALTHCHECK_URL }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PLATFORM_HEALTH_URL) -or [string]::IsNullOrWhiteSpace($env:TENANT_HEALTH_URL)) {
+            throw "Both production health URLs are required."
+          }
+          foreach ($url in @($env:PLATFORM_HEALTH_URL, $env:TENANT_HEALTH_URL)) {
+            $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 30
+            if ($response.StatusCode -ne 200) { throw "Health check failed for $url" }
+          }

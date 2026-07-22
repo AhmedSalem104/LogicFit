@@ -10,16 +10,21 @@ public class GetClientSubscriptionsQueryHandler : IRequestHandler<GetClientSubsc
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetClientSubscriptionsQueryHandler(IApplicationDbContext context, ITenantService tenantService)
+    public GetClientSubscriptionsQueryHandler(IApplicationDbContext context, ITenantService tenantService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<List<ClientSubscriptionDto>> Handle(GetClientSubscriptionsQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var role = await _context.Users.Where(u => u.Id == currentUserId && u.TenantId == tenantId)
+            .Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
 
         var query = _context.ClientSubscriptions
             .Include(s => s.Client).ThenInclude(c => c.Profile)
@@ -28,6 +33,9 @@ public class GetClientSubscriptionsQueryHandler : IRequestHandler<GetClientSubsc
             .Include(s => s.Freezes)
             .Where(s => s.TenantId == tenantId)
             .AsQueryable();
+
+        if (role == UserRole.Client)
+            query = query.Where(s => s.ClientId == currentUserId);
 
         if (request.ClientId.HasValue)
             query = query.Where(s => s.ClientId == request.ClientId.Value);

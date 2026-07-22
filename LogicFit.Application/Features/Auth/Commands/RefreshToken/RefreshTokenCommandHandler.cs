@@ -59,9 +59,9 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
             Roles = auth.Roles,
             Permissions = auth.Permissions,
             TenantId = user.TenantId,
-            AccessToken = accessToken,
+            AccessToken = accessToken.Token,
             RefreshToken = newToken.Token,
-            ExpiresAt = _dateTimeService.UtcNow.AddMinutes(60)
+            ExpiresAt = accessToken.ExpiresAt
         };
     }
 }

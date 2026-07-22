@@ -23,6 +23,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(e => e.WalletBalance)
             .HasPrecision(18, 2);
 
+        builder.Property(e => e.RowVersion)
+            .IsRowVersion()
+            .IsConcurrencyToken();
+
         builder.HasIndex(e => new { e.TenantId, e.Email })
             .IsUnique();
 

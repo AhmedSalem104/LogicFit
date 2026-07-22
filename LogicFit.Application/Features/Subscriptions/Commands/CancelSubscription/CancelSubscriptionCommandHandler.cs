@@ -31,6 +31,9 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
         if (subscription == null)
             throw new NotFoundException("ClientSubscription", request.SubscriptionId);
 
+        if (subscription.Status == SubscriptionStatus.Cancelled)
+            throw new ConflictException("Subscription is already cancelled");
+
         // Handle refund
         if (request.RefundToWallet && subscription.AmountPaid > 0)
         {

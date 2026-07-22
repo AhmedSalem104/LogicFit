@@ -28,7 +28,8 @@ public class PermissionPolicyProvider : IAuthorizationPolicyProvider
         {
             var policy = new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()
-                .AddRequirements(new PermissionRequirement(policyName))
+                // Every permission-gated endpoint also requires the gym to be in an allowed state.
+                .AddRequirements(new PermissionRequirement(policyName), new ActiveTenantRequirement())
                 .Build();
 
             return Task.FromResult<AuthorizationPolicy?>(policy);

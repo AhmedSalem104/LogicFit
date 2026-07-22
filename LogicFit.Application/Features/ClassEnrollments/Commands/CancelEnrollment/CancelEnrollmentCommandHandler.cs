@@ -12,24 +12,32 @@ public class CancelEnrollmentCommandHandler : IRequestHandler<CancelEnrollmentCo
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
     private readonly IDateTimeService _dateTimeService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public CancelEnrollmentCommandHandler(IApplicationDbContext context, ITenantService tenantService, IDateTimeService dateTimeService)
+    public CancelEnrollmentCommandHandler(IApplicationDbContext context, ITenantService tenantService, IDateTimeService dateTimeService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
         _dateTimeService = dateTimeService;
+        _currentUserService = currentUserService;
     }
 
     public async Task Handle(CancelEnrollmentCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
         var now = _dateTimeService.UtcNow;
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
 
         var enrollment = await _context.ClassEnrollments
             .Include(e => e.Schedule)
                 .ThenInclude(s => s.GroupClass)
             .FirstOrDefaultAsync(e => e.Id == request.Id && e.TenantId == tenantId, cancellationToken)
             ?? throw new NotFoundException("ClassEnrollment", request.Id);
+
+        var currentUserRole = await _context.Users.Where(u => u.Id == currentUserId && u.TenantId == tenantId)
+            .Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
+        if (currentUserRole == UserRole.Client && enrollment.ClientId != currentUserId)
+            throw new ForbiddenException("Clients can only cancel their own enrollments");
 
         if (enrollment.Status == ClassEnrollmentStatus.Cancelled)
             throw new DomainException("Enrollment is already cancelled");

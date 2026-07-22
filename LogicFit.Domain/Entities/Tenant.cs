@@ -11,6 +11,11 @@ public class Tenant : AuditableEntity, ISoftDeletable
     public string? Subdomain { get; set; }
     public string? CustomDomain { get; set; }
     public TenantStatus Status { get; set; }
+
+    /// <summary>Why the gym is suspended (when Status == Suspended). Null/None otherwise.
+    /// Kept distinct from Status and the subscription state so the access layer can pick a precise code.</summary>
+    public SuspensionReason? SuspensionReason { get; set; }
+
     public BrandingSettings? BrandingSettings { get; set; }
 
     // Gym Details

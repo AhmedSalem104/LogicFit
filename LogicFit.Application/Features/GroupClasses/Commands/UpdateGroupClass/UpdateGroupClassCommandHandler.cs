@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Exceptions;
+using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,16 +10,22 @@ public class UpdateGroupClassCommandHandler : IRequestHandler<UpdateGroupClassCo
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public UpdateGroupClassCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public UpdateGroupClassCommandHandler(IApplicationDbContext context, ITenantService tenantService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public async Task Handle(UpdateGroupClassCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var role = await _context.Users.Where(u => u.Id == currentUserId).Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
+        if (role == UserRole.Client)
+            throw new ForbiddenException("Clients cannot update group classes");
         var gc = await _context.GroupClasses
             .FirstOrDefaultAsync(g => g.Id == request.Id && g.TenantId == tenantId, cancellationToken)
             ?? throw new NotFoundException("GroupClass", request.Id);

@@ -8,11 +8,19 @@ public class ForgetPasswordCommandHandler : IRequestHandler<ForgetPasswordComman
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly IPasswordResetTokenService _resetTokenService;
+    private readonly IDateTimeService _dateTimeService;
 
-    public ForgetPasswordCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public ForgetPasswordCommandHandler(
+        IApplicationDbContext context,
+        ITenantService tenantService,
+        IPasswordResetTokenService resetTokenService,
+        IDateTimeService dateTimeService)
     {
         _context = context;
         _tenantService = tenantService;
+        _resetTokenService = resetTokenService;
+        _dateTimeService = dateTimeService;
     }
 
     public async Task<ForgetPasswordResponse> Handle(ForgetPasswordCommand request, CancellationToken cancellationToken)
@@ -37,10 +45,10 @@ public class ForgetPasswordCommandHandler : IRequestHandler<ForgetPasswordComman
         }
 
         // Generate 6-digit reset token
-        var resetToken = new Random().Next(100000, 999999).ToString();
+        var resetToken = _resetTokenService.GenerateToken();
 
-        user.PasswordResetToken = resetToken;
-        user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(15); // Token valid for 15 minutes
+        user.PasswordResetToken = _resetTokenService.HashToken(resetToken);
+        user.PasswordResetTokenExpiry = _dateTimeService.UtcNow.AddMinutes(15);
 
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -50,7 +58,7 @@ public class ForgetPasswordCommandHandler : IRequestHandler<ForgetPasswordComman
         {
             Success = true,
             Message = "Reset code has been sent to your phone number.",
-            ResetToken = resetToken // Remove this in production
+            ResetToken = _resetTokenService.CanExposeToken ? resetToken : null
         };
     }
 }

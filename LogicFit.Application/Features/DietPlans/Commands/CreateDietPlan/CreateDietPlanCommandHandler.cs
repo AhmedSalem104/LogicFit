@@ -1,7 +1,9 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
+using LogicFit.Domain.Exceptions;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace LogicFit.Application.Features.DietPlans.Commands.CreateDietPlan;
 
@@ -23,6 +25,15 @@ public class CreateDietPlanCommandHandler : IRequestHandler<CreateDietPlanComman
 
     public async Task<Guid> Handle(CreateDietPlanCommand request, CancellationToken cancellationToken)
     {
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var currentUserRole = await _context.Users
+            .Where(u => u.Id == currentUserId)
+            .Select(u => u.Role)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (currentUserRole == UserRole.Client)
+            throw new ForbiddenException("Clients cannot create diet plans");
+
         var plan = new DietPlan
         {
             Id = Guid.NewGuid(),

@@ -1,3 +1,4 @@
+using LogicFit.Application.Common.Authorization;
 using LogicFit.Application.Features.Platform.Plans.DTOs;
 using LogicFit.Application.Features.Platform.Plans.Queries.GetPlans;
 using LogicFit.Application.Features.TenantBilling.Commands.ChooseSubscriptionPlan;
@@ -15,6 +16,7 @@ namespace LogicFit.API.Features.TenantBilling;
 [ApiController]
 [Route("api/tenant")]
 [Authorize(Policy = Permissions.ManageTenantBilling)]
+[AllowWhenPendingApproval] // plans / my-subscription / select-plan must work before the gym is approved
 public class TenantSubscriptionController : ControllerBase
 {
     private readonly IMediator _mediator;

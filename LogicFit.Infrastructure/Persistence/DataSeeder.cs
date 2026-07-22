@@ -63,40 +63,16 @@ public class DataSeeder
     {
         _logger.LogWarning("Starting force reset of Foods table...");
 
-        // Delete related data first (foreign key constraints)
-        var mealItems = await _context.Set<MealItem>().IgnoreQueryFilters().ToListAsync();
-        if (mealItems.Any())
-        {
-            _context.Set<MealItem>().RemoveRange(mealItems);
-            _logger.LogInformation("Deleted {Count} meal items", mealItems.Count);
-        }
-
-        var recipeIngredients = await _context.Set<RecipeIngredient>().IgnoreQueryFilters().ToListAsync();
-        if (recipeIngredients.Any())
-        {
-            _context.Set<RecipeIngredient>().RemoveRange(recipeIngredients);
-            _logger.LogInformation("Deleted {Count} recipe ingredients", recipeIngredients.Count);
-        }
-
-        var foodMicronutrients = await _context.Set<FoodMicronutrient>().IgnoreQueryFilters().ToListAsync();
-        if (foodMicronutrients.Any())
-        {
-            _context.Set<FoodMicronutrient>().RemoveRange(foodMicronutrients);
-            _logger.LogInformation("Deleted {Count} food micronutrients", foodMicronutrients.Count);
-        }
-
-        // Delete all foods
-        var foods = await _context.Foods.IgnoreQueryFilters().ToListAsync();
-        if (foods.Any())
-        {
-            _context.Foods.RemoveRange(foods);
-            _logger.LogInformation("Deleted {Count} foods", foods.Count);
-        }
-
-        await _context.SaveChangesAsync();
-
-        // Reset identity seed using raw SQL
+        // This is an explicit destructive maintenance operation. Use hard deletes here because
+        // EF's SaveChanges converts RemoveRange on soft-deletable entities into updates; reseeding
+        // identity while those rows remain would cause primary-key collisions during reseeding.
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        await _context.Database.ExecuteSqlRawAsync("DELETE FROM MealItems");
+        await _context.Database.ExecuteSqlRawAsync("DELETE FROM RecipeIngredients");
+        await _context.Database.ExecuteSqlRawAsync("DELETE FROM FoodMicronutrients");
+        await _context.Database.ExecuteSqlRawAsync("DELETE FROM Foods");
         await _context.Database.ExecuteSqlRawAsync("DBCC CHECKIDENT ('Foods', RESEED, 0)");
+        await transaction.CommitAsync();
         _logger.LogInformation("Reset Foods identity seed to 0");
 
         // Now seed fresh

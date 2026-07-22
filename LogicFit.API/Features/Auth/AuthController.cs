@@ -1,3 +1,4 @@
+using LogicFit.Application.Features.Auth.Commands.ChangePassword;
 using LogicFit.Application.Features.Auth.Commands.ForgetPassword;
 using LogicFit.Application.Features.Auth.Commands.Login;
 using LogicFit.Application.Features.Auth.Commands.LogoutAll;
@@ -81,5 +82,17 @@ public class AuthController : ControllerBase
     {
         var result = await _mediator.Send(command);
         return Ok(result);
+    }
+
+    /// <summary>Authenticated self-service password change (current + new).</summary>
+    [HttpPost("change-password")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordCommand command)
+    {
+        await _mediator.Send(command);
+        return NoContent();
     }
 }

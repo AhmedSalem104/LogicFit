@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.BodyMeasurements.DTOs;
+using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,11 +10,13 @@ public class GetBodyMeasurementsQueryHandler : IRequestHandler<GetBodyMeasuremen
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetBodyMeasurementsQueryHandler(IApplicationDbContext context, ITenantService tenantService)
+    public GetBodyMeasurementsQueryHandler(IApplicationDbContext context, ITenantService tenantService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<List<BodyMeasurementDto>> Handle(GetBodyMeasurementsQuery request, CancellationToken cancellationToken)
@@ -24,6 +27,15 @@ public class GetBodyMeasurementsQueryHandler : IRequestHandler<GetBodyMeasuremen
             .Include(b => b.Client).ThenInclude(c => c.Profile)
             .Where(b => b.TenantId == tenantId)
             .AsQueryable();
+
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var currentUserRole = await _context.Users
+            .Where(u => u.Id == currentUserId && u.TenantId == tenantId)
+            .Select(u => u.Role)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (currentUserRole == UserRole.Client)
+            query = query.Where(b => b.ClientId == currentUserId);
 
         if (request.ClientId.HasValue)
             query = query.Where(b => b.ClientId == request.ClientId.Value);

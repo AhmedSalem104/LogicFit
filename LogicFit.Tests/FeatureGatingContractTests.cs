@@ -1,7 +1,12 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Features.ClientDashboard.Queries.GetMyDashboard;
 using LogicFit.Application.Features.Employees.Commands.CreateEmployee;
 using LogicFit.Application.Features.Expenses.Commands.CreateExpense;
+using LogicFit.Application.Features.MealLogs.Commands.LogMeal;
 using LogicFit.Application.Features.Products.Commands.CreateProduct;
+using LogicFit.Application.Features.Reports.Queries.GetBranchComparisonReport;
+using LogicFit.Application.Features.Reports.Queries.GetFinancialReport;
+using LogicFit.Application.Features.Reports.Queries.GetOperationsDashboard;
 using LogicFit.Application.Features.Sales.Commands.CheckoutSale;
 using LogicFit.Application.Features.Stock.Commands.AdjustStock;
 using LogicFit.Application.Features.Stock.Commands.TransferStock;
@@ -59,6 +64,28 @@ public class FeatureGatingContractTests
         Assert.Equal(FeatureCodes.EmployeeManagement, new CreateEmployeeCommand().RequiredFeatureCode);
     }
 
+    [Fact]
+    public void ClientDashboard_Requires_ClientMobileApp_Feature()
+    {
+        Assert.Equal(FeatureCodes.ClientMobileApp, new GetMyDashboardQuery().RequiredFeatureCode);
+    }
+
+    [Fact]
+    public void LogMeal_Requires_ClientMobileApp_Feature()
+    {
+        Assert.Equal(FeatureCodes.ClientMobileApp, new LogMealCommand().RequiredFeatureCode);
+    }
+
+    [Theory]
+    [InlineData(typeof(GetOperationsDashboardQuery))]
+    [InlineData(typeof(GetFinancialReportQuery))]
+    [InlineData(typeof(GetBranchComparisonReportQuery))]
+    public void Advanced_Reports_Require_AdvancedReports_Feature(System.Type queryType)
+    {
+        var query = (IRequireFeature)System.Activator.CreateInstance(queryType)!;
+        Assert.Equal(FeatureCodes.AdvancedReports, query.RequiredFeatureCode);
+    }
+
     [Theory]
     [InlineData(typeof(CheckoutSaleCommand))]
     [InlineData(typeof(CreateProductCommand))]
@@ -84,6 +111,11 @@ public class FeatureGatingContractTests
             new TransferStockCommand().RequiredFeatureCode,
             new CreateExpenseCommand().RequiredFeatureCode,
             new CreateEmployeeCommand().RequiredFeatureCode,
+            new GetMyDashboardQuery().RequiredFeatureCode,
+            new LogMealCommand().RequiredFeatureCode,
+            new GetOperationsDashboardQuery().RequiredFeatureCode,
+            new GetFinancialReportQuery().RequiredFeatureCode,
+            new GetBranchComparisonReportQuery().RequiredFeatureCode,
         };
 
         foreach (var code in declared)

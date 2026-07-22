@@ -15,6 +15,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
     private readonly IRefreshTokenService _refreshTokenService;
     private readonly ICurrentUserService _currentUserService;
     private readonly ITenantService _tenantService;
+    private readonly ITenantAccessGuard _tenantAccessGuard;
 
     public LoginCommandHandler(
         IApplicationDbContext context,
@@ -23,7 +24,8 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
         IRbacService rbacService,
         IRefreshTokenService refreshTokenService,
         ICurrentUserService currentUserService,
-        ITenantService tenantService)
+        ITenantService tenantService,
+        ITenantAccessGuard tenantAccessGuard)
     {
         _context = context;
         _jwtService = jwtService;
@@ -32,12 +34,22 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
         _refreshTokenService = refreshTokenService;
         _currentUserService = currentUserService;
         _tenantService = tenantService;
+        _tenantAccessGuard = tenantAccessGuard;
     }
 
     public async Task<AuthResponseDto> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         // Resolve the gym from subdomain (preferred) or an explicit tenantId.
         var tenantId = await Common.TenantResolver.ResolveAsync(request.TenantId, request.Subdomain, _tenantService);
+
+        // Gate 1: don't issue a token for a gym that isn't allowed to be accessed (suspended / expired /
+        // cancelled / archived). PendingApproval is allowed to sign in — the per-request authorization
+        // policy limits it to billing/onboarding endpoints.
+        var accessState = await _tenantAccessGuard.GetStateAsync(tenantId, cancellationToken);
+        if (Common.Services.TenantAccessPolicy.EvaluateHardBlock(accessState) is { } block)
+        {
+            throw new TenantAccessException(block.Code, block.HttpStatus);
+        }
 
         // Find user by phone number (include profile for FullName)
         var user = await _context.Users
@@ -81,9 +93,9 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             Roles = auth.Roles,
             Permissions = auth.Permissions,
             TenantId = user.TenantId,
-            AccessToken = accessToken,
+            AccessToken = accessToken.Token,
             RefreshToken = refreshToken.Token,
-            ExpiresAt = _dateTimeService.UtcNow.AddMinutes(60)
+            ExpiresAt = accessToken.ExpiresAt
         };
     }
 }

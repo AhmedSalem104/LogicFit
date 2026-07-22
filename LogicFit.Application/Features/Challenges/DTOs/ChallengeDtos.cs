@@ -17,6 +17,17 @@ public class ChallengeDto
     public int CompletedCount { get; set; }
 }
 
+public class ChallengeLeaderboardEntryDto
+{
+    public int Rank { get; set; }
+    public Guid ClientId { get; set; }
+    public string? ClientName { get; set; }
+    public double CurrentProgress { get; set; }
+    public double ProgressPercentage { get; set; }
+    public bool IsCompleted { get; set; }
+    public DateTime? CompletedAt { get; set; }
+}
+
 public class ClientChallengeDto
 {
     public Guid Id { get; set; }
