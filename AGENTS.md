@@ -26,6 +26,8 @@ For every non-trivial task:
 - Database migrations must be idempotent/reviewed and applied separately from application startup.
 - A failed health check must stop the rollout and trigger rollback or operator review.
 - Monster ASP deployment details must be recorded before enabling automatic deployment: host, user, app directory, service/container command, backup command, migration command, health URL, and rollback command.
+- The supplied `logicfit-platform.runasp.net-WebDeploy.publishSettings` is a Platform API MSDeploy profile only. Its password must be stored as a protected GitHub Environment secret and must never be committed or printed.
+- Tenant API deployment requires a separate WebDeploy profile or equivalent target before production CD can deploy the complete application.
 
 ## Safety and correctness rules
 
