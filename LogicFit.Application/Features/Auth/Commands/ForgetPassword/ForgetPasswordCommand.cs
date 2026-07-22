@@ -13,5 +13,6 @@ public class ForgetPasswordResponse
 {
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
-    public string? ResetToken { get; set; } // In production, this would be sent via SMS/Email
+    /// <summary>Only populated in Development when explicitly enabled; never returned in Production.</summary>
+    public string? ResetToken { get; set; }
 }

@@ -84,6 +84,7 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IDateTimeService, DateTimeService>();
         services.AddScoped<IJwtService, JwtService>();
+        services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>();
         services.AddScoped<IFileUploadService, FileUploadService>();
         services.AddScoped<IEmailService, LoggingEmailService>();
         services.AddScoped<INotificationService, NotificationService>();

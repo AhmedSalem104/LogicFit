@@ -1,6 +1,9 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Entities;
+using LogicFit.Domain.Enums;
+using LogicFit.Domain.Exceptions;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace LogicFit.Application.Features.GroupClasses.Commands.CreateGroupClass;
 
@@ -8,15 +11,22 @@ public class CreateGroupClassCommandHandler : IRequestHandler<CreateGroupClassCo
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public CreateGroupClassCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public CreateGroupClassCommandHandler(IApplicationDbContext context, ITenantService tenantService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<Guid> Handle(CreateGroupClassCommand request, CancellationToken cancellationToken)
     {
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var role = await _context.Users.Where(u => u.Id == currentUserId).Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
+        if (role == UserRole.Client)
+            throw new ForbiddenException("Clients cannot create group classes");
+
         var groupClass = new GroupClass
         {
             Id = Guid.NewGuid(),

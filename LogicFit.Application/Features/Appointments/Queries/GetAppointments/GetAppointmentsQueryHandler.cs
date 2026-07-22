@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.Appointments.DTOs;
+using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,11 +10,13 @@ public class GetAppointmentsQueryHandler : IRequestHandler<GetAppointmentsQuery,
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetAppointmentsQueryHandler(IApplicationDbContext context, ITenantService tenantService)
+    public GetAppointmentsQueryHandler(IApplicationDbContext context, ITenantService tenantService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<List<AppointmentDto>> Handle(GetAppointmentsQuery request, CancellationToken cancellationToken)
@@ -25,6 +28,15 @@ public class GetAppointmentsQueryHandler : IRequestHandler<GetAppointmentsQuery,
             .Include(a => a.Client).ThenInclude(c => c.Profile)
             .Where(a => a.TenantId == tenantId && !a.IsDeleted)
             .AsQueryable();
+
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var currentUserRole = await _context.Users
+            .Where(u => u.Id == currentUserId && u.TenantId == tenantId)
+            .Select(u => u.Role)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (currentUserRole == UserRole.Client)
+            query = query.Where(a => a.ClientId == currentUserId);
 
         if (request.CoachId.HasValue)
             query = query.Where(a => a.CoachId == request.CoachId.Value);

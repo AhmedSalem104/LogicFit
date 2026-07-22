@@ -26,20 +26,36 @@ public class CreateAppointmentCommandHandler : IRequestHandler<CreateAppointment
     public async Task<Guid> Handle(CreateAppointmentCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var currentUserRole = await _context.Users
+            .Where(u => u.Id == currentUserId && u.TenantId == tenantId)
+            .Select(u => u.Role)
+            .FirstOrDefaultAsync(cancellationToken);
 
         // If CoachId not provided, use current user as coach
         var coachId = request.CoachId ?? Guid.Parse(_currentUserService.UserId!);
 
-        // Validate coach exists
+        if (currentUserRole == UserRole.Client)
+        {
+            if (request.ClientId != currentUserId)
+                throw new ForbiddenException("Clients can only create appointments for themselves");
+
+            if (!request.CoachId.HasValue)
+                throw new ForbiddenException("A client must select a coach for an appointment");
+        }
+
+        // Validate coach exists and has a coach-capable role.
         var coachExists = await _context.Users
-            .AnyAsync(u => u.Id == coachId && u.TenantId == tenantId, cancellationToken);
+            .AnyAsync(u => u.Id == coachId && u.TenantId == tenantId
+                && (u.Role == UserRole.Coach || u.Role == UserRole.Trainer), cancellationToken);
 
         if (!coachExists)
             throw new NotFoundException("Coach", coachId);
 
         // Validate client exists
         var clientExists = await _context.Users
-            .AnyAsync(u => u.Id == request.ClientId && u.TenantId == tenantId, cancellationToken);
+            .AnyAsync(u => u.Id == request.ClientId && u.TenantId == tenantId
+                && u.Role == UserRole.Client && u.IsActive, cancellationToken);
 
         if (!clientExists)
             throw new NotFoundException("Client", request.ClientId);

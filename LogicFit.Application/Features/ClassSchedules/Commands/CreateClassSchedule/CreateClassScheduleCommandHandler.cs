@@ -13,11 +13,13 @@ public class CreateClassScheduleCommandHandler : IRequestHandler<CreateClassSche
 
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public CreateClassScheduleCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public CreateClassScheduleCommandHandler(IApplicationDbContext context, ITenantService tenantService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<Guid> Handle(CreateClassScheduleCommand request, CancellationToken cancellationToken)
@@ -26,6 +28,10 @@ public class CreateClassScheduleCommandHandler : IRequestHandler<CreateClassSche
             throw new DomainException("EndTime must be after StartTime");
 
         var tenantId = _tenantService.GetCurrentTenantId();
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var role = await _context.Users.Where(u => u.Id == currentUserId).Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
+        if (role == UserRole.Client)
+            throw new ForbiddenException("Clients cannot create class schedules");
 
         var groupClassExists = await _context.GroupClasses
             .AnyAsync(g => g.Id == request.GroupClassId && g.TenantId == tenantId, cancellationToken);

@@ -26,7 +26,7 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Guid>
         var now = _dateTimeService.UtcNow;
 
         var client = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == request.ClientId && u.TenantId == tenantId && !u.IsDeleted, cancellationToken)
+            .FirstOrDefaultAsync(u => u.Id == request.ClientId && u.TenantId == tenantId && u.Role == UserRole.Client && u.IsActive && !u.IsDeleted, cancellationToken)
             ?? throw new NotFoundException("Client", request.ClientId);
 
         var branchId = request.BranchId ?? await ResolveDefaultBranchIdAsync(tenantId, cancellationToken);
@@ -76,6 +76,20 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Guid>
         {
             await LogDeniedAsync(request.ClientId, branchId, null, GateDenyReason.NoActiveSubscription, now, cancellationToken);
             throw new DomainException("Client has no active subscription");
+        }
+
+        var isFrozen = await _context.SubscriptionFreezes
+            .AnyAsync(f => f.SubscriptionId == activeSubscription.Id
+                && f.TenantId == tenantId
+                && f.IsActive
+                && f.StartDate <= now
+                && f.EndDate > now
+                && !f.IsDeleted, cancellationToken);
+
+        if (isFrozen)
+        {
+            await LogDeniedAsync(request.ClientId, branchId, null, GateDenyReason.SubscriptionFrozen, now, cancellationToken);
+            throw new DomainException("Client subscription is currently frozen");
         }
 
         if (activeSubscription.Plan.SessionsPerWeek.HasValue && activeSubscription.Plan.SessionsPerWeek.Value > 0)

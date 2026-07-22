@@ -9,11 +9,16 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IRefreshTokenService _refreshTokenService;
 
-    public ChangePasswordCommandHandler(IApplicationDbContext context, ICurrentUserService currentUserService)
+    public ChangePasswordCommandHandler(
+        IApplicationDbContext context,
+        ICurrentUserService currentUserService,
+        IRefreshTokenService refreshTokenService)
     {
         _context = context;
         _currentUserService = currentUserService;
+        _refreshTokenService = refreshTokenService;
     }
 
     public async Task Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
@@ -29,6 +34,8 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
             throw new UnauthorizedException("Current password is incorrect");
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        user.PermissionsVersion++;
+        await _refreshTokenService.RevokeAllAsync(user.Id, _currentUserService.IpAddress, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
     }
 }

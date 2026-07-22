@@ -13,6 +13,10 @@ public class StockItemConfiguration : IEntityTypeConfiguration<StockItem>
 
         builder.Property(e => e.Quantity).HasPrecision(18, 2);
 
+        builder.Property(e => e.RowVersion)
+            .IsRowVersion()
+            .IsConcurrencyToken();
+
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => new { e.ProductId, e.BranchId }).IsUnique().HasFilter("[IsDeleted] = 0");
 

@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.DietPlans.DTOs;
+using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,16 +10,21 @@ public class GetDietPlanByIdQueryHandler : IRequestHandler<GetDietPlanByIdQuery,
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetDietPlanByIdQueryHandler(IApplicationDbContext context, ITenantService tenantService)
+    public GetDietPlanByIdQueryHandler(IApplicationDbContext context, ITenantService tenantService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<DietPlanDto?> Handle(GetDietPlanByIdQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var role = await _context.Users.Where(u => u.Id == currentUserId && u.TenantId == tenantId)
+            .Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
 
         return await _context.DietPlans
             .Include(p => p.Coach).ThenInclude(c => c.Profile)
@@ -26,7 +32,8 @@ public class GetDietPlanByIdQueryHandler : IRequestHandler<GetDietPlanByIdQuery,
             .Include(p => p.Meals)
                 .ThenInclude(m => m.Items)
                     .ThenInclude(i => i.Food)
-            .Where(p => p.Id == request.Id && p.TenantId == tenantId)
+            .Where(p => p.Id == request.Id && p.TenantId == tenantId
+                && (role != UserRole.Client || p.ClientId == currentUserId))
             .Select(p => new DietPlanDto
             {
                 Id = p.Id,

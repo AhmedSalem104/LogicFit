@@ -2,13 +2,21 @@ name: CI
 
 on:
   push:
-    branches: [master, main]
+    branches: ['**']
   pull_request:
-    branches: [master, main]
+    branches: ['**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -25,3 +33,17 @@ jobs:
 
       - name: Test
         run: dotnet test LogicFit.sln -c Release --no-build --verbosity normal
+
+      - name: Validate EF migrations
+        run: dotnet ef migrations script --idempotent --no-build --project LogicFit.Infrastructure --startup-project LogicFit.API --output /tmp/logicfit-migrations.sql
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: verify
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build tenant image
+        run: docker build -f LogicFit.API/Dockerfile -t logicfit-api:ci .
+      - name: Build platform image
+        run: docker build -f LogicFit.Platform.API/Dockerfile -t logicfit-platform-api:ci .

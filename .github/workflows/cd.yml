@@ -1,0 +1,45 @@
+name: CD - Production (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Git SHA or release tag to deploy'
+        required: true
+        type: string
+      confirm:
+        description: 'Type DEPLOY-PRODUCTION to confirm a production deployment'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    if: ${{ inputs.confirm == 'DEPLOY-PRODUCTION' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.image_tag }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet restore LogicFit.sln
+      - run: dotnet build LogicFit.sln -c Release --no-restore
+      - run: dotnet test LogicFit.sln -c Release --no-build --verbosity normal
+      - run: dotnet ef migrations script --idempotent --no-build --project LogicFit.Infrastructure --startup-project LogicFit.API --output /tmp/logicfit-migrations.sql
+
+  deploy:
+    if: ${{ inputs.confirm == 'DEPLOY-PRODUCTION' }}
+    needs: preflight
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deployment target not configured
+        run: |
+          echo "Production deployment requires the protected Monster ASP environment secrets and deployment script."
+          echo "Configure MONSTER_SSH_HOST, MONSTER_SSH_USER, MONSTER_SSH_KEY, MONSTER_APP_DIR, and MONSTER_HEALTHCHECK_URL before enabling this job."
+          exit 1

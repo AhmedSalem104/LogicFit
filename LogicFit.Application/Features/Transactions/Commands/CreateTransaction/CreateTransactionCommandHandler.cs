@@ -1,6 +1,7 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
+using LogicFit.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,10 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
     public async Task<Guid> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == request.UserId && u.TenantId == tenantId && !u.IsDeleted, cancellationToken)
+            ?? throw new NotFoundException("User", request.UserId);
 
         // Get user's current balance from last transaction
         var lastTransaction = await _context.WalletTransactions
@@ -41,6 +46,15 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
         };
 
         var newBalance = currentBalance + balanceChange;
+
+        if ((request.Type == TransactionType.Withdrawal || request.Type == TransactionType.Payment)
+            && request.Amount > user.WalletBalance)
+            throw new ValidationException("Amount", "Insufficient wallet balance");
+
+        if (newBalance < 0)
+            throw new ValidationException("Amount", "Wallet balance cannot become negative");
+
+        user.WalletBalance = newBalance;
 
         var transaction = new WalletTransaction
         {

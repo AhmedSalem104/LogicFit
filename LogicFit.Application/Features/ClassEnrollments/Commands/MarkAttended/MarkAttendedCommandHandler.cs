@@ -11,17 +11,24 @@ public class MarkAttendedCommandHandler : IRequestHandler<MarkAttendedCommand>
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
     private readonly IDateTimeService _dateTimeService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public MarkAttendedCommandHandler(IApplicationDbContext context, ITenantService tenantService, IDateTimeService dateTimeService)
+    public MarkAttendedCommandHandler(IApplicationDbContext context, ITenantService tenantService, IDateTimeService dateTimeService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
         _dateTimeService = dateTimeService;
+        _currentUserService = currentUserService;
     }
 
     public async Task Handle(MarkAttendedCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var role = await _context.Users.Where(u => u.Id == currentUserId && u.TenantId == tenantId)
+            .Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
+        if (role == UserRole.Client)
+            throw new ForbiddenException("Clients cannot mark class attendance");
 
         var enrollment = await _context.ClassEnrollments
             .FirstOrDefaultAsync(e => e.Id == request.Id && e.TenantId == tenantId, cancellationToken)

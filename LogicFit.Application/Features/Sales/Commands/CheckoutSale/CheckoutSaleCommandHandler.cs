@@ -310,19 +310,14 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
         return setting?.Rate ?? 0m;
     }
 
-    private async Task<string> GenerateSaleNumberAsync(Guid tenantId, CancellationToken cancellationToken)
+    private Task<string> GenerateSaleNumberAsync(Guid tenantId, CancellationToken cancellationToken)
     {
-        var year = DateTime.UtcNow.Year;
-        var prefix = $"SALE-{year}-";
-        var count = await _context.Sales.CountAsync(s => s.TenantId == tenantId && s.SaleNumber.StartsWith(prefix), cancellationToken);
-        return $"{prefix}{(count + 1):D6}";
+        // Count + 1 collides when two API instances checkout concurrently.
+        return Task.FromResult($"SALE-{DateTime.UtcNow:yyyyMMddHHmmssfff}-{Guid.NewGuid():N}"[..39]);
     }
 
-    private async Task<string> GenerateInvoiceNumberAsync(Guid tenantId, CancellationToken cancellationToken)
+    private Task<string> GenerateInvoiceNumberAsync(Guid tenantId, CancellationToken cancellationToken)
     {
-        var year = DateTime.UtcNow.Year;
-        var prefix = $"INV-{year}-";
-        var count = await _context.Invoices.CountAsync(i => i.TenantId == tenantId && i.InvoiceNumber.StartsWith(prefix), cancellationToken);
-        return $"{prefix}{(count + 1):D6}";
+        return Task.FromResult($"INV-{DateTime.UtcNow:yyyyMMddHHmmssfff}-{Guid.NewGuid():N}"[..38]);
     }
 }

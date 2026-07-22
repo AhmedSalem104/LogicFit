@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Entities;
+using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,14 @@ public class SendNotificationCommandHandler : IRequestHandler<SendNotificationCo
     {
         var tenantId = _tenantService.GetCurrentTenantId();
         var senderId = Guid.Parse(_currentUserService.UserId!);
+
+        var senderRole = await _context.Users
+            .Where(u => u.Id == senderId && u.TenantId == tenantId)
+            .Select(u => u.Role)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (senderRole == UserRole.Client)
+            throw new ForbiddenException("Clients cannot send notifications");
 
         var recipientExists = await _context.Users
             .AnyAsync(u => u.Id == request.RecipientId && u.TenantId == tenantId, cancellationToken);

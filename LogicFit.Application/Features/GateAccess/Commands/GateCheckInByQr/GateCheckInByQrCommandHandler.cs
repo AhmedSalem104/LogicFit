@@ -92,6 +92,20 @@ public class GateCheckInByQrCommandHandler : IRequestHandler<GateCheckInByQrComm
             return new GateCheckInResultDto { Granted = false, Message = "No active subscription", DenyReason = GateDenyReason.NoActiveSubscription, ClientId = card.ClientId, BranchId = branchId };
         }
 
+        var isFrozen = await _context.SubscriptionFreezes
+            .AnyAsync(f => f.SubscriptionId == activeSubscription.Id
+                && f.TenantId == tenantId
+                && f.IsActive
+                && f.StartDate <= now
+                && f.EndDate > now
+                && !f.IsDeleted, cancellationToken);
+
+        if (isFrozen)
+        {
+            await LogAsync(card.ClientId, branchId, card.Id, request.QrCode, GateAccessResult.Denied, GateDenyReason.SubscriptionFrozen, now, cancellationToken);
+            return new GateCheckInResultDto { Granted = false, Message = "Subscription is currently frozen", DenyReason = GateDenyReason.SubscriptionFrozen, ClientId = card.ClientId, BranchId = branchId };
+        }
+
         if (activeSubscription.Plan.SessionsPerWeek.HasValue && activeSubscription.Plan.SessionsPerWeek.Value > 0)
         {
             var weekStart = now.AddDays(-7);

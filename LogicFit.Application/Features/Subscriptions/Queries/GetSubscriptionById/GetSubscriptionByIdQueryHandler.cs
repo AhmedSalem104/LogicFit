@@ -11,23 +11,29 @@ public class GetSubscriptionByIdQueryHandler : IRequestHandler<GetSubscriptionBy
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetSubscriptionByIdQueryHandler(IApplicationDbContext context, ITenantService tenantService)
+    public GetSubscriptionByIdQueryHandler(IApplicationDbContext context, ITenantService tenantService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<ClientSubscriptionDetailDto?> Handle(GetSubscriptionByIdQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var role = await _context.Users.Where(u => u.Id == currentUserId && u.TenantId == tenantId)
+            .Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
 
         var subscription = await _context.ClientSubscriptions
             .Include(s => s.Client).ThenInclude(c => c.Profile)
             .Include(s => s.Plan).ThenInclude(p => p.Subscriptions)
             .Include(s => s.SalesCoach).ThenInclude(c => c!.Profile)
             .Include(s => s.Freezes)
-            .FirstOrDefaultAsync(s => s.Id == request.Id && s.TenantId == tenantId, cancellationToken);
+            .FirstOrDefaultAsync(s => s.Id == request.Id && s.TenantId == tenantId
+                && (role != UserRole.Client || s.ClientId == currentUserId), cancellationToken);
 
         if (subscription == null) return null;
 

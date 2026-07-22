@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LogicFit.Domain.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace LogicFit.API.Middleware;
 
@@ -75,6 +76,12 @@ public class ExceptionHandlingMiddleware
                 exception.Message,
                 (IDictionary<string, string[]>?)null,
                 (string?)null
+            ),
+            DbUpdateConcurrencyException => (
+                StatusCodes.Status409Conflict,
+                "The record was changed by another request. Please reload and try again.",
+                (IDictionary<string, string[]>?)null,
+                (string?)"CONCURRENCY_CONFLICT"
             ),
             // Base domain/business-rule violations (insufficient stock, coupon limits, etc.) are bad
             // requests, not server errors. Keep this AFTER the more specific subclasses above.

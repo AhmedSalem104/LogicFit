@@ -17,6 +17,10 @@ public class CouponConfiguration : IEntityTypeConfiguration<Coupon>
         builder.Property(e => e.MinimumAmount).HasPrecision(18, 2);
         builder.Property(e => e.MaxDiscountAmount).HasPrecision(18, 2);
 
+        builder.Property(e => e.RowVersion)
+            .IsRowVersion()
+            .IsConcurrencyToken();
+
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => new { e.TenantId, e.Code }).IsUnique().HasFilter("[IsDeleted] = 0");
     }

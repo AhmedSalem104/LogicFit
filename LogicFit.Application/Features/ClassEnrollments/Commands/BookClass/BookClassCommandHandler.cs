@@ -13,18 +13,26 @@ public class BookClassCommandHandler : IRequestHandler<BookClassCommand, ClassEn
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
     private readonly IDateTimeService _dateTimeService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public BookClassCommandHandler(IApplicationDbContext context, ITenantService tenantService, IDateTimeService dateTimeService)
+    public BookClassCommandHandler(IApplicationDbContext context, ITenantService tenantService, IDateTimeService dateTimeService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
         _dateTimeService = dateTimeService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<ClassEnrollmentDto> Handle(BookClassCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
         var now = _dateTimeService.UtcNow;
+        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var currentUserRole = await _context.Users.Where(u => u.Id == currentUserId && u.TenantId == tenantId)
+            .Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
+
+        if (currentUserRole == UserRole.Client && request.ClientId != currentUserId)
+            throw new ForbiddenException("Clients can only book classes for themselves");
 
         var schedule = await _context.ClassSchedules
             .Include(s => s.GroupClass)
@@ -38,7 +46,7 @@ public class BookClassCommandHandler : IRequestHandler<BookClassCommand, ClassEn
             throw new DomainException("Cannot book a class that has already started");
 
         var clientExists = await _context.Users
-            .AnyAsync(u => u.Id == request.ClientId && u.TenantId == tenantId && !u.IsDeleted, cancellationToken);
+            .AnyAsync(u => u.Id == request.ClientId && u.TenantId == tenantId && u.Role == UserRole.Client && u.IsActive && !u.IsDeleted, cancellationToken);
         if (!clientExists)
             throw new NotFoundException("Client", request.ClientId);
 

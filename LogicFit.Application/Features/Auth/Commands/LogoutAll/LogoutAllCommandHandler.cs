@@ -30,7 +30,7 @@ public class LogoutAllCommandHandler : IRequestHandler<LogoutAllCommand, Unit>
 
         await _refreshTokenService.RevokeAllAsync(userId, _currentUserService.IpAddress, cancellationToken);
 
-        // Invalidate already-issued access tokens on their next refresh.
+        // Invalidate already-issued access tokens on their next authenticated request.
         var user = await _context.Users
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);

@@ -7,7 +7,7 @@ public interface IJwtService
     /// ("permission" claims), an optional tenant id, and the permission version ("perm_ver").
     /// tenantId is null for platform users.
     /// </summary>
-    string GenerateAccessToken(
+    AccessTokenResult GenerateAccessToken(
         Guid userId,
         string email,
         Guid? tenantId,
@@ -17,3 +17,5 @@ public interface IJwtService
 
     string GenerateRefreshToken();
 }
+
+public sealed record AccessTokenResult(string Token, DateTime ExpiresAt);

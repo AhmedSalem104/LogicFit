@@ -125,9 +125,9 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             Roles = auth.Roles,
             Permissions = auth.Permissions,
             TenantId = user.TenantId,
-            AccessToken = accessToken,
+            AccessToken = accessToken.Token,
             RefreshToken = refreshToken.Token,
-            ExpiresAt = _dateTimeService.UtcNow.AddMinutes(60)
+            ExpiresAt = accessToken.ExpiresAt
         };
     }
 }

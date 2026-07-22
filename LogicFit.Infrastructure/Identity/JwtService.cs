@@ -17,7 +17,7 @@ public class JwtService : IJwtService
         _configuration = configuration;
     }
 
-    public string GenerateAccessToken(
+    public AccessTokenResult GenerateAccessToken(
         Guid userId,
         string email,
         Guid? tenantId,
@@ -58,15 +58,16 @@ public class JwtService : IJwtService
             claims.Add(new Claim("permission", permission));
         }
 
+        var expiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
         var token = new JwtSecurityToken(
             issuer: issuer,
             audience: audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
+            expires: expiresAt,
             signingCredentials: credentials
         );
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return new AccessTokenResult(new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
     }
 
     public string GenerateRefreshToken()

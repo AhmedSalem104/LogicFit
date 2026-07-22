@@ -41,7 +41,12 @@ public class UpdateClientSubscriptionCommandHandler : IRequestHandler<UpdateClie
         }
 
         if (request.AmountPaid.HasValue)
+        {
+            if (request.AmountPaid.Value > subscription.TotalAmount)
+                throw new ValidationException("AmountPaid", "Amount paid cannot exceed the subscription total");
+
             subscription.AmountPaid = request.AmountPaid.Value;
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
 

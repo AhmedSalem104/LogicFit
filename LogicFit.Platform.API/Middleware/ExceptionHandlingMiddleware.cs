@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LogicFit.Domain.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace LogicFit.Platform.API.Middleware;
 
@@ -56,6 +57,11 @@ public class ExceptionHandlingMiddleware
             ConflictException => (
                 StatusCodes.Status409Conflict,
                 exception.Message,
+                (IDictionary<string, string[]>?)null
+            ),
+            DbUpdateConcurrencyException => (
+                StatusCodes.Status409Conflict,
+                "The record was changed by another request. Please reload and try again.",
                 (IDictionary<string, string[]>?)null
             ),
             SubscriptionLimitException => (

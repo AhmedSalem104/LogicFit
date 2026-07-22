@@ -1,5 +1,8 @@
 using LogicFit.Domain.Authorization;
+using LogicFit.Application.Common.Interfaces;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace LogicFit.Infrastructure.Authorization;
 
@@ -11,11 +14,33 @@ namespace LogicFit.Infrastructure.Authorization;
 public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionRequirement>
 {
     public const string PermissionClaimType = "permission";
+    private readonly IApplicationDbContext _context;
 
-    protected override Task HandleRequirementAsync(
+    public PermissionAuthorizationHandler(IApplicationDbContext context)
+    {
+        _context = context;
+    }
+
+    protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context,
         PermissionRequirement requirement)
     {
+        var userIdValue = context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? context.User.FindFirstValue("sub");
+        var versionClaim = context.User.FindFirstValue("perm_ver");
+
+        if (!Guid.TryParse(userIdValue, out var userId) || !int.TryParse(versionClaim, out var tokenVersion))
+            return;
+
+        var currentVersion = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => u.Id == userId && !u.IsDeleted)
+            .Select(u => (int?)u.PermissionsVersion)
+            .FirstOrDefaultAsync();
+
+        if (!currentVersion.HasValue || currentVersion.Value != tokenVersion)
+            return;
+
         var permissions = context.User.FindAll(PermissionClaimType);
 
         foreach (var claim in permissions)

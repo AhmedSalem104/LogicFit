@@ -2,8 +2,10 @@ using LogicFit.Application;
 using LogicFit.Infrastructure;
 using LogicFit.Infrastructure.Persistence;
 using LogicFit.Platform.API.Middleware;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +23,25 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
+
+builder.Services.AddRateLimiter(options =>
+{
+    var permitLimit = builder.Configuration.GetValue("RateLimiting:PermitLimit", 120);
+    var windowSeconds = builder.Configuration.GetValue("RateLimiting:WindowSeconds", 60);
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.User?.Identity?.IsAuthenticated == true
+                ? context.User.FindFirst("sub")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"
+                : context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = permitLimit,
+                Window = TimeSpan.FromSeconds(windowSeconds),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
 
 // Required because the shared authorization handler constructs ITenantAccessGuard (which needs
 // IDistributedCache) per authorized request, even though platform users bypass the tenant checks.
@@ -90,6 +111,7 @@ if (app.Environment.IsDevelopment())
 app.UseExceptionHandling();
 app.UseHttpsRedirection();
 app.UseCors("AppCors");
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

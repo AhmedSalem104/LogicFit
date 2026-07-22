@@ -30,6 +30,10 @@ public class AddSubscriptionPaymentCommandHandler : IRequestHandler<AddSubscript
         if (subscription == null)
             throw new NotFoundException("ClientSubscription", request.SubscriptionId);
 
+        var remaining = Math.Max(0m, subscription.TotalAmount - subscription.AmountPaid);
+        if (request.Amount > remaining)
+            throw new ValidationException("Amount", $"Payment exceeds the remaining subscription balance ({remaining:0.##})");
+
         if (request.PayFromWallet)
         {
             if (subscription.Client.WalletBalance < request.Amount)
