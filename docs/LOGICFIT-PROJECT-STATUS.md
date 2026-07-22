@@ -2,6 +2,105 @@
 
 Last reviewed: 2026-07-23
 
+## Executive summary
+
+LogicFit is a multi-tenant gym-management SaaS. The platform operator manages gyms, plans, features, payment methods, and manual payment approvals. Each gym receives an isolated tenant workspace for staff and clients. Billing is intentionally manual: no gateway, webhook, or automatic card charge is enabled.
+
+## Product map
+
+```mermaid
+flowchart LR
+    Owner[Platform Owner/Admin] --> P[Platform API]
+    P --> Catalog[Plans / Features / Payment Methods]
+    P --> Lifecycle[Tenant Lifecycle]
+    Gym[Gym Owner & Staff] --> T[Tenant API]
+    Client[Gym Client] --> T
+    T --> GymOps[Members / Coaching / Attendance / POS / Finance]
+    T --> Billing[Subscription + Manual Payment Proof]
+    P --> DB[(Shared SQL Server)]
+    T --> DB
+```
+
+## Request and security flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant API as Tenant API
+    participant TM as Tenant Resolver
+    participant Auth as JWT/RBAC
+    participant DB as SQL Server
+    U->>API: Request + host/subdomain + bearer token
+    API->>TM: Resolve TenantId
+    TM-->>API: Tenant context
+    API->>Auth: Validate audience, permission, perm_ver
+    Auth->>DB: Check current user permission version
+    DB-->>Auth: Current version
+    Auth-->>API: Allow or typed 401/403
+    API->>DB: Tenant-filtered query/command
+    DB-->>API: Isolated result
+```
+
+## User journeys
+
+1. Platform admin onboards a gym, assigns an owner, and activates or suspends the tenant.
+2. Gym owner selects a SaaS plan and receives `PendingPayment` status.
+3. Owner pays through an out-of-band manual method and uploads proof.
+4. Platform operator approves or rejects the request. Approval atomically activates/extends the subscription, records payment and invoice data, and notifies the owner.
+5. Owner and staff use tenant features according to roles, permissions, plan features, and live usage limits.
+6. Client registers only as a Client and can access self-service data after tenant resolution.
+
+## Data model boundaries
+
+- Identity: users, refresh tokens, roles, permissions, role assignments, permission version.
+- Tenancy: tenants, branches, tenant status, suspension reason, tenant access state.
+- Commercial: plans, plan features, subscriptions, payment methods, payment requests, payments, invoices.
+- Gym operations: clients, coaches, appointments, classes, attendance, workouts, diets, measurements, products, stock, sales, expenses, employees.
+- Cross-cutting: notifications, audit logs, uploads, concurrency row versions.
+- Every tenant-owned aggregate carries a tenant boundary enforced by EF query filters and command ownership checks.
+
+## API contracts
+
+- Tenant audience: `LogicFitUsers`.
+- Platform audience: `LogicFitPlatform`.
+- Health endpoint: `GET /health` on both hosts; it includes database readiness.
+- Authentication: login, registration, refresh rotation, logout/revocation, password reset/change.
+- Errors use typed status/code/message/errors payloads; authorization and concurrency failures are not silently converted to success.
+- Swagger/OpenAPI is enabled for development inspection; production health remains anonymous for monitoring.
+
+## Operational rules
+
+- Manual billing is the current and supported payment model.
+- Migrations are reviewed and generated idempotently before production application; the API does not silently migrate production at startup.
+- Wallet, stock, coupon, approval, and counter-like shared state must use transactions, row versions, unique constraints, or idempotency keys as appropriate.
+- Secrets, publish profiles, passwords, refresh tokens, payment proofs, and reset tokens never enter Git or logs.
+
+## Development and release flow
+
+```mermaid
+flowchart LR
+    D[Issue] --> B[Task branch from develop]
+    B --> PR1[PR to develop]
+    PR1 --> CI[verify + docker]
+    CI --> R1[Review + merge]
+    R1 --> REL[PR develop to master]
+    REL --> R2[Review + merge]
+    R2 --> Deploy[Manual Visual Studio deployment currently]
+```
+
+- `develop` is protected integration; `master` is protected release history.
+- Direct pushes, force pushes, and branch deletion are prohibited.
+- Every non-trivial task requires a GitHub Issue, task branch, tests, documentation impact, and PR.
+- GitHub CI is active on every push and pull request. It restores, builds, tests, validates EF migrations, and builds both Docker images.
+- Automatic Monster ASP CD is intentionally paused because deployment is currently performed manually from Visual Studio.
+
+## Current deployment position
+
+- Verified live endpoint: `https://logicfit-platform.runasp.net/health` returns `200 Healthy`.
+- The supplied publish profile targets the Platform API site `site78301` only.
+- GitHub Clone-to-`/wwwroot` is not used: it clones source files and cannot safely host the two independent ASP.NET Core API processes in one directory.
+- The supported current operation is manual Visual Studio/WebDeploy publishing. Automatic CD can be revisited after the hosting topology, tenant target, backup, migration, rollback, and health URLs are explicitly defined.
+
 ## Current product
 
 LogicFit is a .NET 8 multi-tenant gym-management SaaS backend. It contains two APIs that share the Application, Domain, Infrastructure, and database layers:
