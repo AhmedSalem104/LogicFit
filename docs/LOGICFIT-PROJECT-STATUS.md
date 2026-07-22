@@ -101,6 +101,81 @@ flowchart LR
 - GitHub Clone-to-`/wwwroot` is not used: it clones source files and cannot safely host the two independent ASP.NET Core API processes in one directory.
 - The supported current operation is manual Visual Studio/WebDeploy publishing. Automatic CD can be revisited after the hosting topology, tenant target, backup, migration, rollback, and health URLs are explicitly defined.
 
+## Repository decomposition
+
+```text
+LogicFit.sln
+├── LogicFit.Domain/          Entities, enums, authorization catalog, domain rules
+├── LogicFit.Application/     CQRS features, handlers, validators, behaviors, interfaces
+├── LogicFit.Infrastructure/  EF Core, SQL mappings, migrations, JWT, RBAC, jobs, persistence
+├── LogicFit.API/              Tenant-facing ASP.NET Core host
+│   ├── Features/              Auth, tenants, clients, coaching, nutrition, commerce, HR, reports
+│   ├── Middleware/            Tenant resolution/access, exception handling, request context
+│   ├── Authorization/         Tenant policies and permission integration
+│   └── Extensions/            Dependency injection and host setup
+├── LogicFit.Platform.API/     Platform-owner ASP.NET Core host
+│   └── Features/              Platform auth, dashboard, tenants, plans, features, subscriptions,
+│                              payment methods and manual payment requests
+├── LogicFit.Tests/            Unit and feature regression tests
+├── Scripts/                   Deployment and verification scripts
+├── docs/                      Status, decisions, API/deployment documentation
+└── .github/workflows/         CI and guarded CD workflows
+```
+
+## Tenant API feature inventory
+
+The Tenant API feature folders are: `Appointments`, `Attendance`, `Auth`, `BodyMeasurements`, `Branches`, `Branding`, `Challenges`, `Chat`, `ClassSchedules`, `ClientDashboard`, `Clients`, `CoachClients`, `Coaches`, `Commissions`, `Coupons`, `DietPlans`, `Employees`, `Equipment`, `Exercises`, `ExpenseCategories`, `Expenses`, `Foods`, `GateAccess`, `GroupClasses`, `GymProfile`, `Invoices`, `Leaves`, `Maintenance`, `MealLogs`, `Meals`, `MembershipCards`, `Muscles`, `Notifications`, `NutrientDefinitions`, `Payments`, `Payroll`, `ProductCategories`, `Products`, `Profile`, `Recipes`, `Reports`, `Rooms`, `Sales`, `Shifts`, `Stock`, `Subscriptions`, `Suppliers`, `TaxSettings`, `TenantBilling`, `Tenants`, `Transactions`, `Users`, `WorkoutPrograms`, and `WorkoutSessions`.
+
+### Tenant API route families
+
+All routes are under `/api` unless noted:
+
+| Family | Main responsibilities |
+|---|---|
+| `auth` | Register client, login, refresh rotation, logout-all, forgot/reset/change password |
+| `branding` | Public branding lookup by subdomain/custom identifier |
+| `client` | Client dashboard, programs, diet plans, subscriptions, measurements, coach, appointments |
+| `clients`, `coaches`, `coach-clients`, `users` | Tenant people, staff, assignments, ownership checks |
+| `appointments`, `class-schedules`, `group-classes` | Booking, recurrence materialization, cancellation, attendance |
+| `attendance`, `gate-access`, `membership-cards` | Check-in/out, QR access, access logs, card issuance/revocation |
+| `workout-programs`, `workout-sessions`, `exercises`, `muscles` | Training catalog and client progress |
+| `diet-plans`, `meals`, `meal-logs`, `foods`, `recipes`, `nutrient-definitions` | Nutrition plans, meals, food/micronutrient data, logging |
+| `body-measurements`, `profile`, `gym-profile` | Health measurements, account profile, gym branding/media |
+| `subscriptions`, `tenant-billing`, `payments`, `invoices`, `transactions` | Subscription status, manual payment flow, invoices and wallet/finance transactions |
+| `products`, `product-categories`, `stock`, `sales`, `coupons` | POS, inventory, checkout, discounts and concurrency-safe stock |
+| `expenses`, `expense-categories`, `reports`, `tax-settings` | Finance, tax configuration and operational/financial reporting |
+| `employees`, `shifts`, `leaves`, `payroll`, `commissions` | HR, scheduling, leave review, payroll and commissions |
+| `branches`, `rooms`, `equipment`, `maintenance` | Multi-branch facilities, rooms, equipment lifecycle and maintenance |
+| `notifications`, `chat`, `challenges` | In-app notifications, participant-only conversations, challenge progress/leaderboards |
+
+## Platform API inventory
+
+The Platform API exposes these route families under `/api/platform` and requires the `LogicFitPlatform` JWT audience plus platform permissions:
+
+| Route family | Responsibilities |
+|---|---|
+| `/auth` | Platform login, refresh rotation, logout-all |
+| `/dashboard` | Platform-wide operational summary |
+| `/tenants` | List/create tenants; approve, suspend, activate, archive lifecycle actions |
+| `/plans` | SaaS plan CRUD, prices, billing cycles and limits |
+| `/features` | SaaS feature catalog and plan feature assignment |
+| `/subscriptions` | Platform-wide subscription visibility and administration |
+| `/payment-methods` | Manual payment channel CRUD |
+| `/payment-requests` | List requests; approve/reject with reason and atomic billing effects |
+
+## Migration history groups
+
+- Foundation and identity: initial schema, phone/password reset, profile and nutrition fields.
+- Gym operations: coach/client, branches, access control, equipment/rooms, classes, finance, POS, HR/payroll.
+- SaaS: RBAC/refresh tokens, plans/subscriptions, manual billing, usage, audit/reminders, custom domains.
+- Security/correctness: tenant suspension reason, wallet/stock rowversion, coupon rowversion.
+
+The authoritative migration files live in `LogicFit.Infrastructure/Persistence/Migrations`. Use an idempotent script for deployment and never edit an applied migration in place.
+
+## API documentation maintenance rule
+
+When adding or changing a controller, route, request/response DTO, permission, database entity, migration, background job, or deployment contract, update this document and the relevant frontend/API guide in the same task PR. The controller attributes remain the source of truth for exact routes; generated Swagger is the source of truth for schemas.
+
 ## Current product
 
 LogicFit is a .NET 8 multi-tenant gym-management SaaS backend. It contains two APIs that share the Application, Domain, Infrastructure, and database layers:
