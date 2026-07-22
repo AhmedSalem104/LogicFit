@@ -22,6 +22,61 @@ Clean Architecture · CQRS · Dynamic RBAC · Manual-billing subscription engine
 
 </div>
 
+## SaaS at a glance
+
+```mermaid
+flowchart TB
+    Operator[LogicFit SaaS Operator] --> Platform[Platform API\nLogicFitPlatform audience]
+    Platform --> Tenants[Gyms / Tenants]
+    Platform --> Plans[Plans + Features]
+    Platform --> Review[Manual Payment Review]
+    TenantUsers[Owner · Manager · Receptionist\nAccountant · Coach · Client] --> Tenant[Tenant API\nLogicFitUsers audience]
+    Tenant --> Gym[Gym Operations\nMembers · Coaching · POS · HR · Attendance]
+    Tenant --> Subscription[Subscription & Usage Limits]
+    Platform --> Database[(Shared SQL Server)]
+    Tenant --> Database
+```
+
+The two APIs share the domain/application/infrastructure layers and database, but are separated by JWT audience and authorization policy. Tenant data is scoped by `TenantId`; a tenant user can never use the platform cross-tenant bypass.
+
+### Who uses the product?
+
+| User | Workspace | Main responsibilities |
+|---|---|---|
+| Platform Owner/Admin | Platform API | Onboard gyms, manage plans/features, review manual payments, activate/suspend tenants |
+| Gym Owner | Tenant API | Configure the gym, manage staff, choose a plan, submit payment proof, view usage |
+| Manager/Receptionist/Accountant | Tenant API | Daily operations according to database permissions |
+| Coach | Tenant API | Assigned clients, workouts, measurements, progress |
+| Client | Tenant API | Profile, subscriptions, appointments, workouts, meals, self-service |
+
+### Tenant isolation model
+
+```mermaid
+flowchart LR
+    Request[Request] --> Resolve[Resolve tenant from subdomain/header/token]
+    Resolve --> Guard{Tenant allowed?}
+    Guard -- No --> Forbidden[403 typed tenant error]
+    Guard -- Yes --> Filter[EF global TenantId filter]
+    Filter --> Permission[Dynamic permission policy]
+    Permission --> Handler[Command/query handler]
+    Handler --> Result[Scoped response]
+```
+
+### Manual billing lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Trial
+    Trial --> PendingPayment: Select/upgrade/renew plan
+    PendingPayment --> PaymentSubmitted: Upload proof
+    PaymentSubmitted --> Active: Operator approves
+    PaymentSubmitted --> PendingPayment: Operator rejects
+    Active --> PastDue: Expiry/lifecycle job
+    PastDue --> Active: Renewal approved
+    PastDue --> Suspended: Grace period ends
+    Suspended --> Active: Operator reactivates
+```
+
 ## Overview
 
 **LogicFit** is a comprehensive, multi-tenant **SaaS platform** for running fitness businesses. It ships as **two independently deployable APIs** that share one database:
@@ -255,10 +310,11 @@ Swagger UI is available in **Development** on each API. Detailed integration gui
 
 | Document | Description |
 |----------|-------------|
-| [FRONTEND_SAAS_INTEGRATION.md](FRONTEND_SAAS_INTEGRATION.md) | **Frontend integration guide** — auth, RBAC map, subscription/billing flow, white-label, error contract, enums |
-| [GYM_MANAGEMENT_API.md](GYM_MANAGEMENT_API.md) | Gym-management endpoints reference |
-| [API_DOCUMENTATION.md](API_DOCUMENTATION.md) | Full API reference |
-| [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md) | System documentation (Arabic) |
+| [AGENTS.md](AGENTS.md) | Persistent execution rules, decisions, branch/PR policy, and deployment guardrails |
+| [docs/LOGICFIT-PROJECT-STATUS.md](docs/LOGICFIT-PROJECT-STATUS.md) | Current architecture, product map, data boundaries, security, CI/CD, and deployment status |
+| [AUTH_AND_REGISTRATION.md](AUTH_AND_REGISTRATION.md) | Authentication and registration contracts |
+| [PLATFORM_FRONTEND_GUIDE.md](PLATFORM_FRONTEND_GUIDE.md) | Platform console integration notes |
+| [FRONTEND_TENANT_ACCESS_GUIDE.md](FRONTEND_TENANT_ACCESS_GUIDE.md) | Tenant access and frontend integration notes |
 
 ### Selected endpoints
 
@@ -307,7 +363,8 @@ Swagger UI is available in **Development** on each API. Detailed integration gui
   ```bash
   docker compose up --build
   ```
-- **CI** — GitHub Actions (`.github/workflows/ci.yml`) restores, builds, and tests on every push/PR.
+- **CI** — GitHub Actions (`.github/workflows/ci.yml`) restores, builds, tests, validates EF migrations, and builds both images on every push/PR.
+- **Release** — `master` and `develop` are protected. Production deployment is currently performed manually from Visual Studio/WebDeploy; the guarded GitHub CD path is retained for a future complete hosting configuration.
 - **Health** — `GET /health` (includes a DB connectivity probe) for readiness checks.
 - **Production config** — set `ConnectionStrings__DefaultConnection` and `JwtSettings__Secret` as environment variables; user-secrets are for local development only.
 
@@ -324,10 +381,10 @@ dotnet test
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes
-4. Push and open a Pull Request
+1. Create a GitHub Issue with scope and acceptance criteria.
+2. Start from the latest `develop` and create `feature/<issue>-<slug>`, `fix/<issue>-<slug>`, or `chore/<issue>-<slug>`.
+3. Run restore/build/test and update documentation for behavior, API, data, security, or deployment changes.
+4. Push the task branch and open a Pull Request into `develop`; never push directly to `develop` or `master`.
 
 ---
 
