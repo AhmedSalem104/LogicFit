@@ -90,6 +90,9 @@ public static class DependencyInjection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddSingleton<IBackupService, SqlServerBackupService>();
 
+        if (configuration.GetValue("Backup:Enabled", false))
+            services.AddHostedService<DailyBackupHostedService>();
+
         // Data Seeder
         services.AddScoped<RbacSeeder>();
         services.AddScoped<PlanSeeder>();
