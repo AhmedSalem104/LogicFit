@@ -28,6 +28,7 @@ For every non-trivial task:
 - Monster ASP deployment details must be recorded before enabling automatic deployment: host, user, app directory, service/container command, backup command, migration command, health URL, and rollback command.
 - The supplied `logicfit-platform.runasp.net-WebDeploy.publishSettings` is a Platform API MSDeploy profile only. Its password must be stored as a protected GitHub Environment secret and must never be committed or printed.
 - Tenant API deployment requires a separate WebDeploy profile or equivalent target before production CD can deploy the complete application.
+- The protected CD workflow requires `RUNASP_PLATFORM_PUBLISH_SETTINGS_B64`, `RUNASP_TENANT_PUBLISH_SETTINGS_B64`, `RUNASP_PLATFORM_HEALTHCHECK_URL`, and `RUNASP_TENANT_HEALTHCHECK_URL` in the GitHub `production` Environment. Profiles are decoded only into the ephemeral Windows runner.
 
 ## Safety and correctness rules
 

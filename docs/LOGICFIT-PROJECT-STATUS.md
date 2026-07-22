@@ -65,6 +65,7 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 - Add integration, end-to-end, load, concurrency, and tenant-isolation tests.
 - Define the Monster ASP deployment target, application directory, service manager, backup command, and health URL before enabling automatic production deployment.
 - A local WebDeploy settings file was provided for `logicfit-platform.runasp.net` (`MSDeploy`, site `site78301`). It configures the Platform API only; its password is intentionally not recorded. A separate Tenant API publish profile and the production backup/migration/rollback procedure are still required.
+- `Scripts/deploy-webdeploy.ps1` now performs credential-safe MSDeploy synchronization from a publish output directory. The protected CD workflow requires both Platform and Tenant profiles plus health URLs before it can deploy.
 
 ## Change log
 
