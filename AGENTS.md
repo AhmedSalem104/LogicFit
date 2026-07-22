@@ -30,6 +30,22 @@ For every non-trivial task:
 - Tenant API deployment requires a separate WebDeploy profile or equivalent target before production CD can deploy the complete application.
 - The protected CD workflow requires `RUNASP_PLATFORM_PUBLISH_SETTINGS_B64`, `RUNASP_TENANT_PUBLISH_SETTINGS_B64`, `RUNASP_PLATFORM_HEALTHCHECK_URL`, and `RUNASP_TENANT_HEALTHCHECK_URL` in the GitHub `production` Environment. Profiles are decoded only into the ephemeral Windows runner.
 
+## GitHub branching and review policy
+
+- `develop` is the protected daily integration branch; `main` (or `master`, if that is the repository release branch) is protected production/release history.
+- Never push directly to `develop`, `main`, or `master`, and never force-push or delete them.
+- Start every task from the latest `origin/develop` and use `feature/<issue>-<slug>`, `fix/<issue>-<slug>`, or `chore/<issue>-<slug>`.
+- Open a Pull Request from the task branch into `develop`. CI must pass and at least one reviewer must approve before merge.
+- Release changes move from `develop` to `main`/`master` through a reviewed Pull Request.
+
+```powershell
+git fetch origin
+git switch develop
+git pull --ff-only
+git switch -c feature/<issue>-<slug>
+git push -u origin feature/<issue>-<slug>
+```
+
 ## Safety and correctness rules
 
 - Treat TenantId and ownership checks as security boundaries.
@@ -58,3 +74,4 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 - CI runs on every branch and PR, validates tests/migrations, and builds both Docker images.
 - Production CD is manual and protected until Monster ASP deployment details and secrets are configured.
 - Current verification baseline: 53 passing tests; three pre-existing nullable warnings remain.
+- Establish `develop` as the protected integration branch; require task-branch Pull Requests and passing CI for all merges.

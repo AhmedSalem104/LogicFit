@@ -55,6 +55,14 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 - Production deployment must have a rollback procedure and must not expose secrets in repository files or logs.
 - A future task that changes API, database, security, deployment, or behavior must update this document and add a GitHub Issue describing scope, acceptance criteria, tests, and deployment impact.
 
+## GitHub workflow
+
+- Work starts from the latest `origin/develop`; `develop` is the protected integration branch.
+- Task branches use `feature/<issue>-<slug>`, `fix/<issue>-<slug>`, or `chore/<issue>-<slug>`.
+- Every task is merged through a reviewed Pull Request into `develop`; direct pushes and force-pushes are prohibited.
+- Releases are reviewed Pull Requests from `develop` into protected `main`/`master`.
+- Required CI checks are `verify` and `docker`; at least one approval is required.
+
 ## Known remaining work
 
 - Replace in-process rate limiting and memory cache with gateway/Redis-backed distributed controls for multi-instance production.
@@ -76,3 +84,4 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 - Added concurrency migrations for wallet/stock and coupons.
 - Added file path/MIME validation and API rate limiting.
 - Added initial CI/CD and project-status documentation.
+- Established the protected `develop` integration-branch workflow and task-branch/PR rules.
