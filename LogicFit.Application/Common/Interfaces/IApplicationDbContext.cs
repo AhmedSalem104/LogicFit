@@ -83,6 +83,8 @@ public interface IApplicationDbContext
     DbSet<RolePermission> RolePermissions { get; }
     DbSet<UserRoleAssignment> UserRoleAssignments { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
+    DbSet<OutboxMessage> OutboxMessages { get; }
+    DbSet<JobExecutionLog> JobExecutionLogs { get; }
 
     // SaaS billing (platform-owned)
     DbSet<Plan> Plans { get; }

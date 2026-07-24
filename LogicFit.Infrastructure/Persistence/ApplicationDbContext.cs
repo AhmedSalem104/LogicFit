@@ -107,6 +107,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<UserRoleAssignment> UserRoleAssignments => Set<UserRoleAssignment>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<JobExecutionLog> JobExecutionLogs => Set<JobExecutionLog>();
 
     // SaaS billing (platform-owned)
     public DbSet<Plan> Plans => Set<Plan>();
