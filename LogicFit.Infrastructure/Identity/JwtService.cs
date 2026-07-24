@@ -29,7 +29,7 @@ public class JwtService : IJwtService
         var issuer = _configuration["JwtSettings:Issuer"] ?? "LogicFit";
         // Audience is host-specific ("LogicFitUsers" for the tenant API, "LogicFitPlatform"
         // for the platform API), which keeps a token minted for one host from being valid on the other.
-        var audience = _configuration["JwtSettings:Audience"] ?? "LogicFitUsers";
+        var audience = tenantId.HasValue ? "LogicFitUsers" : "LogicFitPlatform";
         var expiryMinutes = int.Parse(_configuration["JwtSettings:ExpiryMinutes"] ?? "60");
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));

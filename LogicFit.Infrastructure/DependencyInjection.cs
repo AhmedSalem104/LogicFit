@@ -59,7 +59,7 @@ public static class DependencyInjection
                 ValidateIssuer = true,
                 ValidIssuer = configuration["JwtSettings:Issuer"] ?? "LogicFit",
                 ValidateAudience = true,
-                ValidAudience = configuration["JwtSettings:Audience"] ?? "LogicFitUsers",
+                ValidAudiences = new[] { "LogicFitUsers", "LogicFitPlatform" },
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             };

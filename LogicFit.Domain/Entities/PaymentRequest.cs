@@ -13,6 +13,8 @@ public class PaymentRequest : AuditableEntity, ISoftDeletable
     public Guid TenantId { get; set; }
     public Guid? TenantSubscriptionId { get; set; }
     public Guid PlanId { get; set; }
+    public PaymentRequestOperation Operation { get; set; } = PaymentRequestOperation.NewSubscription;
+    public int? ExtensionDays { get; set; }
     public decimal Amount { get; set; }
     public string Currency { get; set; } = "EGP";
     public Guid? PaymentMethodId { get; set; }

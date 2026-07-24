@@ -41,6 +41,7 @@ public class GetPlansQueryHandler : IRequestHandler<GetPlansQuery, List<PlanDto>
                 IsActive = p.IsActive,
                 DisplayOrder = p.DisplayOrder,
                 Features = p.PlanFeatures.Select(pf => pf.Feature.Code).ToList()
+                ,FeatureLimits = p.PlanFeatures.ToDictionary(pf => pf.Feature.Code, pf => pf.LimitValue)
             })
             .ToListAsync(cancellationToken);
     }

@@ -87,9 +87,12 @@ public interface IApplicationDbContext
     // SaaS billing (platform-owned)
     DbSet<Plan> Plans { get; }
     DbSet<Feature> Features { get; }
+    DbSet<FeatureDependency> FeatureDependencies { get; }
+    DbSet<FeatureQuotaDefinition> FeatureQuotaDefinitions { get; }
     DbSet<PlanFeature> PlanFeatures { get; }
     DbSet<TenantSubscription> TenantSubscriptions { get; }
     DbSet<TenantFeature> TenantFeatures { get; }
+    DbSet<SubscriptionFeatureSnapshot> SubscriptionFeatureSnapshots { get; }
     DbSet<TenantPaymentMethod> TenantPaymentMethods { get; }
     DbSet<PaymentRequest> PaymentRequests { get; }
     DbSet<SubscriptionPayment> SubscriptionPayments { get; }

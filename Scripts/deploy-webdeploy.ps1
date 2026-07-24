@@ -20,7 +20,7 @@ if ([string]::IsNullOrWhiteSpace($profile.userName) -or [string]::IsNullOrWhiteS
 $destination = "https://$($profile.publishUrl):8172/msdeploy.axd?site=$($profile.msdeploySite)"
 $arguments = @(
     '-verb:sync',
-    "-source:contentPath=$ContentPath",
+    "-source:contentPath=`"$ContentPath`"",
     "-dest:auto,ComputerName=$destination,UserName=$($profile.userName),Password=$($profile.userPWD),AuthType=Basic",
     '-enableLink:AppPoolExtension',
     '-retryAttempts:3',

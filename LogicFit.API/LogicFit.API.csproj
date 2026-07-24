@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LogicFit.Application\LogicFit.Application.csproj" />
     <ProjectReference Include="..\LogicFit.Infrastructure\LogicFit.Infrastructure.csproj" />
+    <ProjectReference Include="..\LogicFit.Platform.API\LogicFit.Platform.API.csproj" />
   </ItemGroup>
 
   <ItemGroup>
