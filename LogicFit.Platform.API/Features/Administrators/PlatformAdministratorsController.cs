@@ -45,4 +45,17 @@ public sealed class PlatformAdministratorsController(IApplicationDbContext conte
         await context.SaveChangesAsync(cancellationToken);
         return Created($"api/platform/administrators/{user.Id}", new { user.Id, user.Email, Role = user.Role.ToString(), FullName = request.FullName.Trim() });
     }
+
+    [HttpPatch("{id:guid}/status")]
+    public async Task<IActionResult> SetStatus(Guid id, [FromBody] bool isActive, CancellationToken cancellationToken)
+    {
+        if (!User.IsInRole(SystemRoles.PlatformOwner)) return Forbid();
+        var user = await context.Users.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, cancellationToken);
+        if (user is null || user.Role is not (UserRole.PlatformAdmin or UserRole.PlatformOwner)) return NotFound();
+        if (user.Role == UserRole.PlatformOwner) return BadRequest(new { message = "لا يمكن تعطيل مالك المنصة." });
+        user.IsActive = isActive;
+        user.PermissionsVersion++;
+        await context.SaveChangesAsync(cancellationToken);
+        return Ok(new { user.Id, user.IsActive });
+    }
 }
