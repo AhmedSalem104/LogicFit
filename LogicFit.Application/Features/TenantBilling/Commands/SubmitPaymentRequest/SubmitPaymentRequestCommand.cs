@@ -1,5 +1,6 @@
 using LogicFit.Application.Features.Platform.PaymentRequests.DTOs;
 using MediatR;
+using LogicFit.Domain.Enums;
 
 namespace LogicFit.Application.Features.TenantBilling.Commands.SubmitPaymentRequest;
 
@@ -12,4 +13,6 @@ public class SubmitPaymentRequestCommand : IRequest<PaymentRequestDto>
     public DateTime? PaymentDate { get; set; }
     public string? ProofFileUrl { get; set; }
     public string? Notes { get; set; }
+    public PaymentRequestOperation Operation { get; set; } = PaymentRequestOperation.NewSubscription;
+    public int? ExtensionDays { get; set; }
 }

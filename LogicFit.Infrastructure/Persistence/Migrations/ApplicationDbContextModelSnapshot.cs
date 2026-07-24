@@ -1211,6 +1211,12 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<DateTime?>("StartDate")
                         .HasColumnType("datetime2");
 
@@ -1961,10 +1967,28 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsFree")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Module")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("NameAr")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NameEn")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("SupportsQuota")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1978,6 +2002,59 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Features", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.FeatureDependency", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DependsOnFeatureId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FeatureId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DependsOnFeatureId");
+
+                    b.HasIndex("FeatureId", "DependsOnFeatureId")
+                        .IsUnique();
+
+                    b.ToTable("FeatureDependencies");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.FeatureQuotaDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("DefaultLimit")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("FeatureId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ResourceKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeatureId", "ResourceKey")
+                        .IsUnique();
+
+                    b.ToTable("FeatureQuotaDefinitions");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Food", b =>
@@ -3006,12 +3083,18 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("ExtensionDays")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("Operation")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("PaymentDate")
                         .HasColumnType("datetime2");
@@ -4442,6 +4525,12 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -4546,6 +4635,36 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("StockMovements", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.SubscriptionFeatureSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CapturedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FeatureKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("LimitValue")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantSubscriptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantSubscriptionId", "FeatureKey")
+                        .IsUnique();
+
+                    b.ToTable("SubscriptionFeatureSnapshots");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.SubscriptionFreeze", b =>
@@ -5043,7 +5162,13 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime?>("EndsAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<Guid>("FeatureId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("GrantedByUserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsEnabled")
@@ -5051,6 +5176,13 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Property<int?>("LimitOverride")
                         .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -5321,6 +5453,12 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("Role")
                         .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -6384,6 +6522,36 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("ParentCategory");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.FeatureDependency", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.Feature", "DependsOnFeature")
+                        .WithMany()
+                        .HasForeignKey("DependsOnFeatureId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LogicFit.Domain.Entities.Feature", "Feature")
+                        .WithMany()
+                        .HasForeignKey("FeatureId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DependsOnFeature");
+
+                    b.Navigation("Feature");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.FeatureQuotaDefinition", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.Feature", "Feature")
+                        .WithMany()
+                        .HasForeignKey("FeatureId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Feature");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.Food", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
@@ -7022,6 +7190,17 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("TargetBranch");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.SubscriptionFeatureSnapshot", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.TenantSubscription", "TenantSubscription")
+                        .WithMany("FeatureSnapshots")
+                        .HasForeignKey("TenantSubscriptionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TenantSubscription");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.SubscriptionFreeze", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.ClientSubscription", "Subscription")
@@ -7462,6 +7641,11 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("SubscriptionPlans");
 
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantSubscription", b =>
+                {
+                    b.Navigation("FeatureSnapshots");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.User", b =>

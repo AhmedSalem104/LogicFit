@@ -111,9 +111,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     // SaaS billing (platform-owned)
     public DbSet<Plan> Plans => Set<Plan>();
     public DbSet<Feature> Features => Set<Feature>();
+    public DbSet<FeatureDependency> FeatureDependencies => Set<FeatureDependency>();
+    public DbSet<FeatureQuotaDefinition> FeatureQuotaDefinitions => Set<FeatureQuotaDefinition>();
     public DbSet<PlanFeature> PlanFeatures => Set<PlanFeature>();
     public DbSet<TenantSubscription> TenantSubscriptions => Set<TenantSubscription>();
     public DbSet<TenantFeature> TenantFeatures => Set<TenantFeature>();
+    public DbSet<SubscriptionFeatureSnapshot> SubscriptionFeatureSnapshots => Set<SubscriptionFeatureSnapshot>();
     public DbSet<TenantPaymentMethod> TenantPaymentMethods => Set<TenantPaymentMethod>();
     public DbSet<PaymentRequest> PaymentRequests => Set<PaymentRequest>();
     public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
@@ -131,6 +134,30 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         builder.Entity<ApplicationUser>()
             .Property(u => u.WalletBalance)
             .HasPrecision(18, 2);
+
+        builder.Entity<Feature>()
+            .HasIndex(f => f.Code)
+            .IsUnique();
+        builder.Entity<FeatureDependency>()
+            .HasIndex(d => new { d.FeatureId, d.DependsOnFeatureId })
+            .IsUnique();
+        builder.Entity<FeatureDependency>()
+            .HasOne(d => d.Feature).WithMany()
+            .HasForeignKey(d => d.FeatureId).OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<FeatureDependency>()
+            .HasOne(d => d.DependsOnFeature).WithMany()
+            .HasForeignKey(d => d.DependsOnFeatureId).OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<FeatureQuotaDefinition>()
+            .HasIndex(q => new { q.FeatureId, q.ResourceKey })
+            .IsUnique();
+        builder.Entity<SubscriptionFeatureSnapshot>()
+            .HasIndex(s => new { s.TenantSubscriptionId, s.FeatureKey })
+            .IsUnique();
+        builder.Entity<SubscriptionFeatureSnapshot>()
+            .HasOne(s => s.TenantSubscription)
+            .WithMany(s => s.FeatureSnapshots)
+            .HasForeignKey(s => s.TenantSubscriptionId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Global Query Filters
         ApplyGlobalFilters(builder);

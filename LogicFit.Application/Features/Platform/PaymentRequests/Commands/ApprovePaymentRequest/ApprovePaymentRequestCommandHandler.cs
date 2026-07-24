@@ -3,6 +3,7 @@ using LogicFit.Application.Features.Platform.PaymentRequests.DTOs;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
+using LogicFit.Domain.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,6 +32,8 @@ public class ApprovePaymentRequestCommandHandler : IRequestHandler<ApprovePaymen
     {
         var pr = await _context.PaymentRequests
             .Include(p => p.Plan)
+            .ThenInclude(p => p!.PlanFeatures)
+            .ThenInclude(pf => pf.Feature)
             .FirstOrDefaultAsync(p => p.Id == request.PaymentRequestId, cancellationToken);
 
         if (pr == null)
@@ -70,11 +73,22 @@ public class ApprovePaymentRequestCommandHandler : IRequestHandler<ApprovePaymen
             pr.TenantSubscriptionId = subscription.Id;
         }
 
-        var durationDays = pr.Plan?.DurationInDays ?? 30;
+        var isExtend = pr.Operation == PaymentRequestOperation.Extend;
+        var durationDays = isExtend ? pr.ExtensionDays.GetValueOrDefault() : (pr.Plan?.DurationInDays ?? 30);
+        if (durationDays <= 0) throw new ValidationException("Extension days must be greater than zero.");
+        if (!isExtend)
+        {
+            subscription.PlanId = pr.PlanId;
+            subscription.BillingCycle = pr.Plan?.BillingCycle ?? subscription.BillingCycle;
+            subscription.Amount = pr.Amount;
+            subscription.Currency = pr.Currency;
+        }
         var extendFrom = (subscription.Status == TenantSubscriptionStatus.Active && subscription.EndDate.HasValue && subscription.EndDate > now)
             ? subscription.EndDate.Value
             : now;
 
+        if (!TenantSubscriptionStateMachine.CanTransition(subscription.Status, TenantSubscriptionStatus.Active))
+            throw new ConflictException($"Subscription cannot transition from {subscription.Status} to Active.");
         subscription.Status = TenantSubscriptionStatus.Active;
         subscription.StartDate ??= now;
         subscription.EndDate = extendFrom.AddDays(durationDays);
@@ -82,6 +96,20 @@ public class ApprovePaymentRequestCommandHandler : IRequestHandler<ApprovePaymen
         subscription.ApprovedBy = reviewer;
         subscription.ApprovedAt = now;
         subscription.ReminderSentAt = null; // new period → allow a fresh "expiring soon" reminder
+        if (!await _context.SubscriptionFeatureSnapshots.AnyAsync(x => x.TenantSubscriptionId == subscription.Id, cancellationToken))
+        {
+            foreach (var planFeature in pr.Plan?.PlanFeatures ?? [])
+            {
+                _context.SubscriptionFeatureSnapshots.Add(new SubscriptionFeatureSnapshot
+                {
+                    TenantSubscriptionId = subscription.Id,
+                    FeatureKey = planFeature.Feature.Code,
+                    IsEnabled = true,
+                    LimitValue = planFeature.LimitValue,
+                    CapturedAt = now
+                });
+            }
+        }
 
         // Activate the tenant.
         var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == pr.TenantId, cancellationToken);

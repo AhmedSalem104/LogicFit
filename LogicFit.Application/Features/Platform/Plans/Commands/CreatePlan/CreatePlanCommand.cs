@@ -20,4 +20,5 @@ public class CreatePlanCommand : IRequest<PlanDto>
     public bool IsActive { get; set; } = true;
     public int DisplayOrder { get; set; }
     public List<string> FeatureCodes { get; set; } = new();
+    public Dictionary<string, int?> FeatureLimits { get; set; } = new();
 }

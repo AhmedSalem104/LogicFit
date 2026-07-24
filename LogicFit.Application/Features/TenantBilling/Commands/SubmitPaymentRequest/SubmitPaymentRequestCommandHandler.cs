@@ -68,6 +68,8 @@ public class SubmitPaymentRequestCommandHandler : IRequestHandler<SubmitPaymentR
             PaymentDate = request.PaymentDate ?? _dateTimeService.UtcNow,
             ProofFileUrl = request.ProofFileUrl,
             Notes = request.Notes,
+            Operation = request.Operation,
+            ExtensionDays = request.ExtensionDays,
             Status = PaymentRequestStatus.Pending
         };
         _context.PaymentRequests.Add(paymentRequest);
@@ -81,6 +83,7 @@ public class SubmitPaymentRequestCommandHandler : IRequestHandler<SubmitPaymentR
             PlanId = paymentRequest.PlanId,
             PlanName = plan.Name,
             TenantSubscriptionId = paymentRequest.TenantSubscriptionId,
+            Operation = paymentRequest.Operation,
             Amount = paymentRequest.Amount,
             Currency = paymentRequest.Currency,
             PaymentMethodId = paymentRequest.PaymentMethodId,

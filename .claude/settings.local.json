@@ -54,7 +54,20 @@
       "Bash(dotnet ef database drop:*)",
       "Bash(cd:*)",
       "Bash(grep:*)",
-      "Bash(sed 's/\\\\.cs$//')"
+      "Bash(sed 's/\\\\.cs$//')",
+      "Bash(dotnet --version)",
+      "Bash(rm -rf __TRACKED_VAR__/pub-platform __TRACKED_VAR__/pub-tenant)",
+      "Bash(dotnet publish *)",
+      "Bash(dotnet test *)",
+      "Bash(cat LogicFit.Domain/Enums/CommissionSourceType.cs)",
+      "Bash(cat LogicFit.Domain/Enums/CommissionRuleType.cs)",
+      "Bash(cat LogicFit.Domain/Enums/CommissionStatus.cs)",
+      "Bash(cat LogicFit.Domain/Entities/ShiftAssignment.cs)",
+      "Bash(cat LogicFit.Domain/Entities/Shift.cs)",
+      "Bash(gh pr *)",
+      "Bash(git fetch *)",
+      "Bash(gh repo *)",
+      "Bash(gh api *)"
     ],
     "deny": [],
     "ask": []

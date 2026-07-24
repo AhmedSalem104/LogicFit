@@ -6,6 +6,7 @@ using LogicFit.Application.Features.Platform.PaymentRequests.DTOs;
 using LogicFit.Application.Features.TenantBilling.Commands.SubmitPaymentRequest;
 using LogicFit.Application.Features.TenantBilling.Queries.GetMyPaymentRequests;
 using LogicFit.Domain.Authorization;
+using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -45,7 +46,8 @@ public class TenantBillingController : ControllerBase
         [FromForm] string? transactionNumber,
         [FromForm] DateTime? paymentDate,
         [FromForm] string? notes,
-        IFormFile? proof)
+        IFormFile? proof,
+        [FromForm] PaymentRequestOperation operation = PaymentRequestOperation.NewSubscription)
     {
         string? proofUrl = null;
         if (proof != null)
@@ -61,6 +63,8 @@ public class TenantBillingController : ControllerBase
             PaymentDate = paymentDate,
             ProofFileUrl = proofUrl,
             Notes = notes
+            ,Operation = operation
+            ,ExtensionDays = Request.Form.TryGetValue("extensionDays", out var days) && int.TryParse(days, out var parsedDays) ? parsedDays : null
         });
         return Ok(result);
     }

@@ -12,6 +12,10 @@ public class TenantFeature : BaseEntity
     public Guid FeatureId { get; set; }
     public bool IsEnabled { get; set; } = true;
     public int? LimitOverride { get; set; }
+    public string Reason { get; set; } = string.Empty;
+    public DateTime StartsAt { get; set; }
+    public DateTime? EndsAt { get; set; }
+    public Guid? GrantedByUserId { get; set; }
 
     // Navigation
     public virtual Feature Feature { get; set; } = null!;
