@@ -1,6 +1,7 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Enums;
+using LogicFit.Platform.API.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,14 +14,13 @@ namespace LogicFit.Platform.API.Features.Administrators;
 public sealed class PlatformAdministratorsController(IApplicationDbContext context) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> List(CancellationToken cancellationToken)
+    public async Task<IActionResult> List([FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize, CancellationToken cancellationToken = default)
     {
-        var users = await context.Users.AsNoTracking().IgnoreQueryFilters()
+        var users = context.Users.AsNoTracking().IgnoreQueryFilters()
             .Where(u => !u.IsDeleted && (u.Role == UserRole.PlatformOwner || u.Role == UserRole.PlatformAdmin))
             .OrderBy(u => u.Email)
-            .Select(u => new { u.Id, u.Email, u.PhoneNumber, Role = u.Role.ToString(), u.IsActive, u.CreatedAt, FullName = u.Profile == null ? null : u.Profile.FullName })
-            .ToListAsync(cancellationToken);
-        return Ok(users);
+            .Select(u => new { u.Id, u.Email, u.PhoneNumber, Role = u.Role.ToString(), u.IsActive, u.CreatedAt, FullName = u.Profile == null ? null : u.Profile.FullName });
+        return Ok(await PlatformPaging.CreateAsync(users, page, pageSize, cancellationToken));
     }
 
     public sealed record CreateAdministratorRequest(string Email, string Password, string FullName);

@@ -1,6 +1,7 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Enums;
+using LogicFit.Platform.API.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,7 @@ namespace LogicFit.Platform.API.Features.Alerts;
 public sealed class PlatformAlertsController(IApplicationDbContext context) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> List(CancellationToken cancellationToken)
+    public async Task<IActionResult> List([FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize, CancellationToken cancellationToken = default)
     {
         var alerts = new List<object>();
         var failedJobs = await context.JobExecutionLogs.AsNoTracking().Where(x => x.Status == "Failed").OrderByDescending(x => x.StartedAtUtc).Take(20).ToListAsync(cancellationToken);
@@ -22,6 +23,7 @@ public sealed class PlatformAlertsController(IApplicationDbContext context) : Co
         alerts.AddRange(failedOutbox.Select(x => new { severity = "error", title = "فشل رسالة Outbox", message = x.Type, occurredAtUtc = x.FailedAtUtc!.Value, detail = x.LastError }));
         var pending = await context.PaymentRequests.AsNoTracking().IgnoreQueryFilters().CountAsync(x => x.Status == PaymentRequestStatus.Pending && !x.IsDeleted, cancellationToken);
         if (pending > 0) alerts.Add(new { severity = "warning", title = "طلبات دفع معلقة", message = $"يوجد {pending} طلب بانتظار المراجعة", occurredAtUtc = DateTime.UtcNow, detail = (string?)null });
-        return Ok(alerts.OrderByDescending(x => x.GetType().GetProperty("occurredAtUtc")?.GetValue(x)).ToList());
+        var ordered = alerts.OrderByDescending(x => x.GetType().GetProperty("occurredAtUtc")?.GetValue(x)).ToList();
+        return Ok(PlatformPaging.Create(ordered, page, pageSize));
     }
 }
