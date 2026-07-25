@@ -41,6 +41,19 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
         if (!currentVersion.HasValue || currentVersion.Value != tokenVersion)
             return;
 
+        // PlatformOwner is a signed platform role.  It is intentionally treated as
+        // an effective all-permissions role as well as the ManagePlatform claim.
+        // This keeps access stable when an older account has stale/missing
+        // RolePermission rows; the token is still validated against PermissionsVersion.
+        var isPlatformOwner = context.User
+            .FindAll(ClaimTypes.Role)
+            .Any(c => string.Equals(c.Value, SystemRoles.PlatformOwner, StringComparison.Ordinal));
+        if (isPlatformOwner)
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
         var permissions = context.User.FindAll(PermissionClaimType);
 
         foreach (var claim in permissions)
