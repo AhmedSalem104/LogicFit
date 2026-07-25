@@ -163,8 +163,6 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
                         IdempotencyKey = $"subscription:{sub.Id}:expired:{now:yyyyMMdd}"
                     });
                     suspended++;
-                    await notificationService.NotifyTenantOwnerAsync(
-                        sub.TenantId, NotificationTemplates.TenantSuspended, null, cancellationToken);
                 }
             }
         }

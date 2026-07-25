@@ -106,6 +106,7 @@ public static class DependencyInjection
         {
             services.AddHostedService<SubscriptionLifecycleService>();
             services.AddHostedService<PlatformSubscriptionLifecycleService>();
+            services.AddHostedService<OutboxProcessorService>();
         }
 
         return services;
