@@ -32,6 +32,7 @@ public class GetPaymentRequestsQueryHandler : IRequestHandler<GetPaymentRequests
                 PlanId = p.PlanId,
                 PlanName = p.Plan.Name,
                 TenantSubscriptionId = p.TenantSubscriptionId,
+                Operation = p.Operation,
                 Amount = p.Amount,
                 Currency = p.Currency,
                 PaymentMethodId = p.PaymentMethodId,

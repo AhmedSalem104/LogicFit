@@ -19,7 +19,8 @@ public sealed class SqlServerBackupService : IBackupService
 
     public IReadOnlyList<BackupRecord> List()
     {
-        var directory = GetDirectory();
+        var directory = GetDirectoryOrNull();
+        if (directory is null) return [];
         if (!Directory.Exists(directory)) return [];
         return Directory.EnumerateFiles(directory, "*.bak", SearchOption.TopDirectoryOnly)
             .Select(path => new FileInfo(path))
@@ -30,7 +31,8 @@ public sealed class SqlServerBackupService : IBackupService
 
     public async Task<BackupRecord> CreateAsync(CancellationToken cancellationToken)
     {
-        var directory = GetDirectory();
+        var directory = GetDirectoryOrNull()
+            ?? throw new InvalidOperationException("Backup service is not configured. Set Backup:Directory to a writable SQL Server path.");
         Directory.CreateDirectory(directory);
         var database = new SqlConnectionStringBuilder(_configuration.GetConnectionString("DefaultConnection"))
             .InitialCatalog;
@@ -56,8 +58,12 @@ public sealed class SqlServerBackupService : IBackupService
         return new BackupRecord(info.Name, info.Length, info.CreationTimeUtc, "Completed");
     }
 
-    private string GetDirectory() => _configuration["Backup:Directory"]
-        ?? throw new InvalidOperationException("Backup:Directory is not configured.");
+    private string? GetDirectoryOrNull()
+    {
+        var directory = _configuration["Backup:Directory"]?.Trim();
+        var enabled = _configuration.GetValue("Backup:Enabled", false);
+        return enabled && !string.IsNullOrWhiteSpace(directory) ? directory : null;
+    }
 
     private static string Sanitize(string value) => string.Concat(value.Select(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_' ? ch : '_'));
 }

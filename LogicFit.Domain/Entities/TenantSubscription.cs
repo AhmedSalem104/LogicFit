@@ -45,4 +45,5 @@ public class TenantSubscription : AuditableEntity, ISoftDeletable
     // Navigation
     public virtual Tenant Tenant { get; set; } = null!;
     public virtual Plan Plan { get; set; } = null!;
+    public virtual ICollection<SubscriptionFeatureSnapshot> FeatureSnapshots { get; set; } = new List<SubscriptionFeatureSnapshot>();
 }

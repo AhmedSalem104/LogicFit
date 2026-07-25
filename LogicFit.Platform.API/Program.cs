@@ -102,6 +102,14 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Idempotent platform bootstrap: creates the sentinel platform tenant, RBAC,
+// and the initial PlatformOwner only when they do not already exist.
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+    await seeder.SeedAsync();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
