@@ -131,6 +131,13 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
             {
                 sub.Status = TenantSubscriptionStatus.PastDue;
                 if (tenant != null) tenant.Status = TenantStatus.PastDue;
+                context.OutboxMessages.Add(new OutboxMessage
+                {
+                    Type = "tenant.subscription.past_due",
+                    Payload = $"{{\"tenantId\":\"{sub.TenantId}\",\"subscriptionId\":\"{sub.Id}\"}}",
+                    OccurredAtUtc = now,
+                    IdempotencyKey = $"subscription:{sub.Id}:past-due:{now:yyyyMMdd}"
+                });
                 pastDue++;
                 continue;
             }
@@ -148,6 +155,13 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
                         tenant.Status = TenantStatus.Suspended;
                         tenant.SuspensionReason = SuspensionReason.NonPayment;
                     }
+                    context.OutboxMessages.Add(new OutboxMessage
+                    {
+                        Type = "tenant.subscription.expired",
+                        Payload = $"{{\"tenantId\":\"{sub.TenantId}\",\"subscriptionId\":\"{sub.Id}\"}}",
+                        OccurredAtUtc = now,
+                        IdempotencyKey = $"subscription:{sub.Id}:expired:{now:yyyyMMdd}"
+                    });
                     suspended++;
                     await notificationService.NotifyTenantOwnerAsync(
                         sub.TenantId, NotificationTemplates.TenantSuspended, null, cancellationToken);
