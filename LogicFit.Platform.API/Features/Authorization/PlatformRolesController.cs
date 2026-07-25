@@ -24,7 +24,7 @@ public sealed class PlatformRolesController(IApplicationDbContext context) : Con
     }
 
     [HttpGet("permissions")]
-    public async Task<IActionResult> Permissions(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetPermissionCatalog(CancellationToken cancellationToken)
         => Ok(await context.Permissions.AsNoTracking().OrderBy(x => x.Category).ThenBy(x => x.Code)
             .Select(x => new { x.Code, x.DisplayName, x.Category, x.IsPlatformPermission }).ToListAsync(cancellationToken));
 
