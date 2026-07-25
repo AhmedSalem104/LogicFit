@@ -174,6 +174,35 @@ The Platform API exposes these route families under `/api/platform` and requires
 | `/subscriptions` | Platform-wide subscription visibility and administration |
 | `/payment-methods` | Manual payment channel CRUD |
 | `/payment-requests` | List requests; approve/reject with reason and atomic billing effects |
+| `/administrators`, `/roles` | Platform operator accounts and role-permission administration; owner-only sensitive mutations |
+| `/audit-logs`, `/invoices` | Read-only, paginated audit and financial records |
+| `/alerts`, `/operations` | Paginated operational alerts, job execution logs and Outbox monitoring |
+| `/backups` | Private BACPAC backup status, creation, paginated history and authorized streaming download |
+
+### Platform collection pagination contract
+
+All Platform administration collection routes now accept one-based `page` and `pageSize` query parameters. `pageSize` is clamped from `1` to `100` (default `20`). Responses have the consistent camel-case shape:
+
+```json
+{
+  "items": [],
+  "totalCount": 0,
+  "page": 1,
+  "pageSize": 20,
+  "totalPages": 0,
+  "hasPreviousPage": false,
+  "hasNextPage": false
+}
+```
+
+The contract applies to tenants, subscriptions, payment requests, plans, payment methods, features, feature overrides/dependencies/quota definitions, administrators, roles, alerts, audit logs, invoices, operations, and backup history. Tenant, subscription, payment request, administrator, role, audit, invoice, job, and Outbox queries page at the database level. Small configuration catalogs use the same response shape while preserving their existing application query contracts.
+
+### Administration mutation boundaries
+
+- Plans and payment methods support create, update, and guarded deletion.
+- Features are created and updated/archived; feature dependencies are created and removed; quotas and tenant overrides are upserted/deactivated rather than destructively deleted.
+- Tenants, subscriptions, administrators, and payment requests use lifecycle actions (approve, suspend, activate, archive, extend, approve/reject) instead of unsafe generic deletion.
+- Invoices, audit logs, jobs, Outbox records, alerts, reports, and backup records are operational/financial history and intentionally have no edit/delete API.
 
 ## Migration history groups
 
@@ -230,9 +259,9 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 
 ## Verification status
 
-- `dotnet test LogicFit.sln -c Release --no-restore`: 53 passing tests.
-- `dotnet build LogicFit.sln -c Release --no-restore`: successful.
-- Three existing nullable warnings remain in coach-client and client-subscription query projections.
+- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 64 passing tests.
+- `dotnet build LogicFit.sln -c Release --no-restore`: successful; three pre-existing nullable warnings remain in coach-client and client-subscription query projections.
+- `npm run build` in `LogiFit_Platform_Admin_Dashboard`: successful.
 
 ## CI/CD policy
 
@@ -262,6 +291,21 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 - `Scripts/deploy-webdeploy.ps1` now performs credential-safe MSDeploy synchronization from a publish output directory. The protected CD workflow requires both Platform and Tenant profiles plus health URLs before it can deploy.
 
 ## Change log
+
+### 2026-07-25
+
+- Added one shared Platform API pagination contract and bounded `page`/`pageSize` behavior.
+- Moved high-volume platform tenants, subscriptions, and payment-request list queries to database-level paging.
+- Paginated platform audit, invoice, administrators, roles, alerts, operations, and backup collection endpoints.
+- Added authorized configuration-edge removal for feature dependencies; no historical subscription or financial data is modified.
+- Added a reusable Arabic server paginator to the Angular administration dashboard and connected every collection screen to it.
+- Standardized the dashboard list-page shell, empty/loading/error states, action toolbars, and CRUD/lifecycle boundaries.
+- Rebuilt feature overrides, feature dependencies, and quota management screens with controlled create/update/delete-or-lifecycle actions.
+- Added a complete Arabic documentation index covering product flows, users/permissions, the Platform dashboard, API inventory, SaaS domain/data, tenant application, operations, and deployment.
+- Added an in-dashboard operational assistant with contextual help for every protected Platform route, permission-filtered Arabic command search, and safe quick actions that only navigate, refresh, or open existing confirmed forms.
+- Added the dashboard Tailwind/PrimeNG style guide and verified the dashboard build after the assistant integration.
+- Added the authenticated `/documentation` screen to the Platform dashboard, with Arabic search across product, API, security, data, operations, design, and a direct catalog of every dashboard screen.
+- Split dashboard-owned documentation into its own architecture/integration guide and screen catalog, and refreshed both repository READMEs with Mermaid diagrams and maintenance links.
 
 ### 2026-07-23
 

@@ -22,8 +22,14 @@ public class GetFeaturesQueryHandler : IRequestHandler<GetFeaturesQuery, List<Fe
                 Id = f.Id,
                 Code = f.Code,
                 Name = f.Name,
+                NameAr = f.NameAr,
+                NameEn = f.NameEn,
                 Description = f.Description,
-                IsActive = f.IsActive
+                Module = f.Module,
+                IsFree = f.IsFree,
+                IsActive = f.IsActive,
+                SupportsQuota = f.SupportsQuota,
+                Status = f.Status
             })
             .ToListAsync(cancellationToken);
     }

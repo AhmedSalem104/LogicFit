@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Authorization;
+using LogicFit.Platform.API.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,7 +12,10 @@ namespace LogicFit.Platform.API.Features.Backups;
 public sealed class PlatformBackupsController(IBackupService backupService) : ControllerBase
 {
     [HttpGet]
-    public ActionResult<IReadOnlyList<BackupRecord>> List() => Ok(backupService.List());
+    public ActionResult<PlatformPage<BackupRecord>> List(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = PlatformPaging.DefaultPageSize) =>
+        Ok(PlatformPaging.Create(backupService.List(), page, pageSize));
 
     [HttpGet("status")]
     public ActionResult<BackupStatus> Status() => Ok(backupService.GetStatus());

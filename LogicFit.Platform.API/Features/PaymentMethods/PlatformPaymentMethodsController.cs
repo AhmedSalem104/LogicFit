@@ -3,6 +3,7 @@ using LogicFit.Application.Features.Platform.PaymentMethods.Commands.SavePayment
 using LogicFit.Application.Features.Platform.PaymentMethods.DTOs;
 using LogicFit.Application.Features.Platform.PaymentMethods.Queries.GetPaymentMethods;
 using LogicFit.Domain.Authorization;
+using LogicFit.Platform.API.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,11 +23,15 @@ public class PlatformPaymentMethodsController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(List<PaymentMethodDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<PaymentMethodDto>>> Get([FromQuery] bool activeOnly = false)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Get(
+        [FromQuery] bool activeOnly = false,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = PlatformPaging.DefaultPageSize,
+        CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetPaymentMethodsQuery { ActiveOnly = activeOnly });
-        return Ok(result);
+        var result = await _mediator.Send(new GetPaymentMethodsQuery { ActiveOnly = activeOnly }, cancellationToken);
+        return Ok(PlatformPaging.Create(result, page, pageSize));
     }
 
     [HttpPost]

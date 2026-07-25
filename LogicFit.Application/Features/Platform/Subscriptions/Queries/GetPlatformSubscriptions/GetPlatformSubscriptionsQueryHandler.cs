@@ -1,11 +1,12 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogicFit.Application.Features.Platform.Subscriptions.Queries.GetPlatformSubscriptions;
 
 public class GetPlatformSubscriptionsQueryHandler
-    : IRequestHandler<GetPlatformSubscriptionsQuery, List<PlatformSubscriptionDto>>
+    : IRequestHandler<GetPlatformSubscriptionsQuery, PagedResult<PlatformSubscriptionDto>>
 {
     private readonly IApplicationDbContext _context;
 
@@ -14,7 +15,7 @@ public class GetPlatformSubscriptionsQueryHandler
         _context = context;
     }
 
-    public async Task<List<PlatformSubscriptionDto>> Handle(GetPlatformSubscriptionsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<PlatformSubscriptionDto>> Handle(GetPlatformSubscriptionsQuery request, CancellationToken cancellationToken)
     {
         var query = _context.TenantSubscriptions.AsQueryable();
         if (request.Status.HasValue)
@@ -22,7 +23,9 @@ public class GetPlatformSubscriptionsQueryHandler
             query = query.Where(s => s.Status == request.Status.Value);
         }
 
-        return await query
+        var (page, pageSize) = PageRequest.Normalize(request.Page, request.PageSize);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
             .OrderByDescending(s => s.CreatedAt)
             .Select(s => new PlatformSubscriptionDto
             {
@@ -39,6 +42,10 @@ public class GetPlatformSubscriptionsQueryHandler
                 Currency = s.Currency,
                 AutoRenew = s.AutoRenew
             })
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
+
+        return PagedResult<PlatformSubscriptionDto>.Create(items, totalCount, page, pageSize);
     }
 }
