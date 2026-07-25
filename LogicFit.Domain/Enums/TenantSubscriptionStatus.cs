@@ -9,5 +9,6 @@ public enum TenantSubscriptionStatus
     PastDue = 4,
     Suspended = 5,
     Cancelled = 6,
-    Expired = 7
+    Expired = 7,
+    GracePeriod = 8
 }

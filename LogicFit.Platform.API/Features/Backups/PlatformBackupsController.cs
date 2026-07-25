@@ -15,5 +15,17 @@ public sealed class PlatformBackupsController(IBackupService backupService) : Co
 
     [HttpPost]
     public async Task<ActionResult<BackupRecord>> Create(CancellationToken cancellationToken)
-        => Ok(await backupService.CreateAsync(cancellationToken));
+    {
+        try
+        {
+            return Ok(await backupService.CreateAsync(cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "خدمة النسخ الاحتياطي غير مهيأة",
+                detail: ex.Message);
+        }
+    }
 }

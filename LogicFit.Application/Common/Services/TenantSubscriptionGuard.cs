@@ -53,11 +53,15 @@ public class TenantSubscriptionGuard : ITenantSubscriptionGuard
         var subscription = await GetActiveSubscriptionAsync(tenantId, cancellationToken);
         if (subscription == null)
         {
-            return; // Grandfathered: no active plan to enforce.
+            if (!feature.IsFree)
+                throw new SubscriptionLimitException($"The '{featureCode}' feature requires an active subscription.");
+            return;
         }
 
-        var included = await _context.PlanFeatures
-            .AnyAsync(pf => pf.PlanId == subscription.PlanId && pf.FeatureId == feature.Id, cancellationToken);
+        var included = await _context.SubscriptionFeatureSnapshots
+            .AnyAsync(sf => sf.TenantSubscriptionId == subscription.Id && sf.FeatureKey == featureCode && sf.IsEnabled, cancellationToken);
+        if (!included)
+            included = await _context.PlanFeatures.AnyAsync(pf => pf.PlanId == subscription.PlanId && pf.FeatureId == feature.Id, cancellationToken);
         if (!included)
         {
             throw new SubscriptionLimitException($"The '{featureCode}' feature is not included in your current plan.");
@@ -71,7 +75,7 @@ public class TenantSubscriptionGuard : ITenantSubscriptionGuard
         var subscription = await GetActiveSubscriptionAsync(tenantId, cancellationToken);
         if (subscription == null)
         {
-            return; // Grandfathered.
+            throw new SubscriptionLimitException("An active subscription is required for quota-managed resources.");
         }
 
         var plan = await _context.Plans.FirstOrDefaultAsync(p => p.Id == subscription.PlanId, cancellationToken);
@@ -107,7 +111,7 @@ public class TenantSubscriptionGuard : ITenantSubscriptionGuard
         var now = _dateTimeService.UtcNow;
         return await _context.TenantSubscriptions
             .Where(s => s.TenantId == tenantId &&
-                        s.Status == TenantSubscriptionStatus.Active &&
+                        (s.Status == TenantSubscriptionStatus.Active || s.Status == TenantSubscriptionStatus.GracePeriod) &&
                         (s.EndDate == null || s.EndDate > now))
             .OrderByDescending(s => s.EndDate)
             .FirstOrDefaultAsync(cancellationToken);

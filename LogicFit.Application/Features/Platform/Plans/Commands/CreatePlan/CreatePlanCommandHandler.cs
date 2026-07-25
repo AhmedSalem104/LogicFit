@@ -42,7 +42,7 @@ public class CreatePlanCommandHandler : IRequestHandler<CreatePlanCommand, PlanD
         };
         _context.Plans.Add(plan);
 
-        await AttachFeaturesAsync(plan.Id, request.FeatureCodes, cancellationToken);
+        await AttachFeaturesAsync(plan.Id, request.FeatureCodes, request.FeatureLimits, cancellationToken);
 
         await _context.SaveChangesAsync(cancellationToken);
 
@@ -63,10 +63,11 @@ public class CreatePlanCommandHandler : IRequestHandler<CreatePlanCommand, PlanD
             IsActive = plan.IsActive,
             DisplayOrder = plan.DisplayOrder,
             Features = request.FeatureCodes.Distinct().ToList()
+            ,FeatureLimits = request.FeatureLimits
         };
     }
 
-    private async Task AttachFeaturesAsync(Guid planId, List<string> featureCodes, CancellationToken cancellationToken)
+    private async Task AttachFeaturesAsync(Guid planId, List<string> featureCodes, Dictionary<string, int?> limits, CancellationToken cancellationToken)
     {
         if (featureCodes.Count == 0) return;
 
@@ -77,7 +78,8 @@ public class CreatePlanCommandHandler : IRequestHandler<CreatePlanCommand, PlanD
 
         foreach (var featureId in features)
         {
-            _context.PlanFeatures.Add(new PlanFeature { PlanId = planId, FeatureId = featureId });
+            var code = await _context.Features.Where(f => f.Id == featureId).Select(f => f.Code).FirstAsync(cancellationToken);
+            _context.PlanFeatures.Add(new PlanFeature { PlanId = planId, FeatureId = featureId, LimitValue = limits.TryGetValue(code, out var value) ? value : null });
         }
     }
 }
