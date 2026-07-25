@@ -19,4 +19,5 @@ public class PlanDto
     public bool IsActive { get; set; }
     public int DisplayOrder { get; set; }
     public List<string> Features { get; set; } = new();
+    public Dictionary<string, int?> FeatureLimits { get; set; } = new();
 }

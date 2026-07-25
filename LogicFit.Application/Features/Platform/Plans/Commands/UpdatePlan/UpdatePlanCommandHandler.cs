@@ -63,7 +63,14 @@ public class UpdatePlanCommandHandler : IRequestHandler<UpdatePlanCommand, PlanD
         var currentFeatureIds = plan.PlanFeatures.Select(pf => pf.FeatureId).ToHashSet();
         foreach (var featureId in desiredFeatureIds.Where(id => !currentFeatureIds.Contains(id)))
         {
-            _context.PlanFeatures.Add(new PlanFeature { PlanId = plan.Id, FeatureId = featureId });
+            var code = await _context.Features.Where(f => f.Id == featureId).Select(f => f.Code).FirstAsync(cancellationToken);
+            _context.PlanFeatures.Add(new PlanFeature { PlanId = plan.Id, FeatureId = featureId, LimitValue = request.FeatureLimits.TryGetValue(code, out var limit) ? limit : null });
+        }
+
+        foreach (var feature in plan.PlanFeatures)
+        {
+            var code = await _context.Features.Where(f => f.Id == feature.FeatureId).Select(f => f.Code).FirstAsync(cancellationToken);
+            feature.LimitValue = request.FeatureLimits.TryGetValue(code, out var limit) ? limit : null;
         }
 
         await _context.SaveChangesAsync(cancellationToken);
@@ -84,7 +91,8 @@ public class UpdatePlanCommandHandler : IRequestHandler<UpdatePlanCommand, PlanD
             MaxStorageMB = plan.MaxStorageMB,
             IsActive = plan.IsActive,
             DisplayOrder = plan.DisplayOrder,
-            Features = request.FeatureCodes.Distinct().ToList()
+            Features = request.FeatureCodes.Distinct().ToList(),
+            FeatureLimits = request.FeatureLimits
         };
     }
 }

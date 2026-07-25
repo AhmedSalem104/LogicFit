@@ -1,6 +1,6 @@
 # LogicFit Project Status
 
-Last reviewed: 2026-07-23
+Last reviewed: 2026-07-25
 
 ## Executive summary
 
@@ -100,6 +100,13 @@ flowchart LR
 - The supplied publish profile targets the Platform API site `site78301` only.
 - GitHub Clone-to-`/wwwroot` is not used: it clones source files and cannot safely host the two independent ASP.NET Core API processes in one directory.
 - The supported current operation is manual Visual Studio/WebDeploy publishing. Automatic CD can be revisited after the hosting topology, tenant target, backup, migration, rollback, and health URLs are explicitly defined.
+
+### Platform administration API remediation (2026-07-25)
+
+- `GET /api/platform/dashboard` returns `401` only when the dashboard has no valid platform JWT; the endpoint returns `200` with a valid Platform Owner token.
+- `GET /api/platform/plans` now materializes plan features before constructing `FeatureLimits`. A SQL-translated projection cannot construct a CLR `Dictionary`, which previously caused a server-side `500`.
+- `GET /api/platform/operations/jobs`, `/operations/outbox`, and `/alerts` require the `JobExecutionLogs` and `OutboxMessages` tables introduced by migration `20260725115322_AddOutboxAndJobExecution`. A `500` on all three endpoints indicates that the migration was applied to a different database/site or the running Platform host uses a different connection string; apply and verify the migration against the database configured for `https://logicfit-saas.runasp.net`.
+- Backup listing is available when `Backup:Directory` is configured. A manual backup request intentionally returns `503` when that directory is absent or the SQL Server service cannot write the requested `.bak` file; configure a SQL Server-writable directory and enable the scheduled job only after validating permissions.
 
 ## Repository decomposition
 

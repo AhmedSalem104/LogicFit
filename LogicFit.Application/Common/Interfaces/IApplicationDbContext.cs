@@ -83,13 +83,18 @@ public interface IApplicationDbContext
     DbSet<RolePermission> RolePermissions { get; }
     DbSet<UserRoleAssignment> UserRoleAssignments { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
+    DbSet<OutboxMessage> OutboxMessages { get; }
+    DbSet<JobExecutionLog> JobExecutionLogs { get; }
 
     // SaaS billing (platform-owned)
     DbSet<Plan> Plans { get; }
     DbSet<Feature> Features { get; }
+    DbSet<FeatureDependency> FeatureDependencies { get; }
+    DbSet<FeatureQuotaDefinition> FeatureQuotaDefinitions { get; }
     DbSet<PlanFeature> PlanFeatures { get; }
     DbSet<TenantSubscription> TenantSubscriptions { get; }
     DbSet<TenantFeature> TenantFeatures { get; }
+    DbSet<SubscriptionFeatureSnapshot> SubscriptionFeatureSnapshots { get; }
     DbSet<TenantPaymentMethod> TenantPaymentMethods { get; }
     DbSet<PaymentRequest> PaymentRequests { get; }
     DbSet<SubscriptionPayment> SubscriptionPayments { get; }

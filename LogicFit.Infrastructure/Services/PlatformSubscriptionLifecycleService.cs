@@ -46,15 +46,46 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var usageCalculator = scope.ServiceProvider.GetRequiredService<ITenantUsageCalculator>();
                 var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+                var execution = new JobExecutionLog
+                {
+                    JobName = nameof(PlatformSubscriptionLifecycleService),
+                    Status = "Running",
+                    StartedAtUtc = DateTime.UtcNow,
+                    AttemptCount = 1
+                };
+                context.JobExecutionLogs.Add(execution);
+                await context.SaveChangesAsync(stoppingToken);
 
                 await TransitionSubscriptionsAsync(context, notificationService, stoppingToken);
                 await SendExpiryRemindersAsync(context, notificationService, stoppingToken);
                 await ExpireStalePaymentRequestsAsync(context, stoppingToken);
                 await RecalculateUsageAsync(context, usageCalculator, stoppingToken);
+                execution.Status = "Completed";
+                execution.CompletedAtUtc = DateTime.UtcNow;
+                await context.SaveChangesAsync(stoppingToken);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in PlatformSubscriptionLifecycleService");
+                try
+                {
+                    using var failureScope = _scopeFactory.CreateScope();
+                    var failureContext = failureScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    failureContext.JobExecutionLogs.Add(new JobExecutionLog
+                    {
+                        JobName = nameof(PlatformSubscriptionLifecycleService),
+                        Status = "Failed",
+                        StartedAtUtc = DateTime.UtcNow,
+                        CompletedAtUtc = DateTime.UtcNow,
+                        AttemptCount = 1,
+                        Error = ex.Message
+                    });
+                    await failureContext.SaveChangesAsync(stoppingToken);
+                }
+                catch (Exception logEx)
+                {
+                    _logger.LogError(logEx, "Unable to record failed platform job execution");
+                }
             }
 
             await Task.Delay(_period, stoppingToken);
@@ -100,6 +131,13 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
             {
                 sub.Status = TenantSubscriptionStatus.PastDue;
                 if (tenant != null) tenant.Status = TenantStatus.PastDue;
+                context.OutboxMessages.Add(new OutboxMessage
+                {
+                    Type = "tenant.subscription.past_due",
+                    Payload = $"{{\"tenantId\":\"{sub.TenantId}\",\"subscriptionId\":\"{sub.Id}\"}}",
+                    OccurredAtUtc = now,
+                    IdempotencyKey = $"subscription:{sub.Id}:past-due:{now:yyyyMMdd}"
+                });
                 pastDue++;
                 continue;
             }
@@ -117,9 +155,14 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
                         tenant.Status = TenantStatus.Suspended;
                         tenant.SuspensionReason = SuspensionReason.NonPayment;
                     }
+                    context.OutboxMessages.Add(new OutboxMessage
+                    {
+                        Type = "tenant.subscription.expired",
+                        Payload = $"{{\"tenantId\":\"{sub.TenantId}\",\"subscriptionId\":\"{sub.Id}\"}}",
+                        OccurredAtUtc = now,
+                        IdempotencyKey = $"subscription:{sub.Id}:expired:{now:yyyyMMdd}"
+                    });
                     suspended++;
-                    await notificationService.NotifyTenantOwnerAsync(
-                        sub.TenantId, NotificationTemplates.TenantSuspended, null, cancellationToken);
                 }
             }
         }

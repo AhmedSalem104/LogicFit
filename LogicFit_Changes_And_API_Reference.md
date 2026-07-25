@@ -287,7 +287,10 @@ SELECT IDENT_CURRENT('Foods') AS CurrentIdentity;
 
 ### Base URL
 ```
-http://localhost:5026/api
+Production (Tenant API):    https://logicfit.runasp.net/api
+Production (Platform API):  https://logicfit-platform.runasp.net/api/platform
+Local dev  (Tenant API):    http://localhost:5026/api
+Local dev  (Platform API):  http://localhost:51127/api/platform
 ```
 
 ### Headers
