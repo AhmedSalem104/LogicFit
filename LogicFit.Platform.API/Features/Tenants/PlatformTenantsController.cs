@@ -23,10 +23,14 @@ public class PlatformTenantsController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(List<PlatformTenantDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<PlatformTenantDto>>> GetTenants([FromQuery] TenantStatus? status)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetTenants(
+        [FromQuery] TenantStatus? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetPlatformTenantsQuery { Status = status });
+        var result = await _mediator.Send(new GetPlatformTenantsQuery { Status = status, Page = page, PageSize = pageSize }, cancellationToken);
         return Ok(result);
     }
 

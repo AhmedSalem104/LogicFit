@@ -24,10 +24,14 @@ public class PlatformSubscriptionsController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(List<PlatformSubscriptionDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<PlatformSubscriptionDto>>> GetSubscriptions([FromQuery] TenantSubscriptionStatus? status)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetSubscriptions(
+        [FromQuery] TenantSubscriptionStatus? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetPlatformSubscriptionsQuery { Status = status });
+        var result = await _mediator.Send(new GetPlatformSubscriptionsQuery { Status = status, Page = page, PageSize = pageSize }, cancellationToken);
         return Ok(result);
     }
 

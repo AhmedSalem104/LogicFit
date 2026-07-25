@@ -16,7 +16,7 @@
 **Two-tier SaaS platform** — a central console for the operator and an isolated, white-labeled app for every gym.
 Clean Architecture · CQRS · Dynamic RBAC · Manual-billing subscription engine.
 
-[Highlights](#-whats-new) · [Features](#-features) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Billing Model](#-saas-billing-model) · [Deployment](#-deployment)
+[Highlights](#-whats-new) · [Features](#-features) · [Architecture](#-architecture) · [Documentation](#-documentation-center) · [Quick Start](#-quick-start) · [Billing Model](#-saas-billing-model) · [Deployment](#-deployment)
 
 ---
 
@@ -66,15 +66,18 @@ flowchart LR
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Trial
-    Trial --> PendingPayment: Select/upgrade/renew plan
-    PendingPayment --> PaymentSubmitted: Upload proof
-    PaymentSubmitted --> Active: Operator approves
-    PaymentSubmitted --> PendingPayment: Operator rejects
-    Active --> PastDue: Expiry/lifecycle job
-    PastDue --> Active: Renewal approved
-    PastDue --> Suspended: Grace period ends
-    Suspended --> Active: Operator reactivates
+    [*] --> PendingPayment
+    PendingPayment --> Active: Payment approved / activate
+    PendingPayment --> PendingPayment: Payment rejected
+    Active --> Grace: EndDate reached when policy allows
+    Active --> Expired: EndDate reached without grace
+    Grace --> Expired: Grace ends
+    Expired --> Active: Renew/upgrade approved
+    Active --> Suspended: Administrative suspension
+    Grace --> Suspended: Administrative suspension
+    Suspended --> Active: Administrative activation
+    Active --> Cancelled: Cancel renewal
+    Cancelled --> Expired: EndDate reached
 ```
 
 ## Overview
@@ -100,7 +103,7 @@ Both APIs are built on **Clean Architecture** with **CQRS + MediatR**, secured b
 - **Manual billing** — gym owners upload a payment proof, the operator approves it, and the subscription activates in a single atomic transaction (designed to drop in a payment gateway later, no rebuild).
 - **Feature gating & usage limits** — enforced centrally via a MediatR pipeline behavior with live counts.
 - **White-label & custom domains** — per-gym branding served publicly for pre-login theming.
-- **Automated lifecycle** — background jobs handle trial/expiry → past-due → suspension, reminders, and usage rollups.
+- **Automated lifecycle** — background jobs handle expiry, grace, suspension, reminders, and usage rollups idempotently.
 - **Notifications** — in-app + pluggable email channel wired into billing events.
 - **Production-ready** — health checks, Docker, GitHub Actions CI, and an xUnit test project.
 - **Hardened security** — refresh-token rotation & revocation, secrets out of source control, tenant-isolation guards, and no privilege escalation on public registration.
@@ -242,7 +245,7 @@ Operator: review → Approve ─────────┼─ atomic: activate/
 
 - **Plans** carry price, billing cycle, and limits (`MaxMembers/Coaches/Branches/Employees`, `null = unlimited`) plus feature codes.
 - **Feature gating & limits** are enforced before create operations via a MediatR behavior using **live counts**; gyms without an active plan are grandfathered. Violations return **HTTP 402**.
-- **Lifecycle jobs** (daily) move subscriptions trial/active → past-due → suspended, send expiry reminders, expire stale payment requests, and refresh the usage cache.
+- **Lifecycle jobs** process expiry/grace/suspension transitions, send reminders, expire stale payment requests, and refresh usage safely with idempotent execution.
 
 ---
 
@@ -303,6 +306,37 @@ dotnet run --project LogicFit.Platform.API   # Platform API
 **Health check**: `GET /health` on either API.
 
 ---
+
+## Documentation Center
+
+The written project hand-off lives in [`docs/README.md`](docs/README.md). It is maintained
+with the code and covers the product, onboarding and billing flows, users/permissions,
+all Platform dashboard screens, API route inventory, SaaS data invariants, tenant-app
+workspaces, operations, deployment, rollback, and the dashboard design system.
+
+```mermaid
+flowchart LR
+    Code[Code / Tests / Migrations] --> Docs[docs/README.md]
+    Docs --> Product[Product & flows]
+    Docs --> Admin[Platform screens & permissions]
+    Docs --> API[API contracts]
+    Docs --> Data[SaaS data invariants]
+    Docs --> Ops[Operations & deployment]
+    Admin --> Dashboard[Angular Platform Dashboard]
+```
+
+| Start here | Purpose |
+|---|---|
+| [Product and flows](docs/PRODUCT-AND-FLOWS.md) | SaaS onboarding, manual billing, subscriptions, features, backups. |
+| [Users and permissions](docs/USERS-AND-PERMISSIONS.md) | Platform and gym roles, policies, tenant isolation. |
+| [Platform admin guide](docs/PLATFORM-ADMIN-GUIDE.md) | Every platform-admin screen and safe operational action. |
+| [API reference](docs/API-REFERENCE.md) | Platform and tenant routes, auth, pagination, HTTP behavior. |
+| [SaaS domain and data](docs/SAAS-DOMAIN-AND-DATA.md) | Snapshots, invoices, Outbox, jobs, state and concurrency rules. |
+| [Tenant app guide](docs/TENANT-APPLICATION-GUIDE.md) | Owner, staff, coach and client workspaces. |
+| [Operations and deployment](docs/OPERATIONS-AND-DEPLOYMENT.md) | Secrets, backup, migration, health, incident response and rollback. |
+
+The administrative dashboard also exposes this reference inside the authenticated UI at
+`/documentation`, with Arabic search and direct screen links.
 
 ## API Documentation
 

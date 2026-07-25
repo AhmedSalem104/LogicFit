@@ -41,9 +41,8 @@ public sealed class UpsertFeatureCommandHandler(IApplicationDbContext context)
             feature = new Feature { Code = code };
             context.Features.Add(feature);
         }
-        else if (!string.Equals(feature.Code, code, StringComparison.OrdinalIgnoreCase) &&
-                 await context.Features.AnyAsync(f => f.Code == code && f.Id != feature.Id, cancellationToken))
-            throw new InvalidOperationException("Feature code already exists.");
+        else if (!string.Equals(feature.Code, code, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Feature code is immutable after creation.");
 
         feature.Code = code;
         feature.Name = string.IsNullOrWhiteSpace(request.NameEn) ? request.Name : request.NameEn!;
@@ -56,6 +55,12 @@ public sealed class UpsertFeatureCommandHandler(IApplicationDbContext context)
         feature.SupportsQuota = request.SupportsQuota;
         feature.Status = request.Status;
         await context.SaveChangesAsync(cancellationToken);
-        return new FeatureDto { Id = feature.Id, Code = feature.Code, Name = feature.Name, Description = feature.Description, IsActive = feature.IsActive };
+        return new FeatureDto
+        {
+            Id = feature.Id, Code = feature.Code, Name = feature.Name,
+            NameAr = feature.NameAr, NameEn = feature.NameEn, Description = feature.Description,
+            Module = feature.Module, IsFree = feature.IsFree, IsActive = feature.IsActive,
+            SupportsQuota = feature.SupportsQuota, Status = feature.Status
+        };
     }
 }
