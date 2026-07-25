@@ -23,6 +23,11 @@ public sealed class PlatformRolesController(IApplicationDbContext context) : Con
         return Ok(roles);
     }
 
+    [HttpGet("permissions")]
+    public async Task<IActionResult> Permissions(CancellationToken cancellationToken)
+        => Ok(await context.Permissions.AsNoTracking().OrderBy(x => x.Category).ThenBy(x => x.Code)
+            .Select(x => new { x.Code, x.DisplayName, x.Category, x.IsPlatformPermission }).ToListAsync(cancellationToken));
+
     [HttpPut("{id:guid}/permissions")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateRolePermissionsRequest request, CancellationToken cancellationToken)
     {
