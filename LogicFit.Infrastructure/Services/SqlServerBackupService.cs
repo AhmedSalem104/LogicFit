@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.SqlServer.Dac;
+using System.Text.RegularExpressions;
 
 namespace LogicFit.Infrastructure.Services;
 
@@ -15,6 +16,10 @@ namespace LogicFit.Infrastructure.Services;
 public sealed class SqlServerBackupService : IBackupService
 {
     private const string BackupSearchPattern = "*.bacpac";
+    private static readonly Regex BackupFileNamePattern = new(
+        "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}-\\d{8}-\\d{6}\\.bacpac$",
+        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase,
+        TimeSpan.FromSeconds(1));
     private readonly IConfiguration _configuration;
     private readonly IHostEnvironment _environment;
     private readonly ILogger<SqlServerBackupService> _logger;
@@ -77,6 +82,44 @@ public sealed class SqlServerBackupService : IBackupService
         {
             _logger.LogWarning("The private backup storage cannot be inspected.");
             return new BackupStatus(true, false, "BACPAC", retentionDays, runAtUtc, 0, "تعذر الوصول إلى مساحة التخزين الخاصة بالنسخ الاحتياطي.");
+        }
+    }
+
+    public BackupDownload OpenRead(string fileName)
+    {
+        if (!TryGetSettings(out var settings, out var reason))
+        {
+            throw new InvalidOperationException(reason);
+        }
+
+        if (!IsSafeBackupFileName(fileName))
+        {
+            throw new FileNotFoundException("Backup file was not found.");
+        }
+
+        var path = Path.Combine(settings.StorageDirectory, fileName);
+        try
+        {
+            var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 64 * 1024, useAsync: true);
+            return new BackupDownload(fileName, stream.Length, stream);
+        }
+        catch (FileNotFoundException)
+        {
+            throw;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            throw new FileNotFoundException("Backup file was not found.");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _logger.LogWarning("A private BACPAC download was requested while storage was unavailable.");
+            throw new InvalidOperationException("تعذر الوصول إلى مساحة التخزين الخاصة بالنسخ الاحتياطي.");
+        }
+        catch (IOException)
+        {
+            _logger.LogWarning("A private BACPAC download could not be opened.");
+            throw new InvalidOperationException("تعذر فتح النسخة الاحتياطية المطلوبة.");
         }
     }
 
@@ -240,6 +283,11 @@ public sealed class SqlServerBackupService : IBackupService
     }
 
     private static string Sanitize(string value) => string.Concat(value.Select(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_' ? ch : '_'));
+
+    private static bool IsSafeBackupFileName(string fileName) =>
+        !string.IsNullOrWhiteSpace(fileName)
+        && string.Equals(fileName, Path.GetFileName(fileName), StringComparison.Ordinal)
+        && BackupFileNamePattern.IsMatch(fileName);
 
     private sealed record BackupSettings(
         string ConnectionString,

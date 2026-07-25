@@ -16,6 +16,31 @@ public sealed class PlatformBackupsController(IBackupService backupService) : Co
     [HttpGet("status")]
     public ActionResult<BackupStatus> Status() => Ok(backupService.GetStatus());
 
+    [HttpGet("{fileName}/download")]
+    public IActionResult Download(string fileName)
+    {
+        try
+        {
+            var backup = backupService.OpenRead(fileName);
+            return File(backup.Content, "application/octet-stream", backup.FileName, enableRangeProcessing: false);
+        }
+        catch (FileNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ArgumentException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "خدمة النسخ الاحتياطي غير متاحة",
+                detail: ex.Message);
+        }
+    }
+
     [HttpPost]
     public async Task<ActionResult<BackupRecord>> Create(CancellationToken cancellationToken)
     {
