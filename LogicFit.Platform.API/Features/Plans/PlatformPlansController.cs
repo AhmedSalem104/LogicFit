@@ -4,6 +4,7 @@ using LogicFit.Application.Features.Platform.Plans.Commands.UpdatePlan;
 using LogicFit.Application.Features.Platform.Plans.DTOs;
 using LogicFit.Application.Features.Platform.Plans.Queries.GetPlans;
 using LogicFit.Domain.Authorization;
+using LogicFit.Platform.API.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,11 +24,15 @@ public class PlatformPlansController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(List<PlanDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<PlanDto>>> GetPlans([FromQuery] bool activeOnly = false)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPlans(
+        [FromQuery] bool activeOnly = false,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = PlatformPaging.DefaultPageSize,
+        CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetPlansQuery { ActiveOnly = activeOnly });
-        return Ok(result);
+        var result = await _mediator.Send(new GetPlansQuery { ActiveOnly = activeOnly }, cancellationToken);
+        return Ok(PlatformPaging.Create(result, page, pageSize));
     }
 
     [HttpPost]

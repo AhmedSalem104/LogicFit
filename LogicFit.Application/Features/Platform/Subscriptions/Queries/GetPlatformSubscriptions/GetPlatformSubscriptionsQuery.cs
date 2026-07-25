@@ -1,11 +1,14 @@
+using LogicFit.Application.Common.Models;
 using LogicFit.Domain.Enums;
 using MediatR;
 
 namespace LogicFit.Application.Features.Platform.Subscriptions.Queries.GetPlatformSubscriptions;
 
-public class GetPlatformSubscriptionsQuery : IRequest<List<PlatformSubscriptionDto>>
+public class GetPlatformSubscriptionsQuery : IRequest<PagedResult<PlatformSubscriptionDto>>
 {
     public TenantSubscriptionStatus? Status { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = PageRequest.DefaultPageSize;
 }
 
 public class PlatformSubscriptionDto

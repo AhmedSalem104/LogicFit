@@ -7,6 +7,7 @@ using LogicFit.Application.Features.Platform.Features.Commands.UpsertQuotaDefini
 using LogicFit.Application.Features.Platform.Features.Commands.SetFeatureDependency;
 using LogicFit.Application.Features.Platform.Features.Queries.GetFeatureDependencies;
 using LogicFit.Domain.Authorization;
+using LogicFit.Platform.API.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,11 +27,14 @@ public class PlatformFeaturesController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(List<FeatureDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<FeatureDto>>> GetFeatures()
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetFeatures(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = PlatformPaging.DefaultPageSize,
+        CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetFeaturesQuery());
-        return Ok(result);
+        var result = await _mediator.Send(new GetFeaturesQuery(), cancellationToken);
+        return Ok(PlatformPaging.Create(result, page, pageSize));
     }
 
     [HttpPost]
@@ -52,12 +56,19 @@ public class PlatformFeaturesController : ControllerBase
         => Ok(await _mediator.Send(command));
 
     [HttpGet("tenant-overrides")]
-    public async Task<ActionResult<List<TenantFeatureOverrideDto>>> GetTenantOverrides([FromQuery] Guid? tenantId)
-        => Ok(await _mediator.Send(new GetTenantOverridesQuery { TenantId = tenantId }));
+    public async Task<IActionResult> GetTenantOverrides(
+        [FromQuery] Guid? tenantId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = PlatformPaging.DefaultPageSize,
+        CancellationToken cancellationToken = default)
+        => Ok(PlatformPaging.Create(await _mediator.Send(new GetTenantOverridesQuery { TenantId = tenantId }, cancellationToken), page, pageSize));
 
     [HttpGet("quota-definitions")]
-    public async Task<ActionResult<List<FeatureQuotaDefinitionDto>>> GetQuotaDefinitions()
-        => Ok(await _mediator.Send(new GetQuotaDefinitionsQuery()));
+    public async Task<IActionResult> GetQuotaDefinitions(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = PlatformPaging.DefaultPageSize,
+        CancellationToken cancellationToken = default)
+        => Ok(PlatformPaging.Create(await _mediator.Send(new GetQuotaDefinitionsQuery(), cancellationToken), page, pageSize));
 
     [HttpPost("quota-definitions")]
     public async Task<ActionResult<Guid>> CreateQuotaDefinition([FromBody] UpsertQuotaDefinitionCommand command)
@@ -68,10 +79,20 @@ public class PlatformFeaturesController : ControllerBase
         => Ok(await _mediator.Send(new UpsertQuotaDefinitionCommand { Id = id, FeatureId = command.FeatureId, ResourceKey = command.ResourceKey, Unit = command.Unit, DefaultLimit = command.DefaultLimit, IsActive = command.IsActive }));
 
     [HttpGet("dependencies")]
-    public async Task<ActionResult<List<FeatureDependencyDto>>> GetDependencies()
-        => Ok(await _mediator.Send(new GetFeatureDependenciesQuery()));
+    public async Task<IActionResult> GetDependencies(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = PlatformPaging.DefaultPageSize,
+        CancellationToken cancellationToken = default)
+        => Ok(PlatformPaging.Create(await _mediator.Send(new GetFeatureDependenciesQuery(), cancellationToken), page, pageSize));
 
     [HttpPost("dependencies")]
     public async Task<ActionResult<Guid>> SetDependency([FromBody] SetFeatureDependencyCommand command)
         => Ok(await _mediator.Send(command));
+
+    [HttpDelete("dependencies/{id:guid}")]
+    public async Task<IActionResult> DeleteDependency(Guid id, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(new DeleteFeatureDependencyCommand(id), cancellationToken);
+        return NoContent();
+    }
 }

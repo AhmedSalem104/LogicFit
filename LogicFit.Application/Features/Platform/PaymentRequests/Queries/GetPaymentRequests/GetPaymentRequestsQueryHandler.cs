@@ -1,11 +1,12 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Models;
 using LogicFit.Application.Features.Platform.PaymentRequests.DTOs;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogicFit.Application.Features.Platform.PaymentRequests.Queries.GetPaymentRequests;
 
-public class GetPaymentRequestsQueryHandler : IRequestHandler<GetPaymentRequestsQuery, List<PaymentRequestDto>>
+public class GetPaymentRequestsQueryHandler : IRequestHandler<GetPaymentRequestsQuery, PagedResult<PaymentRequestDto>>
 {
     private readonly IApplicationDbContext _context;
 
@@ -14,7 +15,7 @@ public class GetPaymentRequestsQueryHandler : IRequestHandler<GetPaymentRequests
         _context = context;
     }
 
-    public async Task<List<PaymentRequestDto>> Handle(GetPaymentRequestsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<PaymentRequestDto>> Handle(GetPaymentRequestsQuery request, CancellationToken cancellationToken)
     {
         var query = _context.PaymentRequests.AsQueryable();
         if (request.Status.HasValue)
@@ -22,7 +23,9 @@ public class GetPaymentRequestsQueryHandler : IRequestHandler<GetPaymentRequests
             query = query.Where(p => p.Status == request.Status.Value);
         }
 
-        return await query
+        var (page, pageSize) = PageRequest.Normalize(request.Page, request.PageSize);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
             .OrderByDescending(p => p.CreatedAt)
             .Select(p => new PaymentRequestDto
             {
@@ -46,6 +49,10 @@ public class GetPaymentRequestsQueryHandler : IRequestHandler<GetPaymentRequests
                 RejectReason = p.RejectReason,
                 CreatedAt = p.CreatedAt
             })
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
+
+        return PagedResult<PaymentRequestDto>.Create(items, totalCount, page, pageSize);
     }
 }

@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Models;
 using LogicFit.Application.Features.Platform.Tenants.DTOs;
 using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Enums;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LogicFit.Application.Features.Platform.Tenants.Queries.GetPlatformTenants;
 
-public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenantsQuery, List<PlatformTenantDto>>
+public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenantsQuery, PagedResult<PlatformTenantDto>>
 {
     private readonly IApplicationDbContext _context;
 
@@ -16,7 +17,7 @@ public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenants
         _context = context;
     }
 
-    public async Task<List<PlatformTenantDto>> Handle(GetPlatformTenantsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedResult<PlatformTenantDto>> Handle(GetPlatformTenantsQuery request, CancellationToken cancellationToken)
     {
         // Platform reads across all tenants (CurrentTenantId is null), excluding the sentinel tenant.
         var query = _context.Tenants
@@ -27,7 +28,9 @@ public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenants
             query = query.Where(t => t.Status == request.Status.Value);
         }
 
-        return await query
+        var (page, pageSize) = PageRequest.Normalize(request.Page, request.PageSize);
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query
             .OrderByDescending(t => t.CreatedAt)
             .Select(t => new PlatformTenantDto
             {
@@ -43,6 +46,10 @@ public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenants
                     .Count(u => u.TenantId == t.Id && u.Role == UserRole.Client && !u.IsDeleted),
                 CreatedAt = t.CreatedAt
             })
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(cancellationToken);
+
+        return PagedResult<PlatformTenantDto>.Create(items, totalCount, page, pageSize);
     }
 }

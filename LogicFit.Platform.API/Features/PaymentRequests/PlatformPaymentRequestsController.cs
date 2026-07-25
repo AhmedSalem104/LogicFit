@@ -23,10 +23,14 @@ public class PlatformPaymentRequestsController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(List<PaymentRequestDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<PaymentRequestDto>>> Get([FromQuery] PaymentRequestStatus? status)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Get(
+        [FromQuery] PaymentRequestStatus? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var result = await _mediator.Send(new GetPaymentRequestsQuery { Status = status });
+        var result = await _mediator.Send(new GetPaymentRequestsQuery { Status = status, Page = page, PageSize = pageSize }, cancellationToken);
         return Ok(result);
     }
 

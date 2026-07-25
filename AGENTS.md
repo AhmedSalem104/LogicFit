@@ -75,3 +75,12 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 - Production CD is manual and protected until Monster ASP deployment details and secrets are configured.
 - Current verification baseline: 53 passing tests; three pre-existing nullable warnings remain.
 - Establish `develop` as the protected integration branch; require task-branch Pull Requests and passing CI for all merges.
+
+### 2026-07-25
+
+- Platform administration collection APIs use the one-based `{ items, totalCount, page, pageSize, totalPages }` pagination contract; page size is bounded to 100.
+- Preserve immutable financial and operational history: do not add generic edit/delete APIs to invoices, audit logs, backup records, Outbox records, jobs, or payment requests.
+- Use lifecycle commands for tenants, subscriptions, administrators, plans in use, and feature overrides; destructive deletion is limited to safe configuration records such as a feature dependency.
+- The Angular dashboard must use the shared server paginator for each collection screen rather than local pagination of an unbounded API response.
+- The documentation index at `docs/README.md` is the required written hand-off for product flows, permissions, Platform screens, API contracts, domain data, tenant application, and operations; update the affected document in every future change.
+- The Platform dashboard assistant is a local, permission-filtered operational guide. It must not invoke a mutation directly, expose secrets, or claim an external LLM integration unless a server-side, reviewed integration is actually added.

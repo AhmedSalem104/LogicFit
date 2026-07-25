@@ -40,3 +40,20 @@ public sealed class SetFeatureDependencyHandler(IApplicationDbContext context) :
         return entity.Id;
     }
 }
+
+/// <summary>
+/// Removes a configuration edge only. Historical subscription snapshots remain untouched.
+/// </summary>
+public sealed record DeleteFeatureDependencyCommand(Guid Id) : IRequest;
+
+public sealed class DeleteFeatureDependencyHandler(IApplicationDbContext context)
+    : IRequestHandler<DeleteFeatureDependencyCommand>
+{
+    public async Task Handle(DeleteFeatureDependencyCommand request, CancellationToken cancellationToken)
+    {
+        var entity = await context.FeatureDependencies.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken)
+            ?? throw new KeyNotFoundException("Feature dependency not found.");
+        context.FeatureDependencies.Remove(entity);
+        await context.SaveChangesAsync(cancellationToken);
+    }
+}

@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Authorization;
+using LogicFit.Platform.API.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,14 +14,13 @@ public sealed class PlatformRolesController(IApplicationDbContext context) : Con
 {
     public sealed record UpdateRolePermissionsRequest(IReadOnlyList<string> PermissionCodes);
     [HttpGet]
-    public async Task<IActionResult> List(CancellationToken cancellationToken)
+    public async Task<IActionResult> List([FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize, CancellationToken cancellationToken = default)
     {
-        var roles = await context.AppRoles.AsNoTracking()
+        var roles = context.AppRoles.AsNoTracking()
             .Include(x => x.RolePermissions).ThenInclude(x => x.Permission)
             .OrderBy(x => x.Name)
-            .Select(x => new { x.Id, x.Name, Permissions = x.RolePermissions.Select(p => p.Permission.Code).OrderBy(c => c).ToList() })
-            .ToListAsync(cancellationToken);
-        return Ok(roles);
+            .Select(x => new { x.Id, x.Name, Permissions = x.RolePermissions.Select(p => p.Permission.Code).OrderBy(c => c).ToList() });
+        return Ok(await PlatformPaging.CreateAsync(roles, page, pageSize, cancellationToken));
     }
 
     [HttpGet("permissions")]

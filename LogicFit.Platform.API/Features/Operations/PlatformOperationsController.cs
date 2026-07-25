@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Authorization;
+using LogicFit.Platform.API.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,18 +13,16 @@ namespace LogicFit.Platform.API.Features.Operations;
 public sealed class PlatformOperationsController(IApplicationDbContext context) : ControllerBase
 {
     [HttpGet("outbox")]
-    public async Task<IActionResult> GetOutbox([FromQuery] int take = 100, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetOutbox([FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize, CancellationToken cancellationToken = default)
     {
-        take = Math.Clamp(take, 1, 200);
-        var items = await context.OutboxMessages.AsNoTracking().OrderByDescending(x => x.OccurredAtUtc).Take(take).ToListAsync(cancellationToken);
-        return Ok(items);
+        var query = context.OutboxMessages.AsNoTracking().OrderByDescending(x => x.OccurredAtUtc);
+        return Ok(await PlatformPaging.CreateAsync(query, page, pageSize, cancellationToken));
     }
 
     [HttpGet("jobs")]
-    public async Task<IActionResult> GetJobs([FromQuery] int take = 100, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> GetJobs([FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize, CancellationToken cancellationToken = default)
     {
-        take = Math.Clamp(take, 1, 200);
-        var items = await context.JobExecutionLogs.AsNoTracking().OrderByDescending(x => x.StartedAtUtc).Take(take).ToListAsync(cancellationToken);
-        return Ok(items);
+        var query = context.JobExecutionLogs.AsNoTracking().OrderByDescending(x => x.StartedAtUtc);
+        return Ok(await PlatformPaging.CreateAsync(query, page, pageSize, cancellationToken));
     }
 }
