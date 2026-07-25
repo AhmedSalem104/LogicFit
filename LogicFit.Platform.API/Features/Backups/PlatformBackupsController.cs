@@ -13,6 +13,9 @@ public sealed class PlatformBackupsController(IBackupService backupService) : Co
     [HttpGet]
     public ActionResult<IReadOnlyList<BackupRecord>> List() => Ok(backupService.List());
 
+    [HttpGet("status")]
+    public ActionResult<BackupStatus> Status() => Ok(backupService.GetStatus());
+
     [HttpPost]
     public async Task<ActionResult<BackupRecord>> Create(CancellationToken cancellationToken)
     {
