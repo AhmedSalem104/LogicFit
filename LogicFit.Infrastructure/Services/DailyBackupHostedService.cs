@@ -9,7 +9,8 @@ namespace LogicFit.Infrastructure.Services;
 public sealed class DailyBackupHostedService(
     IServiceScopeFactory scopeFactory,
     IConfiguration configuration,
-    ILogger<DailyBackupHostedService> logger) : BackgroundService
+    ILogger<DailyBackupHostedService> logger,
+    TimeProvider timeProvider) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -18,10 +19,10 @@ public sealed class DailyBackupHostedService(
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            var now = DateTime.UtcNow;
-            var next = now.Date.Add(runAt);
-            if (next <= now) next = next.AddDays(1);
-            await Task.Delay(next - now, stoppingToken);
+            var now = timeProvider.GetUtcNow();
+            var next = now.UtcDateTime.Date.Add(runAt);
+            if (next <= now.UtcDateTime) next = next.AddDays(1);
+            await Task.Delay(next - now.UtcDateTime, stoppingToken);
 
             try
             {
