@@ -74,6 +74,16 @@ public class GetGymProfileQueryHandler : IRequestHandler<GetGymProfileQuery, Gym
             {
                 PrimaryColor = tenant.BrandingSettings.PrimaryColor,
                 SecondaryColor = tenant.BrandingSettings.SecondaryColor,
+                AccentColor = tenant.BrandingSettings.AccentColor,
+                BackgroundColor = tenant.BrandingSettings.BackgroundColor,
+                SurfaceColor = tenant.BrandingSettings.SurfaceColor,
+                SidebarColor = tenant.BrandingSettings.SidebarColor,
+                AppName = tenant.BrandingSettings.AppName,
+                FontFamily = tenant.BrandingSettings.FontFamily,
+                LoginBackgroundUrl = tenant.BrandingSettings.LoginBackgroundUrl,
+                DashboardBannerUrl = tenant.BrandingSettings.DashboardBannerUrl,
+                SupportPhone = tenant.BrandingSettings.SupportPhone,
+                SupportEmail = tenant.BrandingSettings.SupportEmail,
                 LogoUrl = tenant.BrandingSettings.LogoUrl
             } : null,
             Statistics = new GymStatisticsDto
