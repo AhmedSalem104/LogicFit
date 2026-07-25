@@ -28,4 +28,22 @@ public sealed class PlatformReportsController(IApplicationDbContext context) : C
             expiredSubscriptions = await subscriptions.CountAsync(x => x.Status == TenantSubscriptionStatus.Expired && !x.IsDeleted, cancellationToken)
         });
     }
+
+    [HttpGet("catalog")]
+    public async Task<IActionResult> Catalog(CancellationToken cancellationToken)
+    {
+        return Ok(new
+        {
+            gyms = await context.Tenants.AsNoTracking().CountAsync(x => !x.IsDeleted, cancellationToken),
+            members = await context.Users.IgnoreQueryFilters().CountAsync(x => x.Role == UserRole.Client && !x.IsDeleted, cancellationToken),
+            plans = await context.Plans.AsNoTracking().CountAsync(x => !x.IsDeleted, cancellationToken),
+            features = await context.Features.AsNoTracking().CountAsync(cancellationToken),
+            subscriptions = await context.TenantSubscriptions.IgnoreQueryFilters().CountAsync(x => !x.IsDeleted, cancellationToken),
+            invoices = await context.SubscriptionInvoices.IgnoreQueryFilters().CountAsync(x => !x.IsDeleted, cancellationToken),
+            payments = await context.SubscriptionPayments.AsNoTracking().CountAsync(cancellationToken),
+            auditEntries = await context.AuditLogs.IgnoreQueryFilters().CountAsync(cancellationToken),
+            jobRuns = await context.JobExecutionLogs.AsNoTracking().CountAsync(cancellationToken),
+            outboxMessages = await context.OutboxMessages.AsNoTracking().CountAsync(cancellationToken)
+        });
+    }
 }
