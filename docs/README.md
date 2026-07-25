@@ -14,6 +14,7 @@
 | [المستخدمون والصلاحيات](USERS-AND-PERMISSIONS.md) | الإدارة والأمن | من يدخل النظام، ماذا يستطيع أن يفعل، وما حدود العزل؟ |
 | [مرجع لوحة المنصة](PLATFORM-ADMIN-GUIDE.md) | Platform Owner/Admin | شرح كل شاشة وزر رئيسي وإجراء في لوحة الإدارة المركزية. |
 | [مرجع API](API-REFERENCE.md) | الواجهات وBackend | المسارات، المصادقة، الترقيم، أخطاء HTTP، وحدود العمليات. |
+| [كتالوج API الكامل](API-ENDPOINT-CATALOG.md) | Frontend / Backend / QA | كل endpoint مولّد من الـControllers: method، route، الصلاحية، المدخلات، والاستجابة المعلنة. |
 | [البيانات والـSaaS](SAAS-DOMAIN-AND-DATA.md) | Backend/DBA | الكيانات، Snapshots، الفواتير، Outbox، الحالات والثوابت. |
 | [التشغيل والنشر](OPERATIONS-AND-DEPLOYMENT.md) | DevOps/Support | الإعدادات، النسخ الاحتياطي، المراقبة، CI/CD، الاستعادة وRollback. |
 | [دليل واجهة الصالة](TENANT-APPLICATION-GUIDE.md) | فريق الواجهة والدعم | مسارات وتجربة مالك الصالة والمدرب والمتدرب وموظفيها. |
@@ -39,3 +40,17 @@ LogicFit_LandingPage/                  واجهة التسويق العامة
 أي تغيير في واحد من الآتي يحدّث هذه الوثائق في نفس المهمة: Endpoint، DTO، قاعدة
 بيانات أو Migration، صلاحية، حالة اشتراك/دفع، شاشة، تصميم عام، إعداد تشغيل أو خطة
 استعادة. لا توثّق الأسرار، كلمات المرور، Connection Strings أو ملفات نشر تحتويها.
+
+### كتالوج الـAPI الذي لا ينقص
+
+ملف [API-ENDPOINT-CATALOG.md](API-ENDPOINT-CATALOG.md) ليس قائمة يدوية: يُنشأ من
+جميع Controllers في Tenant API وPlatform API بواسطة:
+
+```powershell
+.\Scripts\Export-ApiEndpointCatalog.ps1
+```
+
+لذلك أي تعديل في route أو method أو policy أو request/response يجب أن يتبعه تشغيل
+السكربت ومراجعة التغيّر الناتج قبل الـPull Request. هذا يمنع فقد endpoint من
+التوثيق، ولا يلغي الحاجة إلى توثيق قرار الـDomain أو تدفق المستخدم في الملفات
+المتخصصة أعلاه.
