@@ -83,7 +83,15 @@ public class UpdateGymProfileCommandHandler : IRequestHandler<UpdateGymProfileCo
         var branding = new[]
         {
             request.PrimaryColor, request.SecondaryColor, request.AppName, request.FontFamily,
-            request.CustomCss, request.InvoiceLogoUrl, request.SupportPhone, request.SupportEmail
+            request.CustomCss, request.InvoiceLogoUrl, request.SupportPhone, request.SupportEmail,
+            request.LogoDarkUrl, request.LogoLightUrl, request.LogoIconUrl, request.FaviconUrl,
+            request.LoginBackgroundUrl, request.DashboardBannerUrl, request.PrimaryHoverColor,
+            request.PrimaryForegroundColor, request.SecondaryHoverColor, request.SecondaryForegroundColor,
+            request.AccentColor, request.BackgroundColor, request.SurfaceColor, request.CardColor,
+            request.SidebarColor, request.SidebarTextColor, request.HeaderColor, request.HeaderTextColor,
+            request.TextPrimaryColor, request.TextSecondaryColor, request.BorderColor, request.InputBackgroundColor,
+            request.SuccessColor, request.WarningColor, request.DangerColor, request.InfoColor,
+            request.BorderRadius, request.ThemeMode
         };
         if (branding.Any(v => v != null) || request.LogoUrl != null)
         {
@@ -92,6 +100,34 @@ public class UpdateGymProfileCommandHandler : IRequestHandler<UpdateGymProfileCo
             if (request.PrimaryColor != null) tenant.BrandingSettings.PrimaryColor = request.PrimaryColor;
             if (request.SecondaryColor != null) tenant.BrandingSettings.SecondaryColor = request.SecondaryColor;
             if (request.LogoUrl != null) tenant.BrandingSettings.LogoUrl = request.LogoUrl;
+            if (request.LogoDarkUrl != null) tenant.BrandingSettings.LogoDarkUrl = request.LogoDarkUrl;
+            if (request.LogoLightUrl != null) tenant.BrandingSettings.LogoLightUrl = request.LogoLightUrl;
+            if (request.LogoIconUrl != null) tenant.BrandingSettings.LogoIconUrl = request.LogoIconUrl;
+            if (request.FaviconUrl != null) tenant.BrandingSettings.FaviconUrl = request.FaviconUrl;
+            if (request.LoginBackgroundUrl != null) tenant.BrandingSettings.LoginBackgroundUrl = request.LoginBackgroundUrl;
+            if (request.DashboardBannerUrl != null) tenant.BrandingSettings.DashboardBannerUrl = request.DashboardBannerUrl;
+            if (request.PrimaryHoverColor != null) tenant.BrandingSettings.PrimaryHoverColor = request.PrimaryHoverColor;
+            if (request.PrimaryForegroundColor != null) tenant.BrandingSettings.PrimaryForegroundColor = request.PrimaryForegroundColor;
+            if (request.SecondaryHoverColor != null) tenant.BrandingSettings.SecondaryHoverColor = request.SecondaryHoverColor;
+            if (request.SecondaryForegroundColor != null) tenant.BrandingSettings.SecondaryForegroundColor = request.SecondaryForegroundColor;
+            if (request.AccentColor != null) tenant.BrandingSettings.AccentColor = request.AccentColor;
+            if (request.BackgroundColor != null) tenant.BrandingSettings.BackgroundColor = request.BackgroundColor;
+            if (request.SurfaceColor != null) tenant.BrandingSettings.SurfaceColor = request.SurfaceColor;
+            if (request.CardColor != null) tenant.BrandingSettings.CardColor = request.CardColor;
+            if (request.SidebarColor != null) tenant.BrandingSettings.SidebarColor = request.SidebarColor;
+            if (request.SidebarTextColor != null) tenant.BrandingSettings.SidebarTextColor = request.SidebarTextColor;
+            if (request.HeaderColor != null) tenant.BrandingSettings.HeaderColor = request.HeaderColor;
+            if (request.HeaderTextColor != null) tenant.BrandingSettings.HeaderTextColor = request.HeaderTextColor;
+            if (request.TextPrimaryColor != null) tenant.BrandingSettings.TextPrimaryColor = request.TextPrimaryColor;
+            if (request.TextSecondaryColor != null) tenant.BrandingSettings.TextSecondaryColor = request.TextSecondaryColor;
+            if (request.BorderColor != null) tenant.BrandingSettings.BorderColor = request.BorderColor;
+            if (request.InputBackgroundColor != null) tenant.BrandingSettings.InputBackgroundColor = request.InputBackgroundColor;
+            if (request.SuccessColor != null) tenant.BrandingSettings.SuccessColor = request.SuccessColor;
+            if (request.WarningColor != null) tenant.BrandingSettings.WarningColor = request.WarningColor;
+            if (request.DangerColor != null) tenant.BrandingSettings.DangerColor = request.DangerColor;
+            if (request.InfoColor != null) tenant.BrandingSettings.InfoColor = request.InfoColor;
+            if (request.BorderRadius != null) tenant.BrandingSettings.BorderRadius = request.BorderRadius;
+            if (request.ThemeMode != null) tenant.BrandingSettings.ThemeMode = request.ThemeMode;
             if (request.AppName != null) tenant.BrandingSettings.AppName = request.AppName;
             if (request.FontFamily != null) tenant.BrandingSettings.FontFamily = request.FontFamily;
             if (request.CustomCss != null) tenant.BrandingSettings.CustomCss = request.CustomCss;

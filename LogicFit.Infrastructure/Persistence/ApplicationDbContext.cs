@@ -30,6 +30,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
     // DbSets
     public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<TenantBrandAsset> TenantBrandAssets => Set<TenantBrandAsset>();
     DbSet<User> IApplicationDbContext.Users => Set<User>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<NutrientDefinition> NutrientDefinitions => Set<NutrientDefinition>();
@@ -160,6 +161,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             .WithMany(s => s.FeatureSnapshots)
             .HasForeignKey(s => s.TenantSubscriptionId)
             .OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<TenantBrandAsset>()
+            .HasIndex(a => new { a.TenantId, a.AssetType, a.SortOrder });
+        builder.Entity<TenantBrandAsset>()
+            .Property(a => a.FocalPointX).HasPrecision(5, 4);
+        builder.Entity<TenantBrandAsset>()
+            .Property(a => a.FocalPointY).HasPrecision(5, 4);
 
         // Global Query Filters
         ApplyGlobalFilters(builder);
@@ -250,6 +257,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
         // Non-tenant entities with soft delete only
         builder.Entity<Tenant>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<TenantBrandAsset>().HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
         builder.Entity<UserProfile>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<NutrientDefinition>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Muscle>().HasQueryFilter(e => !e.IsDeleted);
