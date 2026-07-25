@@ -17,3 +17,7 @@ POST /api/platform/notifications/read-all
 ```
 
 The recipient is always taken from the authenticated user claims. Client-supplied recipient IDs are never trusted. Read operations are idempotent and persist `IsRead` and `ReadAt` in UTC.
+
+## Report catalog
+
+`GET /api/platform/reports/catalog` returns aggregate record counts for gyms, members, plans, features, subscriptions, invoices, payments, audit entries, job runs, and outbox messages. It is intended for the administration report center and requires `ManagePlatformReports`.
