@@ -46,11 +46,23 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var usageCalculator = scope.ServiceProvider.GetRequiredService<ITenantUsageCalculator>();
                 var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+                var execution = new JobExecutionLog
+                {
+                    JobName = nameof(PlatformSubscriptionLifecycleService),
+                    Status = "Running",
+                    StartedAtUtc = DateTime.UtcNow,
+                    AttemptCount = 1
+                };
+                context.JobExecutionLogs.Add(execution);
+                await context.SaveChangesAsync(stoppingToken);
 
                 await TransitionSubscriptionsAsync(context, notificationService, stoppingToken);
                 await SendExpiryRemindersAsync(context, notificationService, stoppingToken);
                 await ExpireStalePaymentRequestsAsync(context, stoppingToken);
                 await RecalculateUsageAsync(context, usageCalculator, stoppingToken);
+                execution.Status = "Completed";
+                execution.CompletedAtUtc = DateTime.UtcNow;
+                await context.SaveChangesAsync(stoppingToken);
             }
             catch (Exception ex)
             {
