@@ -67,6 +67,25 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in PlatformSubscriptionLifecycleService");
+                try
+                {
+                    using var failureScope = _scopeFactory.CreateScope();
+                    var failureContext = failureScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    failureContext.JobExecutionLogs.Add(new JobExecutionLog
+                    {
+                        JobName = nameof(PlatformSubscriptionLifecycleService),
+                        Status = "Failed",
+                        StartedAtUtc = DateTime.UtcNow,
+                        CompletedAtUtc = DateTime.UtcNow,
+                        AttemptCount = 1,
+                        Error = ex.Message
+                    });
+                    await failureContext.SaveChangesAsync(stoppingToken);
+                }
+                catch (Exception logEx)
+                {
+                    _logger.LogError(logEx, "Unable to record failed platform job execution");
+                }
             }
 
             await Task.Delay(_period, stoppingToken);
