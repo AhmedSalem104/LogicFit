@@ -6,6 +6,7 @@ namespace LogicFit.Application.Common.Interfaces;
 public interface IApplicationDbContext
 {
     DbSet<Tenant> Tenants { get; }
+    DbSet<TenantBrandAsset> TenantBrandAssets { get; }
     DbSet<User> Users { get; }
     DbSet<UserProfile> UserProfiles { get; }
     DbSet<NutrientDefinition> NutrientDefinitions { get; }

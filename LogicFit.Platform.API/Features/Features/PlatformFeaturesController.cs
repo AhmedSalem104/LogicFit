@@ -95,5 +95,4 @@ public class PlatformFeaturesController : ControllerBase
         await _mediator.Send(new DeleteFeatureDependencyCommand(id), cancellationToken);
         return NoContent();
     }
-
 }
