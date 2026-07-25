@@ -21,6 +21,16 @@ public class BrandingSettingsDto
 {
     public string? PrimaryColor { get; set; }
     public string? SecondaryColor { get; set; }
+    public string? AccentColor { get; set; }
+    public string? BackgroundColor { get; set; }
+    public string? SurfaceColor { get; set; }
+    public string? SidebarColor { get; set; }
+    public string? AppName { get; set; }
+    public string? FontFamily { get; set; }
+    public string? LoginBackgroundUrl { get; set; }
+    public string? DashboardBannerUrl { get; set; }
+    public string? SupportPhone { get; set; }
+    public string? SupportEmail { get; set; }
     public string? LogoUrl { get; set; }
 }
 
