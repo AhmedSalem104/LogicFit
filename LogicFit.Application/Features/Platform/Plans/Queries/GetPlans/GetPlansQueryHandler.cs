@@ -22,27 +22,13 @@ public class GetPlansQueryHandler : IRequestHandler<GetPlansQuery, List<PlanDto>
             query = query.Where(p => p.IsActive);
         }
 
-        return await query
+        var plans = await query
+            .AsNoTracking()
+            .Include(p => p.PlanFeatures)
+            .ThenInclude(planFeature => planFeature.Feature)
             .OrderBy(p => p.DisplayOrder)
-            .Select(p => new PlanDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Description = p.Description,
-                Price = p.Price,
-                Currency = p.Currency,
-                BillingCycle = p.BillingCycle,
-                DurationInDays = p.DurationInDays,
-                MaxMembers = p.MaxMembers,
-                MaxCoaches = p.MaxCoaches,
-                MaxBranches = p.MaxBranches,
-                MaxEmployees = p.MaxEmployees,
-                MaxStorageMB = p.MaxStorageMB,
-                IsActive = p.IsActive,
-                DisplayOrder = p.DisplayOrder,
-                Features = p.PlanFeatures.Select(pf => pf.Feature.Code).ToList()
-                ,FeatureLimits = p.PlanFeatures.ToDictionary(pf => pf.Feature.Code, pf => pf.LimitValue)
-            })
             .ToListAsync(cancellationToken);
+
+        return plans.Select(PlanDtoMapper.Map).ToList();
     }
 }
