@@ -67,6 +67,7 @@ sequenceDiagram
 - Authentication: login, registration, refresh rotation, logout/revocation, password reset/change.
 - Errors use typed status/code/message/errors payloads; authorization and concurrency failures are not silently converted to success.
 - Swagger/OpenAPI is enabled for development inspection; production health remains anonymous for monitoring.
+- The complete source-derived endpoint contract is in [API-ENDPOINT-CATALOG.md](API-ENDPOINT-CATALOG.md). It currently indexes both API hosts and is regenerated through `Scripts/Export-ApiEndpointCatalog.ps1` whenever a controller contract changes.
 
 ## Operational rules
 
