@@ -63,10 +63,15 @@ public class GetSubscriptionsReportQueryHandler : IRequestHandler<GetSubscriptio
             : 0;
 
         // Plan statistics
-        var planStats = await _context.SubscriptionPlans
+        // Calculate plan aggregates in memory after loading the tenant-scoped
+        // rows. The previous correlated Sum/conditional projection generated
+        // provider-specific SQL and returned 500 on SQL Server for empty plans.
+        var plans = await _context.SubscriptionPlans
             .Include(sp => sp.Subscriptions)
             .Where(sp => sp.TenantId == tenantId && !sp.IsDeleted)
-            .Select(sp => new SubscriptionPlanStatsDto
+            .ToListAsync(cancellationToken);
+
+        var planStats = plans.Select(sp => new SubscriptionPlanStatsDto
             {
                 PlanId = sp.Id,
                 PlanName = sp.Name,
@@ -76,7 +81,7 @@ public class GetSubscriptionsReportQueryHandler : IRequestHandler<GetSubscriptio
                     .Where(cs => !cs.IsDeleted)
                     .Sum(cs => cs.AmountPaid > 0 ? cs.AmountPaid : sp.Price)
             })
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         // Monthly revenue (last 6 months)
         var monthlyRevenue = new List<MonthlyRevenueDto>();

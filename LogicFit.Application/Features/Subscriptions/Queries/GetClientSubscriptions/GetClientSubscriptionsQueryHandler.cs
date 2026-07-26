@@ -62,16 +62,21 @@ public class GetClientSubscriptionsQueryHandler : IRequestHandler<GetClientSubsc
                 || (s.Client.Email != null && s.Client.Email.ToLower().Contains(term)));
         }
 
-        return await query
+        // Materialize before calculating freeze durations. SQL Server cannot
+        // translate TimeSpan.TotalDays inside a nested projection and used to
+        // turn this endpoint into a 500 for otherwise valid subscriptions.
+        var subscriptions = await query
             .OrderByDescending(s => s.CreatedAt)
-            .Select(s => new ClientSubscriptionDto
+            .ToListAsync(cancellationToken);
+
+        return subscriptions.Select(s => new ClientSubscriptionDto
             {
                 Id = s.Id,
                 TenantId = s.TenantId,
                 ClientId = s.ClientId,
                 ClientName = s.Client.Profile != null ? s.Client.Profile.FullName : s.Client.Email,
                 PlanId = s.PlanId,
-                PlanName = s.Plan.Name,
+                PlanName = s.Plan?.Name ?? "غير محدد",
                 StartDate = s.StartDate,
                 EndDate = s.EndDate,
                 Status = s.Status,
@@ -96,6 +101,6 @@ public class GetClientSubscriptionsQueryHandler : IRequestHandler<GetClientSubsc
                     IsActive = f.IsActive
                 }).ToList()
             })
-            .ToListAsync(cancellationToken);
+            .ToList();
     }
 }

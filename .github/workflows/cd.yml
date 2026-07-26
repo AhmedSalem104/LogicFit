@@ -27,10 +27,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Install EF Core CLI
+        run: dotnet tool install --global dotnet-ef --version 8.*
       - run: dotnet restore LogicFit.sln
       - run: dotnet build LogicFit.sln -c Release --no-restore
       - run: dotnet test LogicFit.sln -c Release --no-build --verbosity normal
-      - run: dotnet ef migrations script --idempotent --no-build --project LogicFit.Infrastructure --startup-project LogicFit.API --output /tmp/logicfit-migrations.sql
+      - run: dotnet ef migrations script --idempotent --no-build --configuration Release --project LogicFit.Infrastructure --startup-project LogicFit.API --output /tmp/logicfit-migrations.sql
 
   deploy:
     if: ${{ inputs.confirm == 'DEPLOY-PRODUCTION' }}
