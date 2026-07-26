@@ -139,6 +139,12 @@ public class UpdateGymProfileCommandHandler : IRequestHandler<UpdateGymProfileCo
             if (request.InvoiceLogoUrl != null) tenant.BrandingSettings.InvoiceLogoUrl = request.InvoiceLogoUrl;
             if (request.SupportPhone != null) tenant.BrandingSettings.SupportPhone = request.SupportPhone;
             if (request.SupportEmail != null) tenant.BrandingSettings.SupportEmail = request.SupportEmail;
+
+            // BrandingSettings is stored through an EF value converter. EF can
+            // miss in-place mutations of a mutable converted object, so replace
+            // it with a detached copy to force a reliable column update.
+            tenant.BrandingSettings = JsonSerializer.Deserialize<BrandingSettings>(
+                JsonSerializer.Serialize(tenant.BrandingSettings));
         }
 
         await _context.SaveChangesAsync(cancellationToken);
