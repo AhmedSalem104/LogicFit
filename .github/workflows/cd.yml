@@ -32,7 +32,7 @@ jobs:
       - run: dotnet restore LogicFit.sln
       - run: dotnet build LogicFit.sln -c Release --no-restore
       - run: dotnet test LogicFit.sln -c Release --no-build --verbosity normal
-      - run: dotnet ef migrations script --idempotent --no-build --project LogicFit.Infrastructure --startup-project LogicFit.API --output /tmp/logicfit-migrations.sql
+      - run: dotnet ef migrations script --idempotent --no-build --configuration Release --project LogicFit.Infrastructure --startup-project LogicFit.API --output /tmp/logicfit-migrations.sql
 
   deploy:
     if: ${{ inputs.confirm == 'DEPLOY-PRODUCTION' }}
