@@ -57,7 +57,10 @@ jobs:
       - name: Build publish outputs
         shell: pwsh
         run: |
-          dotnet publish LogicFit.Platform.API/LogicFit.Platform.API.csproj -c Release -o "$env:RUNNER_TEMP/platform-publish" /p:UseAppHost=false
+          # Platform controllers are hosted by LogicFit.API (Unified API).
+          # LogicFit.Platform.API is now a class library and must not be deployed
+          # as a standalone IIS application.
+          dotnet publish LogicFit.API/LogicFit.API.csproj -c Release -o "$env:RUNNER_TEMP/platform-publish" /p:UseAppHost=false
           dotnet publish LogicFit.API/LogicFit.API.csproj -c Release -o "$env:RUNNER_TEMP/tenant-publish" /p:UseAppHost=false
 
       - name: Decode protected publish profiles
