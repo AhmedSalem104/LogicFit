@@ -78,6 +78,7 @@ public class GetGymProfileQueryHandler : IRequestHandler<GetGymProfileQuery, Gym
                 BackgroundColor = tenant.BrandingSettings.BackgroundColor,
                 SurfaceColor = tenant.BrandingSettings.SurfaceColor,
                 SidebarColor = tenant.BrandingSettings.SidebarColor,
+                HeaderColor = tenant.BrandingSettings.HeaderColor,
                 AppName = tenant.BrandingSettings.AppName,
                 FontFamily = tenant.BrandingSettings.FontFamily,
                 LoginBackgroundUrl = tenant.BrandingSettings.LoginBackgroundUrl,
