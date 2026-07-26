@@ -32,6 +32,10 @@ public class BrandingSettingsDto
     public string? DashboardBannerUrl { get; set; }
     public string? SupportPhone { get; set; }
     public string? SupportEmail { get; set; }
+    public string? FacebookUrl { get; set; }
+    public string? InstagramUrl { get; set; }
+    public string? WebsiteUrl { get; set; }
+    public string? OpeningHours { get; set; }
     public string? LogoUrl { get; set; }
 }
 
