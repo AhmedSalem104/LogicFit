@@ -14,7 +14,7 @@ namespace LogicFit.API.Features.CoachClients;
 
 [ApiController]
 [Route("api/coach-clients")]
-[Authorize(Policy = Permissions.ManageCoaches)]
+[Authorize]
 public class CoachClientsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -30,6 +30,7 @@ public class CoachClientsController : ControllerBase
     /// - Coach: sees only their own trainees
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = Permissions.ViewMembers)]
     public async Task<ActionResult<List<CoachClientDto>>> GetCoachClients(
         [FromQuery] Guid? coachId,
         [FromQuery] bool? isActive = true)
@@ -46,6 +47,7 @@ public class CoachClientsController : ControllerBase
     /// Get a specific coach-client relationship by ID
     /// </summary>
     [HttpGet("{id}")]
+    [Authorize(Policy = Permissions.ViewMembers)]
     public async Task<ActionResult<CoachClientDto>> GetCoachClientById(Guid id)
     {
         var result = await _mediator.Send(new GetCoachClientByIdQuery { Id = id });
