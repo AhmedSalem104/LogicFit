@@ -27,6 +27,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Install EF Core CLI
+        run: dotnet tool install --global dotnet-ef --version 8.*
       - run: dotnet restore LogicFit.sln
       - run: dotnet build LogicFit.sln -c Release --no-restore
       - run: dotnet test LogicFit.sln -c Release --no-build --verbosity normal
