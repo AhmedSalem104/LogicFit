@@ -25,6 +25,7 @@ public class BrandingSettingsDto
     public string? BackgroundColor { get; set; }
     public string? SurfaceColor { get; set; }
     public string? SidebarColor { get; set; }
+    public string? HeaderColor { get; set; }
     public string? AppName { get; set; }
     public string? FontFamily { get; set; }
     public string? LoginBackgroundUrl { get; set; }
