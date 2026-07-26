@@ -41,4 +41,8 @@ public class BrandingSettings
     public string? InvoiceLogoUrl { get; set; }
     public string? SupportPhone { get; set; }
     public string? SupportEmail { get; set; }
+    public string? FacebookUrl { get; set; }
+    public string? InstagramUrl { get; set; }
+    public string? WebsiteUrl { get; set; }
+    public string? OpeningHours { get; set; }
 }

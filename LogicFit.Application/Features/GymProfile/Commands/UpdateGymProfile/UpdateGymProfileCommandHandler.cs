@@ -89,6 +89,7 @@ public class UpdateGymProfileCommandHandler : IRequestHandler<UpdateGymProfileCo
         {
             request.PrimaryColor, request.SecondaryColor, request.AppName, request.FontFamily,
             request.CustomCss, request.InvoiceLogoUrl, request.SupportPhone, request.SupportEmail,
+            request.FacebookUrl, request.InstagramUrl, request.WebsiteUrl, request.OpeningHours,
             request.LogoDarkUrl, request.LogoLightUrl, request.LogoIconUrl, request.FaviconUrl,
             request.LoginBackgroundUrl, request.DashboardBannerUrl, request.PrimaryHoverColor,
             request.PrimaryForegroundColor, request.SecondaryHoverColor, request.SecondaryForegroundColor,
@@ -139,6 +140,10 @@ public class UpdateGymProfileCommandHandler : IRequestHandler<UpdateGymProfileCo
             if (request.InvoiceLogoUrl != null) tenant.BrandingSettings.InvoiceLogoUrl = request.InvoiceLogoUrl;
             if (request.SupportPhone != null) tenant.BrandingSettings.SupportPhone = request.SupportPhone;
             if (request.SupportEmail != null) tenant.BrandingSettings.SupportEmail = request.SupportEmail;
+            if (request.FacebookUrl != null) tenant.BrandingSettings.FacebookUrl = request.FacebookUrl;
+            if (request.InstagramUrl != null) tenant.BrandingSettings.InstagramUrl = request.InstagramUrl;
+            if (request.WebsiteUrl != null) tenant.BrandingSettings.WebsiteUrl = request.WebsiteUrl;
+            if (request.OpeningHours != null) tenant.BrandingSettings.OpeningHours = request.OpeningHours;
 
             // BrandingSettings is stored through an EF value converter. EF can
             // miss in-place mutations of a mutable converted object, so replace
