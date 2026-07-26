@@ -11,6 +11,7 @@ public class Permission : AuditableEntity
 {
     public string Code { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
+    public string DisplayNameAr { get; set; } = string.Empty;
     public string? Category { get; set; }
     public bool IsPlatformPermission { get; set; }
 

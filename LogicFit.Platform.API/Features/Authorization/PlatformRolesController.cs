@@ -19,14 +19,14 @@ public sealed class PlatformRolesController(IApplicationDbContext context) : Con
         var roles = context.AppRoles.AsNoTracking()
             .Include(x => x.RolePermissions).ThenInclude(x => x.Permission)
             .OrderBy(x => x.Name)
-            .Select(x => new { x.Id, x.Name, Permissions = x.RolePermissions.Select(p => p.Permission.Code).OrderBy(c => c).ToList() });
+            .Select(x => new { x.Id, x.Name, x.NameAr, Permissions = x.RolePermissions.Select(p => p.Permission.Code).OrderBy(c => c).ToList() });
         return Ok(await PlatformPaging.CreateAsync(roles, page, pageSize, cancellationToken));
     }
 
     [HttpGet("permissions")]
     public async Task<IActionResult> GetPermissionCatalog(CancellationToken cancellationToken)
         => Ok(await context.Permissions.AsNoTracking().OrderBy(x => x.Category).ThenBy(x => x.Code)
-            .Select(x => new { x.Code, x.DisplayName, x.Category, x.IsPlatformPermission }).ToListAsync(cancellationToken));
+            .Select(x => new { x.Code, x.DisplayName, x.DisplayNameAr, x.Category, x.IsPlatformPermission }).ToListAsync(cancellationToken));
 
     [HttpPut("{id:guid}/permissions")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateRolePermissionsRequest request, CancellationToken cancellationToken)

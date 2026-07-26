@@ -30,7 +30,7 @@ public class RbacSeeder
             .ToArray(),
         [SystemRoles.Receptionist] = new[]
         {
-            Permissions.ViewMembers, Permissions.ManageMembers, Permissions.ManageAttendance,
+            Permissions.ViewMembers, Permissions.ManageMembers, Permissions.CreateMembers, Permissions.UpdateMembers, Permissions.DeleteMembers, Permissions.ManageAttendance,
             Permissions.ManageClientSubscriptions, Permissions.ManagePOS
         },
         [SystemRoles.Accountant] = new[]
@@ -133,10 +133,15 @@ public class RbacSeeder
             {
                 Code = code,
                 DisplayName = code,
+                DisplayNameAr = GetPermissionLabel(code),
                 Category = Permissions.PlatformPermissions.Contains(code) ? "Platform" : "Tenant",
                 IsPlatformPermission = Permissions.PlatformPermissions.Contains(code)
             });
         }
+
+        var unlabeled = await _context.Permissions.Where(p => p.DisplayNameAr == "").ToListAsync();
+        foreach (var permission in unlabeled)
+            permission.DisplayNameAr = GetPermissionLabel(permission.Code);
 
         if (missing.Count > 0)
         {
@@ -163,6 +168,7 @@ public class RbacSeeder
                     Name = roleName,
                     NormalizedName = roleName.ToUpperInvariant(),
                     Description = $"System role: {roleName}",
+                    NameAr = GetRoleLabel(roleName),
                     IsSystemRole = true
                 };
                 _context.AppRoles.Add(role);
@@ -188,8 +194,51 @@ public class RbacSeeder
             }
         }
 
+        var unlabeledRoles = await _context.AppRoles.IgnoreQueryFilters().Where(r => r.NameAr == "").ToListAsync();
+        foreach (var role in unlabeledRoles)
+            role.NameAr = GetRoleLabel(role.Name);
+
         await _context.SaveChangesAsync();
     }
+
+    private static readonly Dictionary<string, string> PermissionLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [Permissions.ViewMembers] = "عرض العملاء", [Permissions.ManageMembers] = "إدارة العملاء",
+        [Permissions.CreateMembers] = "إضافة العملاء", [Permissions.UpdateMembers] = "تعديل العملاء", [Permissions.DeleteMembers] = "حذف العملاء",
+        [Permissions.ManageCoaches] = "إدارة المدربين", [Permissions.ManageAttendance] = "إدارة الحضور",
+        [Permissions.ManageClientSubscriptions] = "إدارة اشتراكات العملاء", [Permissions.ManagePOS] = "إدارة نقاط البيع",
+        [Permissions.ManageInventory] = "إدارة المخزون", [Permissions.ManageEmployees] = "إدارة الموظفين", [Permissions.ManageBranches] = "إدارة الفروع",
+        [Permissions.ManageFinance] = "إدارة المالية", [Permissions.ViewReports] = "عرض التقارير", [Permissions.ManageReports] = "إدارة التقارير",
+        [Permissions.ManageSettings] = "إدارة الإعدادات", [Permissions.ManageTenantBilling] = "إدارة فوترة الجيم",
+        [Permissions.ManagePlatform] = "إدارة المنصة", [Permissions.ManageTenants] = "إدارة الجيمات", [Permissions.ManagePlans] = "إدارة الباقات",
+        [Permissions.ManagePaymentRequests] = "إدارة طلبات الدفع", [Permissions.ManagePlatformReports] = "إدارة تقارير المنصة", [Permissions.ManagePlatformBackups] = "إدارة النسخ الاحتياطية"
+    };
+
+    private static readonly Dictionary<string, string> RoleLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [SystemRoles.Owner] = "مالك الجيم", [SystemRoles.Manager] = "مدير الجيم", [SystemRoles.Receptionist] = "موظف الاستقبال",
+        [SystemRoles.Accountant] = "محاسب", [SystemRoles.Coach] = "مدرب", [SystemRoles.Trainer] = "مدرب شخصي", [SystemRoles.Client] = "عميل",
+        [SystemRoles.PlatformOwner] = "مالك المنصة", [SystemRoles.PlatformAdmin] = "مشرف المنصة"
+    };
+
+    private static string GetPermissionLabel(string code) => code switch
+    {
+        Permissions.ViewMembers => "\u0639\u0631\u0636 \u0627\u0644\u0639\u0645\u0644\u0627\u0621", Permissions.ManageMembers => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0639\u0645\u0644\u0627\u0621",
+        Permissions.CreateMembers => "\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0639\u0645\u0644\u0627\u0621", Permissions.UpdateMembers => "\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0639\u0645\u0644\u0627\u0621", Permissions.DeleteMembers => "\u062d\u0630\u0641 \u0627\u0644\u0639\u0645\u0644\u0627\u0621",
+        Permissions.ManageCoaches => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u062f\u0631\u0628\u064a\u0646", Permissions.ManageAttendance => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u062d\u0636\u0648\u0631",
+        Permissions.ManageClientSubscriptions => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0634\u062a\u0631\u0627\u0643\u0627\u062a \u0627\u0644\u0639\u0645\u0644\u0627\u0621", Permissions.ManagePOS => "\u0625\u062f\u0627\u0631\u0629 \u0646\u0642\u0627\u0637 \u0627\u0644\u0628\u064a\u0639",
+        Permissions.ManageInventory => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u062e\u0632\u0648\u0646", Permissions.ManageEmployees => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646", Permissions.ManageBranches => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0641\u0631\u0648\u0639",
+        Permissions.ManageFinance => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0627\u0644\u064a\u0629", Permissions.ViewReports => "\u0639\u0631\u0636 \u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631", Permissions.ManageReports => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631",
+        Permissions.ManageSettings => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a", Permissions.ManageTenantBilling => "\u0625\u062f\u0627\u0631\u0629 \u0641\u0648\u062a\u0631\u0629 \u0627\u0644\u062c\u064a\u0645",
+        Permissions.ManagePlatform => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0635\u0629", Permissions.ManageTenants => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u062c\u064a\u0645\u0627\u062a", Permissions.ManagePlans => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0628\u0627\u0642\u0627\u062a",
+        Permissions.ManagePaymentRequests => "\u0625\u062f\u0627\u0631\u0629 \u0637\u0644\u0628\u0627\u062a \u0627\u0644\u062f\u0641\u0639", Permissions.ManagePlatformReports => "\u0625\u062f\u0627\u0631\u0629 \u062a\u0642\u0627\u0631\u064a\u0631 \u0627\u0644\u0645\u0646\u0635\u0629", Permissions.ManagePlatformBackups => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0646\u0633\u062e \u0627\u0644\u0627\u062d\u062a\u064a\u0627\u0637\u064a\u0629",
+        _ => code
+    };
+
+    private static string GetRoleLabel(string name) => name switch
+    {
+        SystemRoles.Owner => "\u0645\u0627\u0644\u0643 \u0627\u0644\u062c\u064a\u0645", SystemRoles.Manager => "\u0645\u062f\u064a\u0631 \u0627\u0644\u062c\u064a\u0645", SystemRoles.Receptionist => "\u0645\u0648\u0638\u0641 \u0627\u0644\u0627\u0633\u062a\u0642\u0628\u0627\u0644", SystemRoles.Accountant => "\u0645\u062d\u0627\u0633\u0628", SystemRoles.Coach => "\u0645\u062f\u0631\u0628", SystemRoles.Trainer => "\u0645\u062f\u0631\u0628 \u0634\u062e\u0635\u064a", SystemRoles.Client => "\u0639\u0645\u064a\u0644", SystemRoles.PlatformOwner => "\u0645\u0627\u0644\u0643 \u0627\u0644\u0645\u0646\u0635\u0629", SystemRoles.PlatformAdmin => "\u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629", _ => name
+    };
 
     private async Task BackfillUserRolesAsync()
     {
