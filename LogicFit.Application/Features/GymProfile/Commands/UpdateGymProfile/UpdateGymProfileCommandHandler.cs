@@ -32,9 +32,14 @@ public class UpdateGymProfileCommandHandler : IRequestHandler<UpdateGymProfileCo
         // white-label fields (app name, custom fonts/CSS, invoice logo, support branding) require the
         // WhiteLabel feature; pointing the gym at a custom domain requires the CustomDomain feature.
         // Only enforce when those specific fields are actually being changed.
+        // Empty values are emitted by the settings form for untouched optional
+        // fields. They must not turn a color/profile update into a paid
+        // WhiteLabel operation. Non-empty branding changes still require the
+        // WhiteLabel feature; clearing an existing value remains allowed.
         var setsWhiteLabel =
-            request.AppName != null || request.FontFamily != null || request.CustomCss != null ||
-            request.InvoiceLogoUrl != null || request.SupportPhone != null || request.SupportEmail != null;
+            !string.IsNullOrWhiteSpace(request.AppName) || !string.IsNullOrWhiteSpace(request.FontFamily) ||
+            !string.IsNullOrWhiteSpace(request.CustomCss) || !string.IsNullOrWhiteSpace(request.InvoiceLogoUrl) ||
+            !string.IsNullOrWhiteSpace(request.SupportPhone) || !string.IsNullOrWhiteSpace(request.SupportEmail);
         if (setsWhiteLabel)
         {
             await _subscriptionGuard.EnsureFeatureAsync(FeatureCodes.WhiteLabel, cancellationToken);
