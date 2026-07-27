@@ -62,7 +62,7 @@ public class CoachClientsController : ControllerBase
     /// </summary>
     [HttpPost]
     [Authorize(Policy = Permissions.ManageCoaches)]
-    public async Task<ActionResult<Guid>> AddTrainee(AddTraineeCommand command)
+    public async Task<ActionResult<AddTraineeResult>> AddTrainee(AddTraineeCommand command)
     {
         var id = await _mediator.Send(command);
         return Ok(id);

@@ -96,6 +96,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             AccessToken = accessToken.Token,
             RefreshToken = refreshToken.Token,
             ExpiresAt = accessToken.ExpiresAt
+            ,MustChangePassword = user.MustChangePassword
         };
     }
 }

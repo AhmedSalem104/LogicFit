@@ -30,6 +30,17 @@ public sealed class DailyBackupHostedService(
                 var service = scope.ServiceProvider.GetRequiredService<IBackupService>();
                 var result = await service.CreateAsync(stoppingToken);
                 logger.LogInformation("Daily database backup completed: {FileName} ({SizeBytes} bytes)", result.FileName, result.SizeBytes);
+
+                try
+                {
+                    var media = scope.ServiceProvider.GetRequiredService<IMediaBackupService>();
+                    var mediaResult = await media.CreateAsync(stoppingToken);
+                    logger.LogInformation("Daily media backup completed: {FileName} ({SizeBytes} bytes)", mediaResult.FileName, mediaResult.SizeBytes);
+                }
+                catch (Exception mediaException) when (mediaException is not OperationCanceledException || !stoppingToken.IsCancellationRequested)
+                {
+                    logger.LogError(mediaException, "Database backup succeeded but the media backup failed");
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception ex) { logger.LogError(ex, "Daily database backup failed"); }
