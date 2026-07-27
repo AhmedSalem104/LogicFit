@@ -27,13 +27,10 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                 END;
             """);
 
-            migrationBuilder.AddColumn<string>(
-                name: "NameAr",
-                table: "Roles",
-                type: "nvarchar(150)",
-                maxLength: 150,
-                nullable: false,
-                defaultValue: "");
+            migrationBuilder.Sql("""
+                IF COL_LENGTH(N'dbo.Roles', N'NameAr') IS NULL
+                    ALTER TABLE dbo.Roles ADD NameAr nvarchar(150) NOT NULL DEFAULT N'';
+            """);
 
             migrationBuilder.AddColumn<bool>(
                 name: "MustChangePassword",
@@ -46,9 +43,20 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "NameAr",
-                table: "Roles");
+            migrationBuilder.Sql("""
+                IF COL_LENGTH(N'dbo.Roles', N'NameAr') IS NOT NULL
+                BEGIN
+                    DECLARE @constraint sysname;
+                    SELECT @constraint = d.name
+                    FROM sys.default_constraints d
+                    INNER JOIN sys.columns c ON c.default_object_id = d.object_id
+                    WHERE d.parent_object_id = OBJECT_ID(N'dbo.Roles')
+                      AND c.name = N'NameAr';
+                    IF @constraint IS NOT NULL
+                        EXEC(N'ALTER TABLE dbo.Roles DROP CONSTRAINT [' + @constraint + ']');
+                    ALTER TABLE dbo.Roles DROP COLUMN NameAr;
+                END;
+            """);
 
             migrationBuilder.DropColumn(
                 name: "MustChangePassword",
