@@ -44,14 +44,13 @@ jobs:
         with:
           ref: ${{ inputs.image_tag }}
 
-      - name: Require both WebDeploy profiles
+      - name: Require WebDeploy profile
         shell: pwsh
         env:
           PLATFORM_PROFILE_B64: ${{ secrets.RUNASP_PLATFORM_PUBLISH_SETTINGS_B64 }}
-          TENANT_PROFILE_B64: ${{ secrets.RUNASP_TENANT_PUBLISH_SETTINGS_B64 }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:PLATFORM_PROFILE_B64) -or [string]::IsNullOrWhiteSpace($env:TENANT_PROFILE_B64)) {
-            throw "Both RUNASP_PLATFORM_PUBLISH_SETTINGS_B64 and RUNASP_TENANT_PUBLISH_SETTINGS_B64 are required."
+          if ([string]::IsNullOrWhiteSpace($env:PLATFORM_PROFILE_B64)) {
+            throw "RUNASP_PLATFORM_PUBLISH_SETTINGS_B64 is required."
           }
 
       - name: Build publish outputs
@@ -60,36 +59,26 @@ jobs:
           # Platform controllers are hosted by LogicFit.API (Unified API).
           # LogicFit.Platform.API is now a class library and must not be deployed
           # as a standalone IIS application.
-          dotnet publish LogicFit.API/LogicFit.API.csproj -c Release -o "$env:RUNNER_TEMP/platform-publish" /p:UseAppHost=false
-          dotnet publish LogicFit.API/LogicFit.API.csproj -c Release -o "$env:RUNNER_TEMP/tenant-publish" /p:UseAppHost=false
+          dotnet publish LogicFit.API/LogicFit.API.csproj -c Release -o "$env:RUNNER_TEMP/unified-publish" /p:UseAppHost=false
 
       - name: Decode protected publish profiles
         shell: pwsh
         env:
           PLATFORM_PROFILE_B64: ${{ secrets.RUNASP_PLATFORM_PUBLISH_SETTINGS_B64 }}
-          TENANT_PROFILE_B64: ${{ secrets.RUNASP_TENANT_PUBLISH_SETTINGS_B64 }}
         run: |
           [IO.File]::WriteAllBytes("$env:RUNNER_TEMP/platform.publishSettings", [Convert]::FromBase64String($env:PLATFORM_PROFILE_B64))
-          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP/tenant.publishSettings", [Convert]::FromBase64String($env:TENANT_PROFILE_B64))
 
-      - name: Deploy Platform API with WebDeploy
+      - name: Deploy Unified API with WebDeploy
         shell: pwsh
-        run: .\Scripts\deploy-webdeploy.ps1 -PublishSettingsPath "$env:RUNNER_TEMP/platform.publishSettings" -ContentPath "$env:RUNNER_TEMP/platform-publish"
-
-      - name: Deploy Tenant API with WebDeploy
-        shell: pwsh
-        run: .\Scripts\deploy-webdeploy.ps1 -PublishSettingsPath "$env:RUNNER_TEMP/tenant.publishSettings" -ContentPath "$env:RUNNER_TEMP/tenant-publish"
+        run: .\Scripts\deploy-webdeploy.ps1 -PublishSettingsPath "$env:RUNNER_TEMP/platform.publishSettings" -ContentPath "$env:RUNNER_TEMP/unified-publish"
 
       - name: Verify production health
         shell: pwsh
         env:
           PLATFORM_HEALTH_URL: ${{ secrets.RUNASP_PLATFORM_HEALTHCHECK_URL }}
-          TENANT_HEALTH_URL: ${{ secrets.RUNASP_TENANT_HEALTHCHECK_URL }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:PLATFORM_HEALTH_URL) -or [string]::IsNullOrWhiteSpace($env:TENANT_HEALTH_URL)) {
-            throw "Both production health URLs are required."
+          if ([string]::IsNullOrWhiteSpace($env:PLATFORM_HEALTH_URL)) {
+            throw "RUNASP_PLATFORM_HEALTHCHECK_URL is required."
           }
-          foreach ($url in @($env:PLATFORM_HEALTH_URL, $env:TENANT_HEALTH_URL)) {
-            $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 30
-            if ($response.StatusCode -ne 200) { throw "Health check failed for $url" }
-          }
+          $response = Invoke-WebRequest -Uri $env:PLATFORM_HEALTH_URL -UseBasicParsing -TimeoutSec 30
+          if ($response.StatusCode -ne 200) { throw "Health check failed for $env:PLATFORM_HEALTH_URL" }
