@@ -73,8 +73,15 @@ public sealed class R2FileUploadService : IFileUploadService
         await _s3.PutObjectAsync(new PutObjectRequest { BucketName = _bucket, Key = key, InputStream = stream, ContentType = file.ContentType ?? "application/octet-stream", AutoCloseStream = false });
         _logger.LogInformation("Stored media object {Key}", key);
         var publicBase = _configuration["Storage:R2:PublicBaseUrl"]?.TrimEnd('/');
-        return string.IsNullOrWhiteSpace(publicBase) ? $"/api/media/object?key={Uri.EscapeDataString(key)}" : $"{publicBase}/{key}";
+        return string.IsNullOrWhiteSpace(publicBase) || IsPrivateCollection(subfolder)
+            ? $"/api/media/object?key={Uri.EscapeDataString(key)}"
+            : $"{publicBase}/{key}";
     }
+
+    private static bool IsPrivateCollection(string? subfolder)
+        => string.Equals(subfolder, "payment-proofs", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(subfolder, "measurements", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(subfolder, "identity-documents", StringComparison.OrdinalIgnoreCase);
 
     private string? ExtractKey(string value)
     {
