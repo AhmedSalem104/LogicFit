@@ -37,7 +37,7 @@ flowchart TB
     Tenant --> Database
 ```
 
-The two APIs share the domain/application/infrastructure layers and database, but are separated by JWT audience and authorization policy. Tenant data is scoped by `TenantId`; a tenant user can never use the platform cross-tenant bypass.
+The Platform and Tenant API surfaces run from the same host and share the domain/application/infrastructure layers and database. JWT audience and authorization policy still separate their access; tenant data is scoped by `TenantId`, so a tenant user can never use the platform cross-tenant bypass.
 
 ### Who uses the product?
 
@@ -82,14 +82,14 @@ stateDiagram-v2
 
 ## Overview
 
-**LogicFit** is a comprehensive, multi-tenant **SaaS platform** for running fitness businesses. It ships as **two independently deployable APIs** that share one database:
+**LogicFit** is a comprehensive, multi-tenant **SaaS platform** for running fitness businesses. It ships as **one API host** with two protected modules that share one database:
 
-| Layer | Audience | What it does |
+| API module | Audience | What it does |
 |-------|----------|--------------|
 | **Platform API** | Platform Owner / Admin (SaaS operator) | Onboards gyms, manages plans & features, reviews manual payments, activates/suspends tenants |
 | **Tenant API** | Owner / Manager / Receptionist / Accountant / Coach / Client | The full gym app — members, coaching, nutrition, POS, HR, attendance, and self-service subscription management |
 
-Both APIs are built on **Clean Architecture** with **CQRS + MediatR**, secured by **JWT** with a **dynamic, database-driven permission system**, and isolated per gym through **automatic tenant filtering**.
+Both modules are built on **Clean Architecture** with **CQRS + MediatR**, secured by **JWT** with a **dynamic, database-driven permission system**, and isolated per gym through **automatic tenant filtering**.
 
 ---
 
@@ -97,7 +97,7 @@ Both APIs are built on **Clean Architecture** with **CQRS + MediatR**, secured b
 
 > LogicFit evolved from a single gym-management app into a full **SaaS platform**. The highlights of that transformation:
 
-- **Two-tier architecture** — a separate Platform API for the operator, isolated from the tenant app by **JWT audience**.
+- **Unified-host architecture** — Platform administration is a module in `LogicFit.API`, isolated from the tenant module by **JWT audience** and permissions.
 - **Dynamic RBAC** — permissions live in the database (`Roles / Permissions / RolePermissions / UserRoles`); policies are synthesized at runtime, so access can change **without redeploying**.
 - **SaaS subscription engine** — plans, features, per-plan limits, and tenant subscriptions.
 - **Manual billing** — gym owners upload a payment proof, the operator approves it, and the subscription activates in a single atomic transaction (designed to drop in a payment gateway later, no rebuild).
@@ -160,11 +160,11 @@ Both APIs are built on **Clean Architecture** with **CQRS + MediatR**, secured b
 
 ## Architecture
 
-Two API hosts over four shared layers:
+One API host exposes two protected modules over four shared layers:
 
 ```
                          ┌──────────────────────────────────────────┐
-   Platform Admin  ────► │  LogicFit.Platform.API   (aud: Platform)  │ ─┐
+   Platform Admin  ────► │  LogicFit.API / Platform module (aud: Platform) │ ─┐
                          └──────────────────────────────────────────┘  │
                                                                         │  same
    Gym users (Owner…    ┌──────────────────────────────────────────┐   ├─ Application
@@ -189,8 +189,8 @@ LogicFit/
 ├── LogicFit.Application/        # CQRS (Commands/Queries/Handlers), Behaviors, Interfaces, Services
 ├── LogicFit.Infrastructure/     # EF Core DbContext, Configurations, Migrations, Identity/JWT,
 │                                #   Seeders (RBAC/Plans), Background jobs, Email/Notifications
-├── LogicFit.API/                # Tenant API  — gym app controllers, tenant middleware
-├── LogicFit.Platform.API/       # Platform API — operator console controllers
+├── LogicFit.API/                # Unified host — tenant and platform controllers, middleware, configuration
+│   └── Features/Platform/       # Platform operator-console controllers
 └── LogicFit.Tests/              # xUnit tests
 ```
 
@@ -279,15 +279,11 @@ dotnet restore
 
 ### 2) Configure secrets (never commit these)
 ```bash
-# Tenant API
+# Unified API (Tenant + Platform modules)
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your-connection-string>" --project LogicFit.API
 dotnet user-secrets set "JwtSettings:Secret" "<64+ char random secret>"                  --project LogicFit.API
-
-# Platform API (same DB; independent secret is fine)
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your-connection-string>" --project LogicFit.Platform.API
-dotnet user-secrets set "JwtSettings:Secret" "<64+ char random secret>"                  --project LogicFit.Platform.API
 ```
-> `appsettings.json` ships with **empty** `ConnectionStrings`/`Secret` by design. The tenant API uses audience `LogicFitUsers`; the platform API uses `LogicFitPlatform`.
+> `LogicFit.API/appsettings.json` is the only project configuration file. Store production secrets outside source control; the unified host validates `LogicFitUsers` and `LogicFitPlatform` audiences and issues the appropriate audience for each login flow.
 
 ### 3) Apply migrations
 ```bash
@@ -298,8 +294,7 @@ ASPNETCORE_ENVIRONMENT=Development dotnet ef database update \
 
 ### 4) Run
 ```bash
-dotnet run --project LogicFit.API            # Tenant API (seeds RBAC, plans, platform owner on first run)
-dotnet run --project LogicFit.Platform.API   # Platform API
+dotnet run --project LogicFit.API            # Unified API (seeds RBAC, plans, platform owner on first run)
 ```
 
 **Default platform login** (change immediately): `owner@platform.local` / `ChangeMe#12345`
@@ -393,7 +388,7 @@ Swagger UI is available in **Development** on each API. Detailed integration gui
 
 ## Deployment
 
-- **Docker** — `Dockerfile` per API + `docker-compose.yml` (SQL Server + both APIs). Config via environment variables; background jobs run in the tenant host only (`BackgroundJobs__Enabled=false` on the platform host).
+- **Docker** — one unified `LogicFit.API/Dockerfile` + `docker-compose.yml` (SQL Server + unified API). Configuration comes from environment variables and background jobs run once in that host.
   ```bash
   docker compose up --build
   ```
