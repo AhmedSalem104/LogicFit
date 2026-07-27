@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-07-25 18:16 UTC`  |  Total endpoints: **322**
+Generated: `2026-07-27 10:30 UTC`  |  Total endpoints: **330**
 
 ## Contract rules
 
@@ -100,8 +100,14 @@ Generated: `2026-07-25 18:16 UTC`  |  Total endpoints: **322**
 #### `GET /api/platform/dashboard` - `Get`
 
 - **Access:** JWT + Policy: `Permissions.ManagePlatformReports`
-- **Inputs:** No request input.
+- **Inputs:** Query `query`: `GetPlatformDashboardQuery`<br>Handler signature: `[FromQuery] GetPlatformDashboardQuery query`
 - **Declared response:** typeof(PlatformDashboardDto), StatusCodes.Status200OK
+
+#### `GET /api/platform/dashboard/tenants` - `Tenants`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformReports`
+- **Inputs:** Query `search`: `string?`<br>Query `status`: `TenantStatus?`<br>Query `planId`: `Guid?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] string? search = null, [FromQuery] TenantStatus? status = null, [FromQuery] Guid? planId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize`
+- **Declared response:** Task<IActionResult>
 
 ### PlatformFeatures
 
@@ -179,6 +185,26 @@ Generated: `2026-07-25 18:16 UTC`  |  Total endpoints: **322**
 - **Inputs:** Query `number`: `string?`<br>Query `tenantId`: `Guid?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] string? number = null, [FromQuery] Guid? tenantId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize`
 - **Declared response:** Task<IActionResult>
 
+### PlatformNotifications
+
+#### `GET /api/platform/notifications` - `List`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformReports`
+- **Inputs:** Query `search`: `string?`<br>Query `type`: `NotificationType?`<br>Query `isRead`: `bool?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] string? search = null, [FromQuery] NotificationType? type = null, [FromQuery] bool? isRead = null, [FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize`
+- **Declared response:** Task<ActionResult<object>>
+
+#### `POST /api/platform/notifications/{id:guid}/read` - `MarkRead`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformReports`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<IActionResult>
+
+#### `POST /api/platform/notifications/read-all` - `MarkAllRead`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformReports`
+- **Inputs:** No request input.
+- **Declared response:** Task<IActionResult>
+
 ### PlatformOperations
 
 #### `GET /api/platform/operations/jobs` - `GetJobs`
@@ -233,6 +259,12 @@ Generated: `2026-07-25 18:16 UTC`  |  Total endpoints: **322**
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PaymentRequestDto), StatusCodes.Status200OK
 
+#### `GET /api/platform/payment-requests/{id:guid}/proof` - `Proof`
+
+- **Access:** JWT + Policy: `Permissions.ManagePaymentRequests`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<IActionResult>
+
 #### `POST /api/platform/payment-requests/{id:guid}/reject` - `Reject`
 
 - **Access:** JWT + Policy: `Permissions.ManagePaymentRequests`
@@ -266,6 +298,12 @@ Generated: `2026-07-25 18:16 UTC`  |  Total endpoints: **322**
 - **Declared response:** typeof(PlanDto), StatusCodes.Status200OK
 
 ### PlatformReports
+
+#### `GET /api/platform/reports/catalog` - `Catalog`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformReports`
+- **Inputs:** No request input.
+- **Declared response:** Task<IActionResult>
 
 #### `GET /api/platform/reports/overview` - `Overview`
 
@@ -1168,8 +1206,20 @@ Generated: `2026-07-25 18:16 UTC`  |  Total endpoints: **322**
 #### `PUT /api/GymProfile` - `UpdateProfile`
 
 - **Access:** JWT + Policy: `Permissions.ManageSettings`
-- **Inputs:** Body `command`: `UpdateGymProfileCommand` { `Name`: string?; `Description`: string?; `Address`: string?; `PhoneNumber`: string?; `Email`: string?; `LogoUrl`: string?; `CoverImageUrl`: string?; `GalleryImages`: List<string>?; `PrimaryColor`: string?; `SecondaryColor`: string?; `AppName`: string?; `FontFamily`: string?; `CustomCss`: string?; `InvoiceLogoUrl`: string?; `SupportPhone`: string?; `SupportEmail`: string?; `CustomDomain`: string? }<br>Handler signature: `[FromBody] UpdateGymProfileCommand command`
+- **Inputs:** Body `command`: `UpdateGymProfileCommand` { `Name`: string?; `Description`: string?; `Address`: string?; `PhoneNumber`: string?; `Email`: string?; `LogoUrl`: string?; `CoverImageUrl`: string?; `GalleryImages`: List<string>?; `PrimaryColor`: string?; `SecondaryColor`: string?; `LogoDarkUrl`: string?; `LogoLightUrl`: string?; `LogoIconUrl`: string?; `FaviconUrl`: string?; `LoginBackgroundUrl`: string?; `DashboardBannerUrl`: string?; `PrimaryHoverColor`: string?; `PrimaryForegroundColor`: string?; `SecondaryHoverColor`: string?; `SecondaryForegroundColor`: string?; `AccentColor`: string?; `BackgroundColor`: string?; `SurfaceColor`: string?; `CardColor`: string? }<br>Handler signature: `[FromBody] UpdateGymProfileCommand command`
 - **Declared response:** StatusCodes.Status204NoContent<br>StatusCodes.Status404NotFound
+
+#### `POST /api/GymProfile/assets` - `UploadBrandAsset`
+
+- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Inputs:** Form `file`: `IFormFile`<br>Form `assetType`: `string`<br>Form `title`: `string?`<br>Form `altText`: `string?`<br>Handler signature: `[FromForm] IFormFile file, [FromForm] string assetType = "Gallery", [FromForm] string? title = null, [FromForm] string? altText = null`
+- **Declared response:** Task<ActionResult<BrandAssetResponse>>
+
+#### `DELETE /api/GymProfile/assets/{id:guid}` - `DeleteBrandAsset`
+
+- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<IActionResult>
 
 #### `POST /api/GymProfile/cover` - `UploadCover`
 

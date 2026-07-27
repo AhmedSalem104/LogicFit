@@ -2,11 +2,9 @@
 
 ## بيئات ومكونات النشر
 
-- Platform API هو تطبيق مستقل (`LogicFit.Platform.API`) ويحتاج إعدادات قاعدة بيانات
-  وJWT وPassword Reset والنسخ الاحتياطي.
-- Tenant API (`LogicFit.API`) تطبيق مستقل. ملف Publish الخاص بـPlatform لا ينشر
-  Tenant API تلقائياً.
-- لوحة الإدارة Angular تنشر كواجهة static وتتصل بـPlatform API من `environment.apiUrl`.
+- `LogicFit.API` هو المضيف الموحد؛ يحتوي Platform وTenant modules ويستخدم إعدادات
+  قاعدة بيانات وJWT وPassword Reset والنسخ الاحتياطي من مصدر واحد.
+- لوحة الإدارة Angular تنشر كواجهة static وتتصل بمسارات `/api/platform/...` في المضيف الموحد.
 - لا تضع Connection String أو أسرار JWT أو Publish Settings في Git أو docs أو logs.
 
 ## الإعدادات المطلوبة في الخادم
@@ -67,7 +65,7 @@ Environment `production` فقط.
 | `401` من لوحة الإدارة | افحص انتهاء Access Token/Refresh Token وصلاحية المستخدم ثم Endpoint الحقيقي في Network. |
 | `500` متكرر | راجع Application Logs وConnection String وMigration وحالة الجداول، ولا تكشف exception للعميل. |
 | `503` من النسخ | افحص تفعيل الخدمة وأداة/مسار النسخ وصلاحيات ملف التخزين ومساحة القرص. |
-| تنزيل نسخة `404` | تحقق من اسم الملف ومسار التخزين، ثم إصدار Platform API المنشور. |
+| تنزيل نسخة `404` | تحقق من اسم الملف ومسار التخزين، ثم إصدار LogicFit.API الموحد المنشور. |
 | فشل Job/Outbox | راجع JobExecutionLog/Outbox/Alerts/Audit؛ لا تحذف record لمحاولة إخفاء الفشل. |
 
 ## Rollback

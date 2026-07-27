@@ -92,15 +92,15 @@ flowchart LR
 - `develop` is protected integration; `master` is protected release history.
 - Direct pushes, force pushes, and branch deletion are prohibited.
 - Every non-trivial task requires a GitHub Issue, task branch, tests, documentation impact, and PR.
-- GitHub CI is active on every push and pull request. It restores, builds, tests, validates EF migrations, and builds both Docker images.
+- GitHub CI is active on every push and pull request. It restores, builds, tests, validates EF migrations, and builds the unified API Docker image.
 - Automatic Monster ASP CD is intentionally paused because deployment is currently performed manually from Visual Studio.
 
 ## Current deployment position
 
 - Verified live endpoint: `https://logicfit-platform.runasp.net/health` returns `200 Healthy`.
-- The supplied publish profile targets the Platform API site `site78301` only.
-- GitHub Clone-to-`/wwwroot` is not used: it clones source files and cannot safely host the two independent ASP.NET Core API processes in one directory.
-- The supported current operation is manual Visual Studio/WebDeploy publishing. Automatic CD can be revisited after the hosting topology, tenant target, backup, migration, rollback, and health URLs are explicitly defined.
+- The supplied publish profile targets the intended unified API site `site78301`; its password is intentionally not recorded.
+- GitHub Clone-to-`/wwwroot` is not used: it clones source files and cannot safely host the compiled ASP.NET Core application.
+- The supported current operation is manual Visual Studio/WebDeploy publishing. Automatic CD can be revisited after the unified host, backup, migration, rollback, and health URL are explicitly defined.
 
 ### Platform administration API remediation (2026-07-25)
 
@@ -121,14 +121,13 @@ LogicFit.sln
 ├── LogicFit.Domain/          Entities, enums, authorization catalog, domain rules
 ├── LogicFit.Application/     CQRS features, handlers, validators, behaviors, interfaces
 ├── LogicFit.Infrastructure/  EF Core, SQL mappings, migrations, JWT, RBAC, jobs, persistence
-├── LogicFit.API/              Tenant-facing ASP.NET Core host
-│   ├── Features/              Auth, tenants, clients, coaching, nutrition, commerce, HR, reports
+├── LogicFit.API/              Unified ASP.NET Core host
+│   ├── Features/              Tenant auth, tenants, clients, coaching, nutrition, commerce, HR, reports
+│   ├── Features/Platform/     Platform auth, dashboard, tenants, plans, features, subscriptions,
+│   │                          payment methods and manual payment requests
 │   ├── Middleware/            Tenant resolution/access, exception handling, request context
 │   ├── Authorization/         Tenant policies and permission integration
 │   └── Extensions/            Dependency injection and host setup
-├── LogicFit.Platform.API/     Platform-owner ASP.NET Core host
-│   └── Features/              Platform auth, dashboard, tenants, plans, features, subscriptions,
-│                              payment methods and manual payment requests
 ├── LogicFit.Tests/            Unit and feature regression tests
 ├── Scripts/                   Deployment and verification scripts
 ├── docs/                      Status, decisions, API/deployment documentation
@@ -220,10 +219,10 @@ When adding or changing a controller, route, request/response DTO, permission, d
 
 ## Current product
 
-LogicFit is a .NET 8 multi-tenant gym-management SaaS backend. It contains two APIs that share the Application, Domain, Infrastructure, and database layers:
+LogicFit is a .NET 8 multi-tenant gym-management SaaS backend with one ASP.NET Core host: `LogicFit.API`.
 
-- `LogicFit.API`: tenant/gym operations, audience `LogicFitUsers`.
-- `LogicFit.Platform.API`: SaaS administration and manual billing, audience `LogicFitPlatform`.
+- `LogicFit.API/Features`: tenant/gym operations, audience `LogicFitUsers`.
+- `LogicFit.API/Features/Platform`: SaaS administration and manual billing, audience `LogicFitPlatform`.
 
 The current billing model is manual payment approval. No payment gateway or webhook integration is enabled.
 
@@ -260,13 +259,13 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 
 ## Verification status
 
-- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 64 passing tests.
+- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 65 passing tests.
 - `dotnet build LogicFit.sln -c Release --no-restore`: successful; three pre-existing nullable warnings remain in coach-client and client-subscription query projections.
 - `npm run build` in `LogiFit_Platform_Admin_Dashboard`: successful.
 
 ## CI/CD policy
 
-- Every pull request must restore, build, test, validate the migration script, and build both Docker images.
+- Every pull request must restore, build, test, validate the migration script, and build the unified API Docker image.
 - Production deployment must be a protected GitHub Environment operation and must run a health check after deployment.
 - Production deployment must have a rollback procedure and must not expose secrets in repository files or logs.
 - A future task that changes API, database, security, deployment, or behavior must update this document and add a GitHub Issue describing scope, acceptance criteria, tests, and deployment impact.
@@ -288,10 +287,16 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 - Add distributed locks/idempotency for background lifecycle jobs.
 - Add integration, end-to-end, load, concurrency, and tenant-isolation tests.
 - Define the Monster ASP deployment target, application directory, service manager, backup command, and health URL before enabling automatic production deployment.
-- A local WebDeploy settings file was provided for `logicfit-platform.runasp.net` (`MSDeploy`, site `site78301`). It configures the Platform API only; its password is intentionally not recorded. A separate Tenant API publish profile and the production backup/migration/rollback procedure are still required.
-- `Scripts/deploy-webdeploy.ps1` now performs credential-safe MSDeploy synchronization from a publish output directory. The protected CD workflow requires both Platform and Tenant profiles plus health URLs before it can deploy.
+- A local WebDeploy settings file was provided for `logicfit-platform.runasp.net` (`MSDeploy`, site `site78301`). It is the candidate profile for the unified API; its password is intentionally not recorded. Verify the target, backup/migration/rollback procedure, and health URL before enabling production CD.
+- `Scripts/deploy-webdeploy.ps1` performs credential-safe MSDeploy synchronization from one unified publish output directory. The protected CD workflow requires one unified profile and health URL before it can deploy.
 
 ## Change log
+
+### 2026-07-27
+
+- Consolidated Platform controllers into `LogicFit.API/Features/Platform` and removed the standalone Platform API project.
+- Unified local Docker, CI, guarded CD, and configuration around one API host, one appsettings file, and one deployment artifact.
+- Removed the committed database connection string; local and production secrets must be supplied through User Secrets or the environment/secret store.
 
 ### 2026-07-25
 

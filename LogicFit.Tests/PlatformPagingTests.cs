@@ -1,4 +1,4 @@
-using LogicFit.Platform.API.Common;
+using LogicFit.API.Features.Platform.Common;
 using Xunit;
 
 namespace LogicFit.Tests;

@@ -17,7 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LogicFit.Domain\LogicFit.Domain.csproj" />
     <ProjectReference Include="..\LogicFit.Application\LogicFit.Application.csproj" />
-    <ProjectReference Include="..\LogicFit.Platform.API\LogicFit.Platform.API.csproj" />
+    <ProjectReference Include="..\LogicFit.API\LogicFit.API.csproj" />
   </ItemGroup>
 
 </Project>

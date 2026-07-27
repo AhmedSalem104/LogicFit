@@ -28,7 +28,7 @@ For every non-trivial task:
 - Monster ASP deployment details must be recorded before enabling automatic deployment: host, user, app directory, service/container command, backup command, migration command, health URL, and rollback command.
 - The supplied `logicfit-platform.runasp.net-WebDeploy.publishSettings` is a Platform API MSDeploy profile only. Its password must be stored as a protected GitHub Environment secret and must never be committed or printed.
 - Tenant API deployment requires a separate WebDeploy profile or equivalent target before production CD can deploy the complete application.
-- The protected CD workflow requires `RUNASP_PLATFORM_PUBLISH_SETTINGS_B64`, `RUNASP_TENANT_PUBLISH_SETTINGS_B64`, `RUNASP_PLATFORM_HEALTHCHECK_URL`, and `RUNASP_TENANT_HEALTHCHECK_URL` in the GitHub `production` Environment. Profiles are decoded only into the ephemeral Windows runner.
+- The protected CD workflow requires `RUNASP_UNIFIED_PUBLISH_SETTINGS_B64` and `RUNASP_UNIFIED_HEALTHCHECK_URL` in the GitHub `production` Environment. The profile is decoded only into the ephemeral Windows runner.
 
 ## GitHub branching and review policy
 
@@ -71,7 +71,13 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 - Keep billing manual; harden its correctness instead of adding a payment gateway.
 - Treat this `AGENTS.md` as the persistent execution memory for future repository tasks.
 - Use `docs/LOGICFIT-PROJECT-STATUS.md` for product/API/database/deployment status.
-- CI runs on every branch and PR, validates tests/migrations, and builds both Docker images.
+- CI runs on every branch and PR, validates tests/migrations, and builds the unified API Docker image.
+
+### 2026-07-27
+
+- Platform administration is a module inside `LogicFit.API/Features/Platform`, not a separate host or project.
+- `LogicFit.API/appsettings.json` and its environment variables are the single configuration source for both Tenant and Platform API routes.
+- Production deployment publishes one unified API artifact and uses one protected WebDeploy profile and health-check URL.
 - Production CD is manual and protected until Monster ASP deployment details and secrets are configured.
 - Current verification baseline: 53 passing tests; three pre-existing nullable warnings remain.
 - Establish `develop` as the protected integration branch; require task-branch Pull Requests and passing CI for all merges.

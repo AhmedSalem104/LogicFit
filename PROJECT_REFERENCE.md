@@ -26,18 +26,18 @@
 
 ## ما هو LogicFit؟
 
-**LogicFit** منصة **SaaS متعددة المستأجرين (Multi-Tenant)** لإدارة الصالات الرياضية، مبنية على **.NET 8 + Clean Architecture + CQRS (MediatR)**. تُقدَّم كـ **API-ين منفصلين** يشاركان نفس قاعدة البيانات:
+**LogicFit** منصة **SaaS متعددة المستأجرين (Multi-Tenant)** لإدارة الصالات الرياضية، مبنية على **.NET 8 + Clean Architecture + CQRS (MediatR)**. تُقدَّم من خلال **مضيف API موحد** بوحدتين محميتين تشاركان نفس قاعدة البيانات:
 
 | الـ API | لمين؟ | Base URL (Production) | JWT Audience |
 |---------|-------|----------|--------------|
-| **Tenant API** (`LogicFit.API`) | تطبيق الجيم (Owner/Manager/Receptionist/Accountant/Coach/Client) | `https://logicfit.runasp.net` | `LogicFitUsers` |
-| **Platform API** (`LogicFit.Platform.API`) | مشغّل المنصة (PlatformOwner/PlatformAdmin) | `https://logicfit-platform.runasp.net` | `LogicFitPlatform` |
+| **Tenant module** (`LogicFit.API/Features`) | تطبيق الجيم (Owner/Manager/Receptionist/Accountant/Coach/Client) | `{{UNIFIED_API}}` | `LogicFitUsers` |
+| **Platform module** (`LogicFit.API/Features/Platform`) | مشغّل المنصة (PlatformOwner/PlatformAdmin) | `{{UNIFIED_API}}` | `LogicFitPlatform` |
 
-> **الـ placeholders**: `{{TENANT_API}}` = `https://logicfit.runasp.net` · `{{PLATFORM_API}}` = `https://logicfit-platform.runasp.net`.
+> **الـ placeholders**: `{{UNIFIED_API}}` هو عنوان المضيف الموحد. للمحافظة على الأمثلة الحالية، `{{TENANT_API}}` و`{{PLATFORM_API}}` يشيران إلى نفس عنوان `{{UNIFIED_API}}`.
 
-توكن جهة **لا يعمل** على الجهة الأخرى (audience مختلف). الأرقام: **286 endpoint** · 51 controller (Tenant) + 8 (Platform).
+تظل صلاحيات وجمهور JWT وحدود `TenantId` عازلة للوحدتين داخل المضيف الموحد. الأرقام: **286 endpoint** · 51 controller (Tenant) + 8 (Platform).
 
-> ⚠️ **CORS (Production)**: الأصول مغلقة على الهوستين حالياً — أي فرونت ويب لازم يتضاف دومينه في `Cors.AllowedOrigins` قبل الاستخدام من المتصفح (الموبايل غير متأثر).
+> ⚠️ **CORS (Production)**: الأصول مغلقة على المضيف الموحد — أي فرونت ويب لازم يتضاف دومينه في `Cors.AllowedOrigins` قبل الاستخدام من المتصفح (الموبايل غير متأثر).
 
 ## التقنيات المستخدمة
 
@@ -56,11 +56,11 @@
 
 ```
                          ┌──────────────────────────────────────────┐
-   Platform Admin  ────► │  LogicFit.Platform.API  (aud: Platform)  │ ─┐
+   Platform Admin  ────► │  LogicFit.API / Platform module (aud: Platform) │ ─┐
                          └──────────────────────────────────────────┘  │  نفس
                                                                         │  Application
    Gym users        ────► ┌──────────────────────────────────────────┐  ├─ Infrastructure
-   (Owner…Client)         │  LogicFit.API           (aud: Users)      │ ─┤  Domain
+   (Owner…Client)         │  LogicFit.API / Tenant module (aud: Users) │ ─┤  Domain
                           └──────────────────────────────────────────┘  │  + قاعدة بيانات واحدة
                                                                         │
                           ┌──────────────────────────────────────────┐  │
@@ -71,7 +71,7 @@
 ```
 
 - **عزل الجيمات**: EF Core global query filters تفلتر كل كيان بالـ `TenantId`. مستخدمو المنصة يقرؤون عبر الجيمات عبر bypass عند `CurrentTenantId == null`، محميّ بحيث لا يستطيع مستخدم جيم فعل ذلك.
-- **عزل الـ API-ين**: JWT audience مختلف لكل host.
+- **عزل الوحدتين**: JWT audience والصلاحيات مختلفان داخل نفس المضيف.
 
 ---
 
@@ -1420,11 +1420,11 @@ LogicFit/
 ├── LogicFit.Application/        # CQRS (Commands/Queries/Handlers) · Behaviors · Interfaces · Services · DTOs
 ├── LogicFit.Infrastructure/     # EF Core DbContext · Configurations · Migrations · Identity/JWT
 │                                #   Seeders (RBAC/Plans) · Background jobs · Email/Notifications
-├── LogicFit.API/                # Tenant API — 51 controller + tenant middleware
-├── LogicFit.Platform.API/       # Platform API — 8 controllers (لوحة المشغّل)
+├── LogicFit.API/                # Unified host — tenant middleware and all controllers
+│   └── Features/Platform/       # Platform controllers (لوحة المشغّل)
 └── LogicFit.Tests/              # xUnit
 ```
-معمارية: `Domain` ← `Application` ← `Infrastructure` ← (`API` / `Platform.API`). النشر: Docker/compose، CI (GitHub Actions)، Health `/health`.
+معمارية: `Domain` ← `Application` ← `Infrastructure` ← `LogicFit.API` (Tenant + Platform modules). النشر: Docker/compose، CI (GitHub Actions)، Health `/health`.
 
 ---
 
