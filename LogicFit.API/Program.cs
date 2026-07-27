@@ -3,6 +3,7 @@ using LogicFit.Application;
 using LogicFit.Infrastructure;
 using LogicFit.Infrastructure.Persistence;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using System.Threading.RateLimiting;
@@ -120,7 +121,22 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Seed data on startup
+// Applying migrations is opt-in because production deployments should normally run
+// migrations as a separate, controlled release step.  Monster ASP does not currently
+// execute the generated SQL script, so enabling Database__ApplyMigrationsOnStartup=true
+// for one restart lets the application bring the schema up to date before the seeders
+// query newly-added columns (for example Permissions.DisplayNameAr).
+var applyMigrationsOnStartup = builder.Configuration.GetValue("Database:ApplyMigrationsOnStartup", false);
+if (applyMigrationsOnStartup)
+{
+    await using var migrationScope = app.Services.CreateAsyncScope();
+    var db = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    Log.Warning("Database__ApplyMigrationsOnStartup is enabled; applying pending migrations before seeding");
+    await db.Database.MigrateAsync();
+    Log.Information("Database migrations applied successfully");
+}
+
+// Seed data on startup (after optional migrations)
 using (var scope = app.Services.CreateScope())
 {
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
