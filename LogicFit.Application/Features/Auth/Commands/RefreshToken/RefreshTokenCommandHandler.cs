@@ -62,6 +62,7 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
             AccessToken = accessToken.Token,
             RefreshToken = newToken.Token,
             ExpiresAt = accessToken.ExpiresAt
+            ,MustChangePassword = user.MustChangePassword
         };
     }
 }

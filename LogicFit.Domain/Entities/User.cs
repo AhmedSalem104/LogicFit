@@ -13,6 +13,8 @@ public class User : AuditableEntity, ITenantEntity, ISoftDeletable
     public string PasswordHash { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>When true, the user may sign in but must replace the temporary password.</summary>
+    public bool MustChangePassword { get; set; }
 
     // Bumped whenever this user's roles/permissions change; embedded in the JWT as "perm_ver"
     // so issued tokens can be invalidated on the next refresh.
