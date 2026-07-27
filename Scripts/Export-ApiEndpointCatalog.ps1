@@ -18,7 +18,6 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $controllerFiles = @(
     Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'LogicFit.API') -Recurse -Filter '*Controller.cs' -File
-    Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'LogicFit.Platform.API') -Recurse -Filter '*Controller.cs' -File
 )
 $sourceFiles = Get-ChildItem -LiteralPath $repositoryRoot -Recurse -Filter '*.cs' -File |
     Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }
@@ -140,7 +139,7 @@ foreach ($file in $controllerFiles) {
     $routeMatch = [regex]::Matches($classPrelude, '\[Route\("(?<route>[^"]+)"\)\]') | Select-Object -Last 1
     if ($null -eq $routeMatch) { continue }
     $baseRoute = $routeMatch.Groups['route'].Value -replace '\[controller\]', $controllerToken
-    $surface = if ($file.FullName -match 'LogicFit\.Platform\.API') { 'Platform API' } else { 'Tenant API' }
+    $surface = if ($file.FullName -match 'LogicFit\.API\\Features\\Platform\\') { 'Platform API' } else { 'Tenant API' }
 
     foreach ($httpMatch in [regex]::Matches($source, '\[(?<verb>Http(?<method>Get|Post|Put|Delete|Patch|Head|Options))(?<args>\([^\]]*\))?\]')) {
         $tail = $source.Substring($httpMatch.Index + $httpMatch.Length)
@@ -209,5 +208,8 @@ $candidateOutput = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
 $resolvedOutput = [System.IO.Path]::GetFullPath($candidateOutput)
 $outputDirectory = Split-Path -Parent $resolvedOutput
 if (-not (Test-Path -LiteralPath $outputDirectory)) { New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null }
+while ($lines.Count -gt 0 -and [string]::IsNullOrWhiteSpace($lines[$lines.Count - 1])) {
+    $lines.RemoveAt($lines.Count - 1)
+}
 [System.IO.File]::WriteAllLines($resolvedOutput, $lines, [System.Text.UTF8Encoding]::new($false))
 Write-Host "Generated $($ordered.Count) endpoint entries: $resolvedOutput"

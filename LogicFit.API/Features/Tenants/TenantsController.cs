@@ -11,7 +11,7 @@ namespace LogicFit.API.Features.Tenants;
 [ApiController]
 [Route("api/[controller]")]
 // Locked to platform admins. Tenant listing/creation is platform functionality and moves to
-// LogicFit.Platform.API in Phase 2; this closes the previously-anonymous exposure now.
+// The Platform module owns platform-level tenant administration; this tenant endpoint remains protected.
 [Authorize(Policy = Permissions.ManageTenants)]
 public class TenantsController : ControllerBase
 {
