@@ -297,6 +297,7 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 - Consolidated Platform controllers into `LogicFit.API/Features/Platform` and removed the standalone Platform API project.
 - Unified local Docker, CI, guarded CD, and configuration around one API host, one appsettings file, and one deployment artifact.
 - Removed the committed database connection string; local and production secrets must be supplied through User Secrets or the environment/secret store.
+- WebDeploy preserves server-only `appsettings.Production.json`, so Monster ASP production secrets are not committed or replaced during an application sync.
 
 ### 2026-07-25
 
