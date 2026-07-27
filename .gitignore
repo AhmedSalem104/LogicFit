@@ -61,7 +61,6 @@ publish/
 
 # Runtime uploads (payment proofs, logos, user images)
 LogicFit.API/wwwroot/
-LogicFit.Platform.API/wwwroot/
 
 # Stray test artifacts
 test_profile.jpg
@@ -70,3 +69,4 @@ test_profile.jpg
 **/PublishProfiles/
 *.pubxml
 *.pubxml.user
+/LogicFit.API/appsettings.json

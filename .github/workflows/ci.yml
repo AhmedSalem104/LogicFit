@@ -46,7 +46,5 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - name: Build tenant image
+      - name: Build unified API image
         run: docker build -f LogicFit.API/Dockerfile -t logicfit-api:ci .
-      - name: Build platform image
-        run: docker build -f LogicFit.Platform.API/Dockerfile -t logicfit-platform-api:ci .

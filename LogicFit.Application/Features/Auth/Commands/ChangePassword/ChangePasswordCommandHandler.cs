@@ -34,6 +34,7 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
             throw new UnauthorizedException("Current password is incorrect");
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        user.MustChangePassword = false;
         user.PermissionsVersion++;
         await _refreshTokenService.RevokeAllAsync(user.Id, _currentUserService.IpAddress, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);

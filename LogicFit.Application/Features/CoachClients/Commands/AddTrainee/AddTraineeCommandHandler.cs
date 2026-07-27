@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LogicFit.Application.Features.CoachClients.Commands.AddTrainee;
 
-public class AddTraineeCommandHandler : IRequestHandler<AddTraineeCommand, Guid>
+public class AddTraineeCommandHandler : IRequestHandler<AddTraineeCommand, AddTraineeResult>
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
@@ -23,7 +23,7 @@ public class AddTraineeCommandHandler : IRequestHandler<AddTraineeCommand, Guid>
         _currentUserService = currentUserService;
     }
 
-    public async Task<Guid> Handle(AddTraineeCommand request, CancellationToken cancellationToken)
+    public async Task<AddTraineeResult> Handle(AddTraineeCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
 
@@ -50,7 +50,9 @@ public class AddTraineeCommandHandler : IRequestHandler<AddTraineeCommand, Guid>
             throw new ConflictException("Phone number already registered");
 
         // Auto-generate password
-        var password = $"{request.ClientPhone}@{Guid.NewGuid().ToString("N")[..6]}";
+        var password = string.IsNullOrWhiteSpace(request.TemporaryPassword)
+            ? $"{request.ClientPhone}@{Guid.NewGuid().ToString("N")[..6]}"
+            : request.TemporaryPassword.Trim();
 
         // Create new client
         var client = new User
@@ -62,6 +64,7 @@ public class AddTraineeCommandHandler : IRequestHandler<AddTraineeCommand, Guid>
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
             Role = UserRole.Client,
             IsActive = true,
+            MustChangePassword = true,
             WalletBalance = 0
         };
 
@@ -95,6 +98,12 @@ public class AddTraineeCommandHandler : IRequestHandler<AddTraineeCommand, Guid>
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        return client.Id;
+        return new AddTraineeResult
+        {
+            ClientId = client.Id,
+            ClientPhone = client.PhoneNumber!,
+            TemporaryPassword = password,
+            MustChangePassword = true
+        };
     }
 }

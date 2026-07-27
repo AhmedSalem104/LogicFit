@@ -1,5 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
-using LogicFit.Platform.API.Features.Backups;
+using LogicFit.API.Features.Platform.Backups;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
 

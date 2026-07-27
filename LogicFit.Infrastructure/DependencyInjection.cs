@@ -1,4 +1,5 @@
 using System.Text;
+using Amazon.S3;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Infrastructure.Authorization;
 using LogicFit.Infrastructure.Identity;
@@ -87,10 +88,31 @@ public static class DependencyInjection
         services.AddScoped<IDateTimeService, DateTimeService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>();
-        services.AddScoped<IFileUploadService, FileUploadService>();
+        var storageProvider = configuration["Storage:Provider"] ?? "local";
+        if (storageProvider.Equals("r2", StringComparison.OrdinalIgnoreCase))
+        {
+            var serviceUrl = configuration["Storage:R2:ServiceUrl"];
+            var accessKey = configuration["Storage:R2:AccessKey"];
+            var secretKey = configuration["Storage:R2:SecretKey"];
+            if (string.IsNullOrWhiteSpace(serviceUrl) || string.IsNullOrWhiteSpace(accessKey) || string.IsNullOrWhiteSpace(secretKey))
+                throw new InvalidOperationException("Storage is configured for R2 but Storage:R2:ServiceUrl, AccessKey and SecretKey are missing.");
+
+            services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(accessKey, secretKey, new AmazonS3Config
+            {
+                ServiceURL = serviceUrl,
+                AuthenticationRegion = configuration["Storage:R2:Region"] ?? "auto",
+                ForcePathStyle = true
+            }));
+            services.AddScoped<IFileUploadService, R2FileUploadService>();
+        }
+        else
+        {
+            services.AddScoped<IFileUploadService, FileUploadService>();
+        }
         services.AddScoped<IEmailService, LoggingEmailService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddSingleton<IBackupService, SqlServerBackupService>();
+        services.AddSingleton<IMediaBackupService, LocalMediaBackupService>();
 
         if (configuration.GetValue("Backup:Enabled", false))
             services.AddHostedService<DailyBackupHostedService>();

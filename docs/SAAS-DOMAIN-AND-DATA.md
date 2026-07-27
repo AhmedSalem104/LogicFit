@@ -3,8 +3,8 @@
 ## طبقات الحل
 
 ```text
-LogicFit.Platform.API     واجهة الإدارة المركزية وسياسات المنصة
-LogicFit.API              واجهة الصالات والمستخدمين
+LogicFit.API/Features/Platform  واجهة الإدارة المركزية وسياسات المنصة داخل المضيف الموحد
+LogicFit.API                    واجهة الصالات والمستخدمين والمضيف الموحد
 LogicFit.Application      Commands / Queries / قواعد حالات التطبيق
 LogicFit.Domain           الكيانات والثوابت والاستثناءات وقواعد الأعمال
 LogicFit.Infrastructure   EF Core, Identity, persistence, jobs, backups, outbox

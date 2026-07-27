@@ -3709,11 +3709,6 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("NameAr")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
                     b.Property<Guid>("ProgramId")
                         .HasColumnType("uniqueidentifier");
 
@@ -4039,6 +4034,11 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameAr")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("NormalizedName")
                         .IsRequired()
@@ -5582,6 +5582,9 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("MustChangePassword")
                         .HasColumnType("bit");
 
                     b.Property<string>("PasswordHash")
