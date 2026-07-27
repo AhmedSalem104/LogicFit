@@ -2,6 +2,18 @@
 
 All API image/video upload endpoints depend on `IFileUploadService`. The default provider remains the local `wwwroot/uploads` provider. Cloudflare R2 is enabled only when `Storage:Provider` is set to `r2`, so existing deployments remain backwards compatible.
 
+## Free/no-account mode
+
+For a deployment that does not have an object-storage account, explicitly set:
+
+```text
+Storage__Provider=local
+```
+
+No Cloudflare, Google or AWS credentials are required in this mode. Files are stored below `wwwroot/uploads` using the existing validation, random names and feature-level tenant ownership rules. Keep a backup of this directory and use a persistent disk; ephemeral containers or a multi-instance deployment should use R2 instead.
+
+Google Drive is intentionally not used as the default provider: its API requires a Google account/project and OAuth or service-account credentials, and Drive is not an object-storage/CDN endpoint for authenticated `<img>` requests. The R2 provider remains fully available and can be enabled later by changing only the provider setting and adding its credentials.
+
 ## Production configuration
 
 Set these values as hosting environment variables (never commit the access key or secret):
