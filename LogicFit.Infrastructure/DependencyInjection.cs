@@ -112,6 +112,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailService, LoggingEmailService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddSingleton<IBackupService, SqlServerBackupService>();
+        services.AddSingleton<IMediaBackupService, LocalMediaBackupService>();
 
         if (configuration.GetValue("Backup:Enabled", false))
             services.AddHostedService<DailyBackupHostedService>();

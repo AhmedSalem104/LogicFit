@@ -12,6 +12,8 @@ Storage__Provider=local
 
 No Cloudflare, Google or AWS credentials are required in this mode. Files are stored below `wwwroot/uploads` using the existing validation, random names and feature-level tenant ownership rules. Keep a backup of this directory and use a persistent disk; ephemeral containers or a multi-instance deployment should use R2 instead.
 
+When `Backup:Enabled=true`, the daily backup job now creates both the database BACPAC and a `media-YYYYMMDD-HHmmss.zip` archive of `wwwroot/uploads` in the configured private `Backup:StorageDirectory`. The media archive uses the same retention period and is written atomically through a temporary file, so partial archives are not treated as backups.
+
 Google Drive is intentionally not used as the default provider: its API requires a Google account/project and OAuth or service-account credentials, and Drive is not an object-storage/CDN endpoint for authenticated `<img>` requests. The R2 provider remains fully available and can be enabled later by changing only the provider setting and adding its credentials.
 
 ## Production configuration
