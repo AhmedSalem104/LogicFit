@@ -23,6 +23,8 @@ $arguments = @(
     "-source:contentPath=`"$ContentPath`"",
     "-dest:auto,ComputerName=$destination,UserName=$($profile.userName),Password=$($profile.userPWD),AuthType=Basic",
     '-enableLink:AppPoolExtension',
+    # Keep server-only secrets and production overrides, including appsettings.Production.json.
+    '-enableRule:DoNotDeleteRule',
     '-retryAttempts:3',
     '-retryInterval:5000'
 )
