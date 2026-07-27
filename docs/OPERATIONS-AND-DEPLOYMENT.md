@@ -22,6 +22,14 @@
 تغيير الإعدادات يتبعه Save ثم Restart/Recycle للتطبيق. وجود قيمة في `appsettings.json`
 المحلي لا يضمن وصولها لعملية Production.
 
+### ملف إعدادات Production على الخادم
+
+يُنشأ `appsettings.Production.json` داخل موقع Monster ASP فقط ولا يُرفع إلى Git. يضع
+المشغّل فيه `ConnectionStrings:DefaultConnection` و`JwtSettings:Secret` وأي إعدادات
+خاصة بالإنتاج. سكربت WebDeploy يحتفظ بالملفات الإضافية على الخادم عبر
+`DoNotDeleteRule`، لذلك لا يحذف هذا الملف أثناء نشر التطبيق. لا تُسجّل محتويات الملف
+أو كلمات المرور في التذاكر أو السجلات.
+
 ## فحص ما قبل النشر
 
 1. راجع `git status` وتأكد أن النسخة المنشورة هي commit/branch المقصود؛ لا تخلط مجلد
