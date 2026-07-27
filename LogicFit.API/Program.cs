@@ -5,7 +5,6 @@ using LogicFit.Infrastructure.Persistence;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.OpenApi.Models;
 using Serilog;
-using LogicFit.Platform.API.Features.Auth;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,8 +22,7 @@ builder.Host.UseSerilog();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-builder.Services.AddControllers()
-    .AddApplicationPart(typeof(PlatformAuthController).Assembly);
+builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddRateLimiter(options =>
