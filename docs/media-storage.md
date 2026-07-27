@@ -1,0 +1,25 @@
+# LogicFit media storage
+
+All API image/video upload endpoints depend on `IFileUploadService`. The default provider remains the local `wwwroot/uploads` provider. Cloudflare R2 is enabled only when `Storage:Provider` is set to `r2`, so existing deployments remain backwards compatible.
+
+## Production configuration
+
+Set these values as hosting environment variables (never commit the access key or secret):
+
+```text
+Storage__Provider=r2
+Storage__R2__ServiceUrl=https://<account-id>.r2.cloudflarestorage.com
+Storage__R2__Region=auto
+Storage__R2__Bucket=logicfit-media
+Storage__R2__AccessKey=<R2 access key id>
+Storage__R2__SecretKey=<R2 secret access key>
+Storage__R2__PublicBaseUrl=https://media.example.com   # optional; use a custom R2 domain
+```
+
+Without `PublicBaseUrl`, uploads return `/api/media/object?key=...`. That endpoint requires a JWT and only streams keys under the authenticated user's `TenantId` prefix. Platform users can access platform-scoped objects. Keys containing traversal segments are rejected.
+
+With `PublicBaseUrl`, only assets intentionally returned as public URLs (branding, logos and other non-sensitive images) use the CDN domain. Payment receipts, identity documents and other sensitive files should keep the authenticated API URL.
+
+## Existing image fields
+
+Gym profile, branding assets, profile pictures, exercise images, body-measurement photos and payment proofs already call `IFileUploadService`; switching the provider therefore moves new uploads without changing their feature controllers. Existing `/uploads/...` records remain readable during migration. A storage migration job should copy those objects to the tenant-scoped R2 prefix and update their URL fields after a backup.
