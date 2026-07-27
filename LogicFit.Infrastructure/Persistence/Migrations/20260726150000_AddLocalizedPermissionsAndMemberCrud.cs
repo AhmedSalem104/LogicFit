@@ -8,8 +8,23 @@ public partial class AddLocalizedPermissionsAndMemberCrud : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<string>("DisplayNameAr", "Permissions", type: "nvarchar(150)", maxLength: 150, nullable: false, defaultValue: "");
-        migrationBuilder.AddColumn<string>("NameAr", "Roles", type: "nvarchar(150)", maxLength: 150, nullable: false, defaultValue: "");
+        // The production rollout may have added these columns manually before the
+        // migration runner was enabled. Use idempotent SQL so the migration can finish
+        // in either state and record itself in __EFMigrationsHistory.
+        migrationBuilder.Sql("""
+            IF COL_LENGTH(N'dbo.Permissions', N'DisplayNameAr') IS NULL
+            BEGIN
+                ALTER TABLE dbo.Permissions ADD DisplayNameAr nvarchar(150) NOT NULL
+                    CONSTRAINT DF_Permissions_DisplayNameAr DEFAULT N'';
+            END;
+        """);
+        migrationBuilder.Sql("""
+            IF COL_LENGTH(N'dbo.Roles', N'NameAr') IS NULL
+            BEGIN
+                ALTER TABLE dbo.Roles ADD NameAr nvarchar(150) NOT NULL
+                    CONSTRAINT DF_Roles_NameAr DEFAULT N'';
+            END;
+        """);
 
         migrationBuilder.Sql("""
             INSERT INTO Permissions (Id, Code, DisplayName, DisplayNameAr, Category, IsPlatformPermission, CreatedAt)
@@ -36,7 +51,15 @@ public partial class AddLocalizedPermissionsAndMemberCrud : Migration
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn("DisplayNameAr", "Permissions");
-        migrationBuilder.DropColumn("NameAr", "Roles");
+        migrationBuilder.Sql("""
+            IF COL_LENGTH(N'dbo.Permissions', N'DisplayNameAr') IS NOT NULL
+                ALTER TABLE dbo.Permissions DROP CONSTRAINT IF EXISTS DF_Permissions_DisplayNameAr;
+            IF COL_LENGTH(N'dbo.Permissions', N'DisplayNameAr') IS NOT NULL
+                ALTER TABLE dbo.Permissions DROP COLUMN DisplayNameAr;
+            IF COL_LENGTH(N'dbo.Roles', N'NameAr') IS NOT NULL
+                ALTER TABLE dbo.Roles DROP CONSTRAINT IF EXISTS DF_Roles_NameAr;
+            IF COL_LENGTH(N'dbo.Roles', N'NameAr') IS NOT NULL
+                ALTER TABLE dbo.Roles DROP COLUMN NameAr;
+        """);
     }
 }
