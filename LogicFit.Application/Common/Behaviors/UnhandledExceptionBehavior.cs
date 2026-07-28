@@ -23,7 +23,9 @@ public class UnhandledExceptionBehavior<TRequest, TResponse> : IPipelineBehavior
         {
             var requestName = typeof(TRequest).Name;
 
-            _logger.LogError(ex, "Unhandled Exception for Request {RequestName} {@Request}", requestName, request);
+            // Never serialize request objects here: authentication requests contain
+            // passwords/tokens and can otherwise leak credentials into stdout logs.
+            _logger.LogError(ex, "Unhandled Exception for Request {RequestName}", requestName);
 
             throw;
         }
