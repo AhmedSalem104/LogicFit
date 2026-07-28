@@ -52,10 +52,14 @@ public sealed class OnboardClientCommandHandler : IRequestHandler<OnboardClientC
 
                 if (request.Membership.IssueCard)
                 {
+                    var subscriptionEndDate = await _db.ClientSubscriptions
+                        .Where(s => s.Id == subscriptionId.Value)
+                        .Select(s => (DateTime?)s.EndDate)
+                        .SingleAsync(cancellationToken);
                     cardId = await _mediator.Send(new IssueMembershipCardCommand
                     {
                         ClientId = clientId,
-                        ExpiresAt = null
+                        ExpiresAt = subscriptionEndDate
                     }, cancellationToken);
                 }
             }
