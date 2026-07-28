@@ -44,6 +44,9 @@ public class GetCoachesQueryHandler : IRequestHandler<GetCoachesQuery, List<Coac
                 Email = u.Email,
                 PhoneNumber = u.PhoneNumber,
                 IsActive = u.IsActive,
+                StaffQrCode = u.StaffQrCode,
+                StaffQrGeneratedAt = u.StaffQrGeneratedAt,
+                StaffQrRevokedAt = u.StaffQrRevokedAt,
                 Profile = u.Profile != null ? new CoachProfileDto
                 {
                     FullName = u.Profile.FullName,

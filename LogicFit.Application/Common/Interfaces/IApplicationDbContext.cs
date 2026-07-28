@@ -36,6 +36,7 @@ public interface IApplicationDbContext
     DbSet<WalletTransaction> WalletTransactions { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<Attendance> Attendances { get; }
+    DbSet<StaffAttendance> StaffAttendances { get; }
     DbSet<Appointment> Appointments { get; }
     DbSet<ChatConversation> ChatConversations { get; }
     DbSet<ChatMessage> ChatMessages { get; }

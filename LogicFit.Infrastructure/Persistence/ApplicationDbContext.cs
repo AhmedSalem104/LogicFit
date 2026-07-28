@@ -61,6 +61,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
+    public DbSet<StaffAttendance> StaffAttendances => Set<StaffAttendance>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<ChatConversation> ChatConversations => Set<ChatConversation>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
@@ -195,6 +196,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         builder.Entity<CoachClient>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<Attendance>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<StaffAttendance>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<Appointment>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<ChatConversation>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<ChatMessage>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
@@ -205,6 +207,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         builder.Entity<UserBranchAccess>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<MembershipCard>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<GateAccessLog>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<EmployeeProfile>().HasIndex(e => new { e.TenantId, e.QrCode }).IsUnique().HasFilter("[QrCode] IS NOT NULL");
+        builder.Entity<User>().HasIndex(e => new { e.TenantId, e.StaffQrCode }).IsUnique().HasFilter("[StaffQrCode] IS NOT NULL");
         builder.Entity<Room>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<Equipment>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<MaintenanceRecord>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));

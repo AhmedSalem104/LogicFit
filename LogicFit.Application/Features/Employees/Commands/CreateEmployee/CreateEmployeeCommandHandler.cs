@@ -47,7 +47,9 @@ public class CreateEmployeeCommandHandler : IRequestHandler<CreateEmployeeComman
             NationalId = request.NationalId,
             EmergencyContactName = request.EmergencyContactName,
             EmergencyContactPhone = request.EmergencyContactPhone,
-            Qualifications = request.Qualifications
+            Qualifications = request.Qualifications,
+            QrCode = $"staff:{tenantId:N}:{Guid.NewGuid():N}",
+            QrGeneratedAt = _dateTimeService.UtcNow
         };
 
         _context.EmployeeProfiles.Add(employee);

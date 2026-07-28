@@ -7,6 +7,9 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using LogicFit.Application.Common.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using LogicFit.Domain.Exceptions;
 
 namespace LogicFit.API.Features.Employees;
 
@@ -16,7 +19,11 @@ namespace LogicFit.API.Features.Employees;
 public class EmployeesController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public EmployeesController(IMediator mediator) { _mediator = mediator; }
+    private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenantService;
+    private readonly IDateTimeService _dateTime;
+    public EmployeesController(IMediator mediator, IApplicationDbContext context, ITenantService tenantService, IDateTimeService dateTime)
+    { _mediator = mediator; _context = context; _tenantService = tenantService; _dateTime = dateTime; }
 
     [HttpGet]
     public async Task<ActionResult<List<EmployeeDto>>> Get(
@@ -49,6 +56,30 @@ public class EmployeesController : ControllerBase
     {
         command.Id = id;
         await _mediator.Send(command);
+        return NoContent();
+    }
+
+    [HttpPost("{id}/qr/regenerate")]
+    public async Task<ActionResult<object>> RegenerateQr(Guid id, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantService.GetCurrentTenantId();
+        var employee = await _context.EmployeeProfiles.FirstOrDefaultAsync(e => e.Id == id && e.TenantId == tenantId, cancellationToken)
+            ?? throw new NotFoundException("Employee", id);
+        employee.QrCode = $"staff:{tenantId:N}:{Guid.NewGuid():N}";
+        employee.QrGeneratedAt = _dateTime.UtcNow;
+        employee.QrRevokedAt = null;
+        await _context.SaveChangesAsync(cancellationToken);
+        return Ok(new { employee.Id, employee.QrCode, employee.QrGeneratedAt });
+    }
+
+    [HttpPost("{id}/qr/revoke")]
+    public async Task<IActionResult> RevokeQr(Guid id, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantService.GetCurrentTenantId();
+        var employee = await _context.EmployeeProfiles.FirstOrDefaultAsync(e => e.Id == id && e.TenantId == tenantId, cancellationToken)
+            ?? throw new NotFoundException("Employee", id);
+        employee.QrRevokedAt = _dateTime.UtcNow;
+        await _context.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
 }
