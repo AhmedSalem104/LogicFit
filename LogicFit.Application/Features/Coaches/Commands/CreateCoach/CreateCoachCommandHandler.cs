@@ -45,6 +45,8 @@ public class CreateCoachCommandHandler : IRequestHandler<CreateCoachCommand, Gui
             Role = UserRole.Coach,
             IsActive = true,
             WalletBalance = 0
+            ,StaffQrCode = $"staff:{tenantId:N}:{Guid.NewGuid():N}"
+            ,StaffQrGeneratedAt = DateTime.UtcNow
         };
 
         _context.Users.Add(user);
