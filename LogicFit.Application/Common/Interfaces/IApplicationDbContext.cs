@@ -1,5 +1,6 @@
 using LogicFit.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace LogicFit.Application.Common.Interfaces;
 
@@ -103,4 +104,5 @@ public interface IApplicationDbContext
     DbSet<TenantUsage> TenantUsages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
 }
