@@ -11,6 +11,9 @@ using Microsoft.EntityFrameworkCore;
 using LogicFit.Application.Common.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using System.Net.Mime;
+using Amazon.S3;
+using Amazon.S3.Model;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace LogicFit.API.Features.Platform.PaymentRequests;
 
@@ -22,12 +25,21 @@ public class PlatformPaymentRequestsController : ControllerBase
     private readonly IMediator _mediator;
     private readonly IApplicationDbContext _context;
     private readonly IWebHostEnvironment _environment;
+    private readonly IAmazonS3? _s3;
+    private readonly IConfiguration _configuration;
 
-    public PlatformPaymentRequestsController(IMediator mediator, IApplicationDbContext context, IWebHostEnvironment environment)
+    public PlatformPaymentRequestsController(
+        IMediator mediator,
+        IApplicationDbContext context,
+        IWebHostEnvironment environment,
+        IConfiguration configuration,
+        IServiceProvider services)
     {
         _mediator = mediator;
         _context = context;
         _environment = environment;
+        _configuration = configuration;
+        _s3 = services.GetService<IAmazonS3>();
     }
 
     [HttpGet]
@@ -67,7 +79,44 @@ public class PlatformPaymentRequestsController : ControllerBase
             .Where(p => p.Id == id && !p.IsDeleted)
             .Select(p => p.ProofFileUrl)
             .FirstOrDefaultAsync(cancellationToken);
-        if (string.IsNullOrWhiteSpace(url) || !url.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(url))
+            return NotFound();
+
+        // R2 keeps payment proofs private and returns an authenticated media URL.
+        // Platform operators reach this endpoint through the payment-request policy,
+        // so do not route the request through the tenant-scoped MediaController.
+        if (url.StartsWith("/api/media/object", StringComparison.OrdinalIgnoreCase))
+        {
+            if (_s3 is null || !string.Equals(_configuration["Storage:Provider"], "r2", StringComparison.OrdinalIgnoreCase))
+                return NotFound();
+
+            var query = QueryHelpers.ParseQuery(new Uri(url, UriKind.RelativeOrAbsolute).Query);
+            if (!query.TryGetValue("key", out var keyValue) || string.IsNullOrWhiteSpace(keyValue))
+                return NotFound();
+
+            var key = Uri.UnescapeDataString(keyValue.ToString()).TrimStart('/');
+            if (key.Contains("..", StringComparison.Ordinal) || key.Contains('\\') ||
+                !key.Contains("/payment-proofs/", StringComparison.OrdinalIgnoreCase))
+                return NotFound();
+
+            try
+            {
+                var objectResponse = await _s3.GetObjectAsync(new GetObjectRequest
+                {
+                    BucketName = _configuration["Storage:R2:Bucket"],
+                    Key = key
+                }, cancellationToken);
+                return File(objectResponse.ResponseStream,
+                    objectResponse.Headers.ContentType ?? MediaTypeNames.Application.Octet,
+                    enableRangeProcessing: true);
+            }
+            catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return NotFound();
+            }
+        }
+
+        if (!url.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
             return NotFound();
 
         var root = Path.GetFullPath(Path.Combine(_environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot"), "uploads"));

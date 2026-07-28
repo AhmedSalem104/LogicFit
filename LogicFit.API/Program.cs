@@ -126,13 +126,13 @@ var app = builder.Build();
 // execute the generated SQL script, so enabling Database__ApplyMigrationsOnStartup=true
 // for one restart lets the application bring the schema up to date before the seeders
 // query newly-added columns (for example Permissions.DisplayNameAr).
-// The unified Monster deployment is a single application instance and does not run
-// the generated SQL artifact separately. In Production, therefore, apply pending
-// migrations by default unless explicitly disabled. Local/development environments
-// remain opt-in to avoid surprising schema changes during development.
+// Migrations are always opt-in. A production process must never apply schema changes
+// implicitly during startup: a partially applied or incompatible migration would take
+// the whole site down and cause IIS worker-process recycles. Enable the setting only
+// for a controlled one-time migration window, then disable it again.
 var applyMigrationsOnStartup = builder.Configuration.GetValue(
     "Database:ApplyMigrationsOnStartup",
-    builder.Environment.IsProduction());
+    false);
 if (applyMigrationsOnStartup)
 {
     await using var migrationScope = app.Services.CreateAsyncScope();
