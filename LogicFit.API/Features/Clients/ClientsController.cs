@@ -4,6 +4,7 @@ using LogicFit.Application.Features.Clients.Commands.UpdateClient;
 using LogicFit.Application.Features.Clients.DTOs;
 using LogicFit.Application.Features.Clients.Queries.GetClientById;
 using LogicFit.Application.Features.Clients.Queries.GetClients;
+using LogicFit.Application.Features.Clients.Commands.OnboardClient;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using LogicFit.Domain.Authorization;
@@ -54,6 +55,11 @@ public class ClientsController : ControllerBase
         var id = await _mediator.Send(command);
         return Ok(id);
     }
+
+    [HttpPost("onboard")]
+    [Authorize(Policy = Permissions.CreateMembers)]
+    public async Task<ActionResult<OnboardClientResult>> OnboardClient(OnboardClientCommand command)
+        => Ok(await _mediator.Send(command));
 
     [HttpPut("{id}")]
     [Authorize(Policy = Permissions.UpdateMembers)]

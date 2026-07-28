@@ -13,6 +13,8 @@ namespace LogicFit.Infrastructure.Persistence;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IApplicationDbContext
 {
+    public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        => Database.BeginTransactionAsync(cancellationToken);
     private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeService _dateTimeService;
