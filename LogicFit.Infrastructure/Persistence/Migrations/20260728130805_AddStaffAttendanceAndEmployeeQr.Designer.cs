@@ -4,6 +4,7 @@ using LogicFit.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LogicFit.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260728130805_AddStaffAttendanceAndEmployeeQr")]
+    partial class AddStaffAttendanceAndEmployeeQr
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -5702,15 +5705,6 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
-                    b.Property<string>("StaffQrCode")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime?>("StaffQrGeneratedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("StaffQrRevokedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -5732,10 +5726,6 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "Email")
                         .IsUnique();
-
-                    b.HasIndex("TenantId", "StaffQrCode")
-                        .IsUnique()
-                        .HasFilter("[StaffQrCode] IS NOT NULL");
 
                     b.ToTable("DomainUsers", (string)null);
                 });

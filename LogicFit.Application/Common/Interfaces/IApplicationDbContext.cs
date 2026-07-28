@@ -1,5 +1,6 @@
 using LogicFit.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace LogicFit.Application.Common.Interfaces;
 
@@ -35,6 +36,7 @@ public interface IApplicationDbContext
     DbSet<WalletTransaction> WalletTransactions { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<Attendance> Attendances { get; }
+    DbSet<StaffAttendance> StaffAttendances { get; }
     DbSet<Appointment> Appointments { get; }
     DbSet<ChatConversation> ChatConversations { get; }
     DbSet<ChatMessage> ChatMessages { get; }
@@ -103,4 +105,5 @@ public interface IApplicationDbContext
     DbSet<TenantUsage> TenantUsages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
 }

@@ -24,5 +24,9 @@ public class EmployeeDto
     public string? EmergencyContactPhone { get; set; }
     public string? Qualifications { get; set; }
     public List<Guid> BranchIds { get; set; } = new();
+    public string? QrCode { get; set; }
+    public DateTime? QrGeneratedAt { get; set; }
+    public DateTime? QrRevokedAt { get; set; }
+    public bool HasActiveQr => !string.IsNullOrWhiteSpace(QrCode) && !QrRevokedAt.HasValue;
     public bool IsActive => !TerminationDate.HasValue;
 }

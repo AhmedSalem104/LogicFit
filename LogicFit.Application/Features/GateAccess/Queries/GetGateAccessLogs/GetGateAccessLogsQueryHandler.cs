@@ -22,6 +22,7 @@ public class GetGateAccessLogsQueryHandler : IRequestHandler<GetGateAccessLogsQu
 
         var query = _context.GateAccessLogs
             .Include(l => l.Client)
+                .ThenInclude(c => c.Profile)
             .Include(l => l.Branch)
             .Where(l => l.TenantId == tenantId)
             .AsQueryable();
@@ -52,7 +53,7 @@ public class GetGateAccessLogsQueryHandler : IRequestHandler<GetGateAccessLogsQu
         {
             Id = l.Id,
             ClientId = l.ClientId,
-            ClientName = l.Client?.Email,
+            ClientName = l.Client?.Profile?.FullName ?? l.Client?.Email,
             BranchId = l.BranchId,
             BranchName = l.Branch?.Name,
             AccessTime = l.AccessTime,

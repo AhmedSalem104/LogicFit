@@ -15,6 +15,10 @@ public class User : AuditableEntity, ITenantEntity, ISoftDeletable
     public bool IsActive { get; set; } = true;
     /// <summary>When true, the user may sign in but must replace the temporary password.</summary>
     public bool MustChangePassword { get; set; }
+    /// <summary>Opaque QR token used for staff (employees/coaches) gate attendance.</summary>
+    public string? StaffQrCode { get; set; }
+    public DateTime? StaffQrGeneratedAt { get; set; }
+    public DateTime? StaffQrRevokedAt { get; set; }
 
     // Bumped whenever this user's roles/permissions change; embedded in the JWT as "perm_ver"
     // so issued tokens can be invalidated on the next refresh.
