@@ -82,6 +82,20 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 - Current verification baseline: 53 passing tests; three pre-existing nullable warnings remain.
 - Establish `develop` as the protected integration branch; require task-branch Pull Requests and passing CI for all merges.
 
+### 2026-07-28 — production migration incident prevention
+
+- A Git migration file is not a database deployment. Every production migration must have an explicit apply step, a recorded target database, and a post-apply health check.
+- Before enabling startup migrations, inspect `__EFMigrationsHistory` and the actual production schema. Production may contain columns added manually or may be missing columns that exist in the EF model.
+- Migrations targeting shared/legacy Monster databases must be idempotent against both states: use guarded `COL_LENGTH`/`OBJECT_ID` SQL for add/drop/constraint operations when the target schema may differ. Never assume `AddColumn` or `DropColumn` is safe merely because the migration is new.
+- Never make a migration change that drops an existing column without verifying the column exists in every supported production schema. Preserve data and constraints; use a reviewed backup and rollback plan.
+- Do not treat EF model warnings about query filters as startup failures. The release blocker is the first `SqlException`/`Unhandled exception` in stdout, not the preceding warnings.
+- If IIS reports `ISAPI reported an unhealthy condition`, retrieve `stdout_*.log` before changing code. This message is only a symptom of a startup crash/recycle.
+- For Monster ASP, deploy with stdout logging enabled during diagnosis, ensure the logs directory is writable, capture the first root exception, then disable verbose stdout after recovery.
+- Production startup migration is enabled only for the single unified host after schema review. If the database account lacks DDL permission, disable startup migration and apply the reviewed idempotent SQL with an operator-controlled database connection.
+- After each migration fix, run `dotnet build`, `dotnet test`, generate an idempotent migration script, deploy to a schema that represents the production drift, and verify `/health` before merging/releasing.
+- QR/media changes must not introduce storage-provider startup failures: local storage remains the default; R2 is selected only when all required R2 settings are present. Keep sensitive files private and test the authenticated media endpoint separately.
+- Do not declare a deployment healthy from a successful WebDeploy sync alone. Require application startup, database migration completion, `/health` 200, and a smoke test for the affected endpoint.
+
 ### 2026-07-25
 
 - Platform administration collection APIs use the one-based `{ items, totalCount, page, pageSize, totalPages }` pagination contract; page size is bounded to 100.
