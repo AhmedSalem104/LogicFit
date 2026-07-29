@@ -121,28 +121,19 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Applying migrations is opt-in because production deployments should normally run
-// migrations as a separate, controlled release step.  Monster ASP does not currently
-// execute the generated SQL script, so enabling Database__ApplyMigrationsOnStartup=true
-// for one restart lets the application bring the schema up to date before the seeders
-// query newly-added columns (for example Permissions.DisplayNameAr).
-// Migrations are always opt-in. A production process must never apply schema changes
-// implicitly during startup: a partially applied or incompatible migration would take
-// the whole site down and cause IIS worker-process recycles. Enable the setting only
-// for a controlled one-time migration window, then disable it again.
-var applyMigrationsOnStartup = builder.Configuration.GetValue(
+// Production schema changes are a separately reviewed deployment operation. Never
+// apply migrations from the web-process startup path: a partial or incompatible
+// migration would make IIS recycle the application before diagnostics are available.
+var migrationOnStartupRequested = builder.Configuration.GetValue(
     "Database:ApplyMigrationsOnStartup",
     false);
-if (applyMigrationsOnStartup)
+if (migrationOnStartupRequested)
 {
-    await using var migrationScope = app.Services.CreateAsyncScope();
-    var db = migrationScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    Log.Warning("Database__ApplyMigrationsOnStartup is enabled; applying pending migrations before seeding");
-    await db.Database.MigrateAsync();
-    Log.Information("Database migrations applied successfully");
+    Log.Warning(
+        "Database__ApplyMigrationsOnStartup is ignored. Apply reviewed idempotent migrations separately after a verified backup, then restart the application.");
 }
 
-// Seed data on startup (after optional migrations)
+// Seed data on startup.
 using (var scope = app.Services.CreateScope())
 {
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();

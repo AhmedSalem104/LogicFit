@@ -42,6 +42,17 @@ dotnet test LogicFit.sln -c Release --no-build --verbosity minimal
 dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --startup-project LogicFit.API
 ```
 
+### Migrations and health verification
+
+Never apply an EF migration from application startup, including through `Database__ApplyMigrationsOnStartup`. Create and verify a backup, generate and review the idempotent script, apply it through the approved database operator procedure, publish the application, then verify health. The WebDeploy helper supports the final verification without printing publish credentials:
+
+```powershell
+.\Scripts\deploy-webdeploy.ps1 `
+  -PublishSettingsPath <publish-settings-file> `
+  -ContentPath <publish-output-directory> `
+  -HealthCheckUrl https://your-host/health
+```
+
 3. خذ Backup وراجع Migration Dry Run وتقرير المخالفات لأي تغيير بيانات كبير.
 4. انشر الـAPI الصحيح، ثم طبق migrations في خطوة مراجعة منفصلة، ثم نفذ health check.
 5. انشر Dashboard المبني من البيئة التي تشير إلى API الصحيح.
