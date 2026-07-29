@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-07-29 10:42 UTC`  |  Total endpoints: **346**
+Generated: `2026-07-29 11:28 UTC`  |  Total endpoints: **349**
 
 ## Contract rules
 
@@ -401,44 +401,6 @@ Generated: `2026-07-29 10:42 UTC`  |  Total endpoints: **346**
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
 
-### PlatformWorkspaceApplications
-
-#### `GET /api/platform/workspace-applications` - `List`
-
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
-- **Inputs:** Query `applicationType`: `ApplicationType?`<br>Query `status`: `ApplicationRequestStatus?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] ApplicationType? applicationType, [FromQuery] ApplicationRequestStatus? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 20`
-- **Declared response:** typeof(PagedResult<PlatformApplicationDto>), StatusCodes.Status200OK
-
-#### `POST /api/platform/workspace-applications/{id:guid}/approve-freelance` - `ApproveFreelance`
-
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
-- **Inputs:** Body `request`: `ConcurrencyRequest`<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
-- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
-
-#### `POST /api/platform/workspace-applications/{id:guid}/approve-membership` - `ApproveMembership`
-
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
-- **Inputs:** Body `request`: `ConcurrencyRequest`<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
-- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
-
-#### `POST /api/platform/workspace-applications/{id:guid}/reject` - `Reject`
-
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
-- **Inputs:** Body `request`: `RejectRequest`<br>Handler signature: `Guid id, [FromBody] RejectRequest request`
-- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
-
-#### `POST /api/platform/workspace-applications/{id:guid}/request-information` - `RequestInformation`
-
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
-- **Inputs:** Body `request`: `RequestInformationRequest`<br>Handler signature: `Guid id, [FromBody] RequestInformationRequest request`
-- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
-
-#### `POST /api/platform/workspace-applications/{id:guid}/start-review` - `StartReview`
-
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
-- **Inputs:** Body `request`: `ConcurrencyRequest`<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
-- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
-
 ## Tenant API
 
 ### Appointments
@@ -823,6 +785,12 @@ Generated: `2026-07-29 10:42 UTC`  |  Total endpoints: **346**
 - **Inputs:** Handler signature: `Guid id, UpdateClientCommand command`
 - **Declared response:** Task<ActionResult>
 
+#### `POST /api/Clients/onboard` - `OnboardClient`
+
+- **Access:** JWT + Policy: `Permissions.CreateMembers`
+- **Inputs:** Handler signature: `OnboardClientCommand command`
+- **Declared response:** Task<ActionResult<OnboardClientResult>>
+
 ### CoachClients
 
 #### `GET /api/coach-clients` - `GetCoachClients`
@@ -835,7 +803,7 @@ Generated: `2026-07-29 10:42 UTC`  |  Total endpoints: **346**
 
 - **Access:** JWT + Policy: `Permissions.ManageCoaches`
 - **Inputs:** Handler signature: `AddTraineeCommand command`
-- **Declared response:** Task<ActionResult<Guid>>
+- **Declared response:** Task<ActionResult<AddTraineeResult>>
 
 #### `DELETE /api/coach-clients/{clientId}` - `UnassignClientFromCoach`
 
@@ -892,6 +860,18 @@ Generated: `2026-07-29 10:42 UTC`  |  Total endpoints: **346**
 - **Access:** JWT + Policy: `Permissions.ManageCoaches`
 - **Inputs:** Handler signature: `Guid id, UpdateCoachCommand command`
 - **Declared response:** Task<ActionResult>
+
+#### `POST /api/Coaches/{id}/qr/regenerate` - `RegenerateQr`
+
+- **Access:** JWT + Policy: `Permissions.ManageCoaches`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<object>>
+
+#### `POST /api/Coaches/{id}/qr/revoke` - `RevokeQr`
+
+- **Access:** JWT + Policy: `Permissions.ManageCoaches`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<IActionResult>
 
 ### Commissions
 
@@ -1038,6 +1018,18 @@ Generated: `2026-07-29 10:42 UTC`  |  Total endpoints: **346**
 - **Access:** JWT + Policy: `Permissions.ManageEmployees`
 - **Inputs:** Handler signature: `Guid id, UpdateEmployeeCommand command`
 - **Declared response:** Task<ActionResult>
+
+#### `POST /api/Employees/{id}/qr/regenerate` - `RegenerateQr`
+
+- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<object>>
+
+#### `POST /api/Employees/{id}/qr/revoke` - `RevokeQr`
+
+- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<IActionResult>
 
 #### `POST /api/Employees/{id}/terminate` - `Terminate`
 
@@ -1414,6 +1406,14 @@ Generated: `2026-07-29 10:42 UTC`  |  Total endpoints: **346**
 - **Access:** JWT required
 - **Inputs:** Query `date`: `DateTime?`<br>Handler signature: `[FromQuery] DateTime? date`
 - **Declared response:** typeof(NutritionSummaryDto), StatusCodes.Status200OK
+
+### Media
+
+#### `GET /api/media/object` - `GetObject`
+
+- **Access:** JWT required
+- **Inputs:** Query `key`: `string`<br>Handler signature: `[FromQuery] string key`
+- **Declared response:** Task<IActionResult>
 
 ### MembershipCards
 
@@ -1792,6 +1792,26 @@ Generated: `2026-07-29 10:42 UTC`  |  Total endpoints: **346**
 - **Access:** JWT + Policy: `Permissions.ManageEmployees`
 - **Inputs:** Query `employeeId`: `Guid?`<br>Query `shiftId`: `Guid?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] Guid? employeeId, [FromQuery] Guid? shiftId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** Task<ActionResult<List<ShiftAssignmentDto>>>
+
+### StaffAttendance
+
+#### `GET /api/staff-attendance` - `Get`
+
+- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Query `branchId`: `Guid?`<br>Query `userId`: `Guid?`<br>Handler signature: `[FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] Guid? branchId, [FromQuery] Guid? userId`
+- **Declared response:** Task<ActionResult<List<StaffAttendanceDto>>>
+
+#### `POST /api/staff-attendance/{id}/check-out` - `CheckOut`
+
+- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<IActionResult>
+
+#### `POST /api/staff-attendance/toggle-qr` - `ToggleByQr`
+
+- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Inputs:** Body `request`: `ToggleStaffQrRequest`<br>Handler signature: `[FromBody] ToggleStaffQrRequest request`
+- **Declared response:** Task<ActionResult<StaffAttendanceDto>>
 
 ### Stock
 

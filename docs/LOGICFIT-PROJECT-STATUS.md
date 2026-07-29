@@ -59,7 +59,7 @@ sequenceDiagram
 - Cross-cutting: notifications, audit logs, uploads, concurrency row versions.
 - Every tenant-owned aggregate carries a tenant boundary enforced by EF query filters and command ownership checks.
 
-## Freelance workspace foundation (local implementation, not deployed)
+## Freelance workspace foundation (production migrations verified)
 
 - `WorkspaceType.FreelanceCoach` keeps an independent coach in the existing tenant isolation boundary; legacy tenants default to `Gym`.
 - A global `IdentityAccount` is linked to tenant-local `DomainUsers` and `WorkspaceMemberships`. Existing `/api/auth/login` remains supported and creates this link lazily after a successful legacy login; it never fails an existing login because of an identity collision.
@@ -70,7 +70,7 @@ sequenceDiagram
 - A Freelance Owner can sponsor an existing global identity as `FreelanceCoach`, `FreelanceAssistant`, or `Client`; that creates a separate membership application and never grants access directly. Platform approval repeats the live plan-capacity check and only then creates the tenant-local user, role assignment, and active membership. Capacity errors use `PLAN_MEMBER_LIMIT_REACHED` or `PLAN_CLIENT_LIMIT_REACHED`.
 - Freelance workspace branding reuses tenant branding for colors, logos, cover/background, and report identity, and adds a structured profile for bio, specialties, certifications, social links, welcome content, and booking settings.
 - Subscription policy is now explicit in the access gate: `Trial`, `Active`, and `PastDue` operate normally; `Expired` is read-only while billing/renewal remains available; suspended/archived/provisioning workspaces hard-block operational access. Legacy gyms without a SaaS subscription record preserve their existing operational access during the migration rollout; a new freelance workspace without a subscription is billing-only.
-- Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed locally. The third migration adds the tenant row-version used to serialize final membership-capacity approval. They must be applied separately with the idempotent EF script; they have not been applied to any server from this workspace.
+- Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed locally. The third migration adds the tenant row-version used to serialize final membership-capacity approval. Production schema application was verified separately on 2026-07-29; application deployment remains a protected CI/CD operation with health-check and rollback review.
 
 ## API contracts
 
@@ -272,8 +272,8 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 
 ## Verification status
 
-- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 79 passing tests.
-- `dotnet build LogicFit.sln -c Release --no-restore`: successful; three pre-existing nullable warnings remain in coach-client and client-subscription query projections.
+- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 80 passing tests.
+- `dotnet build LogicFit.sln -c Release --no-restore`: successful; four pre-existing nullable warnings remain in coach-client, gate-access, and client-subscription query projections.
 - `npm run build` in `LogiFit_Platform_Admin_Dashboard`: successful.
 
 ## CI/CD policy
