@@ -62,7 +62,7 @@ public class TenantAccessGuard : ITenantAccessGuard
         var tenant = await _context.Tenants
             .IgnoreQueryFilters()
             .Where(t => t.Id == tenantId && !t.IsDeleted)
-            .Select(t => new { t.Status, t.SuspensionReason })
+            .Select(t => new { t.Status, t.SuspensionReason, t.WorkspaceType })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (tenant is null)
@@ -74,21 +74,24 @@ public class TenantAccessGuard : ITenantAccessGuard
         var sub = await _context.TenantSubscriptions
             .Where(s => s.TenantId == tenantId)
             .OrderByDescending(s => s.EndDate)
-            .Select(s => new { s.Status, s.EndDate })
+            .Select(s => new { s.Status, s.EndDate, s.TrialEndsAt })
             .FirstOrDefaultAsync(cancellationToken);
 
         TenantSubscriptionStatus? subStatus = sub?.Status;
 
         // An "Active" subscription whose term has elapsed is effectively expired (the lifecycle job may
         // not have run yet) — treat it as Expired so access reflects reality immediately.
-        if (sub is not null
-            && sub.Status == TenantSubscriptionStatus.Active
-            && sub.EndDate.HasValue
-            && sub.EndDate.Value < now)
+        if (sub is not null &&
+            ((sub.Status == TenantSubscriptionStatus.Active && sub.EndDate.HasValue && sub.EndDate.Value < now)
+             || (sub.Status == TenantSubscriptionStatus.Trial && sub.TrialEndsAt.HasValue && sub.TrialEndsAt.Value < now)
+             || (sub.Status == TenantSubscriptionStatus.Cancelled && sub.EndDate.HasValue && sub.EndDate.Value < now)
+             || (sub.Status == TenantSubscriptionStatus.PastDue
+                 && (sub.EndDate ?? sub.TrialEndsAt).HasValue
+                 && (sub.EndDate ?? sub.TrialEndsAt)!.Value < now.AddDays(-3))))
         {
             subStatus = TenantSubscriptionStatus.Expired;
         }
 
-        return new TenantAccessState(true, tenant.Status, subStatus, tenant.SuspensionReason);
+        return new TenantAccessState(true, tenant.Status, subStatus, tenant.SuspensionReason, tenant.WorkspaceType);
     }
 }

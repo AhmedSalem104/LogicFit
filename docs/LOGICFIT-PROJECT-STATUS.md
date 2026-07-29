@@ -1,6 +1,6 @@
 # LogicFit Project Status
 
-Last reviewed: 2026-07-25
+Last reviewed: 2026-07-29
 
 ## Executive summary
 
@@ -59,6 +59,19 @@ sequenceDiagram
 - Cross-cutting: notifications, audit logs, uploads, concurrency row versions.
 - Every tenant-owned aggregate carries a tenant boundary enforced by EF query filters and command ownership checks.
 
+## Freelance workspace foundation (local implementation, not deployed)
+
+- `WorkspaceType.FreelanceCoach` keeps an independent coach in the existing tenant isolation boundary; legacy tenants default to `Gym`.
+- A global `IdentityAccount` is linked to tenant-local `DomainUsers` and `WorkspaceMemberships`. Existing `/api/auth/login` remains supported and creates this link lazily after a successful legacy login; it never fails an existing login because of an identity collision.
+- New `/api/identity/login` performs identity-first sign-in and returns active workspaces and pending applications together. `/api/identity/select-workspace` exchanges its short-lived opaque selection token for the existing tenant JWT/refresh-token contract.
+- Public freelance onboarding uses `ApplicationRequests`, immutable submission revisions, and short-lived opaque tracking sessions. Applicants may edit only the field names requested by Platform Admin, then resubmit; rejected requests remain terminal evidence.
+- Platform Admin reviews a minimal, non-health/non-training application view through `/api/platform/workspace-applications`. Review, information-request, approval, and rejection use row-version concurrency; rejection revokes tracking sessions and review decisions enqueue an Outbox event.
+- Approval reserves one `Provisioning` workspace before creating the Freelance Owner, its active workspace membership, role assignment, branding profile, and final `Active` workspace. A retry reuses the reserved workspace; a provisioning database failure records `ProvisioningFailed` for operator retry.
+- A Freelance Owner can sponsor an existing global identity as `FreelanceCoach`, `FreelanceAssistant`, or `Client`; that creates a separate membership application and never grants access directly. Platform approval repeats the live plan-capacity check and only then creates the tenant-local user, role assignment, and active membership. Capacity errors use `PLAN_MEMBER_LIMIT_REACHED` or `PLAN_CLIENT_LIMIT_REACHED`.
+- Freelance workspace branding reuses tenant branding for colors, logos, cover/background, and report identity, and adds a structured profile for bio, specialties, certifications, social links, welcome content, and booking settings.
+- Subscription policy is now explicit in the access gate: `Trial`, `Active`, and `PastDue` operate normally; `Expired` is read-only while billing/renewal remains available; suspended/archived/provisioning workspaces hard-block operational access. Legacy gyms without a SaaS subscription record preserve their existing operational access during the migration rollout; a new freelance workspace without a subscription is billing-only.
+- Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed locally. The third migration adds the tenant row-version used to serialize final membership-capacity approval. They must be applied separately with the idempotent EF script; they have not been applied to any server from this workspace.
+
 ## API contracts
 
 - Tenant audience: `LogicFitUsers`.
@@ -72,7 +85,7 @@ sequenceDiagram
 ## Operational rules
 
 - Manual billing is the current and supported payment model.
-- Migrations are reviewed and generated idempotently before production application; the API does not silently migrate production at startup.
+- Migrations are reviewed and generated idempotently before production application. `DataSeeder.InitializeAsync` can apply pending migrations asynchronously only when `Database:ApplyMigrationsOnStartup=true`; it logs each pending migration, emits a critical log and rethrows on failure so startup stops on an incomplete schema, and remains `false` by default. Seed work is separately controlled by `Database:ApplySeedOnStartup`; it is enabled for local development compatibility and disabled in Production to avoid unrequested data changes.
 - Wallet, stock, coupon, approval, and counter-like shared state must use transactions, row versions, unique constraints, or idempotency keys as appropriate.
 - Secrets, publish profiles, passwords, refresh tokens, payment proofs, and reset tokens never enter Git or logs.
 
@@ -260,7 +273,7 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 
 ## Verification status
 
-- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 64 passing tests.
+- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 79 passing tests.
 - `dotnet build LogicFit.sln -c Release --no-restore`: successful; three pre-existing nullable warnings remain in coach-client and client-subscription query projections.
 - `npm run build` in `LogiFit_Platform_Admin_Dashboard`: successful.
 
@@ -289,7 +302,7 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 - Add integration, end-to-end, load, concurrency, and tenant-isolation tests.
 - Define the Monster ASP deployment target, application directory, service manager, backup command, and health URL before enabling automatic production deployment.
 - A local WebDeploy settings file was provided for `logicfit-platform.runasp.net` (`MSDeploy`, site `site78301`). It configures the Platform API only; its password is intentionally not recorded. A separate Tenant API publish profile and the production backup/migration/rollback procedure are still required.
-- `Scripts/deploy-webdeploy.ps1` now performs credential-safe MSDeploy synchronization from a publish output directory. The protected CD workflow requires both Platform and Tenant profiles plus health URLs before it can deploy.
+- `Scripts/deploy-webdeploy.ps1` performs credential-safe MSDeploy synchronization from a publish output directory. Its opt-in `-ApplyMigrations` path requires a verified backup and health URL, generates/reviews an idempotent script, applies migrations separately before WebDeploy, then checks health; `Database:ApplyMigrationsOnStartup` remains disabled. The protected CD workflow requires both Platform and Tenant profiles plus health URLs before it can deploy.
 
 ## Change log
 

@@ -31,6 +31,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     // DbSets
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<TenantBrandAsset> TenantBrandAssets => Set<TenantBrandAsset>();
+    public DbSet<IdentityAccount> IdentityAccounts => Set<IdentityAccount>();
+    public DbSet<IdentityWorkspaceSession> IdentityWorkspaceSessions => Set<IdentityWorkspaceSession>();
+    public DbSet<WorkspaceMembership> WorkspaceMemberships => Set<WorkspaceMembership>();
+    public DbSet<ApplicationRequest> ApplicationRequests => Set<ApplicationRequest>();
+    public DbSet<ApplicationRequestRevision> ApplicationRequestRevisions => Set<ApplicationRequestRevision>();
+    public DbSet<ApplicationTrackingSession> ApplicationTrackingSessions => Set<ApplicationTrackingSession>();
+    public DbSet<FreelanceWorkspaceProfile> FreelanceWorkspaceProfiles => Set<FreelanceWorkspaceProfile>();
     DbSet<User> IApplicationDbContext.Users => Set<User>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<NutrientDefinition> NutrientDefinitions => Set<NutrientDefinition>();
@@ -258,6 +265,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         // Non-tenant entities with soft delete only
         builder.Entity<Tenant>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<TenantBrandAsset>().HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
+        builder.Entity<WorkspaceMembership>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<FreelanceWorkspaceProfile>().HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
         builder.Entity<UserProfile>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<NutrientDefinition>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Muscle>().HasQueryFilter(e => !e.IsDeleted);

@@ -12,5 +12,8 @@ public enum UserRole
 
     // Platform-layer roles (users belong to the sentinel platform tenant)
     PlatformOwner = 8,
-    PlatformAdmin = 9
+    PlatformAdmin = 9,
+    FreelanceOwner = 10,
+    FreelanceCoach = 11,
+    FreelanceAssistant = 12
 }

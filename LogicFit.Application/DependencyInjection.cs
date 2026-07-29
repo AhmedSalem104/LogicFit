@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantAccessGuard, TenantAccessGuard>();
         services.AddScoped<ICommissionService, CommissionService>();
         services.AddScoped<ITenantUsageCalculator, TenantUsageCalculator>();
+        services.AddScoped<IWorkspaceMembershipQuotaService, WorkspaceMembershipQuotaService>();
 
         services.AddMediatR(cfg =>
         {

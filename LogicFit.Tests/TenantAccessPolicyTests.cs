@@ -4,97 +4,89 @@ using Xunit;
 
 namespace LogicFit.Tests;
 
-/// <summary>
-/// Locks in the pure tenant-access decision rules (no DB). Covers the gym-status × subscription-status ×
-/// suspension-reason matrix that both gates and the authorization handler rely on.
-/// </summary>
 public class TenantAccessPolicyTests
 {
     private static TenantAccessState State(
-        TenantStatus tenant,
-        TenantSubscriptionStatus? sub = null,
+        TenantStatus workspace = TenantStatus.Active,
+        TenantSubscriptionStatus? subscription = TenantSubscriptionStatus.Active,
         SuspensionReason? reason = null,
         bool exists = true)
-        => new(exists, tenant, sub, reason);
+        => new(exists, workspace, subscription, reason);
 
     [Theory]
-    [InlineData(TenantStatus.Active)]
-    [InlineData(TenantStatus.Trial)]
-    [InlineData(TenantStatus.PastDue)]
-    public void Operational_Statuses_Are_Not_Blocked_And_Not_Pending(TenantStatus status)
-    {
-        var s = State(status);
-        Assert.Null(TenantAccessPolicy.EvaluateHardBlock(s));
-        Assert.False(TenantAccessPolicy.IsPendingApproval(s));
-    }
-
-    [Fact]
-    public void PendingApproval_Is_Not_HardBlocked_But_Is_Pending()
-    {
-        var s = State(TenantStatus.PendingApproval);
-        Assert.Null(TenantAccessPolicy.EvaluateHardBlock(s));
-        Assert.True(TenantAccessPolicy.IsPendingApproval(s));
-    }
-
-    [Fact]
-    public void Suspended_NonPayment_Blocks_402_With_NonPayment_Code()
-    {
-        var b = TenantAccessPolicy.EvaluateHardBlock(State(TenantStatus.Suspended, reason: SuspensionReason.NonPayment));
-        Assert.NotNull(b);
-        Assert.Equal("TENANT_SUSPENDED_NONPAYMENT", b!.Code);
-        Assert.Equal(402, b.HttpStatus);
-    }
-
-    [Fact]
-    public void Suspended_ManualByAdmin_Blocks_403_Suspended()
-    {
-        var b = TenantAccessPolicy.EvaluateHardBlock(State(TenantStatus.Suspended, reason: SuspensionReason.ManualByAdmin));
-        Assert.NotNull(b);
-        Assert.Equal("TENANT_SUSPENDED", b!.Code);
-        Assert.Equal(403, b.HttpStatus);
-    }
-
-    [Theory]
-    [InlineData(TenantStatus.Cancelled, "TENANT_SUBSCRIPTION_CANCELLED", 402)]
-    [InlineData(TenantStatus.Archived, "TENANT_ARCHIVED", 403)]
-    [InlineData(TenantStatus.Deleted, "TENANT_NOT_FOUND", 404)]
-    public void Terminal_Tenant_Statuses_Block_With_Expected_Code(TenantStatus status, string code, int http)
-    {
-        var b = TenantAccessPolicy.EvaluateHardBlock(State(status));
-        Assert.NotNull(b);
-        Assert.Equal(code, b!.Code);
-        Assert.Equal(http, b.HttpStatus);
-    }
-
-    [Fact]
-    public void Missing_Tenant_Is_NotFound()
-    {
-        var b = TenantAccessPolicy.EvaluateHardBlock(State(TenantStatus.Deleted, exists: false));
-        Assert.NotNull(b);
-        Assert.Equal("TENANT_NOT_FOUND", b!.Code);
-        Assert.Equal(404, b.HttpStatus);
-    }
-
-    [Theory]
-    [InlineData(TenantSubscriptionStatus.Expired, "TENANT_SUBSCRIPTION_EXPIRED", 402)]
-    [InlineData(TenantSubscriptionStatus.Cancelled, "TENANT_SUBSCRIPTION_CANCELLED", 402)]
-    [InlineData(TenantSubscriptionStatus.Suspended, "TENANT_SUBSCRIPTION_SUSPENDED", 402)]
-    public void Subscription_Blocks_Even_When_Tenant_Status_Is_Active(TenantSubscriptionStatus sub, string code, int http)
-    {
-        // A gym still marked Active but whose subscription lapsed must be blocked with the precise code.
-        var b = TenantAccessPolicy.EvaluateHardBlock(State(TenantStatus.Active, sub: sub));
-        Assert.NotNull(b);
-        Assert.Equal(code, b!.Code);
-        Assert.Equal(http, b.HttpStatus);
-    }
-
-    [Theory]
-    [InlineData(TenantSubscriptionStatus.Active)]
     [InlineData(TenantSubscriptionStatus.Trial)]
+    [InlineData(TenantSubscriptionStatus.Active)]
     [InlineData(TenantSubscriptionStatus.PastDue)]
-    [InlineData(TenantSubscriptionStatus.PendingPayment)]
-    public void Healthy_Or_Grace_Subscriptions_Do_Not_Block_An_Active_Tenant(TenantSubscriptionStatus sub)
+    [InlineData(TenantSubscriptionStatus.GracePeriod)]
+    public void Healthy_or_grace_subscription_has_full_access(TenantSubscriptionStatus subscription)
     {
-        Assert.Null(TenantAccessPolicy.EvaluateHardBlock(State(TenantStatus.Active, sub: sub)));
+        Assert.Equal(TenantAccessMode.Full, TenantAccessPolicy.Evaluate(State(subscription: subscription)).Mode);
+    }
+
+    [Theory]
+    [InlineData(TenantSubscriptionStatus.None)]
+    [InlineData(TenantSubscriptionStatus.PendingPayment)]
+    public void No_selected_plan_is_billing_only(TenantSubscriptionStatus subscription)
+    {
+        Assert.Equal(TenantAccessMode.BillingOnly, TenantAccessPolicy.Evaluate(State(subscription: subscription)).Mode);
+    }
+
+    [Theory]
+    [InlineData(TenantSubscriptionStatus.Expired)]
+    [InlineData(TenantSubscriptionStatus.Cancelled)]
+    [InlineData(TenantSubscriptionStatus.Suspended)]
+    public void Ended_subscription_is_read_only_not_hard_blocked(TenantSubscriptionStatus subscription)
+    {
+        var decision = TenantAccessPolicy.Evaluate(State(subscription: subscription));
+        Assert.Equal(TenantAccessMode.ReadOnly, decision.Mode);
+        Assert.Null(decision.Block);
+    }
+
+    [Fact]
+    public void Legacy_gym_without_subscription_record_remains_operational_during_rollout()
+    {
+        Assert.Equal(TenantAccessMode.Full, TenantAccessPolicy.Evaluate(State(subscription: null)).Mode);
+    }
+
+    [Fact]
+    public void New_freelance_workspace_without_subscription_is_billing_only()
+    {
+        var state = State(subscription: null) with { WorkspaceType = WorkspaceType.FreelanceCoach };
+        Assert.Equal(TenantAccessMode.BillingOnly, TenantAccessPolicy.Evaluate(state).Mode);
+    }
+
+    [Fact]
+    public void Pending_workspace_is_billing_only()
+    {
+        Assert.Equal(TenantAccessMode.BillingOnly, TenantAccessPolicy.Evaluate(State(TenantStatus.PendingApproval)).Mode);
+    }
+
+    [Theory]
+    [InlineData(TenantStatus.Archived, "TENANT_ARCHIVED", 403)]
+    [InlineData(TenantStatus.Provisioning, "WORKSPACE_PROVISIONING", 423)]
+    [InlineData(TenantStatus.ProvisioningFailed, "WORKSPACE_PROVISIONING_FAILED", 503)]
+    public void Non_operational_workspace_blocks_before_subscription(TenantStatus workspace, string code, int http)
+    {
+        var decision = TenantAccessPolicy.Evaluate(State(workspace, TenantSubscriptionStatus.Active));
+        Assert.Equal(TenantAccessMode.Blocked, decision.Mode);
+        Assert.Equal(code, decision.Block!.Code);
+        Assert.Equal(http, decision.Block.HttpStatus);
+    }
+
+    [Fact]
+    public void Suspended_workspace_wins_over_active_subscription()
+    {
+        var decision = TenantAccessPolicy.Evaluate(State(TenantStatus.Suspended, TenantSubscriptionStatus.Active, SuspensionReason.ManualByAdmin));
+        Assert.Equal(TenantAccessMode.Blocked, decision.Mode);
+        Assert.Equal("TENANT_SUSPENDED", decision.Block!.Code);
+    }
+
+    [Fact]
+    public void Missing_workspace_is_not_found()
+    {
+        var decision = TenantAccessPolicy.Evaluate(State(exists: false));
+        Assert.Equal(TenantAccessMode.Blocked, decision.Mode);
+        Assert.Equal("TENANT_NOT_FOUND", decision.Block!.Code);
+        Assert.Equal(404, decision.Block.HttpStatus);
     }
 }

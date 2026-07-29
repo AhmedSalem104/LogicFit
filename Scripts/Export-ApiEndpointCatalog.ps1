@@ -201,6 +201,10 @@ foreach ($surfaceGroup in ($ordered | Group-Object Surface)) {
     }
 }
 
+while ($lines.Count -gt 0 -and [string]::IsNullOrWhiteSpace($lines[$lines.Count - 1])) {
+    $lines.RemoveAt($lines.Count - 1)
+}
+
 $candidateOutput = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
     $OutputPath
 } else {

@@ -1,5 +1,7 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.Auth.DTOs;
+using LogicFit.Domain.Entities;
+using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -73,6 +75,11 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             throw new UnauthorizedException("Invalid credentials");
         }
 
+        // Compatibility bridge: existing tenant accounts continue to authenticate exactly as
+        // before, while their next successful sign-in creates/links the global identity and an
+        // active workspace membership. A conflicting global password never breaks legacy login.
+        await EnsureIdentityWorkspaceLinkAsync(user, request.Password, cancellationToken);
+
         // Resolve roles + permissions from RBAC tables
         var auth = await _rbacService.GetUserAuthorizationAsync(user.Id, cancellationToken);
 
@@ -97,5 +104,62 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             RefreshToken = refreshToken.Token,
             ExpiresAt = accessToken.ExpiresAt
         };
+    }
+
+    private async Task EnsureIdentityWorkspaceLinkAsync(User user, string password, CancellationToken cancellationToken)
+    {
+        if (user.IdentityAccountId.HasValue)
+            return;
+
+        var normalizedEmail = user.Email.Trim().ToUpperInvariant();
+        var normalizedPhone = string.IsNullOrWhiteSpace(user.PhoneNumber)
+            ? null
+            : new string(user.PhoneNumber.Where(char.IsDigit).ToArray());
+        var identity = await _context.IdentityAccounts.FirstOrDefaultAsync(x =>
+            x.NormalizedEmail == normalizedEmail ||
+            (normalizedPhone != null && x.NormalizedPhoneNumber == normalizedPhone), cancellationToken);
+
+        if (identity is null)
+        {
+            identity = new IdentityAccount
+            {
+                Email = user.Email,
+                NormalizedEmail = normalizedEmail,
+                PhoneNumber = user.PhoneNumber,
+                NormalizedPhoneNumber = normalizedPhone,
+                PasswordHash = user.PasswordHash,
+                IsActive = user.IsActive,
+                LastLoginAt = _dateTimeService.UtcNow
+            };
+            _context.IdentityAccounts.Add(identity);
+        }
+        else
+        {
+            // Same email/phone with a different password is an unrelated legacy account. It
+            // remains tenant-only until it can be merged through an explicit account-recovery flow.
+            if (!identity.IsActive || !BCrypt.Net.BCrypt.Verify(password, identity.PasswordHash))
+                return;
+            identity.LastLoginAt = _dateTimeService.UtcNow;
+        }
+
+        var existingMembership = await _context.WorkspaceMemberships.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.UserId == user.Id, cancellationToken);
+        if (existingMembership is not null && existingMembership.IdentityAccountId != identity.Id)
+            return;
+
+        user.IdentityAccountId = identity.Id;
+        if (existingMembership is null)
+        {
+            _context.WorkspaceMemberships.Add(new WorkspaceMembership
+            {
+                TenantId = user.TenantId,
+                IdentityAccountId = identity.Id,
+                UserId = user.Id,
+                Role = user.Role,
+                Status = WorkspaceMembershipStatus.Active,
+                ApprovedAt = _dateTimeService.UtcNow,
+                ApprovedBy = "legacy-import"
+            });
+        }
     }
 }

@@ -1,4 +1,5 @@
 using LogicFit.Domain.Entities;
+using LogicFit.Domain.Enums;
 using LogicFit.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -27,6 +28,13 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 
         builder.Property(e => e.CustomDomain)
             .HasMaxLength(200);
+
+        builder.Property(e => e.WorkspaceType)
+            .HasDefaultValue(WorkspaceType.Gym);
+
+        builder.Property(e => e.RowVersion)
+            .IsRowVersion()
+            .IsConcurrencyToken();
 
         builder.HasIndex(e => e.CustomDomain)
             .IsUnique()

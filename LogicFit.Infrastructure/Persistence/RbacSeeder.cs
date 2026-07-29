@@ -46,6 +46,18 @@ public class RbacSeeder
         {
             Permissions.ViewMembers, Permissions.ManageAttendance, Permissions.ViewReports
         },
+        [SystemRoles.FreelanceOwner] = Permissions.TenantPermissions.ToArray(),
+        [SystemRoles.FreelanceCoach] = new[]
+        {
+            Permissions.ViewMembers, Permissions.CreateMembers, Permissions.UpdateMembers,
+            Permissions.ManageCoaches, Permissions.ManageAttendance,
+            Permissions.ManageClientSubscriptions, Permissions.ViewReports
+        },
+        [SystemRoles.FreelanceAssistant] = new[]
+        {
+            Permissions.ViewMembers, Permissions.CreateMembers, Permissions.UpdateMembers,
+            Permissions.ManageAttendance, Permissions.ManageClientSubscriptions
+        },
         [SystemRoles.Client] = Array.Empty<string>(),
         [SystemRoles.PlatformOwner] = Permissions.PlatformPermissions.ToArray(),
         [SystemRoles.PlatformAdmin] = new[]
@@ -65,6 +77,9 @@ public class RbacSeeder
         [UserRole.Receptionist] = SystemRoles.Receptionist,
         [UserRole.Accountant] = SystemRoles.Accountant,
         [UserRole.Trainer] = SystemRoles.Trainer,
+        [UserRole.FreelanceOwner] = SystemRoles.FreelanceOwner,
+        [UserRole.FreelanceCoach] = SystemRoles.FreelanceCoach,
+        [UserRole.FreelanceAssistant] = SystemRoles.FreelanceAssistant,
         [UserRole.PlatformOwner] = SystemRoles.PlatformOwner,
         [UserRole.PlatformAdmin] = SystemRoles.PlatformAdmin
     };
@@ -235,10 +250,17 @@ public class RbacSeeder
         _ => code
     };
 
-    private static string GetRoleLabel(string name) => name switch
+    private static string GetRoleLabel(string name)
     {
-        SystemRoles.Owner => "\u0645\u0627\u0644\u0643 \u0627\u0644\u062c\u064a\u0645", SystemRoles.Manager => "\u0645\u062f\u064a\u0631 \u0627\u0644\u062c\u064a\u0645", SystemRoles.Receptionist => "\u0645\u0648\u0638\u0641 \u0627\u0644\u0627\u0633\u062a\u0642\u0628\u0627\u0644", SystemRoles.Accountant => "\u0645\u062d\u0627\u0633\u0628", SystemRoles.Coach => "\u0645\u062f\u0631\u0628", SystemRoles.Trainer => "\u0645\u062f\u0631\u0628 \u0634\u062e\u0635\u064a", SystemRoles.Client => "\u0639\u0645\u064a\u0644", SystemRoles.PlatformOwner => "\u0645\u0627\u0644\u0643 \u0627\u0644\u0645\u0646\u0635\u0629", SystemRoles.PlatformAdmin => "\u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629", _ => name
-    };
+        if (name == SystemRoles.FreelanceOwner) return "\u0645\u0627\u0644\u0643 \u0627\u0644\u0645\u062f\u0631\u0628 \u0627\u0644\u062d\u0631";
+        if (name == SystemRoles.FreelanceCoach) return "\u0645\u062f\u0631\u0628 \u062d\u0631";
+        if (name == SystemRoles.FreelanceAssistant) return "\u0645\u0633\u0627\u0639\u062f \u0645\u062f\u0631\u0628";
+
+        return name switch
+        {
+            SystemRoles.Owner => "\u0645\u0627\u0644\u0643 \u0627\u0644\u062c\u064a\u0645", SystemRoles.Manager => "\u0645\u062f\u064a\u0631 \u0627\u0644\u062c\u064a\u0645", SystemRoles.Receptionist => "\u0645\u0648\u0638\u0641 \u0627\u0644\u0627\u0633\u062a\u0642\u0628\u0627\u0644", SystemRoles.Accountant => "\u0645\u062d\u0627\u0633\u0628", SystemRoles.Coach => "\u0645\u062f\u0631\u0628", SystemRoles.Trainer => "\u0645\u062f\u0631\u0628 \u0634\u062e\u0635\u064a", SystemRoles.Client => "\u0639\u0645\u064a\u0644", SystemRoles.PlatformOwner => "\u0645\u0627\u0644\u0643 \u0627\u0644\u0645\u0646\u0635\u0629", SystemRoles.PlatformAdmin => "\u0645\u0634\u0631\u0641 \u0627\u0644\u0645\u0646\u0635\u0629", _ => name
+        };
+    }
 
     private async Task BackfillUserRolesAsync()
     {

@@ -1,3 +1,4 @@
+using LogicFit.Application.Common.Authorization;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Common.Services;
 using LogicFit.Domain.Exceptions;
@@ -5,25 +6,15 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace LogicFit.API.Middleware;
 
-/// <summary>
-/// Per-request hard gate: rejects any protected request whose gym is not allowed to be served
-/// (suspended / expired / cancelled / archived / deleted), even if the caller holds a token issued
-/// before the gym was suspended. Deliberately simple — it only decides blocked vs. not-blocked; the
-/// finer "PendingApproval → billing only" rule lives in the authorization layer.
-/// </summary>
+/// <summary>Applies the workspace subscription policy to every authenticated tenant request.</summary>
 public class TenantAccessMiddleware
 {
     private readonly RequestDelegate _next;
 
-    public TenantAccessMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
+    public TenantAccessMiddleware(RequestDelegate next) => _next = next;
 
     public async Task InvokeAsync(HttpContext context, ITenantService tenantService, ITenantAccessGuard guard)
     {
-        // Skip anonymous endpoints (login/register/branding/refresh), unauthenticated requests, and
-        // platform users (no resolved tenant). Health/swagger are anonymous + tenant-less, so covered.
         var isAnonymous = context.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() is not null;
         if (isAnonymous
             || context.User.Identity?.IsAuthenticated != true
@@ -33,11 +24,22 @@ public class TenantAccessMiddleware
             return;
         }
 
-        var state = await guard.GetStateAsync(tenantId, context.RequestAborted);
-        if (TenantAccessPolicy.EvaluateHardBlock(state) is { } block)
-        {
+        var decision = TenantAccessPolicy.Evaluate(await guard.GetStateAsync(tenantId, context.RequestAborted));
+        if (decision.Block is { } block)
             throw new TenantAccessException(block.Code, block.HttpStatus);
-        }
+
+        var endpoint = context.GetEndpoint();
+        var allowsBilling = endpoint?.Metadata.GetMetadata<AllowWhenPendingApprovalAttribute>() is not null;
+        var allowsReadOnlyMutation = endpoint?.Metadata.GetMetadata<AllowWhenWorkspaceReadOnlyAttribute>() is not null;
+        var isSafeRead = HttpMethods.IsGet(context.Request.Method)
+            || HttpMethods.IsHead(context.Request.Method)
+            || HttpMethods.IsOptions(context.Request.Method);
+
+        if (decision.Mode == TenantAccessMode.BillingOnly && !allowsBilling)
+            throw new TenantAccessException("TENANT_BILLING_ONLY", StatusCodes.Status403Forbidden);
+
+        if (decision.Mode == TenantAccessMode.ReadOnly && !isSafeRead && !allowsReadOnlyMutation)
+            throw new TenantAccessException("TENANT_READ_ONLY", StatusCodes.Status403Forbidden);
 
         await _next(context);
     }
