@@ -255,7 +255,7 @@ Tenant requests resolve a tenant before authorization. Tenant query filters, ten
 - `AddWalletAndStockConcurrency`
 - `AddCouponConcurrency`
 
-Migrations must be applied explicitly during deployment after a tested backup. The API does not silently migrate production at startup.
+Migrations must be applied explicitly during deployment after a tested backup. The API ignores `Database__ApplyMigrationsOnStartup` and does not silently migrate production at startup; a deployment can optionally verify its health endpoint after publishing.
 
 ## Verification status
 
