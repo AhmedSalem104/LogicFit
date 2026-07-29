@@ -31,10 +31,16 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsUnique();
 
         builder.HasIndex(e => e.TenantId);
+        builder.HasIndex(e => e.IdentityAccountId);
 
         builder.HasOne(e => e.Tenant)
             .WithMany(t => t.Users)
             .HasForeignKey(e => e.TenantId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.IdentityAccount)
+            .WithMany()
+            .HasForeignKey(e => e.IdentityAccountId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(e => e.Profile)

@@ -65,6 +65,12 @@ public class ExceptionHandlingMiddleware
                 (IDictionary<string, string[]>?)null,
                 (string?)null
             ),
+            PlanLimitExceededException planLimitEx => (
+                StatusCodes.Status409Conflict,
+                exception.Message,
+                (IDictionary<string, string[]>?)null,
+                (string?)planLimitEx.Code
+            ),
             SubscriptionLimitException => (
                 StatusCodes.Status402PaymentRequired,
                 exception.Message,

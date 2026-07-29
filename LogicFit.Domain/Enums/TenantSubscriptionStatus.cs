@@ -3,6 +3,7 @@ namespace LogicFit.Domain.Enums;
 /// <summary>Status of a tenant's subscription to the platform (distinct from a gym member's subscription).</summary>
 public enum TenantSubscriptionStatus
 {
+    None = 0,
     PendingPayment = 1,
     Trial = 2,
     Active = 3,

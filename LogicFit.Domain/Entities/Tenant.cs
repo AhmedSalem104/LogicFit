@@ -10,7 +10,10 @@ public class Tenant : AuditableEntity, ISoftDeletable
     public string Name { get; set; } = string.Empty;
     public string? Subdomain { get; set; }
     public string? CustomDomain { get; set; }
+    public WorkspaceType WorkspaceType { get; set; } = WorkspaceType.Gym;
     public TenantStatus Status { get; set; }
+    /// <summary>Guards concurrent workspace lifecycle and quota-affecting approvals.</summary>
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
 
     /// <summary>Why the gym is suspended (when Status == Suspended). Null/None otherwise.
     /// Kept distinct from Status and the subscription state so the access layer can pick a precise code.</summary>
@@ -34,6 +37,7 @@ public class Tenant : AuditableEntity, ISoftDeletable
 
     // Navigation Properties
     public virtual ICollection<User> Users { get; set; } = new List<User>();
+    public virtual ICollection<WorkspaceMembership> WorkspaceMemberships { get; set; } = new List<WorkspaceMembership>();
     public virtual ICollection<Food> Foods { get; set; } = new List<Food>();
     public virtual ICollection<Recipe> Recipes { get; set; } = new List<Recipe>();
     public virtual ICollection<DietPlan> DietPlans { get; set; } = new List<DietPlan>();

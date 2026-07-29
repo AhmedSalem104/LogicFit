@@ -6,6 +6,7 @@ namespace LogicFit.Domain.Entities;
 
 public class User : AuditableEntity, ITenantEntity, ISoftDeletable
 {
+    public Guid? IdentityAccountId { get; set; }
     public Guid TenantId { get; set; }
     public Guid? PrimaryBranchId { get; set; }
     public string Email { get; set; } = string.Empty;
@@ -37,6 +38,7 @@ public class User : AuditableEntity, ITenantEntity, ISoftDeletable
 
     // Navigation Properties
     public virtual Tenant Tenant { get; set; } = null!;
+    public virtual IdentityAccount? IdentityAccount { get; set; }
     public virtual UserProfile? Profile { get; set; }
     public virtual ICollection<UserRoleAssignment> UserRoles { get; set; } = new List<UserRoleAssignment>();
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();

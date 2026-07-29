@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-07-27 10:30 UTC`  |  Total endpoints: **330**
+Generated: `2026-07-29 10:42 UTC`  |  Total endpoints: **346**
 
 ## Contract rules
 
@@ -401,6 +401,44 @@ Generated: `2026-07-27 10:30 UTC`  |  Total endpoints: **330**
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
 
+### PlatformWorkspaceApplications
+
+#### `GET /api/platform/workspace-applications` - `List`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Query `applicationType`: `ApplicationType?`<br>Query `status`: `ApplicationRequestStatus?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] ApplicationType? applicationType, [FromQuery] ApplicationRequestStatus? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 20`
+- **Declared response:** typeof(PagedResult<PlatformApplicationDto>), StatusCodes.Status200OK
+
+#### `POST /api/platform/workspace-applications/{id:guid}/approve-freelance` - `ApproveFreelance`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Body `request`: `ConcurrencyRequest`<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
+- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
+
+#### `POST /api/platform/workspace-applications/{id:guid}/approve-membership` - `ApproveMembership`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Body `request`: `ConcurrencyRequest`<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
+- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
+
+#### `POST /api/platform/workspace-applications/{id:guid}/reject` - `Reject`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Body `request`: `RejectRequest`<br>Handler signature: `Guid id, [FromBody] RejectRequest request`
+- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
+
+#### `POST /api/platform/workspace-applications/{id:guid}/request-information` - `RequestInformation`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Body `request`: `RequestInformationRequest`<br>Handler signature: `Guid id, [FromBody] RequestInformationRequest request`
+- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
+
+#### `POST /api/platform/workspace-applications/{id:guid}/start-review` - `StartReview`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Body `request`: `ConcurrencyRequest`<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
+- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
+
 ## Tenant API
 
 ### Appointments
@@ -757,31 +795,31 @@ Generated: `2026-07-27 10:30 UTC`  |  Total endpoints: **330**
 
 #### `GET /api/Clients` - `GetClients`
 
-- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Access:** JWT + Policy: `Permissions.ViewMembers`
 - **Inputs:** Query `searchTerm`: `string?`<br>Query `isActive`: `bool?`<br>Handler signature: `[FromQuery] string? searchTerm, [FromQuery] bool? isActive`
 - **Declared response:** Task<ActionResult<List<ClientDto>>>
 
 #### `POST /api/Clients` - `CreateClient`
 
-- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Access:** JWT + Policy: `Permissions.CreateMembers`
 - **Inputs:** Handler signature: `CreateClientCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/Clients/{id}` - `DeleteClient`
 
-- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Access:** JWT + Policy: `Permissions.DeleteMembers`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `GET /api/Clients/{id}` - `GetClient`
 
-- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Access:** JWT + Policy: `Permissions.ViewMembers`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult<ClientDto>>
 
 #### `PUT /api/Clients/{id}` - `UpdateClient`
 
-- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Access:** JWT + Policy: `Permissions.UpdateMembers`
 - **Inputs:** Handler signature: `Guid id, UpdateClientCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -789,7 +827,7 @@ Generated: `2026-07-27 10:30 UTC`  |  Total endpoints: **330**
 
 #### `GET /api/coach-clients` - `GetCoachClients`
 
-- **Access:** JWT + Policy: `Permissions.ManageCoaches`
+- **Access:** JWT + Policy: `Permissions.ViewMembers`
 - **Inputs:** Query `coachId`: `Guid?`<br>Query `isActive`: `bool?`<br>Handler signature: `[FromQuery] Guid? coachId, [FromQuery] bool? isActive = true`
 - **Declared response:** Task<ActionResult<List<CoachClientDto>>>
 
@@ -807,7 +845,7 @@ Generated: `2026-07-27 10:30 UTC`  |  Total endpoints: **330**
 
 #### `GET /api/coach-clients/{id}` - `GetCoachClientById`
 
-- **Access:** JWT + Policy: `Permissions.ManageCoaches`
+- **Access:** JWT + Policy: `Permissions.ViewMembers`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult<CoachClientDto>>
 
@@ -1155,6 +1193,14 @@ Generated: `2026-07-27 10:30 UTC`  |  Total endpoints: **330**
 - **Inputs:** Handler signature: `int id, UpdateFoodCommand command`
 - **Declared response:** Task<ActionResult>
 
+### FreelanceTeamApplications
+
+#### `POST /api/freelance/team/applications` - `Sponsor`
+
+- **Access:** JWT + Policy: `Permissions.ManageCoaches`
+- **Inputs:** Body `command`: `SponsorFreelanceMembershipCommand` { `IdentityEmail`: string; `RequestedRole`: UserRole; `FullName`: string }<br>Handler signature: `[FromBody] SponsorFreelanceMembershipCommand command`
+- **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status201Created
+
 ### GateAccess
 
 #### `POST /api/GateAccess/check-in-qr` - `CheckInByQr`
@@ -1168,6 +1214,12 @@ Generated: `2026-07-27 10:30 UTC`  |  Total endpoints: **330**
 - **Access:** JWT + Policy: `Permissions.ManageAttendance`
 - **Inputs:** Query `clientId`: `Guid?`<br>Query `branchId`: `Guid?`<br>Query `result`: `GateAccessResult?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Query `take`: `int`<br>Handler signature: `[FromQuery] Guid? clientId, [FromQuery] Guid? branchId, [FromQuery] GateAccessResult? result, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] int take = 200`
 - **Declared response:** typeof(List<GateAccessLogDto>), StatusCodes.Status200OK
+
+#### `GET /api/GateAccess/scan` - `Scan`
+
+- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Inputs:** Query `qrCode`: `string`<br>Handler signature: `[FromQuery] string qrCode`
+- **Declared response:** typeof(QrMemberLookupDto), StatusCodes.Status200OK
 
 ### GroupClasses
 
@@ -1238,6 +1290,32 @@ Generated: `2026-07-27 10:30 UTC`  |  Total endpoints: **330**
 - **Access:** JWT + Policy: `Permissions.ManageSettings`
 - **Inputs:** Handler signature: `IFormFile file`
 - **Declared response:** typeof(UploadResponseDto), StatusCodes.Status200OK<br>StatusCodes.Status400BadRequest
+
+### Identity
+
+#### `POST /api/identity/application-tracking-sessions` - `ReissueApplicationTrackingSessions`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `ReissueApplicationTrackingSessionsCommand` { `WorkspaceSelectionToken`: string }<br>Handler signature: `[FromBody] ReissueApplicationTrackingSessionsCommand command`
+- **Declared response:** typeof(IReadOnlyList<ApplicationTrackingSessionDto>), StatusCodes.Status200OK
+
+#### `POST /api/identity/login` - `Login`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `IdentitySignInCommand` { `Identifier`: string; `Password`: string }<br>Handler signature: `[FromBody] IdentitySignInCommand command`
+- **Declared response:** typeof(IdentitySignInDto), StatusCodes.Status200OK
+
+#### `POST /api/identity/register` - `Register`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `RegisterIdentityCommand` { `Email`: string; `PhoneNumber`: string?; `Password`: string }<br>Handler signature: `[FromBody] RegisterIdentityCommand command`
+- **Declared response:** StatusCodes.Status204NoContent
+
+#### `POST /api/identity/select-workspace` - `SelectWorkspace`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `SelectIdentityWorkspaceCommand` { `WorkspaceSelectionToken`: string; `WorkspaceId`: Guid }<br>Handler signature: `[FromBody] SelectIdentityWorkspaceCommand command`
+- **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK
 
 ### Invoices
 
@@ -2132,3 +2210,29 @@ Generated: `2026-07-27 10:30 UTC`  |  Total endpoints: **330**
 - **Access:** JWT required
 - **Inputs:** Handler signature: `StartWorkoutSessionCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
+
+### WorkspaceApplications
+
+#### `POST /api/workspace-applications/freelance` - `SubmitFreelance`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `SubmitFreelanceWorkspaceApplicationCommand` { `Email`: string; `PhoneNumber`: string?; `Password`: string; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `Specialties`: IReadOnlyList<string>?; `Certifications`: IReadOnlyList<string>?; `WelcomeMessage`: string?; `BookingSettings`: System.Text.Json.JsonElement? }<br>Handler signature: `[FromBody] SubmitFreelanceWorkspaceApplicationCommand command`
+- **Declared response:** typeof(ApplicationTrackingSessionDto), StatusCodes.Status201Created
+
+#### `GET /api/workspace-applications/tracking` - `GetTrackingStatus`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** No request input.
+- **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status200OK
+
+#### `PATCH /api/workspace-applications/tracking/fields` - `UpdateRequestedFields`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `System`: `IReadOnlyDictionary<string,`<br>Handler signature: `[FromBody] IReadOnlyDictionary<string, System.Text.Json.JsonElement> fields`
+- **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status200OK
+
+#### `POST /api/workspace-applications/tracking/resubmit` - `Resubmit`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** No request input.
+- **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status200OK
