@@ -1,6 +1,7 @@
 using LogicFit.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace LogicFit.Application.Common.Interfaces;
 
@@ -8,6 +9,13 @@ public interface IApplicationDbContext
 {
     DbSet<Tenant> Tenants { get; }
     DbSet<TenantBrandAsset> TenantBrandAssets { get; }
+    DbSet<IdentityAccount> IdentityAccounts { get; }
+    DbSet<IdentityWorkspaceSession> IdentityWorkspaceSessions { get; }
+    DbSet<WorkspaceMembership> WorkspaceMemberships { get; }
+    DbSet<ApplicationRequest> ApplicationRequests { get; }
+    DbSet<ApplicationRequestRevision> ApplicationRequestRevisions { get; }
+    DbSet<ApplicationTrackingSession> ApplicationTrackingSessions { get; }
+    DbSet<FreelanceWorkspaceProfile> FreelanceWorkspaceProfiles { get; }
     DbSet<User> Users { get; }
     DbSet<UserProfile> UserProfiles { get; }
     DbSet<NutrientDefinition> NutrientDefinitions { get; }
@@ -103,6 +111,8 @@ public interface IApplicationDbContext
     DbSet<SubscriptionPayment> SubscriptionPayments { get; }
     DbSet<SubscriptionInvoice> SubscriptionInvoices { get; }
     DbSet<TenantUsage> TenantUsages { get; }
+
+    EntityEntry Entry(object entity);
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
