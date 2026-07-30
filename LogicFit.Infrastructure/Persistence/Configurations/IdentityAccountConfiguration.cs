@@ -10,6 +10,7 @@ public class IdentityAccountConfiguration : IEntityTypeConfiguration<IdentityAcc
     {
         builder.ToTable("IdentityAccounts");
         builder.HasKey(x => x.Id);
+        builder.Property(x => x.FullName).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Email).HasMaxLength(256).IsRequired();
         builder.Property(x => x.NormalizedEmail).HasMaxLength(256).IsRequired();
         builder.Property(x => x.PhoneNumber).HasMaxLength(32);

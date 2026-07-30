@@ -7,6 +7,10 @@
 هوية المستخدم وسياق الطلب هما مصدر تحديد المستأجر. سجلات المال والمراجعة لا تحذف أو
 تعدل من واجهة عامة.
 
+## Email identity security (Issue #113, unreleased)
+
+An identity-first account signs in with its verified, globally unique email and password only. Phone is contact data and cannot authenticate an identity. Email verification and password-reset links are opaque, one-use, short-lived records stored as hashes; redeeming a password-reset link revokes every linked local refresh token and identity workspace-selection session. This does not grant workspace permission: `WorkspaceMembership.Active`, local `User.Active`, workspace/subscription gates, and RBAC still decide access after identity proof.
+
 ## مستخدمو المنصة المركزية
 
 | الدور | الاستخدام | النطاق |

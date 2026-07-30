@@ -4,6 +4,7 @@ using LogicFit.API.Features.Platform.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using LogicFit.Infrastructure.Authorization;
 
 namespace LogicFit.API.Features.Platform.Authorization;
 
@@ -29,6 +30,7 @@ public sealed class PlatformRolesController(IApplicationDbContext context) : Con
             .Select(x => new { x.Code, x.DisplayName, x.DisplayNameAr, x.Category, x.IsPlatformPermission }).ToListAsync(cancellationToken));
 
     [HttpPut("{id:guid}/permissions")]
+    [Authorize(Policy = PasskeyStepUpRequirement.PolicyName)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateRolePermissionsRequest request, CancellationToken cancellationToken)
     {
         if (!User.IsInRole(SystemRoles.PlatformOwner)) return Forbid();

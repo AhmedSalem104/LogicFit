@@ -19,6 +19,7 @@ public sealed class SelectIdentityWorkspaceCommandHandler
     private readonly IRbacService _rbacService;
     private readonly ICurrentUserService _currentUserService;
     private readonly ITenantAccessGuard _tenantAccessGuard;
+    private readonly IIdentityWorkspaceAccessGuard _identityWorkspaceAccessGuard;
 
     public SelectIdentityWorkspaceCommandHandler(
         IApplicationDbContext context,
@@ -27,7 +28,8 @@ public sealed class SelectIdentityWorkspaceCommandHandler
         IRefreshTokenService refreshTokenService,
         IRbacService rbacService,
         ICurrentUserService currentUserService,
-        ITenantAccessGuard tenantAccessGuard)
+        ITenantAccessGuard tenantAccessGuard,
+        IIdentityWorkspaceAccessGuard identityWorkspaceAccessGuard)
     {
         _context = context;
         _dateTimeService = dateTimeService;
@@ -36,6 +38,7 @@ public sealed class SelectIdentityWorkspaceCommandHandler
         _rbacService = rbacService;
         _currentUserService = currentUserService;
         _tenantAccessGuard = tenantAccessGuard;
+        _identityWorkspaceAccessGuard = identityWorkspaceAccessGuard;
     }
 
     public async Task<AuthResponseDto> Handle(SelectIdentityWorkspaceCommand request, CancellationToken cancellationToken)
@@ -52,6 +55,10 @@ public sealed class SelectIdentityWorkspaceCommandHandler
             ?? throw new ForbiddenException("This identity does not have an active membership in the selected workspace.");
         if (!membership.User.IsActive || membership.User.IsDeleted)
             throw new ForbiddenException("The workspace account is not active.");
+
+        var identityAccess = await _identityWorkspaceAccessGuard.EvaluateAsync(membership.UserId, request.WorkspaceId, cancellationToken);
+        if (identityAccess.Mode == IdentityWorkspaceAccessMode.Blocked)
+            throw new TenantAccessException(identityAccess.Code ?? "WORKSPACE_ACCESS_DENIED", 403);
 
         if (TenantAccessPolicy.EvaluateHardBlock(await _tenantAccessGuard.GetStateAsync(request.WorkspaceId, cancellationToken)) is { } block)
             throw new TenantAccessException(block.Code, block.HttpStatus);

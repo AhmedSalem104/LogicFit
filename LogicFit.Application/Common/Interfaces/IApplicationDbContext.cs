@@ -10,8 +10,14 @@ public interface IApplicationDbContext
     DbSet<Tenant> Tenants { get; }
     DbSet<TenantBrandAsset> TenantBrandAssets { get; }
     DbSet<IdentityAccount> IdentityAccounts { get; }
+    DbSet<IdentityEmailActionToken> IdentityEmailActionTokens { get; }
     DbSet<IdentityWorkspaceSession> IdentityWorkspaceSessions { get; }
+    DbSet<IdentityPasskeyCredential> IdentityPasskeyCredentials { get; }
+    DbSet<IdentityPasskeyCeremony> IdentityPasskeyCeremonies { get; }
+    DbSet<IdentityPasskeyStepUpSession> IdentityPasskeyStepUpSessions { get; }
     DbSet<WorkspaceMembership> WorkspaceMemberships { get; }
+    DbSet<WorkspaceInvite> WorkspaceInvites { get; }
+    DbSet<WorkspaceClientJoinCode> WorkspaceClientJoinCodes { get; }
     DbSet<ApplicationRequest> ApplicationRequests { get; }
     DbSet<ApplicationRequestRevision> ApplicationRequestRevisions { get; }
     DbSet<ApplicationTrackingSession> ApplicationTrackingSessions { get; }
