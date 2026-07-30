@@ -2537,10 +2537,18 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -2582,6 +2590,64 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasFilter("[NormalizedPhoneNumber] IS NOT NULL");
 
                     b.ToTable("IdentityAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityEmailActionToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("IdentityAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Purpose")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("IdentityAccountId", "Purpose", "ExpiresAt");
+
+                    b.ToTable("IdentityEmailActionTokens", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.IdentityWorkspaceSession", b =>
@@ -7342,6 +7408,17 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("IdentityAccount");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityEmailActionToken", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
+                        .WithMany("EmailActionTokens")
+                        .HasForeignKey("IdentityAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdentityAccount");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.Invoice", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.Branch", "Branch")
@@ -8325,6 +8402,8 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("LogicFit.Domain.Entities.IdentityAccount", b =>
                 {
                     b.Navigation("Applications");
+
+                    b.Navigation("EmailActionTokens");
 
                     b.Navigation("Memberships");
                 });

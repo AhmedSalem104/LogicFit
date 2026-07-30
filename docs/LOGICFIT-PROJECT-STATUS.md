@@ -1,10 +1,12 @@
 # LogicFit Project Status
 
-Last reviewed: 2026-07-29
+Last reviewed: 2026-07-30
 
 ## Executive summary
 
 LogicFit is a multi-tenant gym-management SaaS. The platform operator manages gyms, plans, features, payment methods, and manual payment approvals. Each gym receives an isolated tenant workspace for staff and clients. Billing is intentionally manual: no gateway, webhook, or automatic card charge is enabled.
+
+> **Unreleased Issue #113 branch:** email-only identity verification and email password-reset security are implemented in the task branch. They require migration `20260730143000_AddIdentityEmailSecurity`, server-only email/link configuration, frontend integration, CI, review, and deployment before they become production behavior.
 
 ## Product map
 
@@ -309,7 +311,7 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 
 - Added one identity/membership/local-user gate to legacy login, refresh rotation, workspace selection, and every authenticated tenant request. Linked accounts now lose access immediately when their identity, membership, or tenant-local user becomes inactive; unlinked legacy accounts remain behind an explicit temporary compatibility setting.
 - Normalized subscription access for cancellation: a cancelled subscription remains operational strictly before `EndDate`, then resolves to `Expired` and read-only without waiting for a background lifecycle update.
-- Deferred OTP, verified legacy linking, invitations, QR/join code, and workspace-owned client approval to issue #113 so no incomplete public-registration or approval flow is introduced.
+- Deferred verified-email legacy linking, invitations, QR/join code, and workspace-owned client approval to issue #113 so no incomplete public-registration or approval flow is introduced.
 
 ### 2026-07-30
 

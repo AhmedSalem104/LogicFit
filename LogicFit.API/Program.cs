@@ -31,6 +31,16 @@ builder.Services.AddRateLimiter(options =>
     var permitLimit = builder.Configuration.GetValue("RateLimiting:PermitLimit", 120);
     var windowSeconds = builder.Configuration.GetValue("RateLimiting:WindowSeconds", 60);
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("identity-email-actions", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.User?.Identity?.IsAuthenticated == true

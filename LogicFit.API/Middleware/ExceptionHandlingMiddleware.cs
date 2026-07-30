@@ -52,6 +52,12 @@ public class ExceptionHandlingMiddleware
                 (IDictionary<string, string[]>?)null,
                 (string?)null
             ),
+            ServiceUnavailableException unavailableEx => (
+                StatusCodes.Status503ServiceUnavailable,
+                unavailableEx.Message,
+                (IDictionary<string, string[]>?)null,
+                (string?)unavailableEx.Code
+            ),
             // A gym that isn't allowed to be served (suspended/expired/...). Carries a typed code.
             TenantAccessException tenantEx => (
                 tenantEx.StatusCode,

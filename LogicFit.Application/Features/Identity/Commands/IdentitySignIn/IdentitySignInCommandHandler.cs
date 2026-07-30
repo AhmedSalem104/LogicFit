@@ -24,12 +24,11 @@ public sealed class IdentitySignInCommandHandler : IRequestHandler<IdentitySignI
 
     public async Task<IdentitySignInDto> Handle(IdentitySignInCommand request, CancellationToken cancellationToken)
     {
-        var normalizedEmail = request.Identifier.Trim().ToUpperInvariant();
-        var normalizedPhone = new string(request.Identifier.Where(char.IsDigit).ToArray());
-        var identity = await _context.IdentityAccounts.FirstOrDefaultAsync(x =>
-            x.NormalizedEmail == normalizedEmail ||
-            (normalizedPhone.Length > 0 && x.NormalizedPhoneNumber == normalizedPhone), cancellationToken);
-        if (identity is null || !identity.IsActive || !BCrypt.Net.BCrypt.Verify(request.Password, identity.PasswordHash))
+        var normalizedEmail = IdentityEmailAddress.Normalize(request.Email);
+        var identity = await _context.IdentityAccounts
+            .FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail, cancellationToken);
+        if (identity is null || !identity.IsActive || identity.EmailVerifiedAt is null ||
+            !BCrypt.Net.BCrypt.Verify(request.Password, identity.PasswordHash))
             throw new UnauthorizedException("Invalid credentials");
 
         var memberships = await _context.WorkspaceMemberships.IgnoreQueryFilters()

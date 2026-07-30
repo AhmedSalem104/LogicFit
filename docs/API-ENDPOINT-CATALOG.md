@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-07-30 11:44 UTC`  |  Total endpoints: **355**
+Generated: `2026-07-30 12:31 UTC`  |  Total endpoints: **358**
 
 ## Contract rules
 
@@ -1332,20 +1332,38 @@ Generated: `2026-07-30 11:44 UTC`  |  Total endpoints: **355**
 #### `POST /api/identity/login` - `Login`
 
 - **Access:** Server default (not declared explicitly)
-- **Inputs:** Body `command`: `IdentitySignInCommand` { `Identifier`: string; `Password`: string }<br>Handler signature: `[FromBody] IdentitySignInCommand command`
+- **Inputs:** Body `command`: `IdentitySignInCommand` { `Email`: string; `Password`: string }<br>Handler signature: `[FromBody] IdentitySignInCommand command`
 - **Declared response:** typeof(IdentitySignInDto), StatusCodes.Status200OK
+
+#### `POST /api/identity/password-reset` - `RequestPasswordReset`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `RequestIdentityPasswordResetCommand` { `Email`: string }<br>Handler signature: `[FromBody] RequestIdentityPasswordResetCommand command`
+- **Declared response:** StatusCodes.Status202Accepted
+
+#### `POST /api/identity/password-reset/confirm` - `ResetPassword`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `ResetIdentityPasswordCommand` { `Token`: string; `NewPassword`: string }<br>Handler signature: `[FromBody] ResetIdentityPasswordCommand command`
+- **Declared response:** StatusCodes.Status204NoContent
 
 #### `POST /api/identity/register` - `Register`
 
 - **Access:** Server default (not declared explicitly)
-- **Inputs:** Body `command`: `RegisterIdentityCommand` { `Email`: string; `PhoneNumber`: string?; `Password`: string }<br>Handler signature: `[FromBody] RegisterIdentityCommand command`
-- **Declared response:** StatusCodes.Status204NoContent
+- **Inputs:** Body `command`: `RegisterIdentityCommand` { `FullName`: string; `Email`: string; `Password`: string; `PhoneNumber`: string? }<br>Handler signature: `[FromBody] RegisterIdentityCommand command`
+- **Declared response:** StatusCodes.Status202Accepted
 
 #### `POST /api/identity/select-workspace` - `SelectWorkspace`
 
 - **Access:** Server default (not declared explicitly)
 - **Inputs:** Body `command`: `SelectIdentityWorkspaceCommand` { `WorkspaceSelectionToken`: string; `WorkspaceId`: Guid }<br>Handler signature: `[FromBody] SelectIdentityWorkspaceCommand command`
 - **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK
+
+#### `POST /api/identity/verify-email` - `VerifyEmail`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `VerifyIdentityEmailCommand` { `Token`: string }<br>Handler signature: `[FromBody] VerifyIdentityEmailCommand command`
+- **Declared response:** StatusCodes.Status204NoContent
 
 ### Invoices
 

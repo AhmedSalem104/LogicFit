@@ -4,6 +4,8 @@
 
 هذا هو الفهرس المركزي لكل مجال وظيفي موجود في نظام LogicFit. لا يكرر قائمة الـendpoints؛ المرجع التفصيلي المولّد لها هو [كتالوج API](API-ENDPOINT-CATALOG.md). الغرض من هذا الملف أن يعرف مالك المنتج، الدعم، QA، والفرق الثلاثة أين توجد كل ميزة وما هو التدفق الذي يجب تحديثه عندما تتغير.
 
+> **Unreleased – Issue #113 branch:** `LogicFit.Application/Features/Identity`, `LogicFit.Infrastructure/Services/IdentityEmailLinkFactory`, and `IdentityEmailActionTokens` now provide the first email-only identity-security slice: verified email registration and email password recovery. Passkeys, secure invitations, QR/join-code intent, and the final frontend flow remain separate work and must not be presented as released features.
+
 ## متى تُعد الميزة مسجلة؟
 
 تُعد الميزة مسجلة فقط عندما يربط هذا الكتالوج بين:
@@ -48,7 +50,7 @@
 | المصادقة المتوافقة | تسجيل جيم تقليدي، دخول، refresh، logout-all، استعادة وتغيير كلمة المرور | `Features/Auth`، `/api/auth/*` | حساب محلي داخل مساحة محددة |
 | الهوية المستقلة | هوية عالمية، الدخول أولًا بالهوية، اختيار مساحة، إعادة جلسة متابعة الطلب | `Features/Identity`، `/api/identity/*` | `IdentityAccount` لا يمنح دخول مساحة وحده |
 | اختيار مساحة العمل | استبدال token اختيار قصير العمر بـJWT/refresh tenant الموجودين | `IdentityWorkspaceSession` و`WorkspaceMembership` | عضوية `Active` فقط؛ يطبق حارس المساحة قبل إصدار الجلسة |
-| حارس الهوية والعضوية | فحص موحد للحساب المحلي والهوية المرتبطة والعضوية عند login وrefresh واختيار المساحة وكل طلب tenant مصادق عليه | `IIdentityWorkspaceAccessGuard` و`IdentityWorkspaceAccessMiddleware` | الحسابات القديمة غير المرتبطة تعمل مؤقتًا بوضع توافق صريح قابل للإيقاف بعد ترحيل OTP |
+| حارس الهوية والعضوية | فحص موحد للحساب المحلي والهوية المرتبطة والعضوية عند login وrefresh واختيار المساحة وكل طلب tenant مصادق عليه | `IIdentityWorkspaceAccessGuard` و`IdentityWorkspaceAccessMiddleware` | الحسابات القديمة غير المرتبطة تعمل مؤقتًا بوضع توافق صريح قابل للإيقاف بعد ترحيل الربط المثبت بالبريد |
 | طلب مساحة مدرب حر | تقديم إنشاء مساحة وهوية وهوية بصرية مستقلة، جلسة متابعة محدودة، تعديل الحقول المطلوبة وإعادة التقديم | `Features/WorkspaceApplications`، `/api/workspace-applications/*` | public قبل الاعتماد؛ token المتابعة ليس JWT |
 | فريق المدرب الحر | ترشيح Coach/Assistant/Client لمساحة مستقلة ثم اعتماد Platform | `FreelanceTeamApplicationsController`، `/api/freelance/team/applications` | Freelance Owner مع `ManageCoaches`؛ لا توجد صلاحية مباشرة قبل الاعتماد |
 | المستخدمون والأدوار | مستخدمون، profiles، الأدوار، permissions وإصدارات الصلاحيات | `Features/Users`، `Profile`، `Authorization` | TenantId وملكية المورد حد أمني |

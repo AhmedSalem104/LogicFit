@@ -113,6 +113,13 @@ public static class DependencyInjection
         {
             services.AddScoped<IFileUploadService, FileUploadService>();
         }
+        services.Configure<SmtpEmailOptions>(configuration.GetSection(SmtpEmailOptions.SectionName));
+        services.Configure<IdentityEmailLinkOptions>(configuration.GetSection(IdentityEmailLinkOptions.SectionName));
+        services.AddSingleton<IIdentityEmailLinkFactory, IdentityEmailLinkFactory>();
+        if (string.Equals(configuration["Email:Provider"], "smtp", StringComparison.OrdinalIgnoreCase))
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        else
+            services.AddScoped<IEmailSender, UnconfiguredEmailSender>();
         services.AddScoped<IEmailService, LoggingEmailService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddSingleton<IBackupService, SqlServerBackupService>();

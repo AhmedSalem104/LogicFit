@@ -34,6 +34,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<TenantBrandAsset> TenantBrandAssets => Set<TenantBrandAsset>();
     public DbSet<IdentityAccount> IdentityAccounts => Set<IdentityAccount>();
+    public DbSet<IdentityEmailActionToken> IdentityEmailActionTokens => Set<IdentityEmailActionToken>();
     public DbSet<IdentityWorkspaceSession> IdentityWorkspaceSessions => Set<IdentityWorkspaceSession>();
     public DbSet<WorkspaceMembership> WorkspaceMemberships => Set<WorkspaceMembership>();
     public DbSet<ApplicationRequest> ApplicationRequests => Set<ApplicationRequest>();

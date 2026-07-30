@@ -4,11 +4,13 @@
 
 LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إلى **هوية عالمية أولًا ثم اختيار مساحة العمل**. لذلك يوجد تدفقان مدعومان حاليًا: التدفق التقليدي المتوافق، وتدفق الهوية الجديد. لا يجوز حذف الأول قبل نقل كل الواجهات والبيانات إليه.
 
+> **Unreleased – Issue #113 branch:** the identity-first contract is being moved to a verified, email-only global identity. This branch implements the email verification and password-reset foundation; Passkeys, invitations, QR/join flows, legacy-account linking, and the replacement frontend are separate remaining slices and are not yet production behavior.
+
 ## الكيانات وحدود الأمان
 
 | الكيان | الغرض | لا يعني |
 |---|---|---|
-| `IdentityAccount` | هوية عالمية ببريد/هاتف وكلمة مرور؛ قد ترتبط بأكثر من مساحة | منح صلاحية أو Tenant context بمفردها |
+| `IdentityAccount` | هوية عالمية ببريد فريد مطبّع وكلمة مرور؛ قد ترتبط بأكثر من مساحة. الهاتف بيانات تواصل فقط وليس مُعرّف دخول. | منح صلاحية أو Tenant context بمفردها |
 | `User` / `DomainUser` | حساب محلي داخل `TenantId`، profile، دور وحالة كلمة مرور | أن المستخدم يستطيع الدخول إلى مساحة أخرى لها الاسم نفسه |
 | `WorkspaceMembership` | رابط الهوية بالحساب المحلي والمساحة، والدور وحالة الاعتماد | بديلًا عن RBAC أو اشتراك المساحة |
 | `ApplicationRequest` | طلب إنشاء مساحة أو انضمام عضو، بحالات ومراجعة و`RowVersion` | جلسة مستخدم عادية |
@@ -44,7 +46,7 @@ LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إل
 
 ```text
 شاشة الدخول الموحدة
-  -> POST /api/identity/login { identifier: email|phone, password }
+  -> POST /api/identity/login { email, password }
   <- WorkspaceSelectionToken (10 دقائق)
      + activeWorkspaces[]
      + pendingApplications[]
@@ -59,6 +61,23 @@ LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إل
 إذا كانت هناك طلبات معلقة:
   يمكن استعراض حالتها بالتوازي مع الدخول لمساحة نشطة.
 ```
+
+### Email verification and password recovery (Issue #113, unreleased)
+
+```text
+POST /api/identity/register { fullName, email, password, phoneNumber? }
+  -> creates an unverified IdentityAccount and emails a 30-minute one-time link
+POST /api/identity/verify-email { token }
+  -> atomically consumes the hashed token and enables identity-first sign-in
+
+POST /api/identity/password-reset { email }
+  -> accepted response without revealing account existence; sends a one-time link when eligible
+POST /api/identity/password-reset/confirm { token, newPassword }
+  -> atomically consumes the link, updates the global password and linked local passwords,
+     and revokes all local refresh tokens plus identity workspace-selection sessions
+```
+
+The raw 256-bit token is placed in the **frontend URL fragment**, is stored only as a SHA-256 hash, and is never included in application or audit logs. Verification and reset endpoints are anonymous, but registration and reset requests are IP rate-limited (five attempts per 15 minutes). `NormalizedEmail` has the global unique index; phone numbers are no longer accepted by the identity login endpoint.
 
 الاستجابة تعيد `activeWorkspaces` و`pendingApplications` معًا. وجود طلب معلّق لا يمنع المستخدم من دخول مساحة أخرى يملك فيها `WorkspaceMembership.Active`.
 
@@ -176,7 +195,7 @@ FreelanceOwner يرشح هوية موجودة
 
 كل session خاصة بمساحة تمر الآن بالحارس نفسه عند `login` و`refresh` و`select-workspace` وكل طلب tenant مصادق عليه. القرار يمنع فورًا الهوية غير النشطة، العضوية غير النشطة، أو الحساب المحلي غير النشط قبل حارس المساحة والاشتراك والصلاحيات.
 
-الحساب المحلي الذي لم يرتبط بعد بـ`IdentityAccount` لا يعامل كعضوية مكتملة؛ يعمل فقط بوضع توافق مرحلي واضح. الإعداد `Authentication__IdentityAccess__AllowUnlinkedLegacySessions` قيمته الافتراضية `true` لحماية المستخدمين الحاليين من القطع. لا يجوز تحويله إلى `false` قبل تنفيذ OTP وربط الحساب القديم والتحقق من القياسات والسجلات؛ عندها يعيد الحارس `IDENTITY_MIGRATION_REQUIRED` بدل إصدار أو قبول session جديدة.
+الحساب المحلي الذي لم يرتبط بعد بـ`IdentityAccount` لا يعامل كعضوية مكتملة؛ يعمل فقط بوضع توافق مرحلي واضح. الإعداد `Authentication__IdentityAccess__AllowUnlinkedLegacySessions` قيمته الافتراضية `true` لحماية المستخدمين الحاليين من القطع. لا يجوز تحويله إلى `false` قبل تنفيذ ربط الحساب القديم المثبت بالبريد والتحقق من القياسات والسجلات؛ عندها يعيد الحارس `IDENTITY_MIGRATION_REQUIRED` بدل إصدار أو قبول session جديدة.
 
 بعد تجاوز الحارس، لا يزال JWT يحمل `TenantId` وroles وpermissions و`PermissionsVersion`. كل endpoint محمي يطبق policy/permission وفحوص ملكية المورد؛ لا يعتمد على اختيار الواجهة لمسار أو شاشة.
 
