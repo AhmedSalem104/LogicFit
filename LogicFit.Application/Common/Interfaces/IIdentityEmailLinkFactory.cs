@@ -6,4 +6,5 @@ public interface IIdentityEmailLinkFactory
     bool IsConfigured { get; }
     string CreateEmailVerificationLink(string rawToken);
     string CreatePasswordResetLink(string rawToken);
+    string CreateWorkspaceInvitationLink(string rawToken);
 }

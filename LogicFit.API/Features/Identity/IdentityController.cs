@@ -7,6 +7,11 @@ using LogicFit.Application.Features.Identity.Commands.ResetIdentityPassword;
 using LogicFit.Application.Features.Identity.Commands.SelectIdentityWorkspace;
 using LogicFit.Application.Features.Identity.Commands.VerifyIdentityEmail;
 using LogicFit.Application.Features.Identity.DTOs;
+using LogicFit.Application.Features.WorkspaceInvites.Commands.AcceptWorkspaceInvite;
+using LogicFit.Application.Features.WorkspaceInvites.Commands.PreviewWorkspaceInvite;
+using LogicFit.Application.Features.WorkspaceClientJoins.Commands.JoinWorkspaceAsClient;
+using LogicFit.Application.Features.WorkspaceClientJoins.Commands.PreviewWorkspaceClientJoin;
+using LogicFit.Application.Features.WorkspaceClientJoins.DTOs;
 using LogicFit.Application.Features.WorkspaceApplications.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -74,6 +79,35 @@ public sealed class IdentityController : ControllerBase
     [HttpPost("select-workspace")]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<AuthResponseDto>> SelectWorkspace([FromBody] SelectIdentityWorkspaceCommand command, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(command, cancellationToken));
+
+    [HttpPost("invitations/preview")]
+    [ProducesResponseType(typeof(WorkspaceInvitePreviewDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<WorkspaceInvitePreviewDto>> PreviewInvitation(
+        [FromBody] PreviewWorkspaceInviteCommand command, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(command, cancellationToken));
+
+    [HttpPost("invitations/accept")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> AcceptInvitation(
+        [FromBody] AcceptWorkspaceInviteCommand command, CancellationToken cancellationToken)
+    {
+        await _mediator.Send(command, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("client-join/preview")]
+    [EnableRateLimiting("identity-public-join")]
+    [ProducesResponseType(typeof(WorkspaceClientJoinPreviewDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<WorkspaceClientJoinPreviewDto>> PreviewClientJoin(
+        [FromBody] PreviewWorkspaceClientJoinCommand command, CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(command, cancellationToken));
+
+    [HttpPost("client-join")]
+    [EnableRateLimiting("identity-public-join")]
+    [ProducesResponseType(typeof(ClientJoinResultDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ClientJoinResultDto>> JoinAsClient(
+        [FromBody] JoinWorkspaceAsClientCommand command, CancellationToken cancellationToken)
         => Ok(await _mediator.Send(command, cancellationToken));
 
     [HttpPost("application-tracking-sessions")]

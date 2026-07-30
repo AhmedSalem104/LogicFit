@@ -8,6 +8,7 @@ using LogicFit.Application.Features.WorkspaceApplications.DTOs;
 using LogicFit.Application.Features.WorkspaceApplications.Queries.GetPlatformApplications;
 using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Enums;
+using LogicFit.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -65,6 +66,7 @@ public sealed class PlatformWorkspaceApplicationsController : ControllerBase
         }, cancellationToken));
 
     [HttpPost("{id:guid}/approve-freelance")]
+    [Authorize(Policy = PasskeyStepUpRequirement.PolicyName)]
     public async Task<ActionResult<PlatformApplicationDto>> ApproveFreelance(
         Guid id,
         [FromBody] ConcurrencyRequest request,
@@ -72,6 +74,7 @@ public sealed class PlatformWorkspaceApplicationsController : ControllerBase
         => Ok(await _mediator.Send(new ApproveFreelanceWorkspaceApplicationCommand(id, request.RowVersion), cancellationToken));
 
     [HttpPost("{id:guid}/approve-membership")]
+    [Authorize(Policy = PasskeyStepUpRequirement.PolicyName)]
     public async Task<ActionResult<PlatformApplicationDto>> ApproveMembership(
         Guid id,
         [FromBody] ConcurrencyRequest request,
@@ -79,6 +82,7 @@ public sealed class PlatformWorkspaceApplicationsController : ControllerBase
         => Ok(await _mediator.Send(new ApproveMembershipApplicationCommand(id, request.RowVersion), cancellationToken));
 
     [HttpPost("{id:guid}/reject")]
+    [Authorize(Policy = PasskeyStepUpRequirement.PolicyName)]
     public async Task<ActionResult<PlatformApplicationDto>> Reject(
         Guid id,
         [FromBody] RejectRequest request,

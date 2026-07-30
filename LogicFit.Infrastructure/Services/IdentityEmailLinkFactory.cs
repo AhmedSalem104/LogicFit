@@ -20,6 +20,8 @@ public sealed class IdentityEmailLinkFactory : IIdentityEmailLinkFactory
 
     public string CreatePasswordResetLink(string rawToken) => Create("identity/reset-password", rawToken);
 
+    public string CreateWorkspaceInvitationLink(string rawToken) => Create("identity/accept-invite", rawToken);
+
     private string Create(string route, string rawToken)
     {
         if (!IsConfigured)

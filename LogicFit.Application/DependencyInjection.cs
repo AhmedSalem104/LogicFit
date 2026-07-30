@@ -3,6 +3,8 @@ using FluentValidation;
 using LogicFit.Application.Common.Behaviors;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Common.Services;
+using LogicFit.Application.Features.Identity;
+using LogicFit.Application.Features.Platform.Auth;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,6 +24,8 @@ public static class DependencyInjection
         services.AddScoped<ICommissionService, CommissionService>();
         services.AddScoped<ITenantUsageCalculator, TenantUsageCalculator>();
         services.AddScoped<IWorkspaceMembershipQuotaService, WorkspaceMembershipQuotaService>();
+        services.AddScoped<IIdentityWorkspaceSessionIssuer, IdentityWorkspaceSessionIssuer>();
+        services.AddScoped<IPlatformSessionIssuer, PlatformSessionIssuer>();
 
         services.AddMediatR(cfg =>
         {

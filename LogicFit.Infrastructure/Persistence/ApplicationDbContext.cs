@@ -36,7 +36,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<IdentityAccount> IdentityAccounts => Set<IdentityAccount>();
     public DbSet<IdentityEmailActionToken> IdentityEmailActionTokens => Set<IdentityEmailActionToken>();
     public DbSet<IdentityWorkspaceSession> IdentityWorkspaceSessions => Set<IdentityWorkspaceSession>();
+    public DbSet<IdentityPasskeyCredential> IdentityPasskeyCredentials => Set<IdentityPasskeyCredential>();
+    public DbSet<IdentityPasskeyCeremony> IdentityPasskeyCeremonies => Set<IdentityPasskeyCeremony>();
+    public DbSet<IdentityPasskeyStepUpSession> IdentityPasskeyStepUpSessions => Set<IdentityPasskeyStepUpSession>();
     public DbSet<WorkspaceMembership> WorkspaceMemberships => Set<WorkspaceMembership>();
+    public DbSet<WorkspaceInvite> WorkspaceInvites => Set<WorkspaceInvite>();
+    public DbSet<WorkspaceClientJoinCode> WorkspaceClientJoinCodes => Set<WorkspaceClientJoinCode>();
     public DbSet<ApplicationRequest> ApplicationRequests => Set<ApplicationRequest>();
     public DbSet<ApplicationRequestRevision> ApplicationRequestRevisions => Set<ApplicationRequestRevision>();
     public DbSet<ApplicationTrackingSession> ApplicationTrackingSessions => Set<ApplicationTrackingSession>();
