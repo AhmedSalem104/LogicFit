@@ -305,6 +305,10 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 
 ## Change log
 
+### 2026-07-30
+
+- Moved the Platform workspace-application review controller into the unified `LogicFit.API` host. The existing `/api/platform/workspace-applications/*` review contract is now compiled, covered by the unified-module regression test, and included in the generated endpoint catalog.
+
 ### 2026-07-27
 
 - Consolidated Platform controllers into `LogicFit.API/Features/Platform` and removed the standalone Platform API project.
