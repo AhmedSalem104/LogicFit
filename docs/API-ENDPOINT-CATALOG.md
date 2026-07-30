@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-07-29 11:28 UTC`  |  Total endpoints: **349**
+Generated: `2026-07-30 11:24 UTC`  |  Total endpoints: **355**
 
 ## Contract rules
 
@@ -400,6 +400,44 @@ Generated: `2026-07-29 11:28 UTC`  |  Total endpoints: **349**
 - **Access:** JWT + Policy: `Permissions.ManageTenants`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
+
+### PlatformWorkspaceApplications
+
+#### `GET /api/platform/workspace-applications` - `List`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Query `applicationType`: `ApplicationType?`<br>Query `status`: `ApplicationRequestStatus?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] ApplicationType? applicationType, [FromQuery] ApplicationRequestStatus? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 20`
+- **Declared response:** typeof(PagedResult<PlatformApplicationDto>), StatusCodes.Status200OK
+
+#### `POST /api/platform/workspace-applications/{id:guid}/approve-freelance` - `ApproveFreelance`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Body `request`: `ConcurrencyRequest`<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
+- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
+
+#### `POST /api/platform/workspace-applications/{id:guid}/approve-membership` - `ApproveMembership`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Body `request`: `ConcurrencyRequest`<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
+- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
+
+#### `POST /api/platform/workspace-applications/{id:guid}/reject` - `Reject`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Body `request`: `RejectRequest`<br>Handler signature: `Guid id, [FromBody] RejectRequest request`
+- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
+
+#### `POST /api/platform/workspace-applications/{id:guid}/request-information` - `RequestInformation`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Body `request`: `RequestInformationRequest`<br>Handler signature: `Guid id, [FromBody] RequestInformationRequest request`
+- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
+
+#### `POST /api/platform/workspace-applications/{id:guid}/start-review` - `StartReview`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Body `request`: `ConcurrencyRequest`<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
+- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
 
 ## Tenant API
 

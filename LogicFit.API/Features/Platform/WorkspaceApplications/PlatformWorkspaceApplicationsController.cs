@@ -12,8 +12,13 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LogicFit.Platform.API.Features.WorkspaceApplications;
+namespace LogicFit.API.Features.Platform.WorkspaceApplications;
 
+/// <summary>
+/// Platform review surface for workspace-creation and freelance membership applications.
+/// This controller belongs to the unified API host so its existing contract is published and
+/// included in the generated endpoint catalog.
+/// </summary>
 [ApiController]
 [Route("api/platform/workspace-applications")]
 [Authorize(Policy = Permissions.ManageTenants)]
@@ -25,7 +30,7 @@ public sealed class PlatformWorkspaceApplicationsController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<PlatformApplicationDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<PagedResult<PlatformApplicationDto>>?> List(
+    public async Task<ActionResult<PagedResult<PlatformApplicationDto>?>> List(
         [FromQuery] ApplicationType? applicationType,
         [FromQuery] ApplicationRequestStatus? status,
         [FromQuery] int page = 1,
@@ -40,11 +45,17 @@ public sealed class PlatformWorkspaceApplicationsController : ControllerBase
         }, cancellationToken));
 
     [HttpPost("{id:guid}/start-review")]
-    public async Task<ActionResult<PlatformApplicationDto>> StartReview(Guid id, [FromBody] ConcurrencyRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<PlatformApplicationDto>> StartReview(
+        Guid id,
+        [FromBody] ConcurrencyRequest request,
+        CancellationToken cancellationToken)
         => Ok(await _mediator.Send(new StartApplicationReviewCommand(id, request.RowVersion), cancellationToken));
 
     [HttpPost("{id:guid}/request-information")]
-    public async Task<ActionResult<PlatformApplicationDto>> RequestInformation(Guid id, [FromBody] RequestInformationRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<PlatformApplicationDto>> RequestInformation(
+        Guid id,
+        [FromBody] RequestInformationRequest request,
+        CancellationToken cancellationToken)
         => Ok(await _mediator.Send(new RequestApplicationInformationCommand
         {
             ApplicationId = id,
@@ -54,15 +65,24 @@ public sealed class PlatformWorkspaceApplicationsController : ControllerBase
         }, cancellationToken));
 
     [HttpPost("{id:guid}/approve-freelance")]
-    public async Task<ActionResult<PlatformApplicationDto>> ApproveFreelance(Guid id, [FromBody] ConcurrencyRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<PlatformApplicationDto>> ApproveFreelance(
+        Guid id,
+        [FromBody] ConcurrencyRequest request,
+        CancellationToken cancellationToken)
         => Ok(await _mediator.Send(new ApproveFreelanceWorkspaceApplicationCommand(id, request.RowVersion), cancellationToken));
 
     [HttpPost("{id:guid}/approve-membership")]
-    public async Task<ActionResult<PlatformApplicationDto>> ApproveMembership(Guid id, [FromBody] ConcurrencyRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<PlatformApplicationDto>> ApproveMembership(
+        Guid id,
+        [FromBody] ConcurrencyRequest request,
+        CancellationToken cancellationToken)
         => Ok(await _mediator.Send(new ApproveMembershipApplicationCommand(id, request.RowVersion), cancellationToken));
 
     [HttpPost("{id:guid}/reject")]
-    public async Task<ActionResult<PlatformApplicationDto>> Reject(Guid id, [FromBody] RejectRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<PlatformApplicationDto>> Reject(
+        Guid id,
+        [FromBody] RejectRequest request,
+        CancellationToken cancellationToken)
         => Ok(await _mediator.Send(new RejectApplicationCommand
         {
             ApplicationId = id,
