@@ -34,7 +34,7 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
 
         var currentVersion = await _context.Users
             .IgnoreQueryFilters()
-            .Where(u => u.Id == userId && !u.IsDeleted)
+            .Where(u => u.Id == userId && u.IsActive && !u.IsDeleted)
             .Select(u => (int?)u.PermissionsVersion)
             .FirstOrDefaultAsync();
 

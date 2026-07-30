@@ -11,6 +11,12 @@ LogicFit.Infrastructure   EF Core, Identity, persistence, jobs, backups, outbox
 LogicFit.Tests            اختبارات الانحدار والأمان وقواعد الاشتراك والترقيم
 ```
 
+## Identity email-security data (Issue #113, unreleased)
+
+`IdentityAccount` owns the globally unique `NormalizedEmail`, a display name, and `EmailVerifiedAt`. A phone number remains optional contact data only and is not a global login key. `IdentityEmailActionToken` stores the action purpose (`EmailVerification` or `PasswordReset`), SHA-256 token hash, expiry, use/revocation timestamps, IP metadata, and a SQL `rowversion`. It has a unique token-hash index and a lookup index on identity, purpose, and expiry.
+
+Migration `20260730143000_AddIdentityEmailSecurity` is additive and guards for existing production schemas. It marks existing identities verified during backfill so deployed identity users are not locked out, then adds the token table. It is applied separately through the reviewed migration procedure; its `Down` path is intentionally non-destructive.
+
 لا ينبغي للـController أن ينفذ قرار Domain معقداً. يحول الطلب إلى Command/Query؛
 المعاملات والـConcurrency والتحقق من الملكية تكون في الطبقات المناسبة.
 

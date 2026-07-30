@@ -34,6 +34,11 @@ public class PlatformLoginCommandHandler : IRequestHandler<PlatformLoginCommand,
 
     public async Task<AuthResponseDto> Handle(PlatformLoginCommand request, CancellationToken cancellationToken)
     {
+        // Kept only as a compatibility endpoint so callers receive a deliberate, safe failure.
+        // Platform tokens are no longer issued after a password alone: use /passkeys/login/options then /verify.
+        await Task.CompletedTask;
+        throw new UnauthorizedException("PLATFORM_PASSKEY_REQUIRED");
+#pragma warning disable CS0162
         var user = await _context.Users
             .IgnoreQueryFilters()
             .Include(u => u.Profile)
@@ -77,5 +82,6 @@ public class PlatformLoginCommandHandler : IRequestHandler<PlatformLoginCommand,
             RefreshToken = refreshToken.Token,
             ExpiresAt = accessToken.ExpiresAt
         };
+#pragma warning restore CS0162
     }
 }
