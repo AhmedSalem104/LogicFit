@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-07-30 11:24 UTC`  |  Total endpoints: **355**
+Generated: `2026-07-30 13:18 UTC`  |  Total endpoints: **379**
 
 ## Contract rules
 
@@ -61,6 +61,30 @@ Generated: `2026-07-30 11:24 UTC`  |  Total endpoints: **355**
 
 - **Access:** JWT required
 - **Inputs:** No request input.
+- **Declared response:** StatusCodes.Status204NoContent
+
+#### `POST /api/platform/auth/passkeys/login/options` - `BeginPasskeyLogin`
+
+- **Access:** Anonymous (no token required)
+- **Inputs:** Body `command`: `BeginPlatformPasskeyLoginCommand`<br>Handler signature: `[FromBody] BeginPlatformPasskeyLoginCommand command`
+- **Declared response:** typeof(PasskeyCeremonyOptionsDto), StatusCodes.Status200OK
+
+#### `POST /api/platform/auth/passkeys/login/verify` - `CompletePasskeyLogin`
+
+- **Access:** Anonymous (no token required)
+- **Inputs:** Body `command`: `CompletePlatformPasskeyLoginCommand`<br>Handler signature: `[FromBody] CompletePlatformPasskeyLoginCommand command`
+- **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK
+
+#### `POST /api/platform/auth/passkeys/registration/options` - `BeginPasskeyRegistration`
+
+- **Access:** Anonymous (no token required)
+- **Inputs:** Body `command`: `BeginPlatformPasskeyRegistrationCommand`<br>Handler signature: `[FromBody] BeginPlatformPasskeyRegistrationCommand command`
+- **Declared response:** typeof(PasskeyCeremonyOptionsDto), StatusCodes.Status200OK
+
+#### `POST /api/platform/auth/passkeys/registration/verify` - `CompletePasskeyRegistration`
+
+- **Access:** Anonymous (no token required)
+- **Inputs:** Body `command`: `CompletePlatformPasskeyRegistrationCommand`<br>Handler signature: `[FromBody] CompletePlatformPasskeyRegistrationCommand command`
 - **Declared response:** StatusCodes.Status204NoContent
 
 #### `POST /api/platform/auth/refresh` - `Refresh`
@@ -281,19 +305,19 @@ Generated: `2026-07-30 11:24 UTC`  |  Total endpoints: **355**
 
 #### `POST /api/platform/plans` - `CreatePlan`
 
-- **Access:** JWT + Policy: `Permissions.ManagePlans`
+- **Access:** JWT + Policy: `PasskeyStepUpRequirement.PolicyName`
 - **Inputs:** Body `command`: `CreatePlanCommand` { `Name`: string; `Description`: string?; `Price`: decimal; `Currency`: string; `BillingCycle`: BillingCycle; `DurationInDays`: int; `MaxMembers`: int?; `MaxCoaches`: int?; `MaxBranches`: int?; `MaxEmployees`: int?; `MaxStorageMB`: int?; `IsActive`: bool; `DisplayOrder`: int; `FeatureCodes`: List<string> }<br>Handler signature: `[FromBody] CreatePlanCommand command`
 - **Declared response:** typeof(PlanDto), StatusCodes.Status201Created
 
 #### `DELETE /api/platform/plans/{id:guid}` - `DeletePlan`
 
-- **Access:** JWT + Policy: `Permissions.ManagePlans`
+- **Access:** JWT + Policy: `PasskeyStepUpRequirement.PolicyName`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** StatusCodes.Status204NoContent
 
 #### `PUT /api/platform/plans/{id:guid}` - `UpdatePlan`
 
-- **Access:** JWT + Policy: `Permissions.ManagePlans`
+- **Access:** JWT + Policy: `PasskeyStepUpRequirement.PolicyName`
 - **Inputs:** Body `command`: `UpdatePlanCommand` { `Id`: Guid; `Name`: string; `Description`: string?; `Price`: decimal; `Currency`: string; `BillingCycle`: BillingCycle; `DurationInDays`: int; `MaxMembers`: int?; `MaxCoaches`: int?; `MaxBranches`: int?; `MaxEmployees`: int?; `MaxStorageMB`: int?; `IsActive`: bool; `DisplayOrder`: int; `FeatureCodes`: List<string> }<br>Handler signature: `Guid id, [FromBody] UpdatePlanCommand command`
 - **Declared response:** typeof(PlanDto), StatusCodes.Status200OK
 
@@ -321,7 +345,7 @@ Generated: `2026-07-30 11:24 UTC`  |  Total endpoints: **355**
 
 #### `PUT /api/platform/roles/{id:guid}/permissions` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManagePlatformReports`
+- **Access:** JWT + Policy: `PasskeyStepUpRequirement.PolicyName`
 - **Inputs:** Body `request`: `UpdateRolePermissionsRequest`<br>Handler signature: `Guid id, [FromBody] UpdateRolePermissionsRequest request`
 - **Declared response:** Task<IActionResult>
 
@@ -373,31 +397,31 @@ Generated: `2026-07-30 11:24 UTC`  |  Total endpoints: **355**
 
 #### `POST /api/platform/tenants` - `CreateTenant`
 
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Access:** JWT + Policy: `PasskeyStepUpRequirement.PolicyName`
 - **Inputs:** Body `command`: `CreateTenantWithOwnerCommand` { `Name`: string; `Subdomain`: string?; `Email`: string?; `PhoneNumber`: string?; `OwnerEmail`: string; `OwnerPhoneNumber`: string?; `OwnerPassword`: string; `OwnerFullName`: string }<br>Handler signature: `[FromBody] CreateTenantWithOwnerCommand command`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status201Created
 
 #### `POST /api/platform/tenants/{id:guid}/activate` - `Activate`
 
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Access:** JWT + Policy: `PasskeyStepUpRequirement.PolicyName`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
 
 #### `POST /api/platform/tenants/{id:guid}/approve` - `Approve`
 
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Access:** JWT + Policy: `PasskeyStepUpRequirement.PolicyName`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
 
 #### `POST /api/platform/tenants/{id:guid}/archive` - `Archive`
 
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Access:** JWT + Policy: `PasskeyStepUpRequirement.PolicyName`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
 
 #### `POST /api/platform/tenants/{id:guid}/suspend` - `Suspend`
 
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Access:** JWT + Policy: `PasskeyStepUpRequirement.PolicyName`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
 
@@ -411,19 +435,19 @@ Generated: `2026-07-30 11:24 UTC`  |  Total endpoints: **355**
 
 #### `POST /api/platform/workspace-applications/{id:guid}/approve-freelance` - `ApproveFreelance`
 
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Access:** JWT + Policy: `PasskeyStepUpRequirement.PolicyName`
 - **Inputs:** Body `request`: `ConcurrencyRequest`<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
 - **Declared response:** Task<ActionResult<PlatformApplicationDto>>
 
 #### `POST /api/platform/workspace-applications/{id:guid}/approve-membership` - `ApproveMembership`
 
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Access:** JWT + Policy: `PasskeyStepUpRequirement.PolicyName`
 - **Inputs:** Body `request`: `ConcurrencyRequest`<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
 - **Declared response:** Task<ActionResult<PlatformApplicationDto>>
 
 #### `POST /api/platform/workspace-applications/{id:guid}/reject` - `Reject`
 
-- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Access:** JWT + Policy: `PasskeyStepUpRequirement.PolicyName`
 - **Inputs:** Body `request`: `RejectRequest`<br>Handler signature: `Guid id, [FromBody] RejectRequest request`
 - **Declared response:** Task<ActionResult<PlatformApplicationDto>>
 
@@ -1231,6 +1255,12 @@ Generated: `2026-07-30 11:24 UTC`  |  Total endpoints: **355**
 - **Inputs:** Body `command`: `SponsorFreelanceMembershipCommand` { `IdentityEmail`: string; `RequestedRole`: UserRole; `FullName`: string }<br>Handler signature: `[FromBody] SponsorFreelanceMembershipCommand command`
 - **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status201Created
 
+#### `POST /api/freelance/team/applications/api/freelance/team/invites` - `Invite`
+
+- **Access:** JWT + Policy: `Permissions.ManageCoaches`
+- **Inputs:** Body `command`: `CreateWorkspaceInviteCommand` { `Email`: string; `RequestedRole`: UserRole }<br>Handler signature: `[FromBody] CreateWorkspaceInviteCommand command`
+- **Declared response:** typeof(WorkspaceInviteCreatedDto), StatusCodes.Status201Created
+
 ### GateAccess
 
 #### `POST /api/GateAccess/check-in-qr` - `CheckInByQr`
@@ -1329,23 +1359,103 @@ Generated: `2026-07-30 11:24 UTC`  |  Total endpoints: **355**
 - **Inputs:** Body `command`: `ReissueApplicationTrackingSessionsCommand` { `WorkspaceSelectionToken`: string }<br>Handler signature: `[FromBody] ReissueApplicationTrackingSessionsCommand command`
 - **Declared response:** typeof(IReadOnlyList<ApplicationTrackingSessionDto>), StatusCodes.Status200OK
 
+#### `POST /api/identity/client-join` - `JoinAsClient`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `JoinWorkspaceAsClientCommand` { `Code`: string; `WorkspaceSelectionToken`: string }<br>Handler signature: `[FromBody] JoinWorkspaceAsClientCommand command`
+- **Declared response:** typeof(ClientJoinResultDto), StatusCodes.Status200OK
+
+#### `POST /api/identity/client-join/preview` - `PreviewClientJoin`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `PreviewWorkspaceClientJoinCommand` { `Code`: string }<br>Handler signature: `[FromBody] PreviewWorkspaceClientJoinCommand command`
+- **Declared response:** typeof(WorkspaceClientJoinPreviewDto), StatusCodes.Status200OK
+
+#### `POST /api/identity/invitations/accept` - `AcceptInvitation`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `AcceptWorkspaceInviteCommand` { `Token`: string; `WorkspaceSelectionToken`: string }<br>Handler signature: `[FromBody] AcceptWorkspaceInviteCommand command`
+- **Declared response:** StatusCodes.Status204NoContent
+
+#### `POST /api/identity/invitations/preview` - `PreviewInvitation`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `PreviewWorkspaceInviteCommand` { `Token`: string }<br>Handler signature: `[FromBody] PreviewWorkspaceInviteCommand command`
+- **Declared response:** typeof(WorkspaceInvitePreviewDto), StatusCodes.Status200OK
+
 #### `POST /api/identity/login` - `Login`
 
 - **Access:** Server default (not declared explicitly)
-- **Inputs:** Body `command`: `IdentitySignInCommand` { `Identifier`: string; `Password`: string }<br>Handler signature: `[FromBody] IdentitySignInCommand command`
+- **Inputs:** Body `command`: `IdentitySignInCommand` { `Email`: string; `Password`: string }<br>Handler signature: `[FromBody] IdentitySignInCommand command`
 - **Declared response:** typeof(IdentitySignInDto), StatusCodes.Status200OK
+
+#### `POST /api/identity/password-reset` - `RequestPasswordReset`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `RequestIdentityPasswordResetCommand` { `Email`: string }<br>Handler signature: `[FromBody] RequestIdentityPasswordResetCommand command`
+- **Declared response:** StatusCodes.Status202Accepted
+
+#### `POST /api/identity/password-reset/confirm` - `ResetPassword`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `ResetIdentityPasswordCommand` { `Token`: string; `NewPassword`: string }<br>Handler signature: `[FromBody] ResetIdentityPasswordCommand command`
+- **Declared response:** StatusCodes.Status204NoContent
 
 #### `POST /api/identity/register` - `Register`
 
 - **Access:** Server default (not declared explicitly)
-- **Inputs:** Body `command`: `RegisterIdentityCommand` { `Email`: string; `PhoneNumber`: string?; `Password`: string }<br>Handler signature: `[FromBody] RegisterIdentityCommand command`
-- **Declared response:** StatusCodes.Status204NoContent
+- **Inputs:** Body `command`: `RegisterIdentityCommand` { `FullName`: string; `Email`: string; `Password`: string; `PhoneNumber`: string? }<br>Handler signature: `[FromBody] RegisterIdentityCommand command`
+- **Declared response:** StatusCodes.Status202Accepted
 
 #### `POST /api/identity/select-workspace` - `SelectWorkspace`
 
 - **Access:** Server default (not declared explicitly)
 - **Inputs:** Body `command`: `SelectIdentityWorkspaceCommand` { `WorkspaceSelectionToken`: string; `WorkspaceId`: Guid }<br>Handler signature: `[FromBody] SelectIdentityWorkspaceCommand command`
 - **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK
+
+#### `POST /api/identity/verify-email` - `VerifyEmail`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Body `command`: `VerifyIdentityEmailCommand` { `Token`: string }<br>Handler signature: `[FromBody] VerifyIdentityEmailCommand command`
+- **Declared response:** StatusCodes.Status204NoContent
+
+### IdentityPasskeys
+
+#### `POST /api/identity/passkeys/registration/options` - `BeginRegistration`
+
+- **Access:** JWT required
+- **Inputs:** No request input.
+- **Declared response:** typeof(PasskeyCeremonyOptionsDto), StatusCodes.Status200OK
+
+#### `POST /api/identity/passkeys/registration/verify` - `CompleteRegistration`
+
+- **Access:** JWT required
+- **Inputs:** Body `command`: `CompleteIdentityPasskeyRegistrationCommand`<br>Handler signature: `[FromBody] CompleteIdentityPasskeyRegistrationCommand command`
+- **Declared response:** StatusCodes.Status204NoContent
+
+#### `POST /api/identity/passkeys/sign-in/options` - `BeginSignIn`
+
+- **Access:** Anonymous (no token required)
+- **Inputs:** Body `command`: `BeginIdentityPasskeySignInCommand`<br>Handler signature: `[FromBody] BeginIdentityPasskeySignInCommand command`
+- **Declared response:** typeof(PasskeyCeremonyOptionsDto), StatusCodes.Status200OK
+
+#### `POST /api/identity/passkeys/sign-in/verify` - `CompleteSignIn`
+
+- **Access:** Anonymous (no token required)
+- **Inputs:** Body `command`: `CompleteIdentityPasskeySignInCommand`<br>Handler signature: `[FromBody] CompleteIdentityPasskeySignInCommand command`
+- **Declared response:** typeof(IdentitySignInDto), StatusCodes.Status200OK
+
+#### `POST /api/identity/passkeys/step-up/options` - `BeginStepUp`
+
+- **Access:** JWT required
+- **Inputs:** No request input.
+- **Declared response:** typeof(PasskeyCeremonyOptionsDto), StatusCodes.Status200OK
+
+#### `POST /api/identity/passkeys/step-up/verify` - `CompleteStepUp`
+
+- **Access:** JWT required
+- **Inputs:** Body `command`: `CompleteIdentityPasskeyStepUpCommand`<br>Handler signature: `[FromBody] CompleteIdentityPasskeyStepUpCommand command`
+- **Declared response:** typeof(PasskeyStepUpDto), StatusCodes.Status200OK
 
 ### Invoices
 
@@ -2294,3 +2404,43 @@ Generated: `2026-07-30 11:24 UTC`  |  Total endpoints: **355**
 - **Access:** Server default (not declared explicitly)
 - **Inputs:** No request input.
 - **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status200OK
+
+### WorkspaceClientJoinCodes
+
+#### `POST /api/workspace/client-join-codes` - `Generate`
+
+- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Inputs:** Body `command`: `GenerateWorkspaceClientJoinCodeCommand` { `AutoApproveClients`: bool; `ValidForDays`: int }<br>Handler signature: `[FromBody] GenerateWorkspaceClientJoinCodeCommand command`
+- **Declared response:** typeof(WorkspaceClientJoinCodeDto), StatusCodes.Status201Created
+
+#### `POST /api/workspace/client-join-codes/join` - `Join`
+
+- **Access:** Anonymous (no token required)
+- **Inputs:** Body `command`: `JoinWorkspaceAsClientCommand` { `Code`: string; `WorkspaceSelectionToken`: string }<br>Handler signature: `[FromBody] JoinWorkspaceAsClientCommand command`
+- **Declared response:** typeof(ClientJoinResultDto), StatusCodes.Status200OK
+
+#### `POST /api/workspace/client-join-codes/memberships/{membershipId:guid}/approve` - `Approve`
+
+- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Inputs:** Handler signature: `Guid membershipId`
+- **Declared response:** StatusCodes.Status204NoContent
+
+#### `POST /api/workspace/client-join-codes/preview` - `Preview`
+
+- **Access:** Anonymous (no token required)
+- **Inputs:** Body `command`: `PreviewWorkspaceClientJoinCommand` { `Code`: string }<br>Handler signature: `[FromBody] PreviewWorkspaceClientJoinCommand command`
+- **Declared response:** typeof(WorkspaceClientJoinPreviewDto), StatusCodes.Status200OK
+
+### WorkspaceInvites
+
+#### `POST /api/workspace-invites/accept` - `Accept`
+
+- **Access:** Anonymous (no token required)
+- **Inputs:** Body `command`: `AcceptWorkspaceInviteCommand` { `Token`: string; `WorkspaceSelectionToken`: string }<br>Handler signature: `[FromBody] AcceptWorkspaceInviteCommand command`
+- **Declared response:** StatusCodes.Status204NoContent
+
+#### `POST /api/workspace-invites/preview` - `Preview`
+
+- **Access:** Anonymous (no token required)
+- **Inputs:** Body `command`: `PreviewWorkspaceInviteCommand` { `Token`: string }<br>Handler signature: `[FromBody] PreviewWorkspaceInviteCommand command`
+- **Declared response:** typeof(WorkspaceInvitePreviewDto), StatusCodes.Status200OK

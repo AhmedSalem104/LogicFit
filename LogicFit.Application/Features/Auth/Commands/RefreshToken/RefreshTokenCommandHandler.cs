@@ -1,6 +1,8 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.Auth.DTOs;
 using LogicFit.Domain.Authorization;
+using LogicFit.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +16,7 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
     private readonly IRbacService _rbacService;
     private readonly IRefreshTokenService _refreshTokenService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IIdentityWorkspaceAccessGuard _identityWorkspaceAccessGuard;
 
     public RefreshTokenCommandHandler(
         IApplicationDbContext context,
@@ -21,7 +24,8 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
         IDateTimeService dateTimeService,
         IRbacService rbacService,
         IRefreshTokenService refreshTokenService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IIdentityWorkspaceAccessGuard identityWorkspaceAccessGuard)
     {
         _context = context;
         _jwtService = jwtService;
@@ -29,12 +33,20 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
         _rbacService = rbacService;
         _refreshTokenService = refreshTokenService;
         _currentUserService = currentUserService;
+        _identityWorkspaceAccessGuard = identityWorkspaceAccessGuard;
     }
 
     public async Task<AuthResponseDto> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
         var (user, newToken) = await _refreshTokenService.RotateAsync(
             request.RefreshToken, _currentUserService.IpAddress, request.Surface, cancellationToken);
+
+        if (user.TenantId != PlatformConstants.PlatformTenantId)
+        {
+            var identityAccess = await _identityWorkspaceAccessGuard.EvaluateAsync(user.Id, user.TenantId, cancellationToken);
+            if (identityAccess.Mode == IdentityWorkspaceAccessMode.Blocked)
+                throw new TenantAccessException(identityAccess.Code ?? "WORKSPACE_ACCESS_DENIED", 403);
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
 

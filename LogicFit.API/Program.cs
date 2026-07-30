@@ -31,6 +31,26 @@ builder.Services.AddRateLimiter(options =>
     var permitLimit = builder.Configuration.GetValue("RateLimiting:PermitLimit", 120);
     var windowSeconds = builder.Configuration.GetValue("RateLimiting:WindowSeconds", 60);
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("identity-email-actions", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    options.AddPolicy("identity-public-join", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.User?.Identity?.IsAuthenticated == true
@@ -181,6 +201,11 @@ app.UseAuthentication();
 // Tenant must be resolved BEFORE authorization so permission checks and query filters
 // see the current tenant.
 app.UseTenant();
+
+// Identity and membership are a separate boundary from subscription and permissions. Linked
+// accounts are enforced immediately; unlinked legacy accounts remain compatibility-only until
+// verified OTP migration is enabled.
+app.UseIdentityWorkspaceAccessGate();
 
 // Hard gate: block requests for suspended/expired/cancelled/archived gyms before authorization.
 app.UseTenantAccessGate();

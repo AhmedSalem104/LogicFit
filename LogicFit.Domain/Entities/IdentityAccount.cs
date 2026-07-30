@@ -8,8 +8,15 @@ namespace LogicFit.Domain.Entities;
 /// </summary>
 public class IdentityAccount : AuditableEntity
 {
+    /// <summary>Global display name collected during identity registration, independent of any workspace profile.</summary>
+    public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string NormalizedEmail { get; set; } = string.Empty;
+    /// <summary>
+    /// A global identity cannot sign in until ownership of its email address has been proved by a
+    /// one-time verification link. Existing identities are backfilled during the migration.
+    /// </summary>
+    public DateTime? EmailVerifiedAt { get; set; }
     public string? PhoneNumber { get; set; }
     public string? NormalizedPhoneNumber { get; set; }
     public string PasswordHash { get; set; } = string.Empty;
@@ -17,4 +24,6 @@ public class IdentityAccount : AuditableEntity
     public DateTime? LastLoginAt { get; set; }
     public ICollection<WorkspaceMembership> Memberships { get; set; } = new List<WorkspaceMembership>();
     public ICollection<ApplicationRequest> Applications { get; set; } = new List<ApplicationRequest>();
+    public ICollection<IdentityEmailActionToken> EmailActionTokens { get; set; } = new List<IdentityEmailActionToken>();
+    public ICollection<IdentityPasskeyCredential> PasskeyCredentials { get; set; } = new List<IdentityPasskeyCredential>();
 }
