@@ -28,3 +28,16 @@ public sealed class IdentitySignInDto
     public IReadOnlyList<PendingApplicationDto> PendingApplications { get; init; } = Array.Empty<PendingApplicationDto>();
     public bool RequiresWorkspaceSelection { get; init; }
 }
+
+/// <summary>Minimal invitation data that is safe to show after a recipient follows a high-entropy link.</summary>
+public sealed class WorkspaceInvitePreviewDto
+{
+    public Guid InviteId { get; init; }
+    public Guid WorkspaceId { get; init; }
+    public string WorkspaceName { get; init; } = string.Empty;
+    public string? WorkspaceIdentifier { get; init; }
+    public string? LogoUrl { get; init; }
+    public UserRole Role { get; init; }
+    public string EmailMasked { get; init; } = string.Empty;
+    public DateTime ExpiresAt { get; init; }
+}

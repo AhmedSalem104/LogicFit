@@ -7,5 +7,7 @@ public enum WorkspaceMembershipStatus
     Active = 3,
     Rejected = 4,
     Suspended = 5,
-    Revoked = 6
+    Revoked = 6,
+    /// <summary>Client has proved their global identity and is awaiting a workspace operator decision.</summary>
+    PendingWorkspaceApproval = 7
 }

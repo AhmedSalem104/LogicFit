@@ -1,10 +1,14 @@
 # LogicFit Project Status
 
-Last reviewed: 2026-07-29
+Last reviewed: 2026-07-30
 
 ## Executive summary
 
 LogicFit is a multi-tenant gym-management SaaS. The platform operator manages gyms, plans, features, payment methods, and manual payment approvals. Each gym receives an isolated tenant workspace for staff and clients. Billing is intentionally manual: no gateway, webhook, or automatic card charge is enabled.
+
+> **Unreleased Issue #113 branch:** email-only identity verification and email password-reset security are implemented in the task branch. They require migration `20260730143000_AddIdentityEmailSecurity`, server-only email/link configuration, frontend integration, CI, review, and deployment before they become production behavior.
+>
+> The same branch adds one-use email-bound workspace invitations, owner-controlled client join codes, WebAuthn passkey sign-in/registration/step-up, and additive migrations `20260730150000_AddWorkspaceInvites`, `20260730151000_AddWorkspaceClientJoinCodes`, and `20260730153000_AddIdentityPasskeys`.
 
 ## Product map
 
@@ -71,6 +75,9 @@ sequenceDiagram
 - Freelance workspace branding reuses tenant branding for colors, logos, cover/background, and report identity, and adds a structured profile for bio, specialties, certifications, social links, welcome content, and booking settings.
 - Subscription policy is now explicit in the access gate: `Trial`, `Active`, and `PastDue` operate normally; `Expired` is read-only while billing/renewal remains available; suspended/archived/provisioning workspaces hard-block operational access. Legacy gyms without a SaaS subscription record preserve their existing operational access during the migration rollout; a new freelance workspace without a subscription is billing-only.
 - Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed locally. The third migration adds the tenant row-version used to serialize final membership-capacity approval. `20260729133325_SeedFreelanceSystemRoles` is an idempotent corrective data migration that creates or restores the three freelance system roles and their permission maps; it must be applied explicitly before a Platform Admin approves a freelance workspace. Production schema application remains a protected CI/CD operation with health-check and rollback review.
+- Team membership now uses `/api/freelance/team/invites` and `/api/workspace-invites/{preview,accept}`. The invitation is tied to normalized email, workspace, and role; acceptance requires a verified identity session and a live quota check.
+- Client acquisition supports owner-generated `/api/workspace/client-join-codes` plus preview/join endpoints. Raw codes are returned only once, stored as hashes, expire/revoke, and either activate the client or create a pending owner approval according to workspace settings.
+- Passkey ceremonies are five-minute and one-use; credentials are unique, and sensitive Platform mutations require a recent passkey step-up.
 
 ## API contracts
 
@@ -309,7 +316,7 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 
 - Added one identity/membership/local-user gate to legacy login, refresh rotation, workspace selection, and every authenticated tenant request. Linked accounts now lose access immediately when their identity, membership, or tenant-local user becomes inactive; unlinked legacy accounts remain behind an explicit temporary compatibility setting.
 - Normalized subscription access for cancellation: a cancelled subscription remains operational strictly before `EndDate`, then resolves to `Expired` and read-only without waiting for a background lifecycle update.
-- Deferred OTP, verified legacy linking, invitations, QR/join code, and workspace-owned client approval to issue #113 so no incomplete public-registration or approval flow is introduced.
+- Deferred verified-email legacy linking, invitations, QR/join code, and workspace-owned client approval to issue #113 so no incomplete public-registration or approval flow is introduced.
 
 ### 2026-07-30
 

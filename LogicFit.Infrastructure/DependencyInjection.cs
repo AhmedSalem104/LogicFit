@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Fido2NetLib;
 
 namespace LogicFit.Infrastructure;
 
@@ -30,6 +31,15 @@ public static class DependencyInjection
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        services.Configure<PasskeyOptions>(configuration.GetSection(PasskeyOptions.SectionName));
+        var passkeyDomain = configuration[$"{PasskeyOptions.SectionName}:ServerDomain"] ?? "localhost";
+        var passkeyOrigins = configuration.GetSection($"{PasskeyOptions.SectionName}:Origins").Get<string[]>() ?? new[] { "https://localhost" };
+        services.AddFido2(options =>
+        {
+            options.ServerDomain = passkeyDomain;
+            options.ServerName = configuration[$"{PasskeyOptions.SectionName}:ServerName"] ?? "LogicFit";
+            options.Origins = passkeyOrigins.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        });
 
         // Identity
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
@@ -75,8 +85,11 @@ public static class DependencyInjection
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
         services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ActiveTenantAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, PasskeyStepUpHandler>();
         services.AddAuthorization(options =>
         {
+            options.AddPolicy(PasskeyStepUpRequirement.PolicyName, policy =>
+                policy.RequireAuthenticatedUser().AddRequirements(new PasskeyStepUpRequirement()));
             // Endpoints with a plain [Authorize] (no permission policy) still enforce the gym-status rule.
             options.DefaultPolicy = new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()
@@ -113,7 +126,15 @@ public static class DependencyInjection
         {
             services.AddScoped<IFileUploadService, FileUploadService>();
         }
+        services.Configure<SmtpEmailOptions>(configuration.GetSection(SmtpEmailOptions.SectionName));
+        services.Configure<IdentityEmailLinkOptions>(configuration.GetSection(IdentityEmailLinkOptions.SectionName));
+        services.AddSingleton<IIdentityEmailLinkFactory, IdentityEmailLinkFactory>();
+        if (string.Equals(configuration["Email:Provider"], "smtp", StringComparison.OrdinalIgnoreCase))
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        else
+            services.AddScoped<IEmailSender, UnconfiguredEmailSender>();
         services.AddScoped<IEmailService, LoggingEmailService>();
+        services.AddScoped<IIdentityPasskeyService, IdentityPasskeyService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddSingleton<IBackupService, SqlServerBackupService>();
         services.AddSingleton<IMediaBackupService, LocalMediaBackupService>();
