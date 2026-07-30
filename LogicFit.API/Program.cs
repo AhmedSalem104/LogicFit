@@ -182,6 +182,11 @@ app.UseAuthentication();
 // see the current tenant.
 app.UseTenant();
 
+// Identity and membership are a separate boundary from subscription and permissions. Linked
+// accounts are enforced immediately; unlinked legacy accounts remain compatibility-only until
+// verified OTP migration is enabled.
+app.UseIdentityWorkspaceAccessGate();
+
 // Hard gate: block requests for suspended/expired/cancelled/archived gyms before authorization.
 app.UseTenantAccessGate();
 

@@ -1,9 +1,11 @@
 using System.Text;
 using Amazon.S3;
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Infrastructure.Authorization;
 using LogicFit.Infrastructure.Identity;
 using LogicFit.Infrastructure.Persistence;
+using LogicFit.Infrastructure.Security;
 using LogicFit.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -84,6 +86,8 @@ public static class DependencyInjection
 
         // Services
         services.AddScoped<ITenantService, TenantService>();
+        services.Configure<IdentityAccessOptions>(configuration.GetSection(IdentityAccessOptions.SectionName));
+        services.AddScoped<IIdentityWorkspaceAccessGuard, IdentityWorkspaceAccessGuard>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IDateTimeService, DateTimeService>();
         services.AddScoped<IJwtService, JwtService>();

@@ -168,8 +168,15 @@ FreelanceOwner يرشح هوية موجودة
 | `Provisioning` أو `ProvisioningFailed` | حظر مؤقت/تشغيلي كامل بالكود المناسب |
 | اشتراك `None` أو `PendingPayment` | billing فقط؛ هذا الوضع الافتراضي لمساحة مدرب حر جديدة بلا اشتراك |
 | `Trial` أو `Active` أو `PastDue` أو `GracePeriod` | وصول تشغيلي عادي ضمن حدود الخطة |
-| `Expired` أو `Cancelled` أو subscription `Suspended` | قراءة فقط مع فوترة وتجديد حيث تسمح السياسة |
+| `Cancelled` ووقت التشغيل قبل `EndDate` | وصول كامل حتى نهاية الدورة المدفوعة مع إيقاف التجديد التلقائي |
+| `Expired` أو `Cancelled` عند/بعد `EndDate` أو subscription `Suspended` | قراءة فقط مع فوترة وتجديد حيث تسمح السياسة |
 | جيم قديم بلا سجل اشتراك SaaS | يحافظ على الوصول القديم مؤقتًا لتوافق الترحيل |
+
+### الحارس الموحد المنفذ أثناء الترحيل
+
+كل session خاصة بمساحة تمر الآن بالحارس نفسه عند `login` و`refresh` و`select-workspace` وكل طلب tenant مصادق عليه. القرار يمنع فورًا الهوية غير النشطة، العضوية غير النشطة، أو الحساب المحلي غير النشط قبل حارس المساحة والاشتراك والصلاحيات.
+
+الحساب المحلي الذي لم يرتبط بعد بـ`IdentityAccount` لا يعامل كعضوية مكتملة؛ يعمل فقط بوضع توافق مرحلي واضح. الإعداد `Authentication__IdentityAccess__AllowUnlinkedLegacySessions` قيمته الافتراضية `true` لحماية المستخدمين الحاليين من القطع. لا يجوز تحويله إلى `false` قبل تنفيذ OTP وربط الحساب القديم والتحقق من القياسات والسجلات؛ عندها يعيد الحارس `IDENTITY_MIGRATION_REQUIRED` بدل إصدار أو قبول session جديدة.
 
 بعد تجاوز الحارس، لا يزال JWT يحمل `TenantId` وroles وpermissions و`PermissionsVersion`. كل endpoint محمي يطبق policy/permission وفحوص ملكية المورد؛ لا يعتمد على اختيار الواجهة لمسار أو شاشة.
 

@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-07-30 11:24 UTC`  |  Total endpoints: **355**
+Generated: `2026-07-30 11:44 UTC`  |  Total endpoints: **355**
 
 ## Contract rules
 

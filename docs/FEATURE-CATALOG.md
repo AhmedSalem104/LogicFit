@@ -48,6 +48,7 @@
 | المصادقة المتوافقة | تسجيل جيم تقليدي، دخول، refresh، logout-all، استعادة وتغيير كلمة المرور | `Features/Auth`، `/api/auth/*` | حساب محلي داخل مساحة محددة |
 | الهوية المستقلة | هوية عالمية، الدخول أولًا بالهوية، اختيار مساحة، إعادة جلسة متابعة الطلب | `Features/Identity`، `/api/identity/*` | `IdentityAccount` لا يمنح دخول مساحة وحده |
 | اختيار مساحة العمل | استبدال token اختيار قصير العمر بـJWT/refresh tenant الموجودين | `IdentityWorkspaceSession` و`WorkspaceMembership` | عضوية `Active` فقط؛ يطبق حارس المساحة قبل إصدار الجلسة |
+| حارس الهوية والعضوية | فحص موحد للحساب المحلي والهوية المرتبطة والعضوية عند login وrefresh واختيار المساحة وكل طلب tenant مصادق عليه | `IIdentityWorkspaceAccessGuard` و`IdentityWorkspaceAccessMiddleware` | الحسابات القديمة غير المرتبطة تعمل مؤقتًا بوضع توافق صريح قابل للإيقاف بعد ترحيل OTP |
 | طلب مساحة مدرب حر | تقديم إنشاء مساحة وهوية وهوية بصرية مستقلة، جلسة متابعة محدودة، تعديل الحقول المطلوبة وإعادة التقديم | `Features/WorkspaceApplications`، `/api/workspace-applications/*` | public قبل الاعتماد؛ token المتابعة ليس JWT |
 | فريق المدرب الحر | ترشيح Coach/Assistant/Client لمساحة مستقلة ثم اعتماد Platform | `FreelanceTeamApplicationsController`، `/api/freelance/team/applications` | Freelance Owner مع `ManageCoaches`؛ لا توجد صلاحية مباشرة قبل الاعتماد |
 | المستخدمون والأدوار | مستخدمون، profiles، الأدوار، permissions وإصدارات الصلاحيات | `Features/Users`، `Profile`، `Authorization` | TenantId وملكية المورد حد أمني |
@@ -90,7 +91,8 @@
 | مساحة `Suspended` أو `Archived` أو `Provisioning` أو `ProvisioningFailed` | منع تشغيلي كامل، حتى لو كان الدور أو الاشتراك صالحًا |
 | اشتراك `None` أو `PendingPayment` | billing فقط؛ والمدرب الحر الجديد بلا اشتراك يدخل هذه الحالة |
 | `Trial` أو `Active` أو `PastDue` أو `GracePeriod` | تشغيل عادي ضمن الخطة |
-| `Expired` أو `Cancelled` أو subscription `Suspended` | قراءة فقط مع إتاحة الفوترة/التجديد حيث تسمح السياسة |
+| `Cancelled` ووقت التشغيل قبل `EndDate` | وصول كامل حتى نهاية الدورة المدفوعة مع إيقاف التجديد |
+| `Expired` أو `Cancelled` عند/بعد `EndDate` أو subscription `Suspended` | قراءة فقط مع إتاحة الفوترة/التجديد حيث تسمح السياسة |
 | جيم قديم بلا سجل SaaS subscription | يحافظ مؤقتًا على وصوله التشغيلي للتوافق أثناء الترحيل |
 
 ## خريطة الأدوار المرجعية

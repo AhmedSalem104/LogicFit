@@ -88,6 +88,13 @@ Environment `production` فقط.
 | تنزيل نسخة `404` | تحقق من اسم الملف ومسار التخزين، ثم إصدار LogicFit.API الموحد المنشور. |
 | فشل Job/Outbox | راجع JobExecutionLog/Outbox/Alerts/Audit؛ لا تحذف record لمحاولة إخفاء الفشل. |
 
+## Identity access migration rollout
+
+- `Authentication__IdentityAccess__AllowUnlinkedLegacySessions=true` is the production-safe default while legacy tenant-local accounts are migrated. It permits only the existing compatibility path; it does not make an unlinked account an approved identity membership.
+- Before switching the value to `false`, deploy the OTP/verified-linking phase, measure remaining legacy-compatible sessions, verify account-recovery support, and test login, refresh, workspace selection, suspended membership, and inactive identity behavior in the production-like environment.
+- Treat a spike in `IDENTITY_MIGRATION_REQUIRED`, `WORKSPACE_MEMBERSHIP_INACTIVE`, `IDENTITY_ACCOUNT_INACTIVE`, or `WORKSPACE_ACCOUNT_INACTIVE` as an operator-review signal. Do not work around it by re-enabling users or memberships without an audited decision.
+- Cancellation access is evaluated against `EndDate` at request time. Test a cancelled workspace before and at the end date during rollout; it must be full before the end date and read-only at/after it.
+
 ## Rollback
 
 Rollback قرار تشغيلي موثق: أوقف rollout عند health check فاشل، أعد binary السابق
