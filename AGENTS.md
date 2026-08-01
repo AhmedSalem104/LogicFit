@@ -76,7 +76,7 @@ Do not record secrets, passwords, refresh tokens, connection strings, publish pr
 - Monster ASP deployment details must be recorded before enabling automatic deployment: host, user, app directory, service/container command, backup command, migration command, health URL, and rollback command.
 - The supplied `logicfit-platform.runasp.net-WebDeploy.publishSettings` is a Platform API MSDeploy profile only. Its password must be stored as a protected GitHub Environment secret and must never be committed or printed.
 - Tenant API deployment requires a separate WebDeploy profile or equivalent target before production CD can deploy the complete application.
-- The protected CD workflow requires `RUNASP_UNIFIED_PUBLISH_SETTINGS_B64` and `RUNASP_UNIFIED_HEALTHCHECK_URL` in the GitHub `production` Environment. The profile is decoded only into the ephemeral Windows runner.
+- The protected CD workflow requires `RUNASP_UNIFIED_PUBLISH_SETTINGS_B64`, `RUNASP_UNIFIED_HEALTHCHECK_URL`, and `LOGICFIT_PRODUCTION_DB_CONNECTION` in the GitHub `production` Environment. The profile is decoded and the database connection is injected only into the ephemeral Windows runner; neither value may be printed.
 
 ## GitHub branching and review policy
 
@@ -133,16 +133,22 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 ### 2026-07-28 — production migration incident prevention
 
 - A Git migration file is not a database deployment. Every production migration must have an explicit apply step, a recorded target database, and a post-apply health check.
-- Before enabling startup migrations, inspect `__EFMigrationsHistory` and the actual production schema. Production may contain columns added manually or may be missing columns that exist in the EF model.
+- Before applying production migrations, inspect `__EFMigrationsHistory` and the actual production schema. Production may contain columns added manually or may be missing columns that exist in the EF model.
 - Migrations targeting shared/legacy Monster databases must be idempotent against both states: use guarded `COL_LENGTH`/`OBJECT_ID` SQL for add/drop/constraint operations when the target schema may differ. Never assume `AddColumn` or `DropColumn` is safe merely because the migration is new.
 - Never make a migration change that drops an existing column without verifying the column exists in every supported production schema. Preserve data and constraints; use a reviewed backup and rollback plan.
 - Do not treat EF model warnings about query filters as startup failures. The release blocker is the first `SqlException`/`Unhandled exception` in stdout, not the preceding warnings.
 - If IIS reports `ISAPI reported an unhealthy condition`, retrieve `stdout_*.log` before changing code. This message is only a symptom of a startup crash/recycle.
 - For Monster ASP, deploy with stdout logging enabled during diagnosis, ensure the logs directory is writable, capture the first root exception, then disable verbose stdout after recovery.
-- Production startup migration is enabled only for the single unified host after schema review. If the database account lacks DDL permission, disable startup migration and apply the reviewed idempotent SQL with an operator-controlled database connection.
+- Production startup migration remains disabled. Apply reviewed migrations only through the protected deployment/operator process with the explicit EF connection override; if the database account lacks DDL permission, stop and use the approved database operator procedure.
 - After each migration fix, run `dotnet build`, `dotnet test`, generate an idempotent migration script, deploy to a schema that represents the production drift, and verify `/health` before merging/releasing.
 - QR/media changes must not introduce storage-provider startup failures: local storage remains the default; R2 is selected only when all required R2 settings are present. Keep sensitive files private and test the authenticated media endpoint separately.
 - Do not declare a deployment healthy from a successful WebDeploy sync alone. Require application startup, database migration completion, `/health` 200, and a smoke test for the affected endpoint.
+
+### 2026-08-01 — protected migration-aware publishing
+
+- The manual production workflow applies reviewed pending migrations before WebDeploy, never from IIS startup.
+- A production migration run requires a verified BACPAC reference, the reviewed idempotent SQL artifact, explicit approval for destructive statements, and the protected database connection secret.
+- A migration failure or remaining pending migration stops the rollout before WebDeploy; a failed health check stops completion and requires operator review.
 
 ### 2026-07-25
 

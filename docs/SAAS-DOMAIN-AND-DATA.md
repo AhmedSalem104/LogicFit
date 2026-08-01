@@ -26,6 +26,8 @@ obsolete Passkey tables and creates these OTP records without changing tenant bu
 
 Migration `20260730143000_AddIdentityEmailSecurity` is additive and guards for existing production schemas. It marks existing identities verified during backfill so deployed identity users are not locked out, then adds the token table. It is applied separately through the reviewed migration procedure; its `Down` path is intentionally non-destructive.
 
+Production schema state is advanced only by the explicit deployment migration stage. The stage compares the released migration plan with the target database, requires a verified BACPAC reference, applies the EF lineage before publishing the API, and verifies that no migration remains pending. Application startup never mutates the schema.
+
 لا ينبغي للـController أن ينفذ قرار Domain معقداً. يحول الطلب إلى Command/Query؛
 المعاملات والـConcurrency والتحقق من الملكية تكون في الطبقات المناسبة.
 
