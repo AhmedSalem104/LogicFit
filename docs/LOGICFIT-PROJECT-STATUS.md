@@ -6,11 +6,13 @@ Last reviewed: 2026-08-01
 
 LogicFit is a multi-tenant gym-management SaaS. The platform operator manages gyms, plans, features, payment methods, and manual payment approvals. Each gym receives an isolated tenant workspace for staff and clients. Billing is intentionally manual: no gateway, webhook, or automatic card charge is enabled.
 
-> **Merged to `develop` in Issue #118; not released, deployed, or production-verified:** centralized E.164 OTP, Phone + OTP identity login/recovery,
+> **Released to `master` in Issue #118; production deployment remains to be verified:** centralized E.164 OTP, Phone + OTP identity login/recovery,
 > mandatory Platform Admin OTP, OTP step-up, Meta WhatsApp provider integration, and
 > HttpOnly refresh cookies are merged across the Backend, Tenant UI, and Platform UI. Passkey/WebAuthn is removed.
 > Migration `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp` must be reviewed and
-> applied separately after backup; production OTP and Meta secrets are server-only.
+> applied separately after backup; production OTP and Meta secrets are server-only. Issue #127 adds an
+> explicitly enabled, time-bounded `TemporaryFixed` provider for hosted pre-provider testing with code
+> `1234`; it preserves real OTP challenges and must be removed when Meta WhatsApp is enabled.
 
 ## Product map
 

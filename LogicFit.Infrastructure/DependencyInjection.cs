@@ -36,6 +36,12 @@ public static class DependencyInjection
         var environmentName = configuration["ASPNETCORE_ENVIRONMENT"] ?? Environments.Production;
         var otpProvider = configuration["Otp:Provider"] ?? string.Empty;
         var fixedCode = configuration["Otp:DevelopmentFixedCode"];
+        var allowTemporaryFixedCode = configuration.GetValue("Otp:AllowTemporaryFixedCode", false);
+        var temporaryFixedCode = configuration["Otp:TemporaryFixedCode"];
+        var temporaryFixedCodeExpiresAtUtc = configuration.GetValue<DateTime?>("Otp:TemporaryFixedCodeExpiresAtUtc");
+        var temporaryFixedExpiryUtc = temporaryFixedCodeExpiresAtUtc.HasValue
+            ? NormalizeUtc(temporaryFixedCodeExpiresAtUtc.Value)
+            : (DateTime?)null;
         if (!environmentName.Equals(Environments.Development, StringComparison.OrdinalIgnoreCase) &&
             !string.IsNullOrWhiteSpace(fixedCode))
             throw new InvalidOperationException("Otp:DevelopmentFixedCode is forbidden outside Development.");
@@ -47,6 +53,24 @@ public static class DependencyInjection
             throw new InvalidOperationException("Otp:HmacSecret must be supplied by server secrets and contain at least 32 characters.");
         if (otpProvider.Equals("Development", StringComparison.OrdinalIgnoreCase) && fixedCode != "1234")
             throw new InvalidOperationException("Development OTP must use the reviewed fixed code.");
+        if (otpProvider.Equals("TemporaryFixed", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!allowTemporaryFixedCode)
+                throw new InvalidOperationException("Temporary fixed OTP requires the explicit server-only allow flag.");
+            if (temporaryFixedCode != "1234")
+                throw new InvalidOperationException("Temporary fixed OTP must use the explicitly reviewed temporary code.");
+            var nowUtc = DateTime.UtcNow;
+            if (temporaryFixedExpiryUtc is null ||
+                temporaryFixedExpiryUtc.Value <= nowUtc ||
+                temporaryFixedExpiryUtc.Value > nowUtc.AddDays(31))
+            {
+                throw new InvalidOperationException("Temporary fixed OTP requires a future UTC expiry no more than 31 days away.");
+            }
+        }
+        else if (allowTemporaryFixedCode || !string.IsNullOrWhiteSpace(temporaryFixedCode) || temporaryFixedCodeExpiresAtUtc.HasValue)
+        {
+            throw new InvalidOperationException("Temporary fixed OTP settings must be removed when the provider is not TemporaryFixed.");
+        }
         if (otpProvider.Equals("MetaWhatsApp", StringComparison.OrdinalIgnoreCase))
         {
             var requiredMetaSecrets = new[]
@@ -63,11 +87,13 @@ public static class DependencyInjection
         }
         services.AddHttpClient<MetaWhatsAppOtpProvider>(client => client.Timeout = TimeSpan.FromSeconds(10));
         services.AddScoped<DevelopmentOtpProvider>();
+        services.AddScoped<TemporaryFixedOtpProvider>();
         services.AddScoped<IOtpSender>(provider => otpProvider.ToLowerInvariant() switch
         {
             "development" => provider.GetRequiredService<DevelopmentOtpProvider>(),
+            "temporaryfixed" => provider.GetRequiredService<TemporaryFixedOtpProvider>(),
             "metawhatsapp" => provider.GetRequiredService<MetaWhatsAppOtpProvider>(),
-            _ => throw new InvalidOperationException("Otp:Provider must be Development or MetaWhatsApp.")
+            _ => throw new InvalidOperationException("Otp:Provider must be Development, TemporaryFixed, or MetaWhatsApp.")
         });
 
         // Identity
@@ -188,4 +214,11 @@ public static class DependencyInjection
 
         return services;
     }
+
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
 }

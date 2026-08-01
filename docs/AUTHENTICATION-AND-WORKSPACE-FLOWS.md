@@ -1,10 +1,10 @@
 # المصادقة وتدفقات مساحات العمل
 
-> حالة المرجع: تم دمج Issue #118 في فروع `develop` للـBackend والواجهتين بتاريخ 2026-08-01. لم تُصدر أو تُنشر أو تُتحقق على Production بعد، ويلزم تطبيق الـMigration وإعداد أسرار الخادم عبر مسار النشر المحمي.
+> حالة المرجع: تم إصدار Issue #118 إلى فروع الإنتاج بتاريخ 2026-08-01، وما زال النشر والتحقق الفعلي يتطلبان تطبيق الـMigration وإعداد أسرار الخادم عبر مسار النشر المحمي. يضيف Issue #127 مزود اختبار مستضاف مؤقتًا ومحدد الصلاحية حتى يتوفر مزود الإرسال الخارجي.
 
 LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إلى **هوية عالمية أولًا ثم اختيار مساحة العمل**. لذلك يوجد تدفقان مدعومان حاليًا: التدفق التقليدي المتوافق، وتدفق الهوية الجديد. لا يجوز حذف الأول قبل نقل كل الواجهات والبيانات إليه.
 
-> **Merged to `develop` – Issue #118; not released, deployed, or production-verified:** Email + Password remains supported, and Phone + OTP is added as a complete identity sign-in and recovery path. Passkey/WebAuthn is removed from runtime code, APIs, permissions, and both frontends.
+> **Released – Issue #118; deployment verification pending:** Email + Password remains supported, and Phone + OTP is added as a complete identity sign-in and recovery path. Passkey/WebAuthn is removed from runtime code, APIs, permissions, and both frontends.
 
 ## الكيانات وحدود الأمان
 
@@ -85,7 +85,7 @@ POST /api/identity/password-reset/confirm { token, newPassword }
 
 The raw 256-bit email token is placed in the **frontend URL fragment**, is stored only as a SHA-256 hash, and is never included in application or audit logs. Verification and reset endpoints are anonymous, but registration and reset requests are rate-limited. `NormalizedEmail` keeps its global unique index. Email + Password remains available while a separately verified, unique E.164 phone enables Phone + OTP.
 
-## نظام OTP المركزي (Issue #118، مدمج في `develop` وغير منشور)
+## نظام OTP المركزي (Issues #118 و#127)
 
 الأغراض المسجلة هي `PhoneVerification`, `PasswordlessLogin`, `PlatformAdminLogin`,
 `SensitiveActionStepUp`, `PasswordReset`, `ChangePhone`, و`InviteAcceptance`.
@@ -102,6 +102,10 @@ The raw 256-bit email token is placed in the **frontend URL fragment**, is store
 - `DevelopmentOtpProvider` لا يعمل إلا عندما تكون البيئة `Development` ويستخدم `1234`
   داخل تحدٍ حقيقي. اختيار المزود خارج Development أو وجود fixed code في Staging/Production
   يوقف Startup فورًا.
+- `TemporaryFixedOtpProvider` استثناء مؤقت للاختبار المستضاف فقط. لا يعمل إلا مع تفعيل صريح
+  من أسرار الخادم، والكود `1234` بالضبط، وتاريخ انتهاء مستقبلي لا يتجاوز 31 يومًا. بعد انتهاء
+  التاريخ يرفض الخادم إصدار تحديات جديدة. لا يتجاوز هذا المزود `challengeId` أو الـHash أو حدود
+  المحاولات والإرسال أو الاستهلاك الذري، ولا يعيد الكود في الاستجابة.
 - `MetaWhatsAppOtpProvider` ينفذ نفس `IOtpSender` ويستخدم WhatsApp Authentication Template.
   يخزن `ProviderMessageId` ويدعم حالات `Queued`, `Sent`, `Delivered`, `Failed` وWebhook
   موقعًا. نجاح الإرسال لا ينشئ جلسة؛ الجلسة لا تصدر إلا بعد تحقق الكود داخليًا.
