@@ -63,7 +63,7 @@ public sealed class RequestPhoneLoginOtpHandler : IRequestHandler<RequestPhoneLo
     {
         var phone = OtpService.NormalizePhone(request.PhoneNumber);
         var identity = await _db.IdentityAccounts.SingleOrDefaultAsync(x =>
-            x.NormalizedPhoneNumber == phone && x.PhoneVerifiedAt != null && x.IsActive, ct);
+            x.NormalizedPhoneNumber == phone && x.EmailVerifiedAt != null && x.IsActive, ct);
         return await _otp.RequestAsync(phone, OtpPurpose.PasswordlessLogin, identity?.Id,
             request.SessionBinding, ct, identity is not null);
     }
@@ -71,12 +71,24 @@ public sealed class RequestPhoneLoginOtpHandler : IRequestHandler<RequestPhoneLo
 
 public sealed class VerifyPhoneLoginOtpHandler : IRequestHandler<VerifyPhoneLoginOtpCommand, IdentitySignInDto>
 {
-    private readonly IOtpService _otp; private readonly IIdentityWorkspaceSessionIssuer _issuer;
-    public VerifyPhoneLoginOtpHandler(IOtpService otp, IIdentityWorkspaceSessionIssuer issuer) => (_otp, _issuer) = (otp, issuer);
+    private readonly IApplicationDbContext _db; private readonly IOtpService _otp;
+    private readonly IIdentityWorkspaceSessionIssuer _issuer; private readonly IDateTimeService _clock;
+    public VerifyPhoneLoginOtpHandler(IApplicationDbContext db, IOtpService otp,
+        IIdentityWorkspaceSessionIssuer issuer, IDateTimeService clock)
+        => (_db, _otp, _issuer, _clock) = (db, otp, issuer, clock);
     public async Task<IdentitySignInDto> Handle(VerifyPhoneLoginOtpCommand request, CancellationToken ct)
     {
         var challenge = await _otp.VerifyAsync(request.ChallengeId, request.Code, OtpPurpose.PasswordlessLogin, request.SessionBinding, ct);
         if (!challenge.IdentityAccountId.HasValue) throw new UnauthorizedException("Invalid credentials");
+        var identity = await _db.IdentityAccounts.SingleOrDefaultAsync(x =>
+            x.Id == challenge.IdentityAccountId.Value && x.IsActive &&
+            x.NormalizedPhoneNumber == challenge.NormalizedPhoneNumber, ct);
+        if (identity is null) throw new UnauthorizedException("Invalid credentials");
+        if (identity.PhoneVerifiedAt is null)
+        {
+            identity.PhoneVerifiedAt = _clock.UtcNow;
+            await _db.SaveChangesAsync(ct);
+        }
         return await _issuer.IssueAsync(challenge.IdentityAccountId.Value, ct);
     }
 }
