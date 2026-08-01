@@ -98,7 +98,18 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 
 ### Migrations and health verification
 
-Never apply an EF migration from application startup, including through `Database__ApplyMigrationsOnStartup`. Create and verify a BACPAC, generate and review the idempotent script from the released `origin/master` tree, then let the protected WebDeploy helper apply the migration before publishing. The helper stops before WebDeploy on a missing backup reference, missing protected database connection, unapproved destructive SQL, migration failure, or remaining pending migration. It verifies health after publishing without printing database or publish credentials:
+Issue #147 makes startup migration the default safety net for manual Visual Studio/WebDeploy
+publishes. Before `DataSeeder` or HTTP traffic, the API obtains a SQL Server application lock,
+checks `__EFMigrationsHistory`, applies pending compiled EF migrations, and verifies that none
+remain. It does not generate migrations at runtime. Concurrent IIS workers wait for the same lock
+instead of applying the same migration twice.
+
+This does not remove release controls: create and verify a BACPAC, generate and review the
+idempotent script from the released `origin/master` tree, and preferably let the protected
+WebDeploy helper pre-apply the migration. The helper stops before WebDeploy on a missing backup
+reference, missing protected database connection, unapproved destructive SQL, migration failure,
+or remaining pending migration. It verifies health after publishing without printing database or
+publish credentials:
 
 ```powershell
 .\Scripts\deploy-webdeploy.ps1 `
@@ -112,6 +123,14 @@ Never apply an EF migration from application startup, including through `Databas
 ```
 
 The connection is read from `LOGICFIT_PRODUCTION_DB_CONNECTION` in the current protected process and is passed to the EF design-time factory through the short-lived `LOGICFIT_EF_CONNECTION_STRING` operator variable. Without that explicit override, EF remains pinned to LocalDB and cannot reach production accidentally. The GitHub `production` Environment must store the production secret together with `RUNASP_UNIFIED_PUBLISH_SETTINGS_B64` and `RUNASP_UNIFIED_HEALTHCHECK_URL`. The manual workflow also requires `backup_reference`, `migration_review=MIGRATIONS-REVIEWED`, and `confirm=DEPLOY-PRODUCTION`. `-ApproveDestructiveMigrationReview` is used only after reviewing a plan containing intentional `DROP`, `DELETE`, or `TRUNCATE` statements.
+
+Startup settings are optional because safe defaults are compiled in: enabled, 120-second lock
+wait, and 300-second command timeout. Override them only in the server secret/configuration store
+with `Database__StartupMigrations__Enabled`,
+`Database__StartupMigrations__LockTimeoutSeconds`, and
+`Database__StartupMigrations__CommandTimeoutSeconds`. If the database login lacks DDL permission,
+startup fails clearly; grant only the reviewed permission window or pre-apply through the protected
+operator flow. Never disable startup migration merely to bypass a pending schema.
 
 3. خذ Backup وراجع Migration Dry Run وتقرير المخالفات لأي تغيير بيانات كبير.
 4. طبّق migrations في خطوة مراجعة منفصلة، ثم انشر الـAPI الصحيح، ثم نفّذ health check.

@@ -6,6 +6,11 @@
 
 > **Unreleased – Issue #118:** the identity feature keeps verified Email + Password and email-link recovery, adds centralized Phone + OTP, Platform Admin OTP, OTP step-up, provider-independent delivery, and HttpOnly refresh cookies. Passkey/WebAuthn is removed. This is local branch behavior until review, merge, migration, secrets, and deployment are complete.
 
+> **Issue #147 source implementation; production deployment not yet verified:** the Backend startup
+> checks and applies pending compiled EF migrations before seeding, serialized across SQL Server
+> workers. This is an operational Backend change only; neither Angular repository has a screen,
+> route, or documentation impact.
+
 ## متى تُعد الميزة مسجلة؟
 
 تُعد الميزة مسجلة فقط عندما يربط هذا الكتالوج بين:
