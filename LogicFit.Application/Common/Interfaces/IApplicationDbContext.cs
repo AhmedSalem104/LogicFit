@@ -1,5 +1,7 @@
 using LogicFit.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace LogicFit.Application.Common.Interfaces;
 
@@ -7,6 +9,19 @@ public interface IApplicationDbContext
 {
     DbSet<Tenant> Tenants { get; }
     DbSet<TenantBrandAsset> TenantBrandAssets { get; }
+    DbSet<IdentityAccount> IdentityAccounts { get; }
+    DbSet<IdentityEmailActionToken> IdentityEmailActionTokens { get; }
+    DbSet<IdentityWorkspaceSession> IdentityWorkspaceSessions { get; }
+    DbSet<IdentityPasskeyCredential> IdentityPasskeyCredentials { get; }
+    DbSet<IdentityPasskeyCeremony> IdentityPasskeyCeremonies { get; }
+    DbSet<IdentityPasskeyStepUpSession> IdentityPasskeyStepUpSessions { get; }
+    DbSet<WorkspaceMembership> WorkspaceMemberships { get; }
+    DbSet<WorkspaceInvite> WorkspaceInvites { get; }
+    DbSet<WorkspaceClientJoinCode> WorkspaceClientJoinCodes { get; }
+    DbSet<ApplicationRequest> ApplicationRequests { get; }
+    DbSet<ApplicationRequestRevision> ApplicationRequestRevisions { get; }
+    DbSet<ApplicationTrackingSession> ApplicationTrackingSessions { get; }
+    DbSet<FreelanceWorkspaceProfile> FreelanceWorkspaceProfiles { get; }
     DbSet<User> Users { get; }
     DbSet<UserProfile> UserProfiles { get; }
     DbSet<NutrientDefinition> NutrientDefinitions { get; }
@@ -35,6 +50,7 @@ public interface IApplicationDbContext
     DbSet<WalletTransaction> WalletTransactions { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<Attendance> Attendances { get; }
+    DbSet<StaffAttendance> StaffAttendances { get; }
     DbSet<Appointment> Appointments { get; }
     DbSet<ChatConversation> ChatConversations { get; }
     DbSet<ChatMessage> ChatMessages { get; }
@@ -102,5 +118,8 @@ public interface IApplicationDbContext
     DbSet<SubscriptionInvoice> SubscriptionInvoices { get; }
     DbSet<TenantUsage> TenantUsages { get; }
 
+    EntityEntry Entry(object entity);
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
 }

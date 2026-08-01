@@ -9,6 +9,10 @@
 
 ## الإعدادات المطلوبة في الخادم
 
+### Identity email delivery (Issue #113, unreleased)
+
+Before enabling email registration or identity password reset, configure these server-only settings (environment-variable form shown; values are never committed): `Email__Provider=smtp`, `Email__Smtp__Host`, `Email__Smtp__Port`, `Email__Smtp__UseSsl`, `Email__Smtp__UserName`, `Email__Smtp__Password`, `Email__Smtp__FromEmail`, `Email__Smtp__FromName`, and `IdentityEmailLinks__FrontendBaseUrl` (HTTPS only). The API returns `503 IDENTITY_EMAIL_NOT_CONFIGURED` until both delivery and HTTPS frontend-link settings are present. Do not log the generated link or raw token. Apply `20260730143000_AddIdentityEmailSecurity` from a reviewed idempotent script after backup, publish, then verify `/health` and a non-production email flow.
+
 تُخزن في إعدادات الموقع/Secret Store الخاصة بالخادم، لا في source control:
 
 | المفتاح | الغرض |
@@ -22,6 +26,14 @@
 تغيير الإعدادات يتبعه Save ثم Restart/Recycle للتطبيق. وجود قيمة في `appsettings.json`
 المحلي لا يضمن وصولها لعملية Production.
 
+### ملف إعدادات Production على الخادم
+
+يُنشأ `appsettings.Production.json` داخل موقع Monster ASP فقط ولا يُرفع إلى Git. يضع
+المشغّل فيه `ConnectionStrings:DefaultConnection` و`JwtSettings:Secret` وأي إعدادات
+خاصة بالإنتاج. سكربت WebDeploy يحتفظ بالملفات الإضافية على الخادم عبر
+`DoNotDeleteRule`، لذلك لا يحذف هذا الملف أثناء نشر التطبيق. لا تُسجّل محتويات الملف
+أو كلمات المرور في التذاكر أو السجلات.
+
 ## فحص ما قبل النشر
 
 1. راجع `git status` وتأكد أن النسخة المنشورة هي commit/branch المقصود؛ لا تخلط مجلد
@@ -32,6 +44,17 @@
 dotnet build LogicFit.sln -c Release --no-restore
 dotnet test LogicFit.sln -c Release --no-build --verbosity minimal
 dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --startup-project LogicFit.API
+```
+
+### Migrations and health verification
+
+Never apply an EF migration from application startup, including through `Database__ApplyMigrationsOnStartup`. Create and verify a backup, generate and review the idempotent script, apply it through the approved database operator procedure, publish the application, then verify health. The WebDeploy helper supports the final verification without printing publish credentials:
+
+```powershell
+.\Scripts\deploy-webdeploy.ps1 `
+  -PublishSettingsPath <publish-settings-file> `
+  -ContentPath <publish-output-directory> `
+  -HealthCheckUrl https://your-host/health
 ```
 
 3. خذ Backup وراجع Migration Dry Run وتقرير المخالفات لأي تغيير بيانات كبير.
@@ -63,10 +86,18 @@ Environment `production` فقط.
 | العرض | البداية الصحيحة للتشخيص |
 |---|---|
 | `401` من لوحة الإدارة | افحص انتهاء Access Token/Refresh Token وصلاحية المستخدم ثم Endpoint الحقيقي في Network. |
+| `409` عند اعتماد مدرب حر | افحص حالة الطلب أولاً. إذا كانت `UnderReview` ورسالة اللوحة تشير إلى أدوار غير مهيأة، خذ Backup وطبّق `20260729133325_SeedFreelanceSystemRoles` عبر إجراء Migrations المعتمد، ثم حدّث الطابور وأعد المحاولة. |
 | `500` متكرر | راجع Application Logs وConnection String وMigration وحالة الجداول، ولا تكشف exception للعميل. |
 | `503` من النسخ | افحص تفعيل الخدمة وأداة/مسار النسخ وصلاحيات ملف التخزين ومساحة القرص. |
 | تنزيل نسخة `404` | تحقق من اسم الملف ومسار التخزين، ثم إصدار LogicFit.API الموحد المنشور. |
 | فشل Job/Outbox | راجع JobExecutionLog/Outbox/Alerts/Audit؛ لا تحذف record لمحاولة إخفاء الفشل. |
+
+## Identity access migration rollout
+
+- `Authentication__IdentityAccess__AllowUnlinkedLegacySessions=true` is the production-safe default while legacy tenant-local accounts are migrated. It permits only the existing compatibility path; it does not make an unlinked account an approved identity membership.
+- Before switching the value to `false`, deploy the verified-email legacy-linking phase, measure remaining legacy-compatible sessions, verify account-recovery support, and test login, refresh, workspace selection, suspended membership, and inactive identity behavior in the production-like environment.
+- Treat a spike in `IDENTITY_MIGRATION_REQUIRED`, `WORKSPACE_MEMBERSHIP_INACTIVE`, `IDENTITY_ACCOUNT_INACTIVE`, or `WORKSPACE_ACCOUNT_INACTIVE` as an operator-review signal. Do not work around it by re-enabling users or memberships without an audited decision.
+- Cancellation access is evaluated against `EndDate` at request time. Test a cancelled workspace before and at the end date during rollout; it must be full before the end date and read-only at/after it.
 
 ## Rollback
 

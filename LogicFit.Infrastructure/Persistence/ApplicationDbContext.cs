@@ -13,6 +13,8 @@ namespace LogicFit.Infrastructure.Persistence;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IApplicationDbContext
 {
+    public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        => Database.BeginTransactionAsync(cancellationToken);
     private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeService _dateTimeService;
@@ -31,6 +33,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     // DbSets
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<TenantBrandAsset> TenantBrandAssets => Set<TenantBrandAsset>();
+    public DbSet<IdentityAccount> IdentityAccounts => Set<IdentityAccount>();
+    public DbSet<IdentityEmailActionToken> IdentityEmailActionTokens => Set<IdentityEmailActionToken>();
+    public DbSet<IdentityWorkspaceSession> IdentityWorkspaceSessions => Set<IdentityWorkspaceSession>();
+    public DbSet<IdentityPasskeyCredential> IdentityPasskeyCredentials => Set<IdentityPasskeyCredential>();
+    public DbSet<IdentityPasskeyCeremony> IdentityPasskeyCeremonies => Set<IdentityPasskeyCeremony>();
+    public DbSet<IdentityPasskeyStepUpSession> IdentityPasskeyStepUpSessions => Set<IdentityPasskeyStepUpSession>();
+    public DbSet<WorkspaceMembership> WorkspaceMemberships => Set<WorkspaceMembership>();
+    public DbSet<WorkspaceInvite> WorkspaceInvites => Set<WorkspaceInvite>();
+    public DbSet<WorkspaceClientJoinCode> WorkspaceClientJoinCodes => Set<WorkspaceClientJoinCode>();
+    public DbSet<ApplicationRequest> ApplicationRequests => Set<ApplicationRequest>();
+    public DbSet<ApplicationRequestRevision> ApplicationRequestRevisions => Set<ApplicationRequestRevision>();
+    public DbSet<ApplicationTrackingSession> ApplicationTrackingSessions => Set<ApplicationTrackingSession>();
+    public DbSet<FreelanceWorkspaceProfile> FreelanceWorkspaceProfiles => Set<FreelanceWorkspaceProfile>();
     DbSet<User> IApplicationDbContext.Users => Set<User>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<NutrientDefinition> NutrientDefinitions => Set<NutrientDefinition>();
@@ -59,6 +74,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
+    public DbSet<StaffAttendance> StaffAttendances => Set<StaffAttendance>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<ChatConversation> ChatConversations => Set<ChatConversation>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
@@ -193,6 +209,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         builder.Entity<CoachClient>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<Attendance>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<StaffAttendance>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<Appointment>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<ChatConversation>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<ChatMessage>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
@@ -203,6 +220,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         builder.Entity<UserBranchAccess>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<MembershipCard>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<GateAccessLog>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<EmployeeProfile>().HasIndex(e => new { e.TenantId, e.QrCode }).IsUnique().HasFilter("[QrCode] IS NOT NULL");
+        builder.Entity<User>().HasIndex(e => new { e.TenantId, e.StaffQrCode }).IsUnique().HasFilter("[StaffQrCode] IS NOT NULL");
         builder.Entity<Room>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<Equipment>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<MaintenanceRecord>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
@@ -258,6 +277,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         // Non-tenant entities with soft delete only
         builder.Entity<Tenant>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<TenantBrandAsset>().HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
+        builder.Entity<WorkspaceMembership>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<FreelanceWorkspaceProfile>().HasQueryFilter(e => _tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId);
         builder.Entity<UserProfile>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<NutrientDefinition>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Muscle>().HasQueryFilter(e => !e.IsDeleted);

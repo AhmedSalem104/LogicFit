@@ -20,3 +20,9 @@ public interface IBackupService
     BackupStatus GetStatus();
     BackupDownload OpenRead(string fileName);
 }
+
+/// <summary>Creates a recoverable archive of locally stored media.</summary>
+public interface IMediaBackupService
+{
+    Task<BackupRecord> CreateAsync(CancellationToken cancellationToken);
+}

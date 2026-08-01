@@ -12,6 +12,7 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.HasKey(e => e.Id);
 
         builder.Property(e => e.Name).HasMaxLength(100).IsRequired();
+        builder.Property(e => e.NameAr).HasMaxLength(150).IsRequired();
         builder.Property(e => e.NormalizedName).HasMaxLength(100).IsRequired();
         builder.Property(e => e.Description).HasMaxLength(500);
 

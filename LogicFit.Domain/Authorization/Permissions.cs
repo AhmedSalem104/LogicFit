@@ -9,6 +9,9 @@ public static class Permissions
     // --- Tenant (gym) permissions ---
     public const string ManageMembers = "ManageMembers";
     public const string ViewMembers = "ViewMembers";
+    public const string CreateMembers = "CreateMembers";
+    public const string UpdateMembers = "UpdateMembers";
+    public const string DeleteMembers = "DeleteMembers";
     public const string ManageCoaches = "ManageCoaches";
     public const string ManageAttendance = "ManageAttendance";
     public const string ManageClientSubscriptions = "ManageClientSubscriptions";
@@ -33,7 +36,7 @@ public static class Permissions
     /// <summary>All tenant-scoped permission codes.</summary>
     public static readonly IReadOnlyList<string> TenantPermissions = new[]
     {
-        ManageMembers, ViewMembers, ManageCoaches, ManageAttendance, ManageClientSubscriptions,
+        ManageMembers, ViewMembers, CreateMembers, UpdateMembers, DeleteMembers, ManageCoaches, ManageAttendance, ManageClientSubscriptions,
         ManagePOS, ManageInventory, ManageEmployees, ManageBranches, ManageFinance,
         ViewReports, ManageReports, ManageSettings, ManageTenantBilling
     };

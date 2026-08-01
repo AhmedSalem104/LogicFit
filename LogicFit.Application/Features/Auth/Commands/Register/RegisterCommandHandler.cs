@@ -128,6 +128,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
             AccessToken = accessToken.Token,
             RefreshToken = refreshToken.Token,
             ExpiresAt = accessToken.ExpiresAt
+            ,MustChangePassword = false
         };
     }
 }

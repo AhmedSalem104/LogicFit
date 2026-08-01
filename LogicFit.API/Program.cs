@@ -3,6 +3,7 @@ using LogicFit.Application;
 using LogicFit.Infrastructure;
 using LogicFit.Infrastructure.Persistence;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using System.Threading.RateLimiting;
@@ -30,6 +31,26 @@ builder.Services.AddRateLimiter(options =>
     var permitLimit = builder.Configuration.GetValue("RateLimiting:PermitLimit", 120);
     var windowSeconds = builder.Configuration.GetValue("RateLimiting:WindowSeconds", 60);
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("identity-email-actions", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    options.AddPolicy("identity-public-join", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.User?.Identity?.IsAuthenticated == true
@@ -120,7 +141,19 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Seed data on startup
+// Production schema changes are a separately reviewed deployment operation. Never
+// apply migrations from the web-process startup path: a partial or incompatible
+// migration would make IIS recycle the application before diagnostics are available.
+var migrationOnStartupRequested = builder.Configuration.GetValue(
+    "Database:ApplyMigrationsOnStartup",
+    false);
+if (migrationOnStartupRequested)
+{
+    Log.Warning(
+        "Database__ApplyMigrationsOnStartup is ignored. Apply reviewed idempotent migrations separately after a verified backup, then restart the application.");
+}
+
+// Seed data on startup.
 using (var scope = app.Services.CreateScope())
 {
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
@@ -168,6 +201,11 @@ app.UseAuthentication();
 // Tenant must be resolved BEFORE authorization so permission checks and query filters
 // see the current tenant.
 app.UseTenant();
+
+// Identity and membership are a separate boundary from subscription and permissions. Linked
+// accounts are enforced immediately; unlinked legacy accounts remain compatibility-only until
+// verified OTP migration is enabled.
+app.UseIdentityWorkspaceAccessGate();
 
 // Hard gate: block requests for suspended/expired/cancelled/archived gyms before authorization.
 app.UseTenantAccessGate();

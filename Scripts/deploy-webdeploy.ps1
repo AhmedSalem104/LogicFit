@@ -2,7 +2,8 @@
 param(
     [Parameter(Mandatory = $true)] [string] $PublishSettingsPath,
     [Parameter(Mandatory = $true)] [string] $ContentPath,
-    [string] $MsDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+    [string] $MsDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe",
+    [string] $HealthCheckUrl
 )
 
 $ErrorActionPreference = "Stop"
@@ -23,6 +24,8 @@ $arguments = @(
     "-source:contentPath=`"$ContentPath`"",
     "-dest:auto,ComputerName=$destination,UserName=$($profile.userName),Password=$($profile.userPWD),AuthType=Basic",
     '-enableLink:AppPoolExtension',
+    # Keep server-only secrets and production overrides, including appsettings.Production.json.
+    '-enableRule:DoNotDeleteRule',
     '-retryAttempts:3',
     '-retryInterval:5000'
 )
@@ -30,3 +33,12 @@ $arguments = @(
 # Do not log the argument list: it contains the publish password.
 & $MsDeployPath @arguments
 if ($LASTEXITCODE -ne 0) { throw "MSDeploy failed with exit code $LASTEXITCODE" }
+
+if (-not [string]::IsNullOrWhiteSpace($HealthCheckUrl)) {
+    $healthResponse = Invoke-WebRequest -Uri $HealthCheckUrl -UseBasicParsing -TimeoutSec 30
+    if ($healthResponse.StatusCode -lt 200 -or $healthResponse.StatusCode -ge 300) {
+        throw "Deployment completed but the health check returned HTTP $($healthResponse.StatusCode)."
+    }
+
+    Write-Host "Health check passed: HTTP $($healthResponse.StatusCode)"
+}

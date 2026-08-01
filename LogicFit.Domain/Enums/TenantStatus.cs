@@ -14,5 +14,7 @@ public enum TenantStatus
     Cancelled = 5,
     PendingApproval = 6,
     Archived = 7,
-    Deleted = 8
+    Deleted = 8,
+    Provisioning = 9,
+    ProvisioningFailed = 10
 }

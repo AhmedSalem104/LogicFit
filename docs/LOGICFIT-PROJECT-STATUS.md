@@ -1,10 +1,14 @@
 # LogicFit Project Status
 
-Last reviewed: 2026-07-25
+Last reviewed: 2026-07-30
 
 ## Executive summary
 
 LogicFit is a multi-tenant gym-management SaaS. The platform operator manages gyms, plans, features, payment methods, and manual payment approvals. Each gym receives an isolated tenant workspace for staff and clients. Billing is intentionally manual: no gateway, webhook, or automatic card charge is enabled.
+
+> **Unreleased Issue #113 branch:** email-only identity verification and email password-reset security are implemented in the task branch. They require migration `20260730143000_AddIdentityEmailSecurity`, server-only email/link configuration, frontend integration, CI, review, and deployment before they become production behavior.
+>
+> The same branch adds one-use email-bound workspace invitations, owner-controlled client join codes, WebAuthn passkey sign-in/registration/step-up, and additive migrations `20260730150000_AddWorkspaceInvites`, `20260730151000_AddWorkspaceClientJoinCodes`, and `20260730153000_AddIdentityPasskeys`.
 
 ## Product map
 
@@ -59,6 +63,22 @@ sequenceDiagram
 - Cross-cutting: notifications, audit logs, uploads, concurrency row versions.
 - Every tenant-owned aggregate carries a tenant boundary enforced by EF query filters and command ownership checks.
 
+## Freelance workspace foundation (production migrations verified)
+
+- `WorkspaceType.FreelanceCoach` keeps an independent coach in the existing tenant isolation boundary; legacy tenants default to `Gym`.
+- A global `IdentityAccount` is linked to tenant-local `DomainUsers` and `WorkspaceMemberships`. Existing `/api/auth/login` remains supported and creates this link lazily after a successful legacy login; it never fails an existing login because of an identity collision.
+- New `/api/identity/login` performs identity-first sign-in and returns active workspaces and pending applications together. `/api/identity/select-workspace` exchanges its short-lived opaque selection token for the existing tenant JWT/refresh-token contract.
+- Public freelance onboarding uses `ApplicationRequests`, immutable submission revisions, and short-lived opaque tracking sessions. Applicants may edit only the field names requested by Platform Admin, then resubmit; rejected requests remain terminal evidence.
+- Platform Admin reviews a minimal, non-health/non-training application view through `/api/platform/workspace-applications`. Review, information-request, approval, and rejection use row-version concurrency; rejection revokes tracking sessions and review decisions enqueue an Outbox event.
+- Approval reserves one `Provisioning` workspace before creating the Freelance Owner, its active workspace membership, role assignment, branding profile, and final `Active` workspace. A retry reuses the reserved workspace; a provisioning database failure records `ProvisioningFailed` for operator retry.
+- A Freelance Owner can sponsor an existing global identity as `FreelanceCoach`, `FreelanceAssistant`, or `Client`; that creates a separate membership application and never grants access directly. Platform approval repeats the live plan-capacity check and only then creates the tenant-local user, role assignment, and active membership. Capacity errors use `PLAN_MEMBER_LIMIT_REACHED` or `PLAN_CLIENT_LIMIT_REACHED`.
+- Freelance workspace branding reuses tenant branding for colors, logos, cover/background, and report identity, and adds a structured profile for bio, specialties, certifications, social links, welcome content, and booking settings.
+- Subscription policy is now explicit in the access gate: `Trial`, `Active`, and `PastDue` operate normally; `Expired` is read-only while billing/renewal remains available; suspended/archived/provisioning workspaces hard-block operational access. Legacy gyms without a SaaS subscription record preserve their existing operational access during the migration rollout; a new freelance workspace without a subscription is billing-only.
+- Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed locally. The third migration adds the tenant row-version used to serialize final membership-capacity approval. `20260729133325_SeedFreelanceSystemRoles` is an idempotent corrective data migration that creates or restores the three freelance system roles and their permission maps; it must be applied explicitly before a Platform Admin approves a freelance workspace. Production schema application remains a protected CI/CD operation with health-check and rollback review.
+- Team membership now uses `/api/freelance/team/invites` and `/api/workspace-invites/{preview,accept}`. The invitation is tied to normalized email, workspace, and role; acceptance requires a verified identity session and a live quota check.
+- Client acquisition supports owner-generated `/api/workspace/client-join-codes` plus preview/join endpoints. Raw codes are returned only once, stored as hashes, expire/revoke, and either activate the client or create a pending owner approval according to workspace settings.
+- Passkey ceremonies are five-minute and one-use; credentials are unique, and sensitive Platform mutations require a recent passkey step-up.
+
 ## API contracts
 
 - Tenant audience: `LogicFitUsers`.
@@ -72,7 +92,7 @@ sequenceDiagram
 ## Operational rules
 
 - Manual billing is the current and supported payment model.
-- Migrations are reviewed and generated idempotently before production application; the API does not silently migrate production at startup.
+- Migrations are reviewed and generated idempotently before production application. `DataSeeder.InitializeAsync` can apply pending migrations asynchronously only when `Database:ApplyMigrationsOnStartup=true`; it logs each pending migration, emits a critical log and rethrows on failure so startup stops on an incomplete schema, and remains `false` by default. Seed work is separately controlled by `Database:ApplySeedOnStartup`; it is enabled for local development compatibility and disabled in Production to avoid unrequested data changes.
 - Wallet, stock, coupon, approval, and counter-like shared state must use transactions, row versions, unique constraints, or idempotency keys as appropriate.
 - Secrets, publish profiles, passwords, refresh tokens, payment proofs, and reset tokens never enter Git or logs.
 
@@ -255,12 +275,12 @@ Tenant requests resolve a tenant before authorization. Tenant query filters, ten
 - `AddWalletAndStockConcurrency`
 - `AddCouponConcurrency`
 
-Migrations must be applied explicitly during deployment after a tested backup. The API does not silently migrate production at startup.
+Migrations must be applied explicitly during deployment after a tested backup. The API ignores `Database__ApplyMigrationsOnStartup` and does not silently migrate production at startup; a deployment can optionally verify its health endpoint after publishing.
 
 ## Verification status
 
-- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 65 passing tests.
-- `dotnet build LogicFit.sln -c Release --no-restore`: successful; three pre-existing nullable warnings remain in coach-client and client-subscription query projections.
+- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 80 passing tests.
+- `dotnet build LogicFit.sln -c Release --no-restore`: successful; four pre-existing nullable warnings remain in coach-client, gate-access, and client-subscription query projections.
 - `npm run build` in `LogiFit_Platform_Admin_Dashboard`: successful.
 
 ## CI/CD policy
@@ -292,11 +312,25 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 
 ## Change log
 
+### 2026-07-30 — identity-first access foundation
+
+- Added one identity/membership/local-user gate to legacy login, refresh rotation, workspace selection, and every authenticated tenant request. Linked accounts now lose access immediately when their identity, membership, or tenant-local user becomes inactive; unlinked legacy accounts remain behind an explicit temporary compatibility setting.
+- Normalized subscription access for cancellation: a cancelled subscription remains operational strictly before `EndDate`, then resolves to `Expired` and read-only without waiting for a background lifecycle update.
+- Deferred verified-email legacy linking, invitations, QR/join code, and workspace-owned client approval to issue #113 so no incomplete public-registration or approval flow is introduced.
+
+### 2026-07-30
+
+- Moved the Platform workspace-application review controller into the unified `LogicFit.API` host. The existing `/api/platform/workspace-applications/*` review contract is now compiled, covered by the unified-module regression test, and included in the generated endpoint catalog.
+- Added `docs/FEATURE-CATALOG.md` as the central, source-linked registry for every current Platform, workspace, finance, fitness, HR, inventory, and communication feature family across the three LogicFit projects.
+- Added `docs/AUTHENTICATION-AND-WORKSPACE-FLOWS.md` as the canonical record of the legacy and identity-first login contracts, application tracking/recovery, freelance workspace approval, team membership, and workspace access gates.
+- Added a mandatory documentation-currency gate to `AGENTS.md`: every implementation change must update its affected feature catalog and user flow in the same Pull Request, and API contract changes must regenerate the endpoint catalog.
+
 ### 2026-07-27
 
 - Consolidated Platform controllers into `LogicFit.API/Features/Platform` and removed the standalone Platform API project.
 - Unified local Docker, CI, guarded CD, and configuration around one API host, one appsettings file, and one deployment artifact.
 - Removed the committed database connection string; local and production secrets must be supplied through User Secrets or the environment/secret store.
+- WebDeploy preserves server-only `appsettings.Production.json`, so Monster ASP production secrets are not committed or replaced during an application sync.
 
 ### 2026-07-25
 

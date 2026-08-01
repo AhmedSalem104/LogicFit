@@ -85,6 +85,10 @@ public class GetGymProfileQueryHandler : IRequestHandler<GetGymProfileQuery, Gym
                 DashboardBannerUrl = tenant.BrandingSettings.DashboardBannerUrl,
                 SupportPhone = tenant.BrandingSettings.SupportPhone,
                 SupportEmail = tenant.BrandingSettings.SupportEmail,
+                FacebookUrl = tenant.BrandingSettings.FacebookUrl,
+                InstagramUrl = tenant.BrandingSettings.InstagramUrl,
+                WebsiteUrl = tenant.BrandingSettings.WebsiteUrl,
+                OpeningHours = tenant.BrandingSettings.OpeningHours,
                 LogoUrl = tenant.BrandingSettings.LogoUrl
             } : null,
             Statistics = new GymStatisticsDto

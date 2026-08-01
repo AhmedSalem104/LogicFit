@@ -21,6 +21,9 @@ public class EmployeeProfile : TenantAuditableEntity
     public string? EmergencyContactPhone { get; set; }
     public string? Qualifications { get; set; }
     public string? Notes { get; set; }
+    public string? QrCode { get; set; }
+    public DateTime? QrGeneratedAt { get; set; }
+    public DateTime? QrRevokedAt { get; set; }
 
     public virtual User User { get; set; } = null!;
     public virtual ICollection<EmployeeBranch> Branches { get; set; } = new List<EmployeeBranch>();

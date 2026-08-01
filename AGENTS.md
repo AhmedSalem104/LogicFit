@@ -11,11 +11,25 @@ For every non-trivial task:
 3. Use a branch named with the issue number and a short purpose.
 4. Inspect the current working tree and preserve unrelated user changes.
 5. Implement the smallest safe change.
-6. Update `docs/LOGICFIT-PROJECT-STATUS.md` for API, database, security, behavior, deployment, or architectural changes.
+6. Update `docs/LOGICFIT-PROJECT-STATUS.md` and every affected canonical user-flow document for API, database, security, behavior, deployment, architectural, role, status, or screen changes.
 7. Add or update regression tests.
 8. Run restore/build/test and migration validation.
 9. Commit with the issue number and push the branch.
 10. Open or update a Pull Request and report verification results.
+
+## Documentation currency gate
+
+Documentation is part of the definition of done for every project change. The current source code and domain rules are the authority; a planned, branch-only, or unavailable behavior must be labelled as such and must never be documented as released.
+
+For every change, before opening the Pull Request:
+
+1. Update `docs/FEATURE-CATALOG.md` when a feature is added, removed, renamed, materially changed, or moved between projects. Keep its implementation source, roles, and affected flow accurate.
+2. Update the canonical flow that users or operators follow. Use `docs/AUTHENTICATION-AND-WORKSPACE-FLOWS.md` for identity, login, workspace selection, applications, memberships, and access gates; use `docs/PRODUCT-AND-FLOWS.md` for other product journeys. Update the relevant frontend repository screen/flow documentation whenever a screen, route, step, or UI behavior changes.
+3. Update `docs/USERS-AND-PERMISSIONS.md`, `docs/SAAS-DOMAIN-AND-DATA.md`, and `docs/OPERATIONS-AND-DEPLOYMENT.md` whenever the change affects authorization, domain data/state/migration, or operations/deployment respectively.
+4. For every API route, policy, request, or response-contract change, run `Scripts/Export-ApiEndpointCatalog.ps1` and commit the generated `docs/API-ENDPOINT-CATALOG.md`; do not hand-maintain endpoint rows.
+5. In the Pull Request description, name the updated catalog/flow documents and state whether any frontend repository must be merged or deployed before the documented behavior is available.
+
+Do not record secrets, passwords, refresh tokens, connection strings, publish profiles, or private customer/health data in documentation.
 
 ## Production rules
 
@@ -81,6 +95,20 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 - Production CD is manual and protected until Monster ASP deployment details and secrets are configured.
 - Current verification baseline: 53 passing tests; three pre-existing nullable warnings remain.
 - Establish `develop` as the protected integration branch; require task-branch Pull Requests and passing CI for all merges.
+
+### 2026-07-28 — production migration incident prevention
+
+- A Git migration file is not a database deployment. Every production migration must have an explicit apply step, a recorded target database, and a post-apply health check.
+- Before enabling startup migrations, inspect `__EFMigrationsHistory` and the actual production schema. Production may contain columns added manually or may be missing columns that exist in the EF model.
+- Migrations targeting shared/legacy Monster databases must be idempotent against both states: use guarded `COL_LENGTH`/`OBJECT_ID` SQL for add/drop/constraint operations when the target schema may differ. Never assume `AddColumn` or `DropColumn` is safe merely because the migration is new.
+- Never make a migration change that drops an existing column without verifying the column exists in every supported production schema. Preserve data and constraints; use a reviewed backup and rollback plan.
+- Do not treat EF model warnings about query filters as startup failures. The release blocker is the first `SqlException`/`Unhandled exception` in stdout, not the preceding warnings.
+- If IIS reports `ISAPI reported an unhealthy condition`, retrieve `stdout_*.log` before changing code. This message is only a symptom of a startup crash/recycle.
+- For Monster ASP, deploy with stdout logging enabled during diagnosis, ensure the logs directory is writable, capture the first root exception, then disable verbose stdout after recovery.
+- Production startup migration is enabled only for the single unified host after schema review. If the database account lacks DDL permission, disable startup migration and apply the reviewed idempotent SQL with an operator-controlled database connection.
+- After each migration fix, run `dotnet build`, `dotnet test`, generate an idempotent migration script, deploy to a schema that represents the production drift, and verify `/health` before merging/releasing.
+- QR/media changes must not introduce storage-provider startup failures: local storage remains the default; R2 is selected only when all required R2 settings are present. Keep sensitive files private and test the authenticated media endpoint separately.
+- Do not declare a deployment healthy from a successful WebDeploy sync alone. Require application startup, database migration completion, `/health` 200, and a smoke test for the affected endpoint.
 
 ### 2026-07-25
 

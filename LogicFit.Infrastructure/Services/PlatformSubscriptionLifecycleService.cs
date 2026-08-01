@@ -104,7 +104,8 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
             .Where(s => !s.IsDeleted &&
                         (s.Status == TenantSubscriptionStatus.Trial ||
                          s.Status == TenantSubscriptionStatus.Active ||
-                         s.Status == TenantSubscriptionStatus.PastDue))
+                         s.Status == TenantSubscriptionStatus.PastDue ||
+                         s.Status == TenantSubscriptionStatus.Cancelled))
             .ToListAsync(cancellationToken);
 
         if (subscriptions.Count == 0) return;
@@ -116,16 +117,31 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
             .ToDictionaryAsync(t => t.Id, cancellationToken);
 
         var pastDue = 0;
-        var suspended = 0;
+        var expired = 0;
 
         foreach (var sub in subscriptions)
         {
             tenants.TryGetValue(sub.TenantId, out var tenant);
 
             // Trial or Active reaching its end date → PastDue (grace begins).
-            var reachedEnd =
-                (sub.Status == TenantSubscriptionStatus.Trial && sub.TrialEndsAt.HasValue && sub.TrialEndsAt < now) ||
-                (sub.Status == TenantSubscriptionStatus.Active && sub.EndDate.HasValue && sub.EndDate < now);
+            if (sub.Status == TenantSubscriptionStatus.Trial && sub.TrialEndsAt.HasValue && sub.TrialEndsAt < now)
+            {
+                sub.Status = TenantSubscriptionStatus.Expired;
+                if (tenant != null && tenant.Status == TenantStatus.Trial) tenant.Status = TenantStatus.Active;
+                context.OutboxMessages.Add(new OutboxMessage
+                {
+                    Type = "tenant.subscription.expired",
+                    Payload = $"{{\"tenantId\":\"{sub.TenantId}\",\"subscriptionId\":\"{sub.Id}\"}}",
+                    OccurredAtUtc = now,
+                    IdempotencyKey = $"subscription:{sub.Id}:expired:{now:yyyyMMdd}"
+                });
+                expired++;
+                continue;
+            }
+
+            var reachedEnd = sub.Status == TenantSubscriptionStatus.Active
+                && sub.EndDate.HasValue
+                && sub.EndDate < now;
 
             if (reachedEnd)
             {
@@ -142,6 +158,21 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
                 continue;
             }
 
+            if (sub.Status == TenantSubscriptionStatus.Cancelled && sub.EndDate.HasValue && sub.EndDate < now)
+            {
+                sub.Status = TenantSubscriptionStatus.Expired;
+                if (tenant != null && tenant.Status == TenantStatus.Cancelled) tenant.Status = TenantStatus.Active;
+                context.OutboxMessages.Add(new OutboxMessage
+                {
+                    Type = "tenant.subscription.expired",
+                    Payload = $"{{\"tenantId\":\"{sub.TenantId}\",\"subscriptionId\":\"{sub.Id}\"}}",
+                    OccurredAtUtc = now,
+                    IdempotencyKey = $"subscription:{sub.Id}:expired:{now:yyyyMMdd}"
+                });
+                expired++;
+                continue;
+            }
+
             // PastDue past the grace period → Expired + tenant Suspended.
             if (sub.Status == TenantSubscriptionStatus.PastDue)
             {
@@ -149,12 +180,8 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
                 if (graceRef.HasValue && graceRef < now.AddDays(-GraceDays))
                 {
                     sub.Status = TenantSubscriptionStatus.Expired;
-                    sub.SuspendedAt = now;
-                    if (tenant != null)
-                    {
-                        tenant.Status = TenantStatus.Suspended;
-                        tenant.SuspensionReason = SuspensionReason.NonPayment;
-                    }
+                    if (tenant != null && tenant.Status == TenantStatus.PastDue)
+                        tenant.Status = TenantStatus.Active;
                     context.OutboxMessages.Add(new OutboxMessage
                     {
                         Type = "tenant.subscription.expired",
@@ -162,15 +189,15 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
                         OccurredAtUtc = now,
                         IdempotencyKey = $"subscription:{sub.Id}:expired:{now:yyyyMMdd}"
                     });
-                    suspended++;
+                    expired++;
                 }
             }
         }
 
-        if (pastDue > 0 || suspended > 0)
+        if (pastDue > 0 || expired > 0)
         {
             await context.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Lifecycle: {PastDue} moved to PastDue, {Suspended} suspended", pastDue, suspended);
+            _logger.LogInformation("Lifecycle: {PastDue} moved to PastDue, {Expired} moved to Expired", pastDue, expired);
         }
     }
 
