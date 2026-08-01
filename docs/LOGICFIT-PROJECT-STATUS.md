@@ -1,6 +1,14 @@
 # LogicFit Project Status
 
-Last reviewed: 2026-08-01
+Last reviewed: 2026-08-02
+
+> **Issue #143, task branch:** Production diagnosis found that the reviewed fixed OTP was being
+> consumed correctly, but legacy identity phones were stored as local Egyptian `01...` values and
+> had no verification timestamp, so phone-login requests became enumeration-safe decoy challenges
+> and session issuance correctly returned `Invalid credentials`. The fix adds same-browser pending
+> challenge recovery, E.164 registration, first successful passwordless OTP phone verification,
+> and data migration `20260801214750_NormalizeLegacyIdentityPhonesToE164`. Platform users that
+> still have no linked identity/phone remain a protected `PlatformBootstrap` operation.
 
 > **Issue #140, task branch:** Platform Owner recovery is now explicit and secret-backed. The
 > legacy hardcoded owner/password seed is removed; a one-run `PlatformBootstrap` operation repairs

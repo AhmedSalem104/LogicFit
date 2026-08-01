@@ -26,7 +26,7 @@ public sealed class RegisterIdentityCommandHandler : IRequestHandler<RegisterIde
         var normalizedEmail = IdentityEmailAddress.Normalize(request.Email);
         var normalizedPhone = string.IsNullOrWhiteSpace(request.PhoneNumber)
             ? null
-            : new string(request.PhoneNumber.Where(char.IsDigit).ToArray());
+            : OtpService.NormalizePhone(request.PhoneNumber);
         var identity = await _context.IdentityAccounts
             .SingleOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail, cancellationToken);
         if (identity is not null && identity.EmailVerifiedAt is not null)
@@ -39,7 +39,7 @@ public sealed class RegisterIdentityCommandHandler : IRequestHandler<RegisterIde
                 FullName = request.FullName.Trim(),
                 Email = request.Email.Trim(),
                 NormalizedEmail = normalizedEmail,
-                PhoneNumber = request.PhoneNumber?.Trim(),
+                PhoneNumber = normalizedPhone,
                 NormalizedPhoneNumber = normalizedPhone,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 IsActive = true

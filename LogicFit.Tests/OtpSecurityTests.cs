@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Security.Claims;
 using LogicFit.API.Security;
 using LogicFit.Application.Features.Platform.Auth.Commands.PlatformOtpLogin;
+using LogicFit.Application.Features.Identity.Commands.Otp;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.Auth.DTOs;
@@ -125,6 +126,61 @@ public sealed class OtpSecurityTests
             dailyFixture.Service.RequestAsync(
                 "+201012345675", OtpPurpose.ChangePhone, null, null));
         Assert.Equal("OTP_DAILY_LIMIT_REACHED", daily.Message);
+    }
+
+    [Fact]
+    public async Task Same_browser_recovers_the_pending_challenge_without_resending()
+    {
+        await using var fixture = await OtpFixture.CreateAsync(cooldownSeconds: 60);
+        var original = await fixture.Service.RequestAsync(
+            "+201012345670", OtpPurpose.PasswordlessLogin, null, "browser-a");
+
+        var recovered = await fixture.Service.RequestAsync(
+            "+201012345670", OtpPurpose.PasswordlessLogin, null, "browser-a");
+
+        Assert.Equal(original.ChallengeId, recovered.ChallengeId);
+        Assert.Equal(original.ExpiresAtUtc, recovered.ExpiresAtUtc);
+        Assert.Equal(original.ResendAvailableAtUtc, recovered.ResendAvailableAtUtc);
+        Assert.Single(fixture.Sender.Messages);
+        Assert.Single(await fixture.Db.OtpChallenges.ToListAsync());
+
+        var otherBrowser = await Assert.ThrowsAsync<ConflictException>(() => fixture.Service.RequestAsync(
+            "+201012345670", OtpPurpose.PasswordlessLogin, null, "browser-b"));
+        Assert.Equal("OTP_RESEND_COOLDOWN", otherBrowser.Message);
+    }
+
+    [Fact]
+    public async Task Passwordless_otp_verifies_an_existing_unverified_phone_before_issuing_context()
+    {
+        await using var fixture = await OtpFixture.CreateAsync();
+        var identity = new IdentityAccount
+        {
+            FullName = "Phone Login",
+            Email = "phone-login@logicfit.test",
+            NormalizedEmail = "PHONE-LOGIN@LOGICFIT.TEST",
+            EmailVerifiedAt = fixture.Clock.UtcNow,
+            PhoneNumber = "+201012345669",
+            NormalizedPhoneNumber = "+201012345669",
+            PasswordHash = "not-used",
+            IsActive = true
+        };
+        fixture.Db.IdentityAccounts.Add(identity);
+        await fixture.Db.SaveChangesAsync();
+        var requestHandler = new RequestPhoneLoginOtpHandler(fixture.Db, fixture.Service);
+        var challenge = await requestHandler.Handle(
+            new RequestPhoneLoginOtpCommand(identity.NormalizedPhoneNumber, "browser-phone"),
+            CancellationToken.None);
+        var issuer = new RecordingIdentityWorkspaceSessionIssuer();
+        var verifyHandler = new VerifyPhoneLoginOtpHandler(
+            fixture.Db, fixture.Service, issuer, fixture.Clock);
+
+        await verifyHandler.Handle(
+            new VerifyPhoneLoginOtpCommand(challenge.ChallengeId, "1234", "browser-phone"),
+            CancellationToken.None);
+
+        fixture.Db.ChangeTracker.Clear();
+        Assert.NotNull((await fixture.Db.IdentityAccounts.SingleAsync(x => x.Id == identity.Id)).PhoneVerifiedAt);
+        Assert.Equal(identity.Id, issuer.IdentityAccountId);
     }
 
     [Fact]
@@ -609,5 +665,17 @@ public sealed class OtpSecurityTests
             new($"access-{Guid.NewGuid():N}", DateTime.UtcNow.AddMinutes(5));
 
         public string GenerateRefreshToken() => $"refresh-{Guid.NewGuid():N}";
+    }
+
+    private sealed class RecordingIdentityWorkspaceSessionIssuer : IIdentityWorkspaceSessionIssuer
+    {
+        public Guid? IdentityAccountId { get; private set; }
+
+        public Task<LogicFit.Application.Features.Identity.DTOs.IdentitySignInDto> IssueAsync(
+            Guid identityAccountId, CancellationToken cancellationToken = default)
+        {
+            IdentityAccountId = identityAccountId;
+            return Task.FromResult(new LogicFit.Application.Features.Identity.DTOs.IdentitySignInDto());
+        }
     }
 }
