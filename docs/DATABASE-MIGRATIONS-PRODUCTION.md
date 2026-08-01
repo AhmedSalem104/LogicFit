@@ -5,10 +5,16 @@ schema changes must be applied against the same database used by the deployed AP
 
 ## Supported production operation
 
-Production migrations never run from the IIS application-startup path. The API ignores
-`Database__ApplyMigrationsOnStartup`; enabling it on the server is not a deployment procedure.
-This keeps a failed or long-running DDL operation from putting the application into an IIS
-recycle loop.
+Starting with Issue #147, the unified API checks the connected database before `DataSeeder` and
+applies every pending migration compiled into the deployed artifact. SQL Server execution is
+serialized with an application lock, uses bounded timeouts, and is followed by a second pending
+check. This is an apply operation only: the server never creates or edits migration source files.
+
+Startup migration is enabled by default through `Database:StartupMigrations:Enabled`. The optional
+environment variables are `Database__StartupMigrations__LockTimeoutSeconds` (default `120`) and
+`Database__StartupMigrations__CommandTimeoutSeconds` (default `300`). The emergency switch
+`Database__StartupMigrations__Enabled=false` transfers responsibility back to the operator and must
+not be used to run a binary against a stale schema.
 
 The supported release operation is the protected WebDeploy helper or the manual GitHub
 `CD - Production` workflow. Both perform one ordered rollout:
@@ -16,7 +22,8 @@ The supported release operation is the protected WebDeploy helper or the manual 
 1. Verify that the selected artifact is tree-equivalent to `origin/master` and that CI passes.
 2. Record a current, verified BACPAC backup reference.
 3. Generate and review the idempotent EF SQL from that exact release.
-4. Apply pending migrations with the protected production database connection.
+4. Prefer applying pending migrations with the protected production database connection. If a
+   manual Visual Studio/WebDeploy publish is used, the startup migrator applies them before seeding.
 5. Stop before WebDeploy if backup, review, connection, or migration verification fails.
 6. Publish the unified API and require `/health` to return a success response.
 7. Run an authenticated smoke test for the affected flow.
@@ -32,8 +39,9 @@ verification sets `PhoneVerifiedAt`.
 
 The migration fails with `LEGACY_PHONE_E164_CONFLICT` if a legacy value would collide with an
 existing E.164 identity, so the operator can resolve ownership instead of silently merging two
-identities. Its `Down` intentionally does not reverse user data normalization. Review and apply it
-separately before publishing the Issue #143 binary, then verify that no legacy identity phone
+identities. Its `Down` intentionally does not reverse user data normalization. Review it and take a
+verified backup before publishing the Issue #143 binary. The protected deployment step may
+pre-apply it; otherwise the startup migrator applies it before seeding. Then verify that no legacy identity phone
 remains and smoke-test Phone + OTP against a real identity. This migration does not repair
 Platform Owner/Admin rows that lack an `IdentityAccount`; those require the one-run, secret-backed
 `PlatformBootstrap` procedure.
@@ -90,7 +98,9 @@ normal developer command from reaching production accidentally.
 `-ApproveDestructiveMigrationReview` is required only when the reviewed SQL contains a
 destructive statement. It records operator intent; it does not make an unsafe statement safe.
 The helper applies migrations before WebDeploy, verifies that EF reports no pending migration,
-publishes without deleting server-only configuration, then verifies health.
+publishes without deleting server-only configuration, then verifies health. On a manual publish,
+the application performs the same pending check at startup; a migration failure intentionally stops
+startup and must be diagnosed from the first migration exception rather than hidden.
 
 ## GitHub protected workflow
 
