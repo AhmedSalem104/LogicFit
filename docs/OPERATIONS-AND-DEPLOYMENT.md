@@ -81,17 +81,23 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 
 ### Migrations and health verification
 
-Never apply an EF migration from application startup, including through `Database__ApplyMigrationsOnStartup`. Create and verify a backup, generate and review the idempotent script, apply it through the approved database operator procedure, publish the application, then verify health. The WebDeploy helper supports the final verification without printing publish credentials:
+Never apply an EF migration from application startup, including through `Database__ApplyMigrationsOnStartup`. Create and verify a BACPAC, generate and review the idempotent script from the released `origin/master` tree, then let the protected WebDeploy helper apply the migration before publishing. The helper stops before WebDeploy on a missing backup reference, missing protected database connection, unapproved destructive SQL, migration failure, or remaining pending migration. It verifies health after publishing without printing database or publish credentials:
 
 ```powershell
 .\Scripts\deploy-webdeploy.ps1 `
   -PublishSettingsPath <publish-settings-file> `
   -ContentPath <publish-output-directory> `
+  -ApplyMigrations `
+  -VerifiedBackupReference <verified-bacpac-name-or-reference> `
+  -MigrationScriptPath <reviewed-idempotent-sql-file> `
+  -ApproveDestructiveMigrationReview `
   -HealthCheckUrl https://your-host/health
 ```
 
+The connection is read from `LOGICFIT_PRODUCTION_DB_CONNECTION` in the current protected process and is passed to the EF design-time factory through the short-lived `LOGICFIT_EF_CONNECTION_STRING` operator variable. Without that explicit override, EF remains pinned to LocalDB and cannot reach production accidentally. The GitHub `production` Environment must store the production secret together with `RUNASP_UNIFIED_PUBLISH_SETTINGS_B64` and `RUNASP_UNIFIED_HEALTHCHECK_URL`. The manual workflow also requires `backup_reference`, `migration_review=MIGRATIONS-REVIEWED`, and `confirm=DEPLOY-PRODUCTION`. `-ApproveDestructiveMigrationReview` is used only after reviewing a plan containing intentional `DROP`, `DELETE`, or `TRUNCATE` statements.
+
 3. خذ Backup وراجع Migration Dry Run وتقرير المخالفات لأي تغيير بيانات كبير.
-4. انشر الـAPI الصحيح، ثم طبق migrations في خطوة مراجعة منفصلة، ثم نفذ health check.
+4. طبّق migrations في خطوة مراجعة منفصلة، ثم انشر الـAPI الصحيح، ثم نفّذ health check.
 5. انشر Dashboard المبني من البيئة التي تشير إلى API الصحيح.
 6. اختبر الدخول، لوحة المتابعة، خطط المنصة، تنبيهات، Jobs، ونسخة احتياطية من حساب
    Platform Owner محدود للاختبار.
@@ -100,9 +106,11 @@ Never apply an EF migration from application startup, including through `Databas
 
 CI يعمل على الفروع وPull Requests ويتحقق من البناء والاختبارات ومراجعة migrations
 وبناء الصور. إنتاجياً لا يحق للنشر أن يبدأ قبل CI أخضر وبيئة محمية وخطة Rollback.
-الـCD التلقائي يظل متوقفاً حتى توثيق host/user/app directory/service command/backup
-command/migration command/health URL/rollback command وتخزين أسرار النشر في GitHub
-Environment `production` فقط.
+يستخدم preflight الخاص بالنشر SQL Server مؤقتًا و`LOGICFIT_TEST_CONNECTION_STRING` مثل CI؛
+لا يسمح باختبارات OTP التي تسقط إلى LocalDB غير المدعوم على Linux.
+الـCD يظل يدوياً ومحميًا. لا يبدأ إلا من شجرة مطابقة لـ`origin/master` وبعد CI ناجح،
+ونسخة BACPAC متحقق منها، ومراجعة SQL، وخطة Rollback، وتخزين أسرار WebDeploy وقاعدة
+البيانات وhealth URL في GitHub Environment `production` فقط.
 
 ## النسخ الاحتياطي والاستعادة
 
