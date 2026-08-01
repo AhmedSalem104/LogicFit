@@ -31,6 +31,12 @@ public static class DependencyInjection
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        var platformBootstrap = configuration
+            .GetSection(PlatformOwnerBootstrapOptions.SectionName)
+            .Get<PlatformOwnerBootstrapOptions>() ?? new PlatformOwnerBootstrapOptions();
+        PlatformOwnerBootstrapOptions.Validate(platformBootstrap);
+        services.Configure<PlatformOwnerBootstrapOptions>(
+            configuration.GetSection(PlatformOwnerBootstrapOptions.SectionName));
         services.Configure<OtpOptions>(configuration.GetSection(OtpOptions.SectionName));
         services.Configure<MetaWhatsAppOptions>(configuration.GetSection(MetaWhatsAppOptions.SectionName));
         var environmentName = configuration["ASPNETCORE_ENVIRONMENT"] ?? Environments.Production;

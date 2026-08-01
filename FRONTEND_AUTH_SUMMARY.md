@@ -93,13 +93,15 @@ POST /api/platform/tenants   (Platform API — صلاحية ManageTenants)
 
 ### 5) مستخدمو المنصة (Platform Owner / Admin)
 
-- **Platform Owner** بيتزرع تلقائياً أول تشغيل: `owner@platform.local` / `ChangeMe#12345` (**غيّره فوراً**).
+- لا توجد بيانات دخول ثابتة لـ **Platform Owner**. الإنشاء/الإصلاح الأول يتم مرة واحدة من
+  Server Secrets عبر `PlatformBootstrap` ثم تُحذف الإعدادات فور نجاح الدخول.
 - **الدخول**: على **Platform API**:
 ```http
 POST /api/platform/auth/login
-{ "email": "owner@platform.local", "password": "..." }
+{ "email": "platform-owner@example.com", "password": "<operator-supplied-secret>", "sessionBinding": "<browser-session-id>" }
 ```
-→ توكن بصلاحيات المنصة (`ManagePlatform`, `ManageTenants`, ...). **مفيش subdomain** — دول فوق الجيمات كلها.
+→ يعيد OTP challenge فقط. بعد `/api/platform/auth/otp/verify` الناجح يصدر Access Token
+وتُكتب Refresh Cookie من نوع HttpOnly. **مفيش subdomain** — دول فوق الجيمات كلها.
 
 ---
 

@@ -176,3 +176,10 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
   preserve divergent local tips, and never continue from a failed fast-forward.
 - Migration delivery requires three separate checks: the file in `origin/master`, the file in the
   canonical workspace, and the migration/schema state in the target database.
+
+### 2026-08-01 — Platform Owner recovery
+
+- Never seed a fixed Platform Owner password or log bootstrap credentials. Initial creation and
+  legacy-identity repair must be an explicit, temporary server-secret operation.
+- Disable and remove all `PlatformBootstrap__*` settings immediately after the verified recovery
+  run; routine password changes and account recovery must use the normal authenticated flows.

@@ -67,36 +67,32 @@ Content-Type: application/json
 `POST /api/platform/auth/login` — **عام (Anonymous)**
 ```json
 // Request
-{ "email": "owner@platform.local", "password": "ChangeMe#12345" }
+{ "email": "platform-owner@example.com", "password": "<operator-supplied-secret>", "sessionBinding": "<browser-session-id>" }
 ```
 ```json
-// Response — AuthResponseDto
+// Response — OtpChallengeDto (no session yet)
 {
-  "userId": "guid",
-  "email": "owner@platform.local",
-  "phoneNumber": null,
-  "fullName": "Platform Owner",
-  "role": "PlatformOwner",
-  "roles": ["PlatformOwner"],
-  "permissions": ["ManagePlatform","ManageTenants","ManagePlans","ManagePaymentRequests","ManagePlatformReports"],
-  "tenantId": "00000000-0000-0000-0000-0000000000a1",
-  "accessToken": "eyJhbGci...",
-  "refreshToken": "def502...",
-  "expiresAt": "2026-07-08T12:15:00Z"
+  "challengeId": "guid",
+  "purpose": "PlatformAdminLogin",
+  "expiresAtUtc": "2026-08-01T18:05:00Z",
+  "resendAvailableAtUtc": "2026-08-01T18:01:00Z",
+  "maskedPhoneNumber": "+20***678"
 }
 ```
-> **بيانات الدخول الافتراضية** (بعد أول تشغيل للنظام): `owner@platform.local` / `ChangeMe#12345` — **يُفضّل تغييرها**.
+> لا توجد بيانات دخول افتراضية. يستخدم المشغل Bootstrap مؤقتًا من Server Secrets عند الإنشاء
+> أو إصلاح حساب قديم، ثم يحذف إعداداته بعد التحقق. الجلسة لا تصدر إلا من
+> `POST /api/platform/auth/otp/verify` بعد نجاح OTP.
 > **مفيش subdomain** — مستخدمو المنصة فوق كل الجيمات.
 
 ### تجديد التوكن
 - **`accessToken` عمره 15 دقيقة**. عند `401` → نادِ `refresh` مرة واحدة ثم أعِد الطلب.
 ```json
 // POST /api/platform/auth/refresh   (Anonymous)
-{ "refreshToken": "def502..." }        // → نفس AuthResponseDto بتوكنات جديدة (القديم يُبطَل — Rotation)
+{} // Refresh Token يُقرأ من HttpOnly cookie ويُدوّر؛ JavaScript لا يقرأه.
 ```
 - **`POST /api/platform/auth/logout-all`** — Authenticated → `204` (إبطال كل الجلسات).
 
-> خزّن `accessToken` + `refreshToken` + `permissions[]`. ابنِ الواجهة حسب `permissions[]`.
+> خزّن `accessToken` + `permissions[]` فقط. لا تخزن Refresh Token في JavaScript أو localStorage.
 
 ---
 

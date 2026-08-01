@@ -87,6 +87,11 @@ The raw 256-bit email token is placed in the **frontend URL fragment**, is store
 
 ## نظام OTP المركزي (Issues #118 و#127)
 
+حساب `PlatformOwner` القديم الذي لا يملك `IdentityAccount` وهاتف E.164 مؤكد لا يستطيع بدء
+تحدي OTP، حتى لو كانت كلمة المرور المحلية صحيحة. يعالج Issue #140 هذه الحالة بتهيئة تشغيلية
+مؤقتة من Server Secrets تنشئ/تصلح الهوية وتلغي الجلسات القديمة، ثم يجب تعطيلها وحذف أسرارها
+بعد أول دخول ناجح. لا يوجد حساب أو كلمة مرور Bootstrap ثابتة داخل الكود.
+
 الأغراض المسجلة هي `PhoneVerification`, `PasswordlessLogin`, `PlatformAdminLogin`,
 `SensitiveActionStepUp`, `PasswordReset`, `ChangePhone`, و`InviteAcceptance`.
 لا يقبل الخادم كودًا بلا `challengeId` صحيح، ولا يخزن الكود الصريح. لكل تحدٍ salt مستقل

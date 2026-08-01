@@ -46,6 +46,23 @@ then smoke-test email login, Phone + OTP, Platform password+OTP, sensitive-actio
 refresh rotation, logout-all, and password-reset session revocation. Roll back the binaries
 and stop the rollout on health/OTP failure; do not reverse the migration destructively.
 
+### Platform Owner recovery bootstrap (Issue #140)
+
+The API no longer creates a Platform Owner with a hardcoded password. If the existing owner
+predates `IdentityAccount` or has no verified E.164 phone, configure the following values in the
+server secret store for one controlled restart only: `PlatformBootstrap__Enabled=true`,
+`PlatformBootstrap__Email`, `PlatformBootstrap__Password`, `PlatformBootstrap__PhoneNumber`,
+`PlatformBootstrap__FullName`, and `PlatformBootstrap__ResetPassword=true`. The password must be
+at least 12 characters and contain uppercase, lowercase, digit, and symbol; the phone must already
+be an operator-controlled E.164 number. The bootstrap creates or repairs one active owner identity,
+marks the operator-asserted email and phone as verified, clears lockout, and revokes existing refresh
+sessions when resetting the password. It never logs the configured values.
+
+After one successful recycle, verify that `/api/platform/auth/login` returns an OTP challenge,
+complete OTP, then immediately set `PlatformBootstrap__Enabled=false`, remove every other
+`PlatformBootstrap__*` value from the server, and recycle again. Do not commit these values, keep
+the bootstrap enabled, or use it as a routine password-reset path. This recovery has no migration.
+
 تُخزن في إعدادات الموقع/Secret Store الخاصة بالخادم، لا في source control:
 
 | المفتاح | الغرض |
