@@ -192,21 +192,13 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Production schema changes are a separately reviewed deployment operation. Never
-// apply migrations from the web-process startup path: a partial or incompatible
-// migration would make IIS recycle the application before diagnostics are available.
-var migrationOnStartupRequested = builder.Configuration.GetValue(
-    "Database:ApplyMigrationsOnStartup",
-    false);
-if (migrationOnStartupRequested)
-{
-    Log.Warning(
-        "Database__ApplyMigrationsOnStartup is ignored. Apply reviewed idempotent migrations separately after a verified backup, then restart the application.");
-}
-
-// Seed data on startup.
+// Keep the connected database schema current before the seeder or any request can use it. The
+// migrator serializes execution across IIS workers and verifies that nothing remains pending.
 using (var scope = app.Services.CreateScope())
 {
+    var migrator = scope.ServiceProvider.GetRequiredService<StartupDatabaseMigrator>();
+    await migrator.ApplyPendingMigrationsAsync(app.Lifetime.ApplicationStopping);
+
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
 
     // Check if force reset of foods is requested (to fix identity issues)
