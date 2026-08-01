@@ -17,6 +17,32 @@ For every non-trivial task:
 9. Commit with the issue number and push the branch.
 10. Open or update a Pull Request and report verification results.
 
+## Canonical workspace and worktree handoff
+
+The user-facing canonical Backend workspace is
+`C:\Users\B-SMART\Desktop\Projects\LogicFit Project\LogicFit`. Temporary Git worktrees are
+implementation-isolation folders for preserving unrelated changes; they are not separate projects
+and must never become the only local location where completed files are visible.
+
+- Announce the exact path and branch whenever a temporary worktree is created, and state why the
+  canonical workspace cannot safely be used for that task.
+- Before creating a branch, compare its start commit with `origin/develop`. A failed fast-forward is
+  a blocker to that branch setup; never continue a task branch from the stale local branch.
+- Before a publish or final handoff, verify the production artifact is tree-equivalent to
+  `origin/master`, not merely built from a similarly named local branch.
+- Verify every required migration exists both in `origin/master` and in the canonical workspace,
+  and separately verify its ID/schema effect in production. A generated SQL file or temporary
+  worktree does not satisfy the canonical-workspace check.
+- After merge/release, inspect the canonical workspace. If it is clean, synchronize it safely to the
+  branch the user expects and confirm the commit plus required files. Preserve any divergent local
+  branch tip under a clearly named local backup branch before realigning it; do not use
+  `git reset --hard`.
+- If the canonical workspace is dirty, do not switch, overwrite, or merge it silently. Report the
+  exact branch/commit gap and leave the user's changes untouched until they choose the integration
+  method.
+- Remove obsolete temporary worktrees only after confirming they are clean and their commits are
+  reachable from Git or a preserved branch. Report which temporary path was removed.
+
 ## Documentation currency gate
 
 Documentation is part of the definition of done for every project change. The current source code and domain rules are the authority; a planned, branch-only, or unavailable behavior must be labelled as such and must never be documented as released.
@@ -135,3 +161,12 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
   the relevant domain/security/operations documents, and both affected frontend flow/screen
   references in the same task. Documentation must explicitly distinguish local/unreleased,
   merged, deployed, and production-verified behavior.
+
+### 2026-08-01 — canonical workspace handoff
+
+- Temporary worktrees are isolation mechanisms only. Completed changes must be verified in the
+  canonical project directory before publish handoff.
+- A local branch name is not proof that it matches its remote. Compare commits and tree content,
+  preserve divergent local tips, and never continue from a failed fast-forward.
+- Migration delivery requires three separate checks: the file in `origin/master`, the file in the
+  canonical workspace, and the migration/schema state in the target database.
