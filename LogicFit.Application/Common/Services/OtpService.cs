@@ -52,9 +52,7 @@ public sealed class OtpService : IOtpService
             item.RevokedAtUtc = now;
         }
 
-        var code = string.Equals(_options.Provider, "Development", StringComparison.OrdinalIgnoreCase)
-            ? _options.DevelopmentFixedCode!
-            : RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+        var code = ResolveCode(now);
         var saltBytes = RandomNumberGenerator.GetBytes(32);
         var salt = Convert.ToBase64String(saltBytes);
         var challenge = new OtpChallenge
@@ -196,6 +194,39 @@ public sealed class OtpService : IOtpService
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_options.HmacSecret));
         return Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes($"{salt}:{code}")));
     }
+
+    private string ResolveCode(DateTime now)
+    {
+        if (string.Equals(_options.Provider, "Development", StringComparison.OrdinalIgnoreCase))
+            return _options.DevelopmentFixedCode!;
+
+        if (string.Equals(_options.Provider, "TemporaryFixed", StringComparison.OrdinalIgnoreCase))
+        {
+            var expiresAtUtc = _options.TemporaryFixedCodeExpiresAtUtc.HasValue
+                ? NormalizeUtc(_options.TemporaryFixedCodeExpiresAtUtc.Value)
+                : (DateTime?)null;
+            if (!_options.AllowTemporaryFixedCode ||
+                _options.TemporaryFixedCode != "1234" ||
+                expiresAtUtc is null ||
+                expiresAtUtc.Value <= now)
+            {
+                throw new ServiceUnavailableException(
+                    "TEMPORARY_FIXED_OTP_EXPIRED",
+                    "The temporary OTP testing mode is unavailable or has expired.");
+            }
+
+            return _options.TemporaryFixedCode!;
+        }
+
+        return RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+    }
+
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
 
     private void AddAudit(string eventName, OtpChallenge challenge, bool success)
     {

@@ -363,6 +363,43 @@ public sealed class OtpSecurityTests
     }
 
     [Fact]
+    public void Temporary_fixed_provider_requires_an_explicit_flag_reviewed_code_and_short_expiry()
+    {
+        var valid = TemporaryFixedConfiguration(true, "1234", DateTime.UtcNow.AddDays(7));
+        new ServiceCollection().AddInfrastructure(valid);
+
+        Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddInfrastructure(
+            TemporaryFixedConfiguration(false, "1234", DateTime.UtcNow.AddDays(7))));
+        Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddInfrastructure(
+            TemporaryFixedConfiguration(true, "9999", DateTime.UtcNow.AddDays(7))));
+        Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddInfrastructure(
+            TemporaryFixedConfiguration(true, "1234", DateTime.UtcNow.AddMinutes(-1))));
+        Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddInfrastructure(
+            TemporaryFixedConfiguration(true, "1234", DateTime.UtcNow.AddDays(32))));
+    }
+
+    [Fact]
+    public async Task Temporary_fixed_provider_uses_1234_only_until_its_runtime_expiry()
+    {
+        var expiresAt = new DateTime(2026, 7, 30, 12, 2, 0, DateTimeKind.Utc);
+        await using var fixture = await OtpFixture.CreateAsync(
+            cooldownSeconds: 0,
+            provider: "TemporaryFixed",
+            temporaryFixedExpiresAtUtc: expiresAt);
+
+        var challenge = await fixture.Service.RequestAsync(
+            "+201012345676", OtpPurpose.PlatformAdminLogin, null, "temporary-browser");
+        Assert.Equal("1234", Assert.Single(fixture.Sender.Messages).Code);
+        await fixture.Service.VerifyAsync(
+            challenge.ChallengeId, "1234", OtpPurpose.PlatformAdminLogin, "temporary-browser");
+
+        fixture.Clock.Advance(TimeSpan.FromMinutes(3));
+        var error = await Assert.ThrowsAsync<ServiceUnavailableException>(() => fixture.Service.RequestAsync(
+            "+201012345673", OtpPurpose.PlatformAdminLogin, null, "temporary-browser"));
+        Assert.Equal("TEMPORARY_FIXED_OTP_EXPIRED", error.Code);
+    }
+
+    [Fact]
     public async Task Meta_provider_contract_is_mocked_and_never_calls_the_network()
     {
         var handler = new StubHttpHandler("""
@@ -440,6 +477,22 @@ public sealed class OtpSecurityTests
         return new ConfigurationBuilder().AddInMemoryCollection(values).Build();
     }
 
+    private static IConfiguration TemporaryFixedConfiguration(bool allow, string code, DateTime expiresAtUtc)
+    {
+        var values = new Dictionary<string, string?>
+        {
+            ["ASPNETCORE_ENVIRONMENT"] = "Production",
+            ["Otp:Provider"] = "TemporaryFixed",
+            ["Otp:AllowTemporaryFixedCode"] = allow.ToString(),
+            ["Otp:TemporaryFixedCode"] = code,
+            ["Otp:TemporaryFixedCodeExpiresAtUtc"] = expiresAtUtc.ToString("O"),
+            ["Otp:HmacSecret"] = "a-test-hmac-secret-that-is-longer-than-32-characters",
+            ["JwtSettings:Secret"] = "a-test-jwt-secret-that-is-longer-than-32-characters",
+            ["ConnectionStrings:DefaultConnection"] = "Server=(localdb)\\mssqllocaldb;Database=otp-tests;"
+        };
+        return new ConfigurationBuilder().AddInMemoryCollection(values).Build();
+    }
+
     private sealed class StubHttpHandler(string response) : HttpMessageHandler
     {
         public int CallCount { get; private set; }
@@ -470,7 +523,8 @@ public sealed class OtpSecurityTests
                 (db, sender, clock, service, connectionString, current, options);
 
         public static async Task<OtpFixture> CreateAsync(
-            int maxAttempts = 5, int cooldownSeconds = 60, int dailyLimit = 10)
+            int maxAttempts = 5, int cooldownSeconds = 60, int dailyLimit = 10,
+            string provider = "Development", DateTime? temporaryFixedExpiresAtUtc = null)
         {
             var databaseName = $"LogicFitOtpTests_{Guid.NewGuid():N}";
             var clock = new MutableClock();
@@ -487,8 +541,11 @@ public sealed class OtpSecurityTests
             var sender = new FakeOtpProvider();
             var otpOptions = new OtpOptions
             {
-                Provider = "Development",
-                DevelopmentFixedCode = "1234",
+                Provider = provider,
+                DevelopmentFixedCode = provider == "Development" ? "1234" : null,
+                AllowTemporaryFixedCode = provider == "TemporaryFixed",
+                TemporaryFixedCode = provider == "TemporaryFixed" ? "1234" : null,
+                TemporaryFixedCodeExpiresAtUtc = temporaryFixedExpiresAtUtc,
                 HmacSecret = "a-test-hmac-secret-that-is-longer-than-32-characters",
                 ExpiresInMinutes = 5,
                 MaxAttempts = maxAttempts,

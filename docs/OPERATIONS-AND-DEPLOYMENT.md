@@ -13,7 +13,7 @@
 
 Before enabling email registration or identity password reset, configure these server-only settings (environment-variable form shown; values are never committed): `Email__Provider=smtp`, `Email__Smtp__Host`, `Email__Smtp__Port`, `Email__Smtp__UseSsl`, `Email__Smtp__UserName`, `Email__Smtp__Password`, `Email__Smtp__FromEmail`, `Email__Smtp__FromName`, and `IdentityEmailLinks__FrontendBaseUrl` (HTTPS only). The API returns `503 IDENTITY_EMAIL_NOT_CONFIGURED` until both delivery and HTTPS frontend-link settings are present. Do not log the generated link or raw token. Apply `20260730143000_AddIdentityEmailSecurity` from a reviewed idempotent script after backup, publish, then verify `/health` and a non-production email flow.
 
-### OTP delivery and Meta WhatsApp (Issue #118, unreleased)
+### OTP delivery and Meta WhatsApp (Issues #118 and #127)
 
 OTP settings exist only in environment variables or the server secret store. Development uses
 `ASPNETCORE_ENVIRONMENT=Development`, `Otp__Provider=Development`,
@@ -28,6 +28,16 @@ Production uses `Otp__Provider=MetaWhatsApp` and must set `Otp__HmacSecret`,
 verification additionally uses `MetaWhatsApp__WebhookVerifyToken` and
 `MetaWhatsApp__AppSecret`. Never put any of these values in a published `appsettings.json`.
 There is no fallback to `1234` if Meta fails.
+
+Until the external provider subscription is available, Issue #127 permits a reviewed hosted-test
+exception. Configure it only in the server secret store with `Otp__Provider=TemporaryFixed`,
+`Otp__AllowTemporaryFixedCode=true`, `Otp__TemporaryFixedCode=1234`,
+`Otp__TemporaryFixedCodeExpiresAtUtc=<future UTC value no more than 31 days away>`, and a private
+`Otp__HmacSecret` of at least 32 characters. The API still creates, hashes, rate-limits, and atomically
+consumes a real challenge; it never returns the code. Startup fails if the explicit flag, exact code,
+or bounded future expiry is missing. Runtime requests fail after expiry. There is no automatic fallback
+from Meta to this provider. To retire the exception, switch to `MetaWhatsApp` and remove all three
+`TemporaryFixedCode` settings from the server.
 
 Before rollout: backup; review/apply
 `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp`; configure the secrets; publish
