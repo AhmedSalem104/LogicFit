@@ -107,7 +107,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
-    await seeder.SeedAsync();
+    await seeder.InitializeAsync();
 }
 
 if (app.Environment.IsDevelopment())

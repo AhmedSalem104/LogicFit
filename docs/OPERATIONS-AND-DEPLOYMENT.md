@@ -36,6 +36,19 @@ dotnet test LogicFit.sln -c Release --no-build --verbosity minimal
 dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --startup-project LogicFit.API
 ```
 
+### WebDeploy with reviewed migrations
+
+Keep `Database:ApplyMigrationsOnStartup=false` and `Database:ApplySeedOnStartup=false` for normal production operation. When a controlled rollout explicitly sets migration to `true`, `DataSeeder.InitializeAsync` logs the names returned by `GetPendingMigrationsAsync()` and awaits `MigrateAsync()` before any seed work. A migration failure emits a critical log, is rethrown, and stops startup so the application cannot serve an incomplete schema. Enable seeding separately only when its idempotent reference-data updates are intended. For a production rollout, create and verify a current BACPAC first, then call the WebDeploy helper with `-ApplyMigrations`. The helper generates and checks an idempotent script, applies pending migrations as a separate EF task **before** WebDeploy, and checks the supplied health URL after publishing.
+
+```powershell
+.\Scripts\deploy-webdeploy.ps1 `
+  -PublishSettingsPath <publish-settings-file> `
+  -ContentPath <publish-output-directory> `
+  -VerifiedBackupPath <current-bacpac-file> `
+  -ApplyMigrations `
+  -HealthCheckUrl https://your-host/health
+```
+
 3. خذ Backup وراجع Migration Dry Run وتقرير المخالفات لأي تغيير بيانات كبير.
 4. انشر الـAPI الصحيح، ثم طبق migrations في خطوة مراجعة منفصلة، ثم نفذ health check.
 5. انشر Dashboard المبني من البيئة التي تشير إلى API الصحيح.

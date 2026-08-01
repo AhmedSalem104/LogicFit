@@ -134,7 +134,7 @@ using (var scope = app.Services.CreateScope())
         await seeder.ForceResetFoodsAsync();
     }
 
-    await seeder.SeedAsync();
+    await seeder.InitializeAsync();
 }
 
 // Configure the HTTP request pipeline

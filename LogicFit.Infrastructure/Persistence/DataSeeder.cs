@@ -3,6 +3,7 @@ using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace LogicFit.Infrastructure.Persistence;
@@ -13,14 +14,21 @@ public class DataSeeder
     private readonly ILogger<DataSeeder> _logger;
     private readonly RbacSeeder _rbacSeeder;
     private readonly PlanSeeder _planSeeder;
+    private readonly IConfiguration _configuration;
     private readonly string _seedDataPath;
 
-    public DataSeeder(ApplicationDbContext context, ILogger<DataSeeder> logger, RbacSeeder rbacSeeder, PlanSeeder planSeeder)
+    public DataSeeder(
+        ApplicationDbContext context,
+        ILogger<DataSeeder> logger,
+        RbacSeeder rbacSeeder,
+        PlanSeeder planSeeder,
+        IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
         _rbacSeeder = rbacSeeder;
         _planSeeder = planSeeder;
+        _configuration = configuration;
         // Check multiple possible locations for seed data
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         _seedDataPath = Path.Combine(baseDir, "SeedData");
@@ -31,6 +39,52 @@ public class DataSeeder
         }
 
         _logger.LogInformation("Seed data path: {Path}", _seedDataPath);
+    }
+
+    /// <summary>
+    /// Performs the optional, explicitly enabled database migration step before
+    /// idempotent seed work. It is intentionally disabled by default in production.
+    /// </summary>
+    public async Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        if (_configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup"))
+        {
+            try
+            {
+                var pendingMigrations = (await _context.Database.GetPendingMigrationsAsync(cancellationToken)).ToArray();
+                if (pendingMigrations.Length == 0)
+                {
+                    _logger.LogInformation("No pending database migrations were found.");
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "Applying {PendingMigrationCount} pending database migrations before seeding: {PendingMigrations}",
+                        pendingMigrations.Length,
+                        string.Join(", ", pendingMigrations));
+
+                    await _context.Database.MigrateAsync(cancellationToken);
+
+                    _logger.LogInformation(
+                        "Successfully applied {PendingMigrationCount} pending database migrations.",
+                        pendingMigrations.Length);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "Database migration failed. Application startup is being stopped to prevent use of an incomplete schema.");
+                throw;
+            }
+        }
+
+        if (_configuration.GetValue("Database:ApplySeedOnStartup", false))
+        {
+            await SeedAsync();
+        }
+        else
+        {
+            _logger.LogInformation("Database seed is disabled by Database:ApplySeedOnStartup.");
+        }
     }
 
     public async Task SeedAsync()
