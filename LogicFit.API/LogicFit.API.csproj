@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <Content Include="..\LogicFit.Infrastructure\Persistence\SeedData\*.json" CopyToOutputDirectory="PreserveNewest" LinkBase="SeedData" />
+    <Content Update="appsettings.Production.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
   </ItemGroup>
 
 </Project>

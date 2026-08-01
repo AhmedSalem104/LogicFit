@@ -122,8 +122,10 @@ flowchart LR
 
 ## Current deployment position
 
-- Verified live endpoint: `https://logicfit-platform.runasp.net/health` returns `200 Healthy`.
-- The supplied publish profile targets the intended unified API site `site78301`; its password is intentionally not recorded.
+- Issue #137 confirmed that `logicfit-saas-model.runasp.net` (`site81605`) failed with IIS `500.30` after publish replaced the server-only configuration and removed `Otp:HmacSecret`. A rollback-safe configuration recovery restored repeated `200 Healthy` responses and DB-backed API smoke checks on 2026-08-01; stdout was disabled again.
+- `logicfit-saas.runasp.net` is a separate current Platform host associated with the active `site81260` publish target. It remained on `500.30` pending execution of the new protected recovery job with the current GitHub Environment profile; stale local encrypted profiles cannot be used as credentials.
+- `logicfit.runasp.net/health` remained `200 Healthy` throughout the incident.
+- Retired `site78301` profiles are not valid recovery credentials. The current documented targets are `site81260` for `logicfit-saas`, `site45954` for `logicfit.runasp.net`, and `site81605` for the hosted model site; protected GitHub Environment profiles remain authoritative.
 - GitHub Clone-to-`/wwwroot` is not used: it clones source files and cannot safely host the compiled ASP.NET Core application.
 - The supported current operation is manual Visual Studio/WebDeploy publishing. Automatic CD can be revisited after the unified host, backup, migration, rollback, and health URL are explicitly defined.
 
@@ -312,10 +314,16 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 - Add distributed locks/idempotency for background lifecycle jobs.
 - Add integration, end-to-end, load, concurrency, and tenant-isolation tests.
 - Define the Monster ASP deployment target, application directory, service manager, backup command, and health URL before enabling automatic production deployment.
-- A local WebDeploy settings file was provided for `logicfit-platform.runasp.net` (`MSDeploy`, site `site78301`). It is the candidate profile for the unified API; its password is intentionally not recorded. Verify the target, backup/migration/rollback procedure, and health URL before enabling production CD.
-- `Scripts/deploy-webdeploy.ps1` performs credential-safe MSDeploy synchronization from one unified publish output directory. The protected CD workflow requires one unified profile and health URL before it can deploy.
+- Stale local WebDeploy profiles are diagnostic metadata only. Production actions select the current protected GitHub Environment profile and require an exact expected Monster site id before any remote write.
+- `Scripts/deploy-webdeploy.ps1` performs credential-safe MSDeploy synchronization and explicitly skips the server-only production configuration. `Scripts/recover-webdeploy-startup.ps1` is configuration-only incident recovery with rollback and health gates.
 
 ## Change log
+
+### 2026-08-01 — production startup recovery hardening (Issue #137)
+
+- Excluded `appsettings.Production.json` from publish artifacts and added an MSDeploy skip rule so server-only secrets cannot be overwritten by a developer-local file.
+- Added a protected, site-bound startup-recovery operation with configuration/web.config rollback, OTP/JWT/password-reset secret injection, controlled recycle, and repeated health verification.
+- Added regression coverage preventing authentication request payload logging and production configuration publication.
 
 ### 2026-07-30 — identity-first access foundation
 

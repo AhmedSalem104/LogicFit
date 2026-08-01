@@ -26,6 +26,9 @@ $arguments = @(
     '-enableLink:AppPoolExtension',
     # Keep server-only secrets and production overrides, including appsettings.Production.json.
     '-enableRule:DoNotDeleteRule',
+    # DoNotDeleteRule only prevents deletion; this skip also prevents an artifact-local file
+    # from overwriting the protected server configuration when a developer has one locally.
+    '-skip:objectName=filePath,absolutePath=appsettings\.Production\.json$',
     '-retryAttempts:3',
     '-retryInterval:5000'
 )

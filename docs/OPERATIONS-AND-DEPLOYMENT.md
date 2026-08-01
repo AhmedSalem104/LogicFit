@@ -64,7 +64,9 @@ and stop the rollout on health/OTP failure; do not reverse the migration destruc
 يُنشأ `appsettings.Production.json` داخل موقع Monster ASP فقط ولا يُرفع إلى Git. يضع
 المشغّل فيه `ConnectionStrings:DefaultConnection` و`JwtSettings:Secret` وأي إعدادات
 خاصة بالإنتاج. سكربت WebDeploy يحتفظ بالملفات الإضافية على الخادم عبر
-`DoNotDeleteRule`، لذلك لا يحذف هذا الملف أثناء نشر التطبيق. لا تُسجّل محتويات الملف
+`LogicFit.API.csproj` excludes it from publish output and `deploy-webdeploy.ps1` skips it
+explicitly at the destination. `DoNotDeleteRule` alone prevents deletion but still allows an
+existing file to be overwritten. لا تُسجّل محتويات الملف
 أو كلمات المرور في التذاكر أو السجلات.
 
 ## فحص ما قبل النشر
@@ -89,6 +91,20 @@ Never apply an EF migration from application startup, including through `Databas
   -ContentPath <publish-output-directory> `
   -HealthCheckUrl https://your-host/health
 ```
+
+### Protected IIS 500.30 startup recovery
+
+Issue #137 recovered `site81605` after stdout identified a missing `Otp:HmacSecret`. The same
+procedure is available through the manual protected CD workflow with
+`confirm=RECOVER-PRODUCTION-STARTUP`. It selects an existing GitHub Environment publish profile,
+requires the exact Monster site id, captures the existing production configuration and web.config
+for rollback, injects protected OTP/JWT/password-reset secrets, forces one recycle, restores the
+original web.config, and requires health after both recycles. It changes neither the database nor
+the application binary.
+
+Never leave stdout enabled after diagnosis. Never upload captured stdout as an artifact when it can
+contain authentication payloads. Rotate exposed application credentials and remove or redact the
+affected server logs through an explicitly approved operator action.
 
 3. خذ Backup وراجع Migration Dry Run وتقرير المخالفات لأي تغيير بيانات كبير.
 4. انشر الـAPI الصحيح، ثم طبق migrations في خطوة مراجعة منفصلة، ثم نفذ health check.
