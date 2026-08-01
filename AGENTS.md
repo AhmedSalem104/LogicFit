@@ -21,6 +21,14 @@ For every non-trivial task:
 
 Documentation is part of the definition of done for every project change. The current source code and domain rules are the authority; a planned, branch-only, or unavailable behavior must be labelled as such and must never be documented as released.
 
+The documentation record is synchronized across all three repositories: `LogicFit` (Backend),
+`LogiFit_Angular` (Tenant UI), and `LogiFit_Platform_Admin_Dashboard` (Platform UI). A
+cross-repository feature is not complete until every affected repository updates its own
+canonical flow, screen, architecture, and API references in the same task. If a repository is
+not affected, the Pull Request must state `No documentation impact` for that repository and why.
+Every affected document must distinguish local work, an open PR, merge to `develop`, release,
+deployment, and production verification; none of those states may be inferred from another one.
+
 For every change, before opening the Pull Request:
 
 1. Update `docs/FEATURE-CATALOG.md` when a feature is added, removed, renamed, materially changed, or moved between projects. Keep its implementation source, roles, and affected flow accurate.
@@ -119,3 +127,11 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 - The documentation index at `docs/README.md` is the required written hand-off for product flows, permissions, Platform screens, API contracts, domain data, tenant application, and operations; update the affected document in every future change.
 - `docs/API-ENDPOINT-CATALOG.md` is generated from every Tenant and Platform controller by `Scripts/Export-ApiEndpointCatalog.ps1`. Any endpoint, policy, request, or response-contract change must regenerate this catalog in the same task; do not manually maintain endpoint rows.
 - The Platform dashboard assistant is a local, permission-filtered operational guide. It must not invoke a mutation directly, expose secrets, or claim an external LLM integration unless a server-side, reviewed integration is actually added.
+
+### 2026-07-30 — authentication documentation contract
+
+- Any authentication, identity, OTP, session, invite, join, workspace-selection, or access-gate
+  change must update `docs/AUTHENTICATION-AND-WORKSPACE-FLOWS.md`, the generated API catalog,
+  the relevant domain/security/operations documents, and both affected frontend flow/screen
+  references in the same task. Documentation must explicitly distinguish local/unreleased,
+  merged, deployed, and production-verified behavior.

@@ -23,15 +23,17 @@ public partial class AddIdentityEmailSecurity : Migration
             IF COL_LENGTH(N'dbo.IdentityAccounts', N'EmailVerifiedAt') IS NULL
                 ALTER TABLE dbo.IdentityAccounts ADD EmailVerifiedAt datetime2 NULL;
 
-            UPDATE dbo.IdentityAccounts
-            SET FullName = CASE
-                    WHEN FullName IS NULL OR LTRIM(RTRIM(FullName)) = N'' THEN Email
-                    ELSE FullName
-                END,
-                EmailVerifiedAt = COALESCE(EmailVerifiedAt, CreatedAt, SYSUTCDATETIME())
-            WHERE FullName IS NULL
-               OR LTRIM(RTRIM(FullName)) = N''
-               OR EmailVerifiedAt IS NULL;
+            -- Compile the data update only after SQL Server has added both guarded columns.
+            EXEC sys.sp_executesql N'
+                UPDATE dbo.IdentityAccounts
+                SET FullName = CASE
+                        WHEN FullName IS NULL OR LEN(LTRIM(RTRIM(FullName))) = 0 THEN Email
+                        ELSE FullName
+                    END,
+                    EmailVerifiedAt = COALESCE(EmailVerifiedAt, CreatedAt, SYSUTCDATETIME())
+                WHERE FullName IS NULL
+                   OR LEN(LTRIM(RTRIM(FullName))) = 0
+                   OR EmailVerifiedAt IS NULL;';
 
             IF EXISTS (
                 SELECT 1
@@ -39,7 +41,9 @@ public partial class AddIdentityEmailSecurity : Migration
                 WHERE object_id = OBJECT_ID(N'dbo.IdentityAccounts')
                   AND name = N'FullName'
                   AND is_nullable = 1)
-                ALTER TABLE dbo.IdentityAccounts ALTER COLUMN FullName nvarchar(200) NOT NULL;
+                EXEC sys.sp_executesql N'
+                    ALTER TABLE dbo.IdentityAccounts
+                    ALTER COLUMN FullName nvarchar(200) NOT NULL;';
             """);
 
         migrationBuilder.Sql("""

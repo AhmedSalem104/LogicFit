@@ -36,9 +36,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<IdentityAccount> IdentityAccounts => Set<IdentityAccount>();
     public DbSet<IdentityEmailActionToken> IdentityEmailActionTokens => Set<IdentityEmailActionToken>();
     public DbSet<IdentityWorkspaceSession> IdentityWorkspaceSessions => Set<IdentityWorkspaceSession>();
-    public DbSet<IdentityPasskeyCredential> IdentityPasskeyCredentials => Set<IdentityPasskeyCredential>();
-    public DbSet<IdentityPasskeyCeremony> IdentityPasskeyCeremonies => Set<IdentityPasskeyCeremony>();
-    public DbSet<IdentityPasskeyStepUpSession> IdentityPasskeyStepUpSessions => Set<IdentityPasskeyStepUpSession>();
+    public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
+    public DbSet<OtpStepUpSession> OtpStepUpSessions => Set<OtpStepUpSession>();
     public DbSet<WorkspaceMembership> WorkspaceMemberships => Set<WorkspaceMembership>();
     public DbSet<WorkspaceInvite> WorkspaceInvites => Set<WorkspaceInvite>();
     public DbSet<WorkspaceClientJoinCode> WorkspaceClientJoinCodes => Set<WorkspaceClientJoinCode>();
@@ -413,7 +412,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             || propertyName.Equals("PasswordResetToken", StringComparison.OrdinalIgnoreCase)
             || propertyName.Equals("RefreshToken", StringComparison.OrdinalIgnoreCase)
             || propertyName.Equals("Token", StringComparison.OrdinalIgnoreCase)
-            || propertyName.Equals("TokenHash", StringComparison.OrdinalIgnoreCase);
+            || propertyName.Equals("TokenHash", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Equals("ReplacedByToken", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Equals("CodeHash", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Equals("CodeSalt", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Equals("SessionBinding", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task OnAfterSaveChanges(List<AuditEntry> auditEntries, CancellationToken cancellationToken)

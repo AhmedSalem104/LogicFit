@@ -8,6 +8,7 @@ using LogicFit.Application.Features.Platform.Features.Commands.SetFeatureDepende
 using LogicFit.Application.Features.Platform.Features.Queries.GetFeatureDependencies;
 using LogicFit.Domain.Authorization;
 using LogicFit.API.Features.Platform.Common;
+using LogicFit.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -38,10 +39,12 @@ public class PlatformFeaturesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<ActionResult<FeatureDto>> Create([FromBody] UpsertFeatureCommand command)
         => Ok(await _mediator.Send(command));
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<ActionResult<FeatureDto>> Update(Guid id, [FromBody] UpsertFeatureCommand command)
         => Ok(await _mediator.Send(new UpsertFeatureCommand
         {
@@ -52,6 +55,7 @@ public class PlatformFeaturesController : ControllerBase
         }));
 
     [HttpPost("tenant-overrides")]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<ActionResult<Guid>> SetTenantOverride([FromBody] SetTenantOverrideCommand command)
         => Ok(await _mediator.Send(command));
 
@@ -71,10 +75,12 @@ public class PlatformFeaturesController : ControllerBase
         => Ok(PlatformPaging.Create(await _mediator.Send(new GetQuotaDefinitionsQuery(), cancellationToken), page, pageSize));
 
     [HttpPost("quota-definitions")]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<ActionResult<Guid>> CreateQuotaDefinition([FromBody] UpsertQuotaDefinitionCommand command)
         => Ok(await _mediator.Send(command));
 
     [HttpPut("quota-definitions/{id:guid}")]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<ActionResult<Guid>> UpdateQuotaDefinition(Guid id, [FromBody] UpsertQuotaDefinitionCommand command)
         => Ok(await _mediator.Send(new UpsertQuotaDefinitionCommand { Id = id, FeatureId = command.FeatureId, ResourceKey = command.ResourceKey, Unit = command.Unit, DefaultLimit = command.DefaultLimit, IsActive = command.IsActive }));
 
@@ -86,10 +92,12 @@ public class PlatformFeaturesController : ControllerBase
         => Ok(PlatformPaging.Create(await _mediator.Send(new GetFeatureDependenciesQuery(), cancellationToken), page, pageSize));
 
     [HttpPost("dependencies")]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<ActionResult<Guid>> SetDependency([FromBody] SetFeatureDependencyCommand command)
         => Ok(await _mediator.Send(command));
 
     [HttpDelete("dependencies/{id:guid}")]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<IActionResult> DeleteDependency(Guid id, CancellationToken cancellationToken)
     {
         await _mediator.Send(new DeleteFeatureDependencyCommand(id), cancellationToken);

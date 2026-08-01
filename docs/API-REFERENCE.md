@@ -15,7 +15,9 @@ body/query/form، والاستجابة المعلنة—استخدم
 
 - عنوان Platform API الإنتاجي الحالي: `https://logicfit-saas.runasp.net`.
 - كل المسارات المحمية تستقبل `Authorization: Bearer <access-token>`.
-- تسجيل الدخول وتجديد الجلسة يعيدان Access Token وRefresh Token؛ لا تسجلهما في logs.
+- تسجيل الدخول يعيد Access Token فقط في JSON. يضع الخادم Refresh Token داخل Cookie
+  `HttpOnly; Secure; SameSite=None` ولا يستطيع JavaScript قراءته. `/refresh` يقرأ الـCookie
+  فقط ويدور القيمة مع اكتشاف إعادة الاستخدام؛ لا تسجل أي token في logs.
 - يستخدم Platform API المسار `/api/platform/...`، بينما API الصالات يستخدم `/api/...`.
 - الخطأ `401` يعني جلسة غير موجودة/منتهية أو صلاحية غير كافية؛ `403` منع سياسة؛ `404`
   مورد غير موجود أو Endpoint غير منشور؛ `500/503` خطأ/عدم توفر خدمة على الخادم.
@@ -34,8 +36,9 @@ body/query/form، والاستجابة المعلنة—استخدم
 
 | Method | Endpoint | الوصول | الغرض |
 |---|---|---|---|
-| POST | `/api/platform/auth/login` | عام | دخول مسؤول المنصة بالبريد وكلمة المرور. |
-| POST | `/api/platform/auth/refresh` | Refresh Token | تدوير Access Token. |
+| POST | `/api/platform/auth/login` | عام | فحص البريد وكلمة المرور وإرسال OTP؛ لا يصدر جلسة كاملة. |
+| POST | `/api/platform/auth/otp/verify` | عام + challenge | تحقق OTP وإصدار جلسة Platform وRefresh Cookie. |
+| POST | `/api/platform/auth/refresh` | HttpOnly Cookie | تدوير Access Token وRefresh Cookie. |
 | POST | `/api/platform/auth/logout-all` | منصة مسجلة | إبطال جلسات الحساب من الخادم. |
 
 ## Platform إدارة SaaS

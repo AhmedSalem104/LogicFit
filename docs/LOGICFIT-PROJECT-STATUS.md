@@ -1,14 +1,16 @@
 # LogicFit Project Status
 
-Last reviewed: 2026-07-30
+Last reviewed: 2026-08-01
 
 ## Executive summary
 
 LogicFit is a multi-tenant gym-management SaaS. The platform operator manages gyms, plans, features, payment methods, and manual payment approvals. Each gym receives an isolated tenant workspace for staff and clients. Billing is intentionally manual: no gateway, webhook, or automatic card charge is enabled.
 
-> **Unreleased Issue #113 branch:** email-only identity verification and email password-reset security are implemented in the task branch. They require migration `20260730143000_AddIdentityEmailSecurity`, server-only email/link configuration, frontend integration, CI, review, and deployment before they become production behavior.
->
-> The same branch adds one-use email-bound workspace invitations, owner-controlled client join codes, WebAuthn passkey sign-in/registration/step-up, and additive migrations `20260730150000_AddWorkspaceInvites`, `20260730151000_AddWorkspaceClientJoinCodes`, and `20260730153000_AddIdentityPasskeys`.
+> **Merged to `develop` in Issue #118; not released, deployed, or production-verified:** centralized E.164 OTP, Phone + OTP identity login/recovery,
+> mandatory Platform Admin OTP, OTP step-up, Meta WhatsApp provider integration, and
+> HttpOnly refresh cookies are merged across the Backend, Tenant UI, and Platform UI. Passkey/WebAuthn is removed.
+> Migration `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp` must be reviewed and
+> applied separately after backup; production OTP and Meta secrets are server-only.
 
 ## Product map
 
@@ -77,7 +79,8 @@ sequenceDiagram
 - Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed locally. The third migration adds the tenant row-version used to serialize final membership-capacity approval. `20260729133325_SeedFreelanceSystemRoles` is an idempotent corrective data migration that creates or restores the three freelance system roles and their permission maps; it must be applied explicitly before a Platform Admin approves a freelance workspace. Production schema application remains a protected CI/CD operation with health-check and rollback review.
 - Team membership now uses `/api/freelance/team/invites` and `/api/workspace-invites/{preview,accept}`. The invitation is tied to normalized email, workspace, and role; acceptance requires a verified identity session and a live quota check.
 - Client acquisition supports owner-generated `/api/workspace/client-join-codes` plus preview/join endpoints. Raw codes are returned only once, stored as hashes, expire/revoke, and either activate the client or create a pending owner approval according to workspace settings.
-- Passkey ceremonies are five-minute and one-use; credentials are unique, and sensitive Platform mutations require a recent passkey step-up.
+- OTP challenges are purpose-bound, five-minute, one-use, HMAC-hashed with per-challenge salt, and concurrency protected. Platform login requires password then OTP, while sensitive Platform mutations require a recent OTP step-up bound to the identity and browser session.
+- Refresh tokens are no longer serialized to either Angular app or stored in localStorage. The API transports them only in secure `__Host-` HttpOnly cookies, rotates them on refresh, detects reuse, and revokes all linked sessions on password reset/change.
 
 ## API contracts
 
@@ -112,7 +115,7 @@ flowchart LR
 - `develop` is protected integration; `master` is protected release history.
 - Direct pushes, force pushes, and branch deletion are prohibited.
 - Every non-trivial task requires a GitHub Issue, task branch, tests, documentation impact, and PR.
-- GitHub CI is active on every push and pull request. It restores, builds, tests, validates EF migrations, and builds the unified API Docker image.
+- GitHub CI is active on every push and pull request. It restores, builds, tests, validates EF migrations, and builds the unified API Docker image. Database-backed OTP and refresh-token concurrency tests use an ephemeral SQL Server service in the Linux `verify` job; local Windows runs continue to use LocalDB unless `LOGICFIT_TEST_CONNECTION_STRING` is supplied.
 - Automatic Monster ASP CD is intentionally paused because deployment is currently performed manually from Visual Studio.
 
 ## Current deployment position
