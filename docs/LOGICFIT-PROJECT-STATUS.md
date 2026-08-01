@@ -10,6 +10,11 @@ Last reviewed: 2026-08-02
 > and data migration `20260801214750_NormalizeLegacyIdentityPhonesToE164`. Platform users that
 > still have no linked identity/phone remain a protected `PlatformBootstrap` operation.
 
+> **Issue #147 source implementation; production deployment not yet verified:** the unified API applies compiled pending EF
+> migrations before `DataSeeder` and before accepting traffic. SQL Server application locking
+> serializes IIS workers, bounded timeouts prevent indefinite startup waits, and a second pending
+> check verifies completion. The change has no API or frontend contract impact.
+
 > **Issue #140, task branch:** Platform Owner recovery is now explicit and secret-backed. The
 > legacy hardcoded owner/password seed is removed; a one-run `PlatformBootstrap` operation repairs
 > the owner/IdentityAccount link, verified email and E.164 phone, password, lockout, and old refresh
@@ -111,7 +116,11 @@ sequenceDiagram
 ## Operational rules
 
 - Manual billing is the current and supported payment model.
-- Migrations are reviewed and generated idempotently before production application. The API never applies them from IIS startup and ignores `Database:ApplyMigrationsOnStartup`. Issue #134 adds an explicit protected deployment step that requires a verified BACPAC reference and production database secret, applies pending EF migrations before WebDeploy, verifies no migration remains pending, then requires `/health` after publishing. The workflow change remains unreleased until its PR is reviewed and merged.
+- Migrations are reviewed and generated idempotently before release. Issue #134 provides the
+  preferred protected pre-WebDeploy apply step. Issue #147 adds a default startup safety net that
+  applies compiled pending migrations under a SQL Server application lock before seeding, verifies
+  completion, and then allows the API to serve traffic. Backup, review, CI, health, and rollback
+  controls remain required.
 - Wallet, stock, coupon, approval, and counter-like shared state must use transactions, row versions, unique constraints, or idempotency keys as appropriate.
 - Secrets, publish profiles, passwords, refresh tokens, payment proofs, and reset tokens never enter Git or logs.
 
@@ -296,7 +305,10 @@ Tenant requests resolve a tenant before authorization. Tenant query filters, ten
 - `AddWalletAndStockConcurrency`
 - `AddCouponConcurrency`
 
-Migrations must be applied explicitly during deployment after a tested backup. The API ignores `Database__ApplyMigrationsOnStartup` and does not silently migrate production at startup. The Issue #134 deployment helper applies reviewed pending migrations before WebDeploy and makes post-publish health verification mandatory when migrations are requested.
+Migrations must be reviewed before deployment after a tested backup. The Issue #134 deployment
+helper preferably applies them before WebDeploy. Issue #147 makes the API re-check and apply any
+remaining compiled migrations at startup before seeding; it serializes SQL Server workers and
+fails startup if apply or post-apply verification fails.
 
 ## Verification status
 
@@ -332,6 +344,14 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 - `Scripts/deploy-webdeploy.ps1` performs credential-safe migration and MSDeploy orchestration from one unified release. With `-ApplyMigrations`, it requires a verified BACPAC reference, reviewed SQL, the protected `LOGICFIT_PRODUCTION_DB_CONNECTION`, and a health URL; migration failure stops the rollout before WebDeploy.
 
 ## Change log
+
+### 2026-08-02 — startup migration safety net (Issue #147)
+
+- Added a default-on startup migrator before `DataSeeder`; it applies only migration classes already
+  compiled into the published artifact and never generates source migrations on the server.
+- Added SQL Server application locking, bounded lock/command timeouts, post-apply pending
+  verification, configuration validation, and regression tests. No frontend or API route changes
+  are required.
 
 ### 2026-08-01 — protected migration-aware publishing (Issue #134, task branch)
 

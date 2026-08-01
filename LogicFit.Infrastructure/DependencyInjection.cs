@@ -31,6 +31,13 @@ public static class DependencyInjection
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        services.AddOptions<StartupDatabaseMigrationOptions>()
+            .Bind(configuration.GetSection(StartupDatabaseMigrationOptions.SectionName))
+            .Validate(
+                StartupDatabaseMigrationOptions.IsValid,
+                "Database startup migration timeouts are outside the supported safe range.")
+            .ValidateOnStart();
+        services.AddScoped<StartupDatabaseMigrator>();
         var platformBootstrap = configuration
             .GetSection(PlatformOwnerBootstrapOptions.SectionName)
             .Get<PlatformOwnerBootstrapOptions>() ?? new PlatformOwnerBootstrapOptions();
