@@ -137,9 +137,20 @@ jobs:
               [string]::IsNullOrWhiteSpace($selection[1])) {
             throw "The selected protected publish profile or health URL is missing."
           }
-          [IO.File]::WriteAllBytes(
-            "$env:RUNNER_TEMP/recovery.publishSettings",
-            [Convert]::FromBase64String($selection[0]))
+          $profilePath = "$env:RUNNER_TEMP/recovery.publishSettings"
+          $profilePayload = $selection[0].Trim()
+          if ($profilePayload.StartsWith('<')) {
+            # Older protected environments stored the publish-settings XML directly.
+            [IO.File]::WriteAllText(
+              $profilePath,
+              $profilePayload,
+              [Text.UTF8Encoding]::new($false))
+          }
+          else {
+            [IO.File]::WriteAllBytes(
+              $profilePath,
+              [Convert]::FromBase64String($profilePayload))
+          }
           "RECOVERY_HEALTH_URL=$($selection[1])" >> $env:GITHUB_ENV
 
       - name: Recover production startup configuration
