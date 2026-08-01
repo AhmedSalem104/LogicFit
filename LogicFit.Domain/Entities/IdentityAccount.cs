@@ -19,11 +19,15 @@ public class IdentityAccount : AuditableEntity
     public DateTime? EmailVerifiedAt { get; set; }
     public string? PhoneNumber { get; set; }
     public string? NormalizedPhoneNumber { get; set; }
+    public DateTime? PhoneVerifiedAt { get; set; }
     public string PasswordHash { get; set; } = string.Empty;
     public bool IsActive { get; set; } = true;
+    public int FailedLoginAttempts { get; set; }
+    public DateTime? LockoutEndUtc { get; set; }
     public DateTime? LastLoginAt { get; set; }
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
     public ICollection<WorkspaceMembership> Memberships { get; set; } = new List<WorkspaceMembership>();
     public ICollection<ApplicationRequest> Applications { get; set; } = new List<ApplicationRequest>();
     public ICollection<IdentityEmailActionToken> EmailActionTokens { get; set; } = new List<IdentityEmailActionToken>();
-    public ICollection<IdentityPasskeyCredential> PasskeyCredentials { get; set; } = new List<IdentityPasskeyCredential>();
+    public ICollection<OtpChallenge> OtpChallenges { get; set; } = new List<OtpChallenge>();
 }

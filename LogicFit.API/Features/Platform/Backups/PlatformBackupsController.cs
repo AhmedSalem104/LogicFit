@@ -1,6 +1,7 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Authorization;
 using LogicFit.API.Features.Platform.Common;
+using LogicFit.Infrastructure.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -46,6 +47,7 @@ public sealed class PlatformBackupsController(IBackupService backupService) : Co
     }
 
     [HttpPost]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<ActionResult<BackupRecord>> Create(CancellationToken cancellationToken)
     {
         try

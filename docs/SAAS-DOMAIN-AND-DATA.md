@@ -13,7 +13,16 @@ LogicFit.Tests            اختبارات الانحدار والأمان وق�
 
 ## Identity email-security data (Issue #113, unreleased)
 
-`IdentityAccount` owns the globally unique `NormalizedEmail`, a display name, and `EmailVerifiedAt`. A phone number remains optional contact data only and is not a global login key. `IdentityEmailActionToken` stores the action purpose (`EmailVerification` or `PasswordReset`), SHA-256 token hash, expiry, use/revocation timestamps, IP metadata, and a SQL `rowversion`. It has a unique token-hash index and a lookup index on identity, purpose, and expiry.
+`IdentityAccount` owns globally unique `NormalizedEmail` and, when present, a unique
+E.164 `NormalizedPhoneNumber`, plus separate email/phone verification timestamps.
+`IdentityEmailActionToken` keeps one-use email verification/reset links as SHA-256 hashes.
+`OtpChallenge` stores the identity (optional for enumeration-safe requests), normalized phone,
+purpose, HMAC hash and per-challenge salt, expiry/attempt/resend counters, delivery/provider
+metadata, consume/revoke state, and SQL `rowversion`. `OtpStepUpSession` stores only the hash
+of the short step-up proof and binds it to identity, OTP challenge, browser session, purpose,
+expiry, and one-use/revocation state. `RefreshToken.RowVersion` serializes rotation and reuse
+detection. Migration `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp` removes the
+obsolete Passkey tables and creates these OTP records without changing tenant business data.
 
 Migration `20260730143000_AddIdentityEmailSecurity` is additive and guards for existing production schemas. It marks existing identities verified during backfill so deployed identity users are not locked out, then adds the token table. It is applied separately through the reviewed migration procedure; its `Down` path is intentionally non-destructive.
 

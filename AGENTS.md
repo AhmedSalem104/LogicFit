@@ -119,3 +119,11 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 - The documentation index at `docs/README.md` is the required written hand-off for product flows, permissions, Platform screens, API contracts, domain data, tenant application, and operations; update the affected document in every future change.
 - `docs/API-ENDPOINT-CATALOG.md` is generated from every Tenant and Platform controller by `Scripts/Export-ApiEndpointCatalog.ps1`. Any endpoint, policy, request, or response-contract change must regenerate this catalog in the same task; do not manually maintain endpoint rows.
 - The Platform dashboard assistant is a local, permission-filtered operational guide. It must not invoke a mutation directly, expose secrets, or claim an external LLM integration unless a server-side, reviewed integration is actually added.
+
+### 2026-07-30 — authentication documentation contract
+
+- Any authentication, identity, OTP, session, invite, join, workspace-selection, or access-gate
+  change must update `docs/AUTHENTICATION-AND-WORKSPACE-FLOWS.md`, the generated API catalog,
+  the relevant domain/security/operations documents, and both affected frontend flow/screen
+  references in the same task. Documentation must explicitly distinguish local/unreleased,
+  merged, deployed, and production-verified behavior.

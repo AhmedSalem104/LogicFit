@@ -30,7 +30,7 @@ public sealed class PlatformRolesController(IApplicationDbContext context) : Con
             .Select(x => new { x.Code, x.DisplayName, x.DisplayNameAr, x.Category, x.IsPlatformPermission }).ToListAsync(cancellationToken));
 
     [HttpPut("{id:guid}/permissions")]
-    [Authorize(Policy = PasskeyStepUpRequirement.PolicyName)]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateRolePermissionsRequest request, CancellationToken cancellationToken)
     {
         if (!User.IsInRole(SystemRoles.PlatformOwner)) return Forbid();

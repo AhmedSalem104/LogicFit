@@ -4,6 +4,7 @@ using LogicFit.Application.Features.Identity.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LogicFit.API.Features.WorkspaceInvites;
 
@@ -16,13 +17,23 @@ public sealed class WorkspaceInvitesController : ControllerBase
 
     [HttpPost("preview")]
     [AllowAnonymous]
+    [EnableRateLimiting("invite-acceptance")]
     [ProducesResponseType(typeof(WorkspaceInvitePreviewDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<WorkspaceInvitePreviewDto>> Preview(
         [FromBody] PreviewWorkspaceInviteCommand command, CancellationToken cancellationToken)
         => Ok(await _mediator.Send(command, cancellationToken));
 
+    [HttpPost("otp/request")]
+    [AllowAnonymous]
+    [EnableRateLimiting("otp-request")]
+    [ProducesResponseType(typeof(OtpChallengeDto), StatusCodes.Status202Accepted)]
+    public async Task<ActionResult<OtpChallengeDto>> RequestOtp(
+        [FromBody] RequestWorkspaceInviteOtpCommand command, CancellationToken cancellationToken)
+        => Accepted(await _mediator.Send(command, cancellationToken));
+
     [HttpPost("accept")]
     [AllowAnonymous]
+    [EnableRateLimiting("invite-acceptance")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Accept(
         [FromBody] AcceptWorkspaceInviteCommand command, CancellationToken cancellationToken)

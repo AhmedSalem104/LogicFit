@@ -36,7 +36,7 @@ public class PlatformTenantsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Policy = PasskeyStepUpRequirement.PolicyName)]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(typeof(PlatformTenantDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<PlatformTenantDto>> CreateTenant([FromBody] CreateTenantWithOwnerCommand command)
     {
@@ -45,22 +45,22 @@ public class PlatformTenantsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/approve")]
-    [Authorize(Policy = PasskeyStepUpRequirement.PolicyName)]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(typeof(PlatformTenantDto), StatusCodes.Status200OK)]
     public Task<PlatformTenantDto> Approve(Guid id) => SetStatus(id, TenantStatus.Active);
 
     [HttpPost("{id:guid}/suspend")]
-    [Authorize(Policy = PasskeyStepUpRequirement.PolicyName)]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(typeof(PlatformTenantDto), StatusCodes.Status200OK)]
     public Task<PlatformTenantDto> Suspend(Guid id) => SetStatus(id, TenantStatus.Suspended);
 
     [HttpPost("{id:guid}/activate")]
-    [Authorize(Policy = PasskeyStepUpRequirement.PolicyName)]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(typeof(PlatformTenantDto), StatusCodes.Status200OK)]
     public Task<PlatformTenantDto> Activate(Guid id) => SetStatus(id, TenantStatus.Active);
 
     [HttpPost("{id:guid}/archive")]
-    [Authorize(Policy = PasskeyStepUpRequirement.PolicyName)]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(typeof(PlatformTenantDto), StatusCodes.Status200OK)]
     public Task<PlatformTenantDto> Archive(Guid id) => SetStatus(id, TenantStatus.Archived);
 

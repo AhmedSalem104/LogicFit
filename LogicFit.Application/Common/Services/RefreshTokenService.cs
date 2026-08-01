@@ -46,13 +46,26 @@ public class RefreshTokenService : IRefreshTokenService
 
     public async Task<(User user, RefreshToken newToken)> RotateAsync(string token, string? ipAddress, string expectedSurface, CancellationToken cancellationToken = default)
     {
+        await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
         var existing = await _context.RefreshTokens
             .FirstOrDefaultAsync(t => t.Token == token, cancellationToken);
 
-        if (existing == null || !existing.IsActive || existing.Surface != expectedSurface)
+        if (existing == null || existing.Surface != expectedSurface)
         {
             throw new UnauthorizedException("Invalid or expired refresh token");
         }
+
+        if (existing.RevokedAt.HasValue && !string.IsNullOrWhiteSpace(existing.ReplacedByToken))
+        {
+            // A rotated token was presented again. Treat the entire token family as compromised.
+            await RevokeAllAsync(existing.UserId, ipAddress, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            throw new UnauthorizedException("REFRESH_TOKEN_REUSE_DETECTED");
+        }
+
+        if (!existing.IsActive)
+            throw new UnauthorizedException("Invalid or expired refresh token");
 
         var user = await _context.Users
             .IgnoreQueryFilters()
@@ -68,6 +81,17 @@ public class RefreshTokenService : IRefreshTokenService
         existing.RevokedAt = _dateTimeService.UtcNow;
         existing.RevokedByIp = ipAddress;
         existing.ReplacedByToken = replacement.Token;
+
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw new UnauthorizedException("REFRESH_TOKEN_REUSE_DETECTED");
+        }
 
         return (user, replacement);
     }

@@ -2545,6 +2545,9 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("EmailVerifiedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("FailedLoginAttempts")
+                        .HasColumnType("int");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -2554,6 +2557,9 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LockoutEndUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("NormalizedEmail")
@@ -2573,6 +2579,15 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime?>("PhoneVerifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -2648,167 +2663,6 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.HasIndex("IdentityAccountId", "Purpose", "ExpiresAt");
 
                     b.ToTable("IdentityEmailActionTokens", (string)null);
-                });
-
-            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityPasskeyCeremony", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("IdentityAccountId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("OptionsJson")
-                        .IsRequired()
-                        .HasMaxLength(16000)
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Purpose")
-                        .HasColumnType("int");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UsedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IdentityAccountId", "Purpose", "ExpiresAt");
-
-                    b.ToTable("IdentityPasskeyCeremonies", (string)null);
-                });
-
-            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityPasskeyCredential", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<byte[]>("CredentialId")
-                        .IsRequired()
-                        .HasMaxLength(1024)
-                        .HasColumnType("varbinary(1024)");
-
-                    b.Property<string>("FriendlyName")
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.Property<Guid>("IdentityAccountId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastUsedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<byte[]>("PublicKey")
-                        .IsRequired()
-                        .HasMaxLength(4096)
-                        .HasColumnType("varbinary(4096)");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<long>("SignatureCounter")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<byte[]>("UserHandle")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("varbinary(128)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CredentialId")
-                        .IsUnique();
-
-                    b.HasIndex("IdentityAccountId", "IsActive");
-
-                    b.ToTable("IdentityPasskeyCredentials", (string)null);
-                });
-
-            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityPasskeyStepUpSession", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("IdentityAccountId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("RevokedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique();
-
-                    b.HasIndex("IdentityAccountId", "ExpiresAt");
-
-                    b.ToTable("IdentityPasskeyStepUpSessions", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.IdentityWorkspaceSession", b =>
@@ -3548,6 +3402,168 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("NutrientDefinitions", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.OtpChallenge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("CodeSalt")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("ConsumedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DeliveryStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("IdentityAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("LastSentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NormalizedPhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ProviderMessageId")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Purpose")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ResendCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SessionBinding")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdentityAccountId");
+
+                    b.HasIndex("ProviderMessageId");
+
+                    b.HasIndex("NormalizedPhoneNumber", "Purpose", "Status");
+
+                    b.ToTable("OtpChallenges", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.OtpStepUpSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("IdentityAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OtpChallengeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Purpose")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SessionBinding")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OtpChallengeId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("IdentityAccountId", "ExpiresAtUtc");
+
+                    b.ToTable("OtpStepUpSessions", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.OutboxMessage", b =>
@@ -4521,6 +4537,12 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Property<string>("RevokedByIp")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("Surface")
                         .IsRequired()
@@ -6202,6 +6224,9 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<int>("FailedLoginAttempts")
+                        .HasColumnType("int");
+
                     b.Property<Guid?>("IdentityAccountId")
                         .HasColumnType("uniqueidentifier");
 
@@ -6210,6 +6235,9 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LockoutEndUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("MustChangePassword")
                         .HasColumnType("bit");
@@ -7701,39 +7729,6 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("IdentityAccount");
                 });
 
-            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityPasskeyCeremony", b =>
-                {
-                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
-                        .WithMany()
-                        .HasForeignKey("IdentityAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("IdentityAccount");
-                });
-
-            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityPasskeyCredential", b =>
-                {
-                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
-                        .WithMany("PasskeyCredentials")
-                        .HasForeignKey("IdentityAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("IdentityAccount");
-                });
-
-            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityPasskeyStepUpSession", b =>
-                {
-                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
-                        .WithMany()
-                        .HasForeignKey("IdentityAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("IdentityAccount");
-                });
-
             modelBuilder.Entity("LogicFit.Domain.Entities.IdentityWorkspaceSession", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
@@ -7882,6 +7877,31 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("Recipient");
 
                     b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.OtpChallenge", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
+                        .WithMany("OtpChallenges")
+                        .HasForeignKey("IdentityAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("IdentityAccount");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.OtpStepUpSession", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", null)
+                        .WithMany()
+                        .HasForeignKey("IdentityAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LogicFit.Domain.Entities.OtpChallenge", null)
+                        .WithMany()
+                        .HasForeignKey("OtpChallengeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Payment", b =>
@@ -8763,7 +8783,7 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Navigation("Memberships");
 
-                    b.Navigation("PasskeyCredentials");
+                    b.Navigation("OtpChallenges");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Invoice", b =>

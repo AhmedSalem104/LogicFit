@@ -1,10 +1,13 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.Identity;
+using LogicFit.Application.Features.Identity.DTOs;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using EmailTokenGenerator = LogicFit.Application.Features.Identity.IdentityEmailActionToken;
 
 namespace LogicFit.Application.Features.WorkspaceInvites.Commands.AcceptWorkspaceInvite;
@@ -15,10 +18,13 @@ public sealed class AcceptWorkspaceInviteCommandHandler : IRequestHandler<Accept
     private readonly IApplicationDbContext _context;
     private readonly IDateTimeService _dateTimeService;
     private readonly IWorkspaceMembershipQuotaService _quotaService;
+    private readonly IOtpService _otp;
+    private readonly OtpOptions _otpOptions;
 
     public AcceptWorkspaceInviteCommandHandler(IApplicationDbContext context, IDateTimeService dateTimeService,
-        IWorkspaceMembershipQuotaService quotaService)
-        => (_context, _dateTimeService, _quotaService) = (context, dateTimeService, quotaService);
+        IWorkspaceMembershipQuotaService quotaService, IOtpService otp, IOptions<OtpOptions> otpOptions)
+        => (_context, _dateTimeService, _quotaService, _otp, _otpOptions) =
+            (context, dateTimeService, quotaService, otp, otpOptions.Value);
 
     public async Task Handle(AcceptWorkspaceInviteCommand request, CancellationToken cancellationToken)
     {
@@ -37,6 +43,15 @@ public sealed class AcceptWorkspaceInviteCommandHandler : IRequestHandler<Accept
             throw new ConflictException("This invitation is invalid, expired, or has already been used.");
         if (!string.Equals(invite.NormalizedEmail, identity.NormalizedEmail, StringComparison.Ordinal))
             throw new ForbiddenException("Sign in with the invited email address to accept this invitation.");
+        if (_otpOptions.RequireForInviteAcceptance)
+        {
+            if (!request.ChallengeId.HasValue || string.IsNullOrWhiteSpace(request.Code))
+                throw new UnauthorizedException("INVITE_OTP_REQUIRED");
+            var verified = await _otp.VerifyAsync(request.ChallengeId.Value, request.Code,
+                OtpPurpose.InviteAcceptance, request.SessionBinding, cancellationToken);
+            if (verified.IdentityAccountId != identity.Id)
+                throw new UnauthorizedException("OTP_INVALID");
+        }
         if (invite.Tenant.IsDeleted || invite.Tenant.Status is TenantStatus.Suspended or TenantStatus.Archived or TenantStatus.ProvisioningFailed)
             throw new ConflictException("This workspace is not available for new memberships.");
 
@@ -87,5 +102,33 @@ public sealed class AcceptWorkspaceInviteCommandHandler : IRequestHandler<Accept
             IdempotencyKey = $"workspace-invite:{invite.Id}:accepted"
         });
         await _context.SaveChangesAsync(cancellationToken);
+    }
+}
+
+public sealed class RequestWorkspaceInviteOtpCommandHandler : IRequestHandler<RequestWorkspaceInviteOtpCommand, OtpChallengeDto>
+{
+    private readonly IApplicationDbContext _context;
+    private readonly IDateTimeService _clock;
+    private readonly IOtpService _otp;
+
+    public RequestWorkspaceInviteOtpCommandHandler(
+        IApplicationDbContext context, IDateTimeService clock, IOtpService otp)
+        => (_context, _clock, _otp) = (context, clock, otp);
+
+    public async Task<OtpChallengeDto> Handle(RequestWorkspaceInviteOtpCommand request, CancellationToken cancellationToken)
+    {
+        var session = await IdentityWorkspaceSessionResolver.GetActiveAsync(
+            _context, _clock, request.WorkspaceSelectionToken, cancellationToken);
+        var identity = await _context.IdentityAccounts.SingleAsync(
+            x => x.Id == session.IdentityAccountId && x.IsActive, cancellationToken);
+        var invite = await _context.WorkspaceInvites.SingleOrDefaultAsync(
+            x => x.TokenHash == EmailTokenGenerator.Hash(request.Token), cancellationToken);
+        if (invite is null || invite.Status != WorkspaceInviteStatus.Pending || invite.ExpiresAt <= _clock.UtcNow ||
+            !string.Equals(invite.NormalizedEmail, identity.NormalizedEmail, StringComparison.Ordinal))
+            throw new UnauthorizedException("Invitation is invalid or expired.");
+        if (identity.PhoneVerifiedAt is null || string.IsNullOrWhiteSpace(identity.NormalizedPhoneNumber))
+            throw new ConflictException("VERIFIED_PHONE_REQUIRED");
+        return await _otp.RequestAsync(identity.NormalizedPhoneNumber, OtpPurpose.InviteAcceptance,
+            identity.Id, request.SessionBinding, cancellationToken);
     }
 }

@@ -7,6 +7,7 @@ using LogicFit.Domain.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LogicFit.API.Features.WorkspaceClientJoins;
 
@@ -35,6 +36,7 @@ public sealed class WorkspaceClientJoinCodesController : ControllerBase
 
     [HttpPost("preview")]
     [AllowAnonymous]
+    [EnableRateLimiting("identity-public-join")]
     [ProducesResponseType(typeof(WorkspaceClientJoinPreviewDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<WorkspaceClientJoinPreviewDto>> Preview(
         [FromBody] PreviewWorkspaceClientJoinCommand command, CancellationToken cancellationToken)
@@ -42,6 +44,7 @@ public sealed class WorkspaceClientJoinCodesController : ControllerBase
 
     [HttpPost("join")]
     [AllowAnonymous]
+    [EnableRateLimiting("identity-public-join")]
     [ProducesResponseType(typeof(ClientJoinResultDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<ClientJoinResultDto>> Join(
         [FromBody] JoinWorkspaceAsClientCommand command, CancellationToken cancellationToken)
