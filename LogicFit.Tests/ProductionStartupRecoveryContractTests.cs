@@ -30,7 +30,8 @@ public sealed class ProductionStartupRecoveryContractTests
         Assert.Contains("LOGICFIT_OTP_HMAC_SECRET", workflow);
         Assert.Contains("LOGICFIT_JWT_SECRET", workflow);
         Assert.Contains("LOGICFIT_PASSWORD_RESET_SECRET", workflow);
-        Assert.Contains("$profilePayload.StartsWith('<')", workflow);
+        Assert.Contains("$xmlStart = $profilePayload.IndexOf('<')", workflow);
+        Assert.Contains("$profileDocument = [xml]$profilePayload", workflow);
         Assert.Contains("[Convert]::FromBase64String($profilePayload)", workflow);
 
         Assert.Contains("does not match expected site", recovery);

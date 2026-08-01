@@ -139,17 +139,28 @@ jobs:
           }
           $profilePath = "$env:RUNNER_TEMP/recovery.publishSettings"
           $profilePayload = $selection[0].Trim()
-          if ($profilePayload.StartsWith('<')) {
+          $xmlStart = $profilePayload.IndexOf('<')
+          if ($xmlStart -ge 0) {
             # Older protected environments stored the publish-settings XML directly.
+            $profilePayload = $profilePayload.Substring($xmlStart)
+            $profileDocument = [xml]$profilePayload
+            if ($null -eq $profileDocument.publishData.publishProfile) {
+              throw "The selected protected publish profile XML is invalid."
+            }
             [IO.File]::WriteAllText(
               $profilePath,
               $profilePayload,
               [Text.UTF8Encoding]::new($false))
           }
           else {
-            [IO.File]::WriteAllBytes(
-              $profilePath,
-              [Convert]::FromBase64String($profilePayload))
+            try {
+              [IO.File]::WriteAllBytes(
+                $profilePath,
+                [Convert]::FromBase64String($profilePayload))
+            }
+            catch [FormatException] {
+              throw "The selected protected publish profile is neither Base64 nor publish-settings XML."
+            }
           }
           "RECOVERY_HEALTH_URL=$($selection[1])" >> $env:GITHUB_ENV
 
