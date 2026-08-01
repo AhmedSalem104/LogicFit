@@ -18,6 +18,7 @@ using LogicFit.Infrastructure.Services;
 using LogicFit.Tests.Fakes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -474,8 +475,12 @@ public sealed class OtpSecurityTests
             var databaseName = $"LogicFitOtpTests_{Guid.NewGuid():N}";
             var clock = new MutableClock();
             var current = new FakeCurrentUser();
-            var connectionString =
-                $"Server=(localdb)\\mssqllocaldb;Database={databaseName};Trusted_Connection=True;MultipleActiveResultSets=True;TrustServerCertificate=True";
+            var baseConnectionString = Environment.GetEnvironmentVariable("LOGICFIT_TEST_CONNECTION_STRING")
+                ?? "Server=(localdb)\\mssqllocaldb;Database=master;Trusted_Connection=True;MultipleActiveResultSets=True;TrustServerCertificate=True";
+            var connectionString = new SqlConnectionStringBuilder(baseConnectionString)
+            {
+                InitialCatalog = databaseName
+            }.ConnectionString;
             var options = new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connectionString).Options;
             var db = new ApplicationDbContext(options, new FakeTenantService(), current, clock);
             await db.Database.EnsureCreatedAsync();
