@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LogicFit.Application.Features.Identity;
 
-/// <summary>Creates the same short-lived workspace selection context after password or verified passkey authentication.</summary>
+/// <summary>Creates the same short-lived workspace selection context after password or verified OTP authentication.</summary>
 public sealed class IdentityWorkspaceSessionIssuer : IIdentityWorkspaceSessionIssuer
 {
     private readonly IApplicationDbContext _context;

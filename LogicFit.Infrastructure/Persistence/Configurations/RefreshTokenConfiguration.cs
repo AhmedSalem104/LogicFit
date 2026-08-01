@@ -16,6 +16,7 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
         builder.Property(e => e.CreatedByIp).HasMaxLength(64);
         builder.Property(e => e.RevokedByIp).HasMaxLength(64);
         builder.Property(e => e.ReplacedByToken).HasMaxLength(256);
+        builder.Property(e => e.RowVersion).IsRowVersion().IsConcurrencyToken();
 
         builder.Ignore(e => e.IsActive);
 

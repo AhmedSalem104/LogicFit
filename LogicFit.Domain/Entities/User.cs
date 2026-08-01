@@ -14,6 +14,8 @@ public class User : AuditableEntity, ITenantEntity, ISoftDeletable
     public string PasswordHash { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public bool IsActive { get; set; } = true;
+    public int FailedLoginAttempts { get; set; }
+    public DateTime? LockoutEndUtc { get; set; }
     /// <summary>When true, the user may sign in but must replace the temporary password.</summary>
     public bool MustChangePassword { get; set; }
     /// <summary>Opaque QR token used for staff (employees/coaches) gate attendance.</summary>

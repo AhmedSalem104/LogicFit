@@ -66,18 +66,43 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
 
         if (user == null)
         {
+            SecurityAuditLog.Add(_context, _currentUserService, _dateTimeService,
+                "TenantPasswordLoginFailed", false, tenantId: tenantId);
+            await _context.SaveChangesAsync(cancellationToken);
             throw new UnauthorizedException("Invalid credentials");
         }
 
         if (!user.IsActive)
         {
-            throw new UnauthorizedException("Account is deactivated");
+            SecurityAuditLog.Add(_context, _currentUserService, _dateTimeService,
+                "TenantPasswordLoginFailed", false, user.Id, tenantId);
+            await _context.SaveChangesAsync(cancellationToken);
+            throw new UnauthorizedException("Invalid credentials");
+        }
+
+        if (user.LockoutEndUtc > _dateTimeService.UtcNow)
+        {
+            SecurityAuditLog.Add(_context, _currentUserService, _dateTimeService,
+                "TenantPasswordLoginFailed", false, user.Id, tenantId);
+            await _context.SaveChangesAsync(cancellationToken);
+            throw new UnauthorizedException("Invalid credentials");
         }
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
+            user.FailedLoginAttempts++;
+            if (user.FailedLoginAttempts >= 5)
+            {
+                user.LockoutEndUtc = _dateTimeService.UtcNow.AddMinutes(15);
+                user.FailedLoginAttempts = 0;
+            }
+            SecurityAuditLog.Add(_context, _currentUserService, _dateTimeService,
+                "TenantPasswordLoginFailed", false, user.Id, tenantId);
+            await _context.SaveChangesAsync(cancellationToken);
             throw new UnauthorizedException("Invalid credentials");
         }
+        user.FailedLoginAttempts = 0;
+        user.LockoutEndUtc = null;
 
         // Compatibility bridge: existing tenant accounts continue to authenticate exactly as
         // before, while their next successful sign-in creates/links the global identity and an
@@ -99,6 +124,8 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
 
         var refreshToken = _refreshTokenService.Issue(
             user, _currentUserService.IpAddress, Common.Services.RefreshTokenService.SurfaceTenant);
+        SecurityAuditLog.Add(_context, _currentUserService, _dateTimeService,
+            "TenantPasswordLoginSucceeded", true, user.Id, tenantId);
         await _context.SaveChangesAsync(cancellationToken);
 
         return new AuthResponseDto
