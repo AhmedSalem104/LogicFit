@@ -2,6 +2,11 @@
 
 Last reviewed: 2026-08-01
 
+> **Issue #140, task branch:** Platform Owner recovery is now explicit and secret-backed. The
+> legacy hardcoded owner/password seed is removed; a one-run `PlatformBootstrap` operation repairs
+> the owner/IdentityAccount link, verified email and E.164 phone, password, lockout, and old refresh
+> sessions without logging credentials. No API or schema change is introduced.
+
 ## Executive summary
 
 LogicFit is a multi-tenant gym-management SaaS. The platform operator manages gyms, plans, features, payment methods, and manual payment approvals. Each gym receives an isolated tenant workspace for staff and clients. Billing is intentionally manual: no gateway, webhook, or automatic card charge is enabled.

@@ -294,10 +294,13 @@ ASPNETCORE_ENVIRONMENT=Development dotnet ef database update \
 
 ### 4) Run
 ```bash
-dotnet run --project LogicFit.API            # Unified API (seeds RBAC, plans, platform owner on first run)
+dotnet run --project LogicFit.API            # Unified API (seeds reference RBAC/plans)
 ```
 
-**Default platform login** (change immediately): `owner@platform.local` / `ChangeMe#12345`
+There is no default Platform Owner credential. Initial creation or legacy repair requires the
+temporary server-secret `PlatformBootstrap` procedure documented in
+[`docs/OPERATIONS-AND-DEPLOYMENT.md`](docs/OPERATIONS-AND-DEPLOYMENT.md); remove its secrets after
+the verified one-time run.
 **Health check**: `GET /health` on either API.
 
 ---
