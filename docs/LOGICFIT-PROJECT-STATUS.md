@@ -1,14 +1,14 @@
 # LogicFit Project Status
 
-Last reviewed: 2026-07-30
+Last reviewed: 2026-08-01
 
 ## Executive summary
 
 LogicFit is a multi-tenant gym-management SaaS. The platform operator manages gyms, plans, features, payment methods, and manual payment approvals. Each gym receives an isolated tenant workspace for staff and clients. Billing is intentionally manual: no gateway, webhook, or automatic card charge is enabled.
 
-> **Unreleased Issue #118:** centralized E.164 OTP, Phone + OTP identity login/recovery,
+> **Merged to `develop` in Issue #118; not released, deployed, or production-verified:** centralized E.164 OTP, Phone + OTP identity login/recovery,
 > mandatory Platform Admin OTP, OTP step-up, Meta WhatsApp provider integration, and
-> HttpOnly refresh cookies are implemented locally for review. Passkey/WebAuthn is removed.
+> HttpOnly refresh cookies are merged across the Backend, Tenant UI, and Platform UI. Passkey/WebAuthn is removed.
 > Migration `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp` must be reviewed and
 > applied separately after backup; production OTP and Meta secrets are server-only.
 
