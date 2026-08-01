@@ -65,7 +65,10 @@ public class GetEmployeesQueryHandler : IRequestHandler<GetEmployeesQuery, List<
             EmergencyContactName = e.EmergencyContactName,
             EmergencyContactPhone = e.EmergencyContactPhone,
             Qualifications = e.Qualifications,
-            BranchIds = e.Branches.Select(b => b.BranchId).ToList()
+            BranchIds = e.Branches.Select(b => b.BranchId).ToList(),
+            QrCode = e.QrCode,
+            QrGeneratedAt = e.QrGeneratedAt,
+            QrRevokedAt = e.QrRevokedAt
         }).ToList();
     }
 }

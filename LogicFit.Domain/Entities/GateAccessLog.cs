@@ -6,6 +6,8 @@ namespace LogicFit.Domain.Entities;
 public class GateAccessLog : TenantAuditableEntity
 {
     public Guid? ClientId { get; set; }
+    public Guid? StaffUserId { get; set; }
+    public string? SubjectType { get; set; }
     public Guid? BranchId { get; set; }
     public Guid? MembershipCardId { get; set; }
     public DateTime AccessTime { get; set; }

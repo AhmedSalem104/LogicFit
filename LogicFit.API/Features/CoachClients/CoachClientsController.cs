@@ -14,7 +14,7 @@ namespace LogicFit.API.Features.CoachClients;
 
 [ApiController]
 [Route("api/coach-clients")]
-[Authorize(Policy = Permissions.ManageCoaches)]
+[Authorize]
 public class CoachClientsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -30,6 +30,7 @@ public class CoachClientsController : ControllerBase
     /// - Coach: sees only their own trainees
     /// </summary>
     [HttpGet]
+    [Authorize(Policy = Permissions.ViewMembers)]
     public async Task<ActionResult<List<CoachClientDto>>> GetCoachClients(
         [FromQuery] Guid? coachId,
         [FromQuery] bool? isActive = true)
@@ -46,6 +47,7 @@ public class CoachClientsController : ControllerBase
     /// Get a specific coach-client relationship by ID
     /// </summary>
     [HttpGet("{id}")]
+    [Authorize(Policy = Permissions.ViewMembers)]
     public async Task<ActionResult<CoachClientDto>> GetCoachClientById(Guid id)
     {
         var result = await _mediator.Send(new GetCoachClientByIdQuery { Id = id });
@@ -59,7 +61,8 @@ public class CoachClientsController : ControllerBase
     /// Creates a new client account and automatically assigns to the logged-in coach
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<Guid>> AddTrainee(AddTraineeCommand command)
+    [Authorize(Policy = Permissions.ManageCoaches)]
+    public async Task<ActionResult<AddTraineeResult>> AddTrainee(AddTraineeCommand command)
     {
         var id = await _mediator.Send(command);
         return Ok(id);
@@ -71,6 +74,7 @@ public class CoachClientsController : ControllerBase
     /// - Coach: can only assign to self (leave coachId null)
     /// </summary>
     [HttpPost("assign")]
+    [Authorize(Policy = Permissions.ManageCoaches)]
     public async Task<ActionResult<Guid>> AssignClientToCoach(AssignClientToCoachCommand command)
     {
         var id = await _mediator.Send(command);
@@ -83,6 +87,7 @@ public class CoachClientsController : ControllerBase
     /// - Activate/deactivate the relationship (IsActive)
     /// </summary>
     [HttpPut("{id}")]
+    [Authorize(Policy = Permissions.ManageCoaches)]
     public async Task<ActionResult> UpdateCoachClient(Guid id, [FromBody] UpdateCoachClientCommand command)
     {
         command.Id = id;
@@ -98,6 +103,7 @@ public class CoachClientsController : ControllerBase
     /// - Coach: can only unassign their own clients
     /// </summary>
     [HttpDelete("{clientId}")]
+    [Authorize(Policy = Permissions.ManageCoaches)]
     public async Task<ActionResult> UnassignClientFromCoach(Guid clientId)
     {
         await _mediator.Send(new UnassignClientFromCoachCommand { ClientId = clientId });

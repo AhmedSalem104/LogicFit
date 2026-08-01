@@ -9,6 +9,10 @@ public class CoachDto
     public bool IsActive { get; set; }
     public CoachProfileDto? Profile { get; set; }
     public int TraineeCount { get; set; }
+    public string? StaffQrCode { get; set; }
+    public DateTime? StaffQrGeneratedAt { get; set; }
+    public DateTime? StaffQrRevokedAt { get; set; }
+    public bool HasActiveQr => !string.IsNullOrWhiteSpace(StaffQrCode) && !StaffQrRevokedAt.HasValue;
 }
 
 public class CoachProfileDto

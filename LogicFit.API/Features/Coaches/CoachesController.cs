@@ -8,6 +8,9 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using LogicFit.Domain.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using LogicFit.Application.Common.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using LogicFit.Domain.Exceptions;
 
 namespace LogicFit.API.Features.Coaches;
 
@@ -17,10 +20,14 @@ namespace LogicFit.API.Features.Coaches;
 public class CoachesController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenant;
+    private readonly IDateTimeService _clock;
 
-    public CoachesController(IMediator mediator)
+    public CoachesController(IMediator mediator, IApplicationDbContext context, ITenantService tenant, IDateTimeService clock)
     {
         _mediator = mediator;
+        _context = context; _tenant = tenant; _clock = clock;
     }
 
     [HttpGet]
@@ -65,5 +72,20 @@ public class CoachesController : ControllerBase
     {
         await _mediator.Send(new DeleteCoachCommand { Id = id });
         return NoContent();
+    }
+
+    [HttpPost("{id}/qr/regenerate")]
+    public async Task<ActionResult<object>> RegenerateQr(Guid id, CancellationToken ct)
+    {
+        var coach = await _context.Users.FirstOrDefaultAsync(u => u.Id == id && u.TenantId == _tenant.GetCurrentTenantId() && u.Role == LogicFit.Domain.Enums.UserRole.Coach, ct) ?? throw new NotFoundException("Coach", id);
+        coach.StaffQrCode = $"staff:{coach.TenantId:N}:{Guid.NewGuid():N}"; coach.StaffQrGeneratedAt = _clock.UtcNow; coach.StaffQrRevokedAt = null;
+        await _context.SaveChangesAsync(ct); return Ok(new { coach.Id, qrCode = coach.StaffQrCode, coach.StaffQrGeneratedAt });
+    }
+
+    [HttpPost("{id}/qr/revoke")]
+    public async Task<IActionResult> RevokeQr(Guid id, CancellationToken ct)
+    {
+        var coach = await _context.Users.FirstOrDefaultAsync(u => u.Id == id && u.TenantId == _tenant.GetCurrentTenantId() && u.Role == LogicFit.Domain.Enums.UserRole.Coach, ct) ?? throw new NotFoundException("Coach", id);
+        coach.StaffQrRevokedAt = _clock.UtcNow; await _context.SaveChangesAsync(ct); return NoContent();
     }
 }

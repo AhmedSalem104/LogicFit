@@ -32,9 +32,14 @@ public class UpdateGymProfileCommandHandler : IRequestHandler<UpdateGymProfileCo
         // white-label fields (app name, custom fonts/CSS, invoice logo, support branding) require the
         // WhiteLabel feature; pointing the gym at a custom domain requires the CustomDomain feature.
         // Only enforce when those specific fields are actually being changed.
+        // Empty values are emitted by the settings form for untouched optional
+        // fields. They must not turn a color/profile update into a paid
+        // WhiteLabel operation. Non-empty branding changes still require the
+        // WhiteLabel feature; clearing an existing value remains allowed.
         var setsWhiteLabel =
-            request.AppName != null || request.FontFamily != null || request.CustomCss != null ||
-            request.InvoiceLogoUrl != null || request.SupportPhone != null || request.SupportEmail != null;
+            !string.IsNullOrWhiteSpace(request.AppName) || !string.IsNullOrWhiteSpace(request.FontFamily) ||
+            !string.IsNullOrWhiteSpace(request.CustomCss) || !string.IsNullOrWhiteSpace(request.InvoiceLogoUrl) ||
+            !string.IsNullOrWhiteSpace(request.SupportPhone) || !string.IsNullOrWhiteSpace(request.SupportEmail);
         if (setsWhiteLabel)
         {
             await _subscriptionGuard.EnsureFeatureAsync(FeatureCodes.WhiteLabel, cancellationToken);
@@ -84,6 +89,7 @@ public class UpdateGymProfileCommandHandler : IRequestHandler<UpdateGymProfileCo
         {
             request.PrimaryColor, request.SecondaryColor, request.AppName, request.FontFamily,
             request.CustomCss, request.InvoiceLogoUrl, request.SupportPhone, request.SupportEmail,
+            request.FacebookUrl, request.InstagramUrl, request.WebsiteUrl, request.OpeningHours,
             request.LogoDarkUrl, request.LogoLightUrl, request.LogoIconUrl, request.FaviconUrl,
             request.LoginBackgroundUrl, request.DashboardBannerUrl, request.PrimaryHoverColor,
             request.PrimaryForegroundColor, request.SecondaryHoverColor, request.SecondaryForegroundColor,
@@ -134,6 +140,16 @@ public class UpdateGymProfileCommandHandler : IRequestHandler<UpdateGymProfileCo
             if (request.InvoiceLogoUrl != null) tenant.BrandingSettings.InvoiceLogoUrl = request.InvoiceLogoUrl;
             if (request.SupportPhone != null) tenant.BrandingSettings.SupportPhone = request.SupportPhone;
             if (request.SupportEmail != null) tenant.BrandingSettings.SupportEmail = request.SupportEmail;
+            if (request.FacebookUrl != null) tenant.BrandingSettings.FacebookUrl = request.FacebookUrl;
+            if (request.InstagramUrl != null) tenant.BrandingSettings.InstagramUrl = request.InstagramUrl;
+            if (request.WebsiteUrl != null) tenant.BrandingSettings.WebsiteUrl = request.WebsiteUrl;
+            if (request.OpeningHours != null) tenant.BrandingSettings.OpeningHours = request.OpeningHours;
+
+            // BrandingSettings is stored through an EF value converter. EF can
+            // miss in-place mutations of a mutable converted object, so replace
+            // it with a detached copy to force a reliable column update.
+            tenant.BrandingSettings = JsonSerializer.Deserialize<BrandingSettings>(
+                JsonSerializer.Serialize(tenant.BrandingSettings));
         }
 
         await _context.SaveChangesAsync(cancellationToken);

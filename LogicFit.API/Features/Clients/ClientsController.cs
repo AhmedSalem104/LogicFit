@@ -4,6 +4,7 @@ using LogicFit.Application.Features.Clients.Commands.UpdateClient;
 using LogicFit.Application.Features.Clients.DTOs;
 using LogicFit.Application.Features.Clients.Queries.GetClientById;
 using LogicFit.Application.Features.Clients.Queries.GetClients;
+using LogicFit.Application.Features.Clients.Commands.OnboardClient;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using LogicFit.Domain.Authorization;
@@ -13,7 +14,7 @@ namespace LogicFit.API.Features.Clients;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = Permissions.ManageMembers)]
+[Authorize]
 public class ClientsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -24,6 +25,7 @@ public class ClientsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = Permissions.ViewMembers)]
     public async Task<ActionResult<List<ClientDto>>> GetClients(
         [FromQuery] string? searchTerm,
         [FromQuery] bool? isActive)
@@ -37,6 +39,7 @@ public class ClientsController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Policy = Permissions.ViewMembers)]
     public async Task<ActionResult<ClientDto>> GetClient(Guid id)
     {
         var result = await _mediator.Send(new GetClientByIdQuery { Id = id });
@@ -46,13 +49,20 @@ public class ClientsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.CreateMembers)]
     public async Task<ActionResult<Guid>> CreateClient(CreateClientCommand command)
     {
         var id = await _mediator.Send(command);
         return Ok(id);
     }
 
+    [HttpPost("onboard")]
+    [Authorize(Policy = Permissions.CreateMembers)]
+    public async Task<ActionResult<OnboardClientResult>> OnboardClient(OnboardClientCommand command)
+        => Ok(await _mediator.Send(command));
+
     [HttpPut("{id}")]
+    [Authorize(Policy = Permissions.UpdateMembers)]
     public async Task<ActionResult> UpdateClient(Guid id, UpdateClientCommand command)
     {
         command.Id = id;
@@ -61,6 +71,7 @@ public class ClientsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = Permissions.DeleteMembers)]
     public async Task<ActionResult> DeleteClient(Guid id)
     {
         await _mediator.Send(new DeleteClientCommand { Id = id });

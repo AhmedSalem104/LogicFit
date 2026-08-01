@@ -69,3 +69,4 @@ test_profile.jpg
 **/PublishProfiles/
 *.pubxml
 *.pubxml.user
+/LogicFit.API/appsettings.json

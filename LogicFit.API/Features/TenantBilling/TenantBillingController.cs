@@ -17,6 +17,7 @@ namespace LogicFit.API.Features.TenantBilling;
 [Route("api/tenant")]
 [Authorize(Policy = Permissions.ManageTenantBilling)]
 [AllowWhenPendingApproval] // reachable while the gym is PendingApproval so the owner can pay & onboard
+[AllowWhenWorkspaceReadOnly]
 public class TenantBillingController : ControllerBase
 {
     private readonly IMediator _mediator;

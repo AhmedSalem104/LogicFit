@@ -34,7 +34,7 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
 
         var currentVersion = await _context.Users
             .IgnoreQueryFilters()
-            .Where(u => u.Id == userId && !u.IsDeleted)
+            .Where(u => u.Id == userId && u.IsActive && !u.IsDeleted)
             .Select(u => (int?)u.PermissionsVersion)
             .FirstOrDefaultAsync();
 
@@ -59,6 +59,8 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
         foreach (var claim in permissions)
         {
             if (claim.Value == requirement.Permission ||
+                (claim.Value == Permissions.ManageMembers &&
+                 (requirement.Permission == Permissions.CreateMembers || requirement.Permission == Permissions.UpdateMembers || requirement.Permission == Permissions.DeleteMembers)) ||
                 claim.Value == Permissions.ManagePlatform)
             {
                 context.Succeed(requirement);

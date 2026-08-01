@@ -2,54 +2,86 @@ using LogicFit.Domain.Enums;
 
 namespace LogicFit.Application.Common.Services;
 
-/// <summary>The aggregated access-relevant state of a gym: its own status, its latest subscription
-/// status, whether it exists, and why it was suspended. Assembled by <c>ITenantAccessGuard</c>.</summary>
+/// <summary>The workspace and subscription state required for access control.</summary>
 public sealed record TenantAccessState(
     bool TenantExists,
     TenantStatus TenantStatus,
     TenantSubscriptionStatus? SubscriptionStatus,
-    SuspensionReason? SuspensionReason);
+    SuspensionReason? SuspensionReason,
+    WorkspaceType WorkspaceType = WorkspaceType.Gym);
 
-/// <summary>A hard block: the tenant may not be served at all. Carries the error code + HTTP status.</summary>
+/// <summary>A workspace-wide hard block with its stable machine-readable code.</summary>
 public sealed record TenantBlock(string Code, int HttpStatus);
 
+/// <summary>Effective workspace access after workspace and subscription rules are applied.</summary>
+public enum TenantAccessMode
+{
+    Full,
+    BillingOnly,
+    ReadOnly,
+    Blocked
+}
+
+public sealed record TenantAccessDecision(TenantAccessMode Mode, TenantBlock? Block = null);
+
 /// <summary>
-/// Pure, DB-free access rules over a <see cref="TenantAccessState"/>. Decides ONLY allowed-vs-hard-blocked
-/// (business nuances like "PendingApproval → billing only" live in the authorization layer, not here).
+/// DB-free workspace access policy. Its precedence is fixed: workspace status, membership status
+/// (enforced by authorization), subscription status, then role/permission checks.
 /// </summary>
 public static class TenantAccessPolicy
 {
-    /// <summary>Returns a <see cref="TenantBlock"/> if the gym must be hard-blocked, otherwise null.</summary>
-    public static TenantBlock? EvaluateHardBlock(TenantAccessState s)
+    public static TenantAccessDecision Evaluate(TenantAccessState state)
     {
-        if (!s.TenantExists)
-            return new TenantBlock("TENANT_NOT_FOUND", 404);
+        if (!state.TenantExists)
+            return Block("TENANT_NOT_FOUND", 404);
 
-        // Subscription-level blocks are the most specific — prefer them.
-        switch (s.SubscriptionStatus)
+        // Workspace status always wins over subscription status.
+        switch (state.TenantStatus)
         {
-            case TenantSubscriptionStatus.Expired:
-                return new TenantBlock("TENANT_SUBSCRIPTION_EXPIRED", 402);
-            case TenantSubscriptionStatus.Cancelled:
-                return new TenantBlock("TENANT_SUBSCRIPTION_CANCELLED", 402);
-            case TenantSubscriptionStatus.Suspended:
-                return new TenantBlock("TENANT_SUBSCRIPTION_SUSPENDED", 402);
+            case TenantStatus.Suspended:
+                return state.SuspensionReason == SuspensionReason.NonPayment
+                    ? Block("TENANT_SUSPENDED_NONPAYMENT", 402)
+                    : Block("TENANT_SUSPENDED", 403);
+            case TenantStatus.Archived:
+                return Block("TENANT_ARCHIVED", 403);
+            case TenantStatus.Deleted:
+                return Block("TENANT_NOT_FOUND", 404);
+            case TenantStatus.Provisioning:
+                return Block("WORKSPACE_PROVISIONING", 423);
+            case TenantStatus.ProvisioningFailed:
+                return Block("WORKSPACE_PROVISIONING_FAILED", 503);
+            case TenantStatus.PendingApproval:
+                return new TenantAccessDecision(TenantAccessMode.BillingOnly);
+            // Legacy tenant-level cancellation is read-only under the new subscription policy.
+            case TenantStatus.Cancelled:
+                return new TenantAccessDecision(TenantAccessMode.ReadOnly);
         }
 
-        // Gym-level status.
-        return s.TenantStatus switch
+        // Existing gyms without a SaaS record preserve their legacy access during rollout. A new
+        // FreelanceCoach workspace without a subscription is explicitly billing-only.
+        if (state.SubscriptionStatus is null)
+            return state.WorkspaceType == WorkspaceType.FreelanceCoach
+                ? new TenantAccessDecision(TenantAccessMode.BillingOnly)
+                : new TenantAccessDecision(TenantAccessMode.Full);
+
+        return state.SubscriptionStatus switch
         {
-            TenantStatus.Suspended => s.SuspensionReason == Domain.Enums.SuspensionReason.NonPayment
-                ? new TenantBlock("TENANT_SUSPENDED_NONPAYMENT", 402)
-                : new TenantBlock("TENANT_SUSPENDED", 403),
-            TenantStatus.Cancelled => new TenantBlock("TENANT_SUBSCRIPTION_CANCELLED", 402),
-            TenantStatus.Archived => new TenantBlock("TENANT_ARCHIVED", 403),
-            TenantStatus.Deleted => new TenantBlock("TENANT_NOT_FOUND", 404),
-            _ => null // Active, Trial, PastDue, PendingApproval → not hard-blocked
+            TenantSubscriptionStatus.None or TenantSubscriptionStatus.PendingPayment
+                => new TenantAccessDecision(TenantAccessMode.BillingOnly),
+            TenantSubscriptionStatus.Trial or TenantSubscriptionStatus.Active or TenantSubscriptionStatus.PastDue or TenantSubscriptionStatus.GracePeriod
+                => new TenantAccessDecision(TenantAccessMode.Full),
+            TenantSubscriptionStatus.Expired or TenantSubscriptionStatus.Cancelled or TenantSubscriptionStatus.Suspended
+                => new TenantAccessDecision(TenantAccessMode.ReadOnly),
+            _ => new TenantAccessDecision(TenantAccessMode.BillingOnly)
         };
     }
 
-    /// <summary>The gym is approved-pending: allowed to sign in but limited to billing/onboarding endpoints.</summary>
-    public static bool IsPendingApproval(TenantAccessState s) =>
-        s.TenantExists && s.TenantStatus == TenantStatus.PendingApproval;
+    /// <summary>Compatibility entry point for callers that only need a true hard block.</summary>
+    public static TenantBlock? EvaluateHardBlock(TenantAccessState state) => Evaluate(state).Block;
+
+    public static bool IsPendingApproval(TenantAccessState state) =>
+        state.TenantExists && state.TenantStatus == TenantStatus.PendingApproval;
+
+    private static TenantAccessDecision Block(string code, int httpStatus) =>
+        new(TenantAccessMode.Blocked, new TenantBlock(code, httpStatus));
 }

@@ -14,6 +14,9 @@ public static class SystemRoles
     public const string Coach = "Coach";
     public const string Client = "Client";
     public const string Trainer = "Trainer";
+    public const string FreelanceOwner = "FreelanceOwner";
+    public const string FreelanceCoach = "FreelanceCoach";
+    public const string FreelanceAssistant = "FreelanceAssistant";
 
     // Platform roles
     public const string PlatformOwner = "PlatformOwner";
