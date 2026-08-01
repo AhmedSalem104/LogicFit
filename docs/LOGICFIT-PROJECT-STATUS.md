@@ -2,15 +2,21 @@
 
 Last reviewed: 2026-08-01
 
+> **Issue #140, task branch:** Platform Owner recovery is now explicit and secret-backed. The
+> legacy hardcoded owner/password seed is removed; a one-run `PlatformBootstrap` operation repairs
+> the owner/IdentityAccount link, verified email and E.164 phone, password, lockout, and old refresh
+> sessions without logging credentials. No API or schema change is introduced.
+
 ## Executive summary
 
 LogicFit is a multi-tenant gym-management SaaS. The platform operator manages gyms, plans, features, payment methods, and manual payment approvals. Each gym receives an isolated tenant workspace for staff and clients. Billing is intentionally manual: no gateway, webhook, or automatic card charge is enabled.
 
-> **Released to `master` in Issue #118; production deployment remains to be verified:** centralized E.164 OTP, Phone + OTP identity login/recovery,
+> **Released to `master` in Issue #118; production binary deployment remains to be verified:** centralized E.164 OTP, Phone + OTP identity login/recovery,
 > mandatory Platform Admin OTP, OTP step-up, Meta WhatsApp provider integration, and
 > HttpOnly refresh cookies are merged across the Backend, Tenant UI, and Platform UI. Passkey/WebAuthn is removed.
-> Migration `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp` must be reviewed and
-> applied separately after backup; production OTP and Meta secrets are server-only. Issue #127 adds an
+> Migration `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp` and every preceding canonical
+> migration were applied to production `db60976` after a structurally verified BACPAC on 2026-08-01;
+> schema/history verification succeeded. Production OTP and Meta secrets are server-only. Issue #127 adds an
 > explicitly enabled, time-bounded `TemporaryFixed` provider for hosted pre-provider testing with code
 > `1234`; it preserves real OTP challenges and must be removed when Meta WhatsApp is enabled.
 
@@ -78,7 +84,7 @@ sequenceDiagram
 - A Freelance Owner can sponsor an existing global identity as `FreelanceCoach`, `FreelanceAssistant`, or `Client`; that creates a separate membership application and never grants access directly. Platform approval repeats the live plan-capacity check and only then creates the tenant-local user, role assignment, and active membership. Capacity errors use `PLAN_MEMBER_LIMIT_REACHED` or `PLAN_CLIENT_LIMIT_REACHED`.
 - Freelance workspace branding reuses tenant branding for colors, logos, cover/background, and report identity, and adds a structured profile for bio, specialties, certifications, social links, welcome content, and booking settings.
 - Subscription policy is now explicit in the access gate: `Trial`, `Active`, and `PastDue` operate normally; `Expired` is read-only while billing/renewal remains available; suspended/archived/provisioning workspaces hard-block operational access. Legacy gyms without a SaaS subscription record preserve their existing operational access during the migration rollout; a new freelance workspace without a subscription is billing-only.
-- Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed locally. The third migration adds the tenant row-version used to serialize final membership-capacity approval. `20260729133325_SeedFreelanceSystemRoles` is an idempotent corrective data migration that creates or restores the three freelance system roles and their permission maps; it must be applied explicitly before a Platform Admin approves a freelance workspace. Production schema application remains a protected CI/CD operation with health-check and rollback review.
+- Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed. The third migration adds the tenant row-version used to serialize final membership-capacity approval. `20260729133325_SeedFreelanceSystemRoles` is an idempotent corrective data migration that creates or restores the three freelance system roles and their permission maps. All four canonical migrations are present in production; the legacy server-only history row `20260729141315_SeedFreelanceSystemRoles` is preserved rather than edited manually.
 - Team membership now uses `/api/freelance/team/invites` and `/api/workspace-invites/{preview,accept}`. The invitation is tied to normalized email, workspace, and role; acceptance requires a verified identity session and a live quota check.
 - Client acquisition supports owner-generated `/api/workspace/client-join-codes` plus preview/join endpoints. Raw codes are returned only once, stored as hashes, expire/revoke, and either activate the client or create a pending owner approval according to workspace settings.
 - OTP challenges are purpose-bound, five-minute, one-use, HMAC-hashed with per-challenge salt, and concurrency protected. Platform login requires password then OTP, while sensitive Platform mutations require a recent OTP step-up bound to the identity and browser session.
@@ -97,7 +103,7 @@ sequenceDiagram
 ## Operational rules
 
 - Manual billing is the current and supported payment model.
-- Migrations are reviewed and generated idempotently before production application. `DataSeeder.InitializeAsync` can apply pending migrations asynchronously only when `Database:ApplyMigrationsOnStartup=true`; it logs each pending migration, emits a critical log and rethrows on failure so startup stops on an incomplete schema, and remains `false` by default. Seed work is separately controlled by `Database:ApplySeedOnStartup`; it is enabled for local development compatibility and disabled in Production to avoid unrequested data changes.
+- Migrations are reviewed and generated idempotently before production application. The API never applies them from IIS startup and ignores `Database:ApplyMigrationsOnStartup`. Issue #134 adds an explicit protected deployment step that requires a verified BACPAC reference and production database secret, applies pending EF migrations before WebDeploy, verifies no migration remains pending, then requires `/health` after publishing. The workflow change remains unreleased until its PR is reviewed and merged.
 - Wallet, stock, coupon, approval, and counter-like shared state must use transactions, row versions, unique constraints, or idempotency keys as appropriate.
 - Secrets, publish profiles, passwords, refresh tokens, payment proofs, and reset tokens never enter Git or logs.
 
@@ -118,14 +124,16 @@ flowchart LR
 - Direct pushes, force pushes, and branch deletion are prohibited.
 - Every non-trivial task requires a GitHub Issue, task branch, tests, documentation impact, and PR.
 - GitHub CI is active on every push and pull request. It restores, builds, tests, validates EF migrations, and builds the unified API Docker image. Database-backed OTP and refresh-token concurrency tests use an ephemeral SQL Server service in the Linux `verify` job; local Windows runs continue to use LocalDB unless `LOGICFIT_TEST_CONNECTION_STRING` is supplied.
-- Automatic Monster ASP CD is intentionally paused because deployment is currently performed manually from Visual Studio.
+- Monster ASP CD remains a manual protected workflow. Issue #134 adds the missing migration-apply stage to that workflow; it does not enable unattended deployment.
 
 ## Current deployment position
 
-- Verified live endpoint: `https://logicfit-platform.runasp.net/health` returns `200 Healthy`.
+- Production database `db60976` has all 50 canonical `origin/master` migrations plus the preserved legacy server-only `20260729141315_SeedFreelanceSystemRoles` row. No canonical migration remains pending; the new identity, invite, client-join, and OTP tables/columns were verified after application on 2026-08-01.
+- Verified live endpoint: `https://logicfit.runasp.net/health` returns `200 Healthy`. The retired `logicfit-platform.runasp.net` hostname did not resolve during the 2026-08-01 verification and must not be used as the unified health URL.
+- The live binary still returned `404` for `/api/workspace-invites/preview` and `/api/workspace/client-join-codes/preview` immediately after the schema rollout, proving that the released `master` binary had not yet reached the site. The first attempted CD was stopped in preflight because Linux OTP tests lacked SQL Server; no WebDeploy ran. Issue #134 adds the missing test database service before the next rollout.
 - The supplied publish profile targets the intended unified API site `site78301`; its password is intentionally not recorded.
 - GitHub Clone-to-`/wwwroot` is not used: it clones source files and cannot safely host the compiled ASP.NET Core application.
-- The supported current operation is manual Visual Studio/WebDeploy publishing. Automatic CD can be revisited after the unified host, backup, migration, rollback, and health URL are explicitly defined.
+- The released operation remains manual Visual Studio/WebDeploy publishing. After Issue #134 is merged and released, the supported helper/workflow will require the released master tree, verified backup reference, reviewed migration plan, protected database connection, WebDeploy, and health verification in one ordered operation.
 
 ### Platform administration API remediation (2026-07-25)
 
@@ -280,11 +288,11 @@ Tenant requests resolve a tenant before authorization. Tenant query filters, ten
 - `AddWalletAndStockConcurrency`
 - `AddCouponConcurrency`
 
-Migrations must be applied explicitly during deployment after a tested backup. The API ignores `Database__ApplyMigrationsOnStartup` and does not silently migrate production at startup; a deployment can optionally verify its health endpoint after publishing.
+Migrations must be applied explicitly during deployment after a tested backup. The API ignores `Database__ApplyMigrationsOnStartup` and does not silently migrate production at startup. The Issue #134 deployment helper applies reviewed pending migrations before WebDeploy and makes post-publish health verification mandatory when migrations are requested.
 
 ## Verification status
 
-- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 80 passing tests.
+- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 119 passing tests on 2026-08-01 after the Issue #134 deployment and EF operator changes.
 - `dotnet build LogicFit.sln -c Release --no-restore`: successful; four pre-existing nullable warnings remain in coach-client, gate-access, and client-subscription query projections.
 - `npm run build` in `LogiFit_Platform_Admin_Dashboard`: successful.
 
@@ -311,11 +319,16 @@ Migrations must be applied explicitly during deployment after a tested backup. T
 - Move private uploads to object storage with signed URLs and malware scanning.
 - Add distributed locks/idempotency for background lifecycle jobs.
 - Add integration, end-to-end, load, concurrency, and tenant-isolation tests.
-- Define the Monster ASP deployment target, application directory, service manager, backup command, and health URL before enabling automatic production deployment.
+- Keep production deployment manual and protected until the Monster ASP target, backup/restore, migration, health, and binary rollback procedures are all operator-verified.
 - A local WebDeploy settings file was provided for `logicfit-platform.runasp.net` (`MSDeploy`, site `site78301`). It is the candidate profile for the unified API; its password is intentionally not recorded. Verify the target, backup/migration/rollback procedure, and health URL before enabling production CD.
-- `Scripts/deploy-webdeploy.ps1` performs credential-safe MSDeploy synchronization from one unified publish output directory. The protected CD workflow requires one unified profile and health URL before it can deploy.
+- `Scripts/deploy-webdeploy.ps1` performs credential-safe migration and MSDeploy orchestration from one unified release. With `-ApplyMigrations`, it requires a verified BACPAC reference, reviewed SQL, the protected `LOGICFIT_PRODUCTION_DB_CONNECTION`, and a health URL; migration failure stops the rollout before WebDeploy.
 
 ## Change log
+
+### 2026-08-01 — protected migration-aware publishing (Issue #134, task branch)
+
+- Added a reviewed migration stage before WebDeploy; the stage requires a verified backup reference and a protected database connection and verifies no EF migration remains pending.
+- Added release-tree, migration-review, destructive-SQL, and post-publish health gates to the manual production workflow. The preflight now provisions the same ephemeral SQL Server and test connection as CI, preventing Linux from falling back to unsupported LocalDB during OTP tests. This workflow behavior is not released until the Issue #134 PR is reviewed, merged to `develop`, released to `master`, and production-verified.
 
 ### 2026-07-30 — identity-first access foundation
 

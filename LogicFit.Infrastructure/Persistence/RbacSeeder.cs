@@ -1,8 +1,11 @@
 using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
+using LogicFit.Application.Features.Identity;
+using LogicFit.Application.Common.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace LogicFit.Infrastructure.Persistence;
 
@@ -14,11 +17,16 @@ public class RbacSeeder
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<RbacSeeder> _logger;
+    private readonly PlatformOwnerBootstrapOptions _bootstrap;
 
-    public RbacSeeder(ApplicationDbContext context, ILogger<RbacSeeder> logger)
+    public RbacSeeder(
+        ApplicationDbContext context,
+        ILogger<RbacSeeder> logger,
+        IOptions<PlatformOwnerBootstrapOptions> bootstrap)
     {
         _context = context;
         _logger = logger;
+        _bootstrap = bootstrap.Value;
     }
 
     // Default system-role -> permission-code mapping.
@@ -112,28 +120,132 @@ public class RbacSeeder
             await _context.SaveChangesAsync();
         }
 
-        // Default platform owner (bootstrap). Backfill assigns the PlatformOwner role afterwards.
-        var ownerExists = await _context.Set<User>()
+        var owner = await _context.Set<User>()
             .IgnoreQueryFilters()
-            .AnyAsync(u => u.TenantId == PlatformConstants.PlatformTenantId && u.Role == UserRole.PlatformOwner);
+            .SingleOrDefaultAsync(u =>
+                u.TenantId == PlatformConstants.PlatformTenantId && u.Role == UserRole.PlatformOwner);
 
-        if (!ownerExists)
+        if (!_bootstrap.Enabled)
         {
-            var owner = new User
+            if (owner is null || !owner.IdentityAccountId.HasValue)
+                _logger.LogWarning("Platform Owner login is not ready. Use the protected PlatformBootstrap server settings for one recovery run.");
+            return;
+        }
+
+        PlatformOwnerBootstrapOptions.Validate(_bootstrap);
+        var normalizedEmail = _bootstrap.GetNormalizedEmail();
+        var normalizedPhone = _bootstrap.GetNormalizedPhoneNumber();
+        var now = DateTime.UtcNow;
+
+        var linkedIdentity = owner?.IdentityAccountId is Guid identityId
+            ? await _context.IdentityAccounts.IgnoreQueryFilters().SingleOrDefaultAsync(x => x.Id == identityId)
+            : null;
+        if (owner?.IdentityAccountId.HasValue == true && linkedIdentity is null)
+            throw new InvalidOperationException("The Platform Owner references a missing IdentityAccount.");
+
+        var emailIdentity = await _context.IdentityAccounts.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail);
+        var phoneIdentity = await _context.IdentityAccounts.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(x => x.NormalizedPhoneNumber == normalizedPhone);
+        var candidateIdentityIds = new[] { linkedIdentity?.Id, emailIdentity?.Id, phoneIdentity?.Id }
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .Distinct()
+            .ToArray();
+        if (candidateIdentityIds.Length > 1)
+            throw new InvalidOperationException("Platform bootstrap email and phone belong to different identities.");
+
+        var passwordChanged = owner is null ||
+            (_bootstrap.ResetPassword && !PasswordMatches(_bootstrap.Password!, owner.PasswordHash));
+        var passwordHash = passwordChanged
+            ? BCrypt.Net.BCrypt.HashPassword(_bootstrap.Password!)
+            : owner!.PasswordHash;
+        var identity = linkedIdentity ?? emailIdentity ?? phoneIdentity;
+        if (identity is null)
+        {
+            identity = new IdentityAccount();
+            _context.IdentityAccounts.Add(identity);
+        }
+
+        var emailChanged = !string.Equals(identity.NormalizedEmail, normalizedEmail, StringComparison.Ordinal);
+        var phoneChanged = !string.Equals(identity.NormalizedPhoneNumber, normalizedPhone, StringComparison.Ordinal);
+        identity.FullName = _bootstrap.FullName.Trim();
+        identity.Email = _bootstrap.Email!.Trim();
+        identity.NormalizedEmail = normalizedEmail;
+        if (emailChanged || identity.EmailVerifiedAt is null)
+            identity.EmailVerifiedAt = now;
+        identity.PhoneNumber = normalizedPhone;
+        identity.NormalizedPhoneNumber = normalizedPhone;
+        if (phoneChanged || identity.PhoneVerifiedAt is null)
+            identity.PhoneVerifiedAt = now;
+        identity.PasswordHash = passwordHash;
+        identity.IsActive = true;
+        identity.FailedLoginAttempts = 0;
+        identity.LockoutEndUtc = null;
+
+        if (owner is null)
+        {
+            owner = new User
             {
                 TenantId = PlatformConstants.PlatformTenantId,
-                Email = "owner@platform.local",
-                PhoneNumber = null,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("ChangeMe#12345"),
-                Role = UserRole.PlatformOwner,
-                IsActive = true
+                Role = UserRole.PlatformOwner
             };
             _context.Set<User>().Add(owner);
-            _context.UserProfiles.Add(new UserProfile { UserId = owner.Id, FullName = "Platform Owner" });
-            await _context.SaveChangesAsync();
+            _context.UserProfiles.Add(new UserProfile
+            {
+                UserId = owner.Id,
+                FullName = _bootstrap.FullName.Trim()
+            });
+        }
+        else
+        {
+            var profile = await _context.UserProfiles.IgnoreQueryFilters()
+                .SingleOrDefaultAsync(x => x.UserId == owner.Id);
+            if (profile is null)
+                _context.UserProfiles.Add(new UserProfile { UserId = owner.Id, FullName = _bootstrap.FullName.Trim() });
+            else
+            {
+                profile.FullName = _bootstrap.FullName.Trim();
+                profile.IsDeleted = false;
+                profile.DeletedAt = null;
+                profile.DeletedBy = null;
+            }
+        }
 
-            _logger.LogWarning(
-                "Seeded default PlatformOwner (owner@platform.local / ChangeMe#12345). CHANGE THIS PASSWORD IMMEDIATELY.");
+        owner.IdentityAccountId = identity.Id;
+        owner.Email = _bootstrap.Email.Trim();
+        owner.PhoneNumber = normalizedPhone;
+        owner.PasswordHash = passwordHash;
+        owner.IsActive = true;
+        owner.IsDeleted = false;
+        owner.DeletedAt = null;
+        owner.DeletedBy = null;
+        owner.FailedLoginAttempts = 0;
+        owner.LockoutEndUtc = null;
+
+        if (passwordChanged)
+        {
+            var activeTokens = await _context.RefreshTokens
+                .Where(x => x.UserId == owner.Id && x.RevokedAt == null)
+                .ToListAsync();
+            foreach (var token in activeTokens)
+                token.RevokedAt = now;
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogWarning(
+            "Platform Owner bootstrap completed without logging credentials. Disable and remove PlatformBootstrap secrets now.");
+    }
+
+    private static bool PasswordMatches(string password, string hash)
+    {
+        try
+        {
+            return BCrypt.Net.BCrypt.Verify(password, hash);
+        }
+        catch
+        {
+            return false;
         }
     }
 
