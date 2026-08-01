@@ -1,10 +1,10 @@
 # المصادقة وتدفقات مساحات العمل
 
-> حالة المرجع: تنفيذ محلي غير منشور لـIssue #118 بتاريخ 2026-07-30. يصف هذا المرجع عقد Backend والواجهتين بعد إزالة Passkey وإضافة OTP المركزي. لا يصبح سلوك إنتاج قبل المراجعة والدمج وتطبيق الـMigration وإعداد أسرار الخادم.
+> حالة المرجع: تم دمج Issue #118 في فروع `develop` للـBackend والواجهتين بتاريخ 2026-08-01. لم تُصدر أو تُنشر أو تُتحقق على Production بعد، ويلزم تطبيق الـMigration وإعداد أسرار الخادم عبر مسار النشر المحمي.
 
 LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إلى **هوية عالمية أولًا ثم اختيار مساحة العمل**. لذلك يوجد تدفقان مدعومان حاليًا: التدفق التقليدي المتوافق، وتدفق الهوية الجديد. لا يجوز حذف الأول قبل نقل كل الواجهات والبيانات إليه.
 
-> **Unreleased – Issue #118:** Email + Password remains supported, and Phone + OTP is added as a complete identity sign-in and recovery path. Passkey/WebAuthn is removed from runtime code, APIs, permissions, and both frontends.
+> **Merged to `develop` – Issue #118; not released, deployed, or production-verified:** Email + Password remains supported, and Phone + OTP is added as a complete identity sign-in and recovery path. Passkey/WebAuthn is removed from runtime code, APIs, permissions, and both frontends.
 
 ## الكيانات وحدود الأمان
 
@@ -85,7 +85,7 @@ POST /api/identity/password-reset/confirm { token, newPassword }
 
 The raw 256-bit email token is placed in the **frontend URL fragment**, is stored only as a SHA-256 hash, and is never included in application or audit logs. Verification and reset endpoints are anonymous, but registration and reset requests are rate-limited. `NormalizedEmail` keeps its global unique index. Email + Password remains available while a separately verified, unique E.164 phone enables Phone + OTP.
 
-## نظام OTP المركزي (Issue #118، غير منشور)
+## نظام OTP المركزي (Issue #118، مدمج في `develop` وغير منشور)
 
 الأغراض المسجلة هي `PhoneVerification`, `PasswordlessLogin`, `PlatformAdminLogin`,
 `SensitiveActionStepUp`, `PasswordReset`, `ChangePhone`, و`InviteAcceptance`.
