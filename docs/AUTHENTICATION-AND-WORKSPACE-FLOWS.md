@@ -2,6 +2,12 @@
 
 > حالة المرجع: تم إصدار Issue #118 إلى فروع الإنتاج بتاريخ 2026-08-01، وما زال النشر والتحقق الفعلي يتطلبان تطبيق الـMigration وإعداد أسرار الخادم عبر مسار النشر المحمي. يضيف Issue #127 مزود اختبار مستضاف مؤقتًا ومحدد الصلاحية حتى يتوفر مزود الإرسال الخارجي.
 
+> **Issue #143 — قيد المراجعة:** يعالج فقدان `challengeId` عند إعادة التحميل، ويجعل طلب
+> OTP المتكرر من نفس `sessionBinding` خلال مهلة الإرسال يعيد نفس التحدي النشط دون رسالة
+> ثانية. كما يطبّع هواتف التسجيل الجديدة إلى E.164 ويحوّل الأرقام المصرية القديمة غير
+> الملتبسة بـMigration بيانات منفصلة. نجاح `PasswordlessLogin` لهوية نشطة ذات بريد مؤكد
+> يثبت الهاتف لأول مرة؛ أما التحدي الوهمي غير المرتبط بهوية فلا يصدر جلسة مطلقًا.
+
 LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إلى **هوية عالمية أولًا ثم اختيار مساحة العمل**. لذلك يوجد تدفقان مدعومان حاليًا: التدفق التقليدي المتوافق، وتدفق الهوية الجديد. لا يجوز حذف الأول قبل نقل كل الواجهات والبيانات إليه.
 
 > **Released – Issue #118; deployment verification pending:** Email + Password remains supported, and Phone + OTP is added as a complete identity sign-in and recovery path. Passkey/WebAuthn is removed from runtime code, APIs, permissions, and both frontends.
@@ -72,7 +78,8 @@ LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إل
 
 ```text
 POST /api/identity/register { fullName, email, password, phoneNumber? }
-  -> creates an unverified IdentityAccount and emails a 30-minute one-time link
+  -> validates an optional phone as E.164, creates an unverified IdentityAccount,
+     and emails a 30-minute one-time link
 POST /api/identity/verify-email { token }
   -> atomically consumes the hashed token and enables identity-first sign-in
 
@@ -101,7 +108,12 @@ The raw 256-bit email token is placed in the **frontend URL fragment**, is store
 
 - الصلاحية 5 دقائق، حد المحاولات 5، ومدة انتظار إعادة الإرسال 60 ثانية.
 - إصدار كود جديد يبطل التحدي المعلق السابق لنفس الهاتف والغرض.
+- إعادة نفس الطلب داخل مهلة الـ60 ثانية وبنفس الهاتف والغرض و`sessionBinding` تعيد بيانات
+  التحدي المعلق نفسه دون إنشاء سجل أو إرسال رسالة جديدة. اختلاف الجلسة يبقى `409` ولا يكشف
+  `challengeId` لمتصفح آخر.
 - الهاتف يُطبّع ويُرفض ما لم يطابق E.164.
+- بعد تأكيد البريد، يمكن لأول `PasswordlessLogin` ناجح أن يثبت الهاتف المخزن على الهوية
+  ثم يصدر سياق اختيار المساحة. لا يكفي `1234` وحده: يجب أن يكون التحدي مرتبطًا بهوية مطابقة.
 - توجد حدود حسب IP/الجهاز في middleware، وبحسب الهاتف/التحدي/اليوم في قاعدة البيانات.
 - لا يعاد OTP في response ولا يسجل في application/audit logs.
 - `DevelopmentOtpProvider` لا يعمل إلا عندما تكون البيئة `Development` ويستخدم `1234`

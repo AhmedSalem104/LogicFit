@@ -23,6 +23,21 @@ The supported release operation is the protected WebDeploy helper or the manual 
 
 Never update `dbo.__EFMigrationsHistory` manually to hide a migration mismatch.
 
+## Pending Issue #143 data correction
+
+Migration `20260801214750_NormalizeLegacyIdentityPhonesToE164` converts unambiguous Egyptian
+identity phone values from the legacy 11-digit `01...` representation to `+20...` E.164 and keeps
+linked `DomainUsers.PhoneNumber` aligned. It does not mark a phone verified; only successful OTP
+verification sets `PhoneVerifiedAt`.
+
+The migration fails with `LEGACY_PHONE_E164_CONFLICT` if a legacy value would collide with an
+existing E.164 identity, so the operator can resolve ownership instead of silently merging two
+identities. Its `Down` intentionally does not reverse user data normalization. Review and apply it
+separately before publishing the Issue #143 binary, then verify that no legacy identity phone
+remains and smoke-test Phone + OTP against a real identity. This migration does not repair
+Platform Owner/Admin rows that lack an `IdentityAccount`; those require the one-run, secret-backed
+`PlatformBootstrap` procedure.
+
 ## Mandatory pre-deploy checks
 
 - Compare the migration IDs in `origin/master` and the canonical workspace with

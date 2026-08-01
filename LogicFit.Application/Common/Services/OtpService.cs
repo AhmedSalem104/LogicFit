@@ -29,18 +29,23 @@ public sealed class OtpService : IOtpService
     {
         var phone = NormalizePhone(phoneNumber);
         var now = _clock.UtcNow;
-        var startOfDay = now.Date;
-        var dailyCount = await _context.OtpChallenges.CountAsync(
-            x => x.NormalizedPhoneNumber == phone && x.CreatedAtUtc >= startOfDay, cancellationToken);
-        if (dailyCount >= _options.DailySendLimit)
-            throw new ConflictException("OTP_DAILY_LIMIT_REACHED");
-
         var latest = await _context.OtpChallenges
             .Where(x => x.NormalizedPhoneNumber == phone && x.Purpose == purpose)
             .OrderByDescending(x => x.CreatedAtUtc)
             .FirstOrDefaultAsync(cancellationToken);
         if (latest is not null && latest.LastSentAtUtc.AddSeconds(_options.ResendCooldownSeconds) > now)
+        {
+            if (CanRecover(latest, identityAccountId, sessionBinding, now))
+                return ToDto(latest);
+
             throw new ConflictException("OTP_RESEND_COOLDOWN");
+        }
+
+        var startOfDay = now.Date;
+        var dailyCount = await _context.OtpChallenges.CountAsync(
+            x => x.NormalizedPhoneNumber == phone && x.CreatedAtUtc >= startOfDay, cancellationToken);
+        if (dailyCount >= _options.DailySendLimit)
+            throw new ConflictException("OTP_DAILY_LIMIT_REACHED");
 
         var active = await _context.OtpChallenges
             .Where(x => x.NormalizedPhoneNumber == phone && x.Purpose == purpose &&
@@ -82,7 +87,7 @@ public sealed class OtpService : IOtpService
             challenge.Provider = "Suppressed";
             AddAudit("OtpSendSuppressed", challenge, true);
             await _context.SaveChangesAsync(cancellationToken);
-            return ToDto(challenge, now);
+            return ToDto(challenge);
         }
 
         try
@@ -105,18 +110,28 @@ public sealed class OtpService : IOtpService
             throw new ServiceUnavailableException("OTP_DELIVERY_FAILED", "OTP delivery is temporarily unavailable.");
         }
 
-        return ToDto(challenge, now);
+        return ToDto(challenge);
     }
 
-    private OtpChallengeDto ToDto(OtpChallenge challenge, DateTime now) =>
+    private OtpChallengeDto ToDto(OtpChallenge challenge) =>
         new()
         {
             ChallengeId = challenge.Id,
             Purpose = challenge.Purpose,
             ExpiresAtUtc = challenge.ExpiresAtUtc,
-            ResendAvailableAtUtc = now.AddSeconds(_options.ResendCooldownSeconds),
+            ResendAvailableAtUtc = challenge.LastSentAtUtc.AddSeconds(_options.ResendCooldownSeconds),
             MaskedPhoneNumber = Mask(challenge.NormalizedPhoneNumber)
         };
+
+    private static bool CanRecover(OtpChallenge challenge, Guid? identityAccountId,
+        string? sessionBinding, DateTime now) =>
+        !string.IsNullOrWhiteSpace(sessionBinding) &&
+        challenge.Status == OtpChallengeStatus.Pending &&
+        challenge.ConsumedAtUtc is null &&
+        challenge.RevokedAtUtc is null &&
+        challenge.ExpiresAtUtc > now &&
+        challenge.IdentityAccountId == identityAccountId &&
+        string.Equals(challenge.SessionBinding, sessionBinding, StringComparison.Ordinal);
 
     public async Task<OtpChallenge> VerifyAsync(Guid challengeId, string code, OtpPurpose purpose,
         string? sessionBinding, CancellationToken cancellationToken = default)
