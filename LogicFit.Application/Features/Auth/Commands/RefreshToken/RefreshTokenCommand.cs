@@ -7,6 +7,7 @@ namespace LogicFit.Application.Features.Auth.Commands.RefreshToken;
 
 public class RefreshTokenCommand : IRequest<AuthResponseDto>
 {
+    [JsonIgnore]
     public string RefreshToken { get; set; } = string.Empty;
 
     // Set server-side by the controller (tenant vs platform API); never bound from the request body.

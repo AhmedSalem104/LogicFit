@@ -7,9 +7,17 @@
 هوية المستخدم وسياق الطلب هما مصدر تحديد المستأجر. سجلات المال والمراجعة لا تحذف أو
 تعدل من واجهة عامة.
 
-## Email identity security (Issue #113, unreleased)
+## Identity and OTP security (Issue #118, unreleased)
 
-An identity-first account signs in with its verified, globally unique email and password only. Phone is contact data and cannot authenticate an identity. Email verification and password-reset links are opaque, one-use, short-lived records stored as hashes; redeeming a password-reset link revokes every linked local refresh token and identity workspace-selection session. This does not grant workspace permission: `WorkspaceMembership.Active`, local `User.Active`, workspace/subscription gates, and RBAC still decide access after identity proof.
+An identity-first account may sign in with its verified, globally unique email and password,
+or a verified, unique E.164 phone and a purpose-bound OTP challenge. Email verification and
+password-reset links remain opaque, one-use, short-lived hash records. OTP codes are also
+one-use, short-lived HMAC records and are never returned by the API. Platform Owner/Admin
+must complete password plus OTP; sensitive Platform mutations require a fresh five-minute
+OTP step-up. None of these proofs grant workspace permission: `WorkspaceMembership.Active`,
+local `User.Active`, workspace/subscription gates, permissions, and ownership checks still
+decide access. Password reset/change and confirmed phone change revoke linked refresh and
+workspace-selection sessions.
 
 ## مستخدمو المنصة المركزية
 

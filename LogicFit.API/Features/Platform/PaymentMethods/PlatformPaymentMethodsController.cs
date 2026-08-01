@@ -4,6 +4,7 @@ using LogicFit.Application.Features.Platform.PaymentMethods.DTOs;
 using LogicFit.Application.Features.Platform.PaymentMethods.Queries.GetPaymentMethods;
 using LogicFit.Domain.Authorization;
 using LogicFit.API.Features.Platform.Common;
+using LogicFit.Infrastructure.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,6 +36,7 @@ public class PlatformPaymentMethodsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(typeof(PaymentMethodDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<PaymentMethodDto>> Create([FromBody] SavePaymentMethodCommand command)
     {
@@ -44,6 +46,7 @@ public class PlatformPaymentMethodsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(typeof(PaymentMethodDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<PaymentMethodDto>> Update(Guid id, [FromBody] SavePaymentMethodCommand command)
     {
@@ -53,6 +56,7 @@ public class PlatformPaymentMethodsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(Guid id)
     {

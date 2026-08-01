@@ -1,13 +1,15 @@
+using LogicFit.API.Security;
 using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.Auth.Commands.LogoutAll;
 using LogicFit.Application.Features.Auth.Commands.RefreshToken;
 using LogicFit.Application.Features.Auth.DTOs;
-using LogicFit.Application.Features.Platform.Auth.Commands.PlatformLogin;
-using LogicFit.Application.Features.Platform.Auth.Commands.PlatformPasskeyLogin;
+using LogicFit.Application.Features.Platform.Auth.Commands.PlatformOtpLogin;
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Features.Identity.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace LogicFit.API.Features.Platform.Auth;
 
@@ -16,63 +18,50 @@ namespace LogicFit.API.Features.Platform.Auth;
 public class PlatformAuthController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IRefreshTokenCookieManager _refreshCookies;
 
-    public PlatformAuthController(IMediator mediator)
+    public PlatformAuthController(IMediator mediator, IRefreshTokenCookieManager refreshCookies)
     {
         _mediator = mediator;
+        _refreshCookies = refreshCookies;
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+    [EnableRateLimiting("auth-login")]
+    [ProducesResponseType(typeof(OtpChallengeDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<AuthResponseDto>> Login([FromBody] PlatformLoginCommand command)
+    public async Task<ActionResult<OtpChallengeDto>> Login([FromBody] RequestPlatformLoginOtpCommand command)
     {
         var result = await _mediator.Send(command);
         return Ok(result);
     }
 
-    /// <summary>Platform authentication begins with password verification and must complete a verified passkey assertion.</summary>
-    [HttpPost("passkeys/login/options")]
+    [HttpPost("otp/verify")]
     [AllowAnonymous]
-    [ProducesResponseType(typeof(PasskeyCeremonyOptionsDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<PasskeyCeremonyOptionsDto>> BeginPasskeyLogin(
-        [FromBody] BeginPlatformPasskeyLoginCommand command, CancellationToken cancellationToken)
-        => Ok(await _mediator.Send(command, cancellationToken));
-
-    [HttpPost("passkeys/login/verify")]
-    [AllowAnonymous]
+    [EnableRateLimiting("otp-verify")]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<AuthResponseDto>> CompletePasskeyLogin(
-        [FromBody] CompletePlatformPasskeyLoginCommand command, CancellationToken cancellationToken)
-        => Ok(await _mediator.Send(command, cancellationToken));
-
-    /// <summary>Initial enrollment only for an existing linked Platform Owner/Admin after password verification.</summary>
-    [HttpPost("passkeys/registration/options")]
-    [AllowAnonymous]
-    [ProducesResponseType(typeof(PasskeyCeremonyOptionsDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<PasskeyCeremonyOptionsDto>> BeginPasskeyRegistration(
-        [FromBody] BeginPlatformPasskeyRegistrationCommand command, CancellationToken cancellationToken)
-        => Ok(await _mediator.Send(command, cancellationToken));
-
-    [HttpPost("passkeys/registration/verify")]
-    [AllowAnonymous]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> CompletePasskeyRegistration(
-        [FromBody] CompletePlatformPasskeyRegistrationCommand command, CancellationToken cancellationToken)
+    public async Task<ActionResult<AuthResponseDto>> VerifyOtp(
+        [FromBody] VerifyPlatformLoginOtpCommand command, CancellationToken cancellationToken)
     {
-        await _mediator.Send(command, cancellationToken);
-        return NoContent();
+        var result = await _mediator.Send(command, cancellationToken);
+        _refreshCookies.Write(Response, result.RefreshToken, RefreshTokenService.SurfacePlatform);
+        return Ok(result);
     }
 
     [HttpPost("refresh")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<AuthResponseDto>> Refresh([FromBody] RefreshTokenCommand command)
+    public async Task<ActionResult<AuthResponseDto>> Refresh()
     {
-        command.Surface = RefreshTokenService.SurfacePlatform;
+        var command = new RefreshTokenCommand
+        {
+            RefreshToken = _refreshCookies.Read(Request, RefreshTokenService.SurfacePlatform) ?? string.Empty,
+            Surface = RefreshTokenService.SurfacePlatform
+        };
         var result = await _mediator.Send(command);
+        _refreshCookies.Write(Response, result.RefreshToken, RefreshTokenService.SurfacePlatform);
         return Ok(result);
     }
 
@@ -82,6 +71,7 @@ public class PlatformAuthController : ControllerBase
     public async Task<IActionResult> LogoutAll()
     {
         await _mediator.Send(new LogoutAllCommand());
+        _refreshCookies.Delete(Response, RefreshTokenService.SurfacePlatform);
         return NoContent();
     }
 }

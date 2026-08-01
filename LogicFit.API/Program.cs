@@ -1,4 +1,5 @@
 using LogicFit.API.Middleware;
+using LogicFit.API.Security;
 using LogicFit.Application;
 using LogicFit.Infrastructure;
 using LogicFit.Infrastructure.Persistence;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using System.Security.Claims;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,12 +27,60 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<IRefreshTokenCookieManager, RefreshTokenCookieManager>();
 
 builder.Services.AddRateLimiter(options =>
 {
     var permitLimit = builder.Configuration.GetValue("RateLimiting:PermitLimit", 120);
     var windowSeconds = builder.Configuration.GetValue("RateLimiting:WindowSeconds", 60);
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    static string SecurityPartition(HttpContext context)
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var identity = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "anonymous";
+        var device = context.Request.Headers["X-Device-Id"].ToString();
+        return $"{ip}:{identity}:{(string.IsNullOrWhiteSpace(device) ? "unknown-device" : device)}";
+    }
+    options.AddPolicy("auth-login", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            SecurityPartition(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    options.AddPolicy("otp-request", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            SecurityPartition(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    options.AddPolicy("otp-verify", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            SecurityPartition(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    options.AddPolicy("invite-acceptance", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            SecurityPartition(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(15),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
     options.AddPolicy("identity-email-actions", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -54,7 +104,7 @@ builder.Services.AddRateLimiter(options =>
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.User?.Identity?.IsAuthenticated == true
-                ? context.User.FindFirst("sub")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"
+                ? context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"
                 : context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
             {
@@ -132,9 +182,10 @@ builder.Services.AddCors(options =>
         }
         else if (builder.Environment.IsDevelopment())
         {
-            policy.AllowAnyOrigin()
+            policy.SetIsOriginAllowed(_ => true)
                   .AllowAnyMethod()
-                  .AllowAnyHeader();
+                  .AllowAnyHeader()
+                  .AllowCredentials();
         }
     });
 });

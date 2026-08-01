@@ -13,6 +13,29 @@
 
 Before enabling email registration or identity password reset, configure these server-only settings (environment-variable form shown; values are never committed): `Email__Provider=smtp`, `Email__Smtp__Host`, `Email__Smtp__Port`, `Email__Smtp__UseSsl`, `Email__Smtp__UserName`, `Email__Smtp__Password`, `Email__Smtp__FromEmail`, `Email__Smtp__FromName`, and `IdentityEmailLinks__FrontendBaseUrl` (HTTPS only). The API returns `503 IDENTITY_EMAIL_NOT_CONFIGURED` until both delivery and HTTPS frontend-link settings are present. Do not log the generated link or raw token. Apply `20260730143000_AddIdentityEmailSecurity` from a reviewed idempotent script after backup, publish, then verify `/health` and a non-production email flow.
 
+### OTP delivery and Meta WhatsApp (Issue #118, unreleased)
+
+OTP settings exist only in environment variables or the server secret store. Development uses
+`ASPNETCORE_ENVIRONMENT=Development`, `Otp__Provider=Development`,
+`Otp__DevelopmentFixedCode=1234`, and a private `Otp__HmacSecret` of at least 32 characters.
+The API still creates and hashes a real challenge. Startup fails if the Development provider
+or fixed code appears outside Development.
+
+Production uses `Otp__Provider=MetaWhatsApp` and must set `Otp__HmacSecret`,
+`MetaWhatsApp__AccessToken`, `MetaWhatsApp__PhoneNumberId`,
+`MetaWhatsApp__BusinessAccountId`, `MetaWhatsApp__TemplateName`,
+`MetaWhatsApp__TemplateLanguage`, and `MetaWhatsApp__GraphApiVersion`. Secure webhook
+verification additionally uses `MetaWhatsApp__WebhookVerifyToken` and
+`MetaWhatsApp__AppSecret`. Never put any of these values in a published `appsettings.json`.
+There is no fallback to `1234` if Meta fails.
+
+Before rollout: backup; review/apply
+`20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp`; configure the secrets; publish
+Backend, Tenant Angular, and Platform Angular as one coordinated release; verify `/health`;
+then smoke-test email login, Phone + OTP, Platform password+OTP, sensitive-action step-up,
+refresh rotation, logout-all, and password-reset session revocation. Roll back the binaries
+and stop the rollout on health/OTP failure; do not reverse the migration destructively.
+
 تُخزن في إعدادات الموقع/Secret Store الخاصة بالخادم، لا في source control:
 
 | المفتاح | الغرض |

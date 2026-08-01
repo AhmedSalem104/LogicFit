@@ -13,8 +13,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
-using Fido2NetLib;
 
 namespace LogicFit.Infrastructure;
 
@@ -31,14 +31,43 @@ public static class DependencyInjection
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
-        services.Configure<PasskeyOptions>(configuration.GetSection(PasskeyOptions.SectionName));
-        var passkeyDomain = configuration[$"{PasskeyOptions.SectionName}:ServerDomain"] ?? "localhost";
-        var passkeyOrigins = configuration.GetSection($"{PasskeyOptions.SectionName}:Origins").Get<string[]>() ?? new[] { "https://localhost" };
-        services.AddFido2(options =>
+        services.Configure<OtpOptions>(configuration.GetSection(OtpOptions.SectionName));
+        services.Configure<MetaWhatsAppOptions>(configuration.GetSection(MetaWhatsAppOptions.SectionName));
+        var environmentName = configuration["ASPNETCORE_ENVIRONMENT"] ?? Environments.Production;
+        var otpProvider = configuration["Otp:Provider"] ?? string.Empty;
+        var fixedCode = configuration["Otp:DevelopmentFixedCode"];
+        if (!environmentName.Equals(Environments.Development, StringComparison.OrdinalIgnoreCase) &&
+            !string.IsNullOrWhiteSpace(fixedCode))
+            throw new InvalidOperationException("Otp:DevelopmentFixedCode is forbidden outside Development.");
+        if (otpProvider.Equals("Development", StringComparison.OrdinalIgnoreCase) &&
+            !environmentName.Equals(Environments.Development, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("DevelopmentOtpProvider is forbidden outside Development.");
+        var hmacSecret = configuration["Otp:HmacSecret"];
+        if (string.IsNullOrWhiteSpace(hmacSecret) || hmacSecret.Length < 32)
+            throw new InvalidOperationException("Otp:HmacSecret must be supplied by server secrets and contain at least 32 characters.");
+        if (otpProvider.Equals("Development", StringComparison.OrdinalIgnoreCase) && fixedCode != "1234")
+            throw new InvalidOperationException("Development OTP must use the reviewed fixed code.");
+        if (otpProvider.Equals("MetaWhatsApp", StringComparison.OrdinalIgnoreCase))
         {
-            options.ServerDomain = passkeyDomain;
-            options.ServerName = configuration[$"{PasskeyOptions.SectionName}:ServerName"] ?? "LogicFit";
-            options.Origins = passkeyOrigins.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var requiredMetaSecrets = new[]
+            {
+                "MetaWhatsApp:AccessToken",
+                "MetaWhatsApp:PhoneNumberId",
+                "MetaWhatsApp:BusinessAccountId",
+                "MetaWhatsApp:TemplateName",
+                "MetaWhatsApp:TemplateLanguage",
+                "MetaWhatsApp:GraphApiVersion"
+            };
+            if (requiredMetaSecrets.Any(key => string.IsNullOrWhiteSpace(configuration[key])))
+                throw new InvalidOperationException("Meta WhatsApp OTP settings must be supplied by server secrets.");
+        }
+        services.AddHttpClient<MetaWhatsAppOtpProvider>(client => client.Timeout = TimeSpan.FromSeconds(10));
+        services.AddScoped<DevelopmentOtpProvider>();
+        services.AddScoped<IOtpSender>(provider => otpProvider.ToLowerInvariant() switch
+        {
+            "development" => provider.GetRequiredService<DevelopmentOtpProvider>(),
+            "metawhatsapp" => provider.GetRequiredService<MetaWhatsAppOtpProvider>(),
+            _ => throw new InvalidOperationException("Otp:Provider must be Development or MetaWhatsApp.")
         });
 
         // Identity
@@ -85,11 +114,11 @@ public static class DependencyInjection
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
         services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ActiveTenantAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, PasskeyStepUpHandler>();
+        services.AddScoped<IAuthorizationHandler, OtpStepUpHandler>();
         services.AddAuthorization(options =>
         {
-            options.AddPolicy(PasskeyStepUpRequirement.PolicyName, policy =>
-                policy.RequireAuthenticatedUser().AddRequirements(new PasskeyStepUpRequirement()));
+            options.AddPolicy(OtpStepUpRequirement.PolicyName, policy =>
+                policy.RequireAuthenticatedUser().AddRequirements(new OtpStepUpRequirement()));
             // Endpoints with a plain [Authorize] (no permission policy) still enforce the gym-status rule.
             options.DefaultPolicy = new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()
@@ -134,7 +163,6 @@ public static class DependencyInjection
         else
             services.AddScoped<IEmailSender, UnconfiguredEmailSender>();
         services.AddScoped<IEmailService, LoggingEmailService>();
-        services.AddScoped<IIdentityPasskeyService, IdentityPasskeyService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddSingleton<IBackupService, SqlServerBackupService>();
         services.AddSingleton<IMediaBackupService, LocalMediaBackupService>();

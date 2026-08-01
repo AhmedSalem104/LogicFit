@@ -1,22 +1,24 @@
 # المصادقة وتدفقات مساحات العمل
 
-> حالة المرجع: تدفق Backend في `master` عند `8ddc5db` مع اعتماد معلّق على PR #109 الذي يضم Controller مراجعة الطلبات إلى المضيف الموحد (2026-07-30). يشرح العقد الذي يجب أن تتبعه الواجهات، ولا يدّعي أن أي تصميم UI في فرع منفصل أصبح منشورًا.
+> حالة المرجع: تنفيذ محلي غير منشور لـIssue #118 بتاريخ 2026-07-30. يصف هذا المرجع عقد Backend والواجهتين بعد إزالة Passkey وإضافة OTP المركزي. لا يصبح سلوك إنتاج قبل المراجعة والدمج وتطبيق الـMigration وإعداد أسرار الخادم.
 
 LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إلى **هوية عالمية أولًا ثم اختيار مساحة العمل**. لذلك يوجد تدفقان مدعومان حاليًا: التدفق التقليدي المتوافق، وتدفق الهوية الجديد. لا يجوز حذف الأول قبل نقل كل الواجهات والبيانات إليه.
 
-> **Unreleased – Issue #113 branch:** the identity-first contract is being moved to a verified, email-only global identity. This branch implements the email verification and password-reset foundation; Passkeys, invitations, QR/join flows, legacy-account linking, and the replacement frontend are separate remaining slices and are not yet production behavior.
+> **Unreleased – Issue #118:** Email + Password remains supported, and Phone + OTP is added as a complete identity sign-in and recovery path. Passkey/WebAuthn is removed from runtime code, APIs, permissions, and both frontends.
 
 ## الكيانات وحدود الأمان
 
 | الكيان | الغرض | لا يعني |
 |---|---|---|
-| `IdentityAccount` | هوية عالمية ببريد فريد مطبّع وكلمة مرور؛ قد ترتبط بأكثر من مساحة. الهاتف بيانات تواصل فقط وليس مُعرّف دخول. | منح صلاحية أو Tenant context بمفردها |
+| `IdentityAccount` | هوية عالمية ببريد فريد مطبّع وكلمة مرور؛ قد ترتبط بأكثر من مساحة. يمكن ربط هاتف E.164 فريد ومؤكد واستخدامه مع OTP. | منح صلاحية أو Tenant context بمفردها |
 | `User` / `DomainUser` | حساب محلي داخل `TenantId`، profile، دور وحالة كلمة مرور | أن المستخدم يستطيع الدخول إلى مساحة أخرى لها الاسم نفسه |
 | `WorkspaceMembership` | رابط الهوية بالحساب المحلي والمساحة، والدور وحالة الاعتماد | بديلًا عن RBAC أو اشتراك المساحة |
 | `ApplicationRequest` | طلب إنشاء مساحة أو انضمام عضو، بحالات ومراجعة و`RowVersion` | جلسة مستخدم عادية |
 | `ApplicationRequestRevision` | لقطة تدقيق لكل إعادة تقديم/تعديل مطلوب | تعديل البيانات بلا أثر تدقيقي |
 | `IdentityWorkspaceSession` | token اختيار مساحة قصير العمر (10 دقائق) محفوظ كـhash | JWT أو refresh token |
 | `ApplicationTrackingSession` | token متابعة طلب قصير العمر، بلا refresh token | دخول إلى بيانات المساحة أو بيانات العملاء |
+| `OtpChallenge` | تحدٍ مركزي لغرض واحد وهاتف E.164، يخزن HMAC+salt وحالة التسليم والمحاولات والصلاحية و`RowVersion` | جلسة مستخدم أو دليلًا على نجاح التحقق |
+| `OtpStepUpSession` | إثبات قصير (5 دقائق) مشتق من OTP ناجح ومربوط بالهوية والجلسة والغرض | صلاحية دائمة أو بديلًا عن RBAC |
 
 العزل بـ`TenantId` وملكية المورد وعضوية المساحة حدود أمنية. لا تعتمد واجهة المستخدم أو إخفاء زر كبديل عن فحص API.
 
@@ -32,7 +34,7 @@ LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إل
   -> فحص User المحلي وكلمة المرور والحالة
   -> جسر التوافق: إنشاء/ربط IdentityAccount وWorkspaceMembership عند الإمكان
   -> تحميل الأدوار والصلاحيات
-  -> إصدار tenant JWT + refresh token
+  -> إصدار tenant JWT ووضع refresh token داخل Cookie آمنة HttpOnly
   -> توجيه الواجهة حسب الدور والصلاحيات
 ```
 
@@ -45,8 +47,11 @@ LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إل
 ## تدفق الهوية أولًا ثم اختيار مساحة (المستهدف)
 
 ```text
-شاشة الدخول الموحدة
+شاشة الدخول الموحدة (أحد المسارين)
   -> POST /api/identity/login { email, password }
+  أو
+  -> POST /api/identity/phone-login/request { phoneNumber(E.164), sessionBinding }
+  -> POST /api/identity/phone-login/verify { challengeId, code, sessionBinding }
   <- WorkspaceSelectionToken (10 دقائق)
      + activeWorkspaces[]
      + pendingApplications[]
@@ -56,7 +61,8 @@ LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إل
   المستخدم يختار مساحة (أو تكمل الواجهة تلقائيًا عند عضوية واحدة)
   -> POST /api/identity/select-workspace { workspaceSelectionToken, workspaceId }
   -> فحص Membership.Active + User.Active + حالة المساحة
-  <- tenant JWT + refresh token + roles + permissions + TenantId
+  <- tenant JWT + roles + permissions + TenantId
+  + Set-Cookie للـrefresh token؛ لا يظهر في JSON ولا يستطيع JavaScript قراءته
 
 إذا كانت هناك طلبات معلقة:
   يمكن استعراض حالتها بالتوازي مع الدخول لمساحة نشطة.
@@ -77,7 +83,52 @@ POST /api/identity/password-reset/confirm { token, newPassword }
      and revokes all local refresh tokens plus identity workspace-selection sessions
 ```
 
-The raw 256-bit token is placed in the **frontend URL fragment**, is stored only as a SHA-256 hash, and is never included in application or audit logs. Verification and reset endpoints are anonymous, but registration and reset requests are IP rate-limited (five attempts per 15 minutes). `NormalizedEmail` has the global unique index; phone numbers are no longer accepted by the identity login endpoint.
+The raw 256-bit email token is placed in the **frontend URL fragment**, is stored only as a SHA-256 hash, and is never included in application or audit logs. Verification and reset endpoints are anonymous, but registration and reset requests are rate-limited. `NormalizedEmail` keeps its global unique index. Email + Password remains available while a separately verified, unique E.164 phone enables Phone + OTP.
+
+## نظام OTP المركزي (Issue #118، غير منشور)
+
+الأغراض المسجلة هي `PhoneVerification`, `PasswordlessLogin`, `PlatformAdminLogin`,
+`SensitiveActionStepUp`, `PasswordReset`, `ChangePhone`, و`InviteAcceptance`.
+لا يقبل الخادم كودًا بلا `challengeId` صحيح، ولا يخزن الكود الصريح. لكل تحدٍ salt مستقل
+وHMAC-SHA256، والمقارنة ثابتة زمنيًا، والاستهلاك ذري ومحمي بـSQL `rowversion`.
+
+القواعد الافتراضية:
+
+- الصلاحية 5 دقائق، حد المحاولات 5، ومدة انتظار إعادة الإرسال 60 ثانية.
+- إصدار كود جديد يبطل التحدي المعلق السابق لنفس الهاتف والغرض.
+- الهاتف يُطبّع ويُرفض ما لم يطابق E.164.
+- توجد حدود حسب IP/الجهاز في middleware، وبحسب الهاتف/التحدي/اليوم في قاعدة البيانات.
+- لا يعاد OTP في response ولا يسجل في application/audit logs.
+- `DevelopmentOtpProvider` لا يعمل إلا عندما تكون البيئة `Development` ويستخدم `1234`
+  داخل تحدٍ حقيقي. اختيار المزود خارج Development أو وجود fixed code في Staging/Production
+  يوقف Startup فورًا.
+- `MetaWhatsAppOtpProvider` ينفذ نفس `IOtpSender` ويستخدم WhatsApp Authentication Template.
+  يخزن `ProviderMessageId` ويدعم حالات `Queued`, `Sent`, `Delivered`, `Failed` وWebhook
+  موقعًا. نجاح الإرسال لا ينشئ جلسة؛ الجلسة لا تصدر إلا بعد تحقق الكود داخليًا.
+
+### دخول Platform Admin والتحقق الإضافي
+
+```text
+POST /api/platform/auth/login { email, password, sessionBinding }
+  -> يفحص الحساب والبريد والهاتف المؤكدين
+  -> ينشئ PlatformAdminLogin challenge ولا يصدر جلسة
+POST /api/platform/auth/otp/verify { challengeId, code, sessionBinding }
+  -> يستهلك التحدي مرة واحدة
+  -> يصدر Platform JWT ويضع refresh token في HttpOnly cookie
+```
+
+العمليات الحساسة في tenants/plans/roles/workspace applications تتطلب
+`POST /api/identity/step-up/request` ثم `/step-up/verify`. ترسل الواجهة الإثبات القصير
+في `X-LogicFit-OTP-Step-Up` وربط الجلسة في `X-Session-Id`. لا يتجاوز الإثبات صلاحيات
+المسؤول الأصلية، ولا يعمل لهوية أو جلسة أخرى.
+
+### Refresh session transport
+
+الـAccess Token قصير العمر ويبقى عقد Bearer الحالي. أما Refresh Token فلا يظهر في
+`AuthResponseDto` ولا في localStorage: يكتبه الخادم في Cookie تبدأ بـ`__Host-` بخصائص
+`HttpOnly; Secure; SameSite=None; Path=/`. `/refresh` يقرأ الـCookie فقط، يدورها،
+ويكتشف إعادة استخدام النسخة القديمة فيبطل عائلة جلسات المستخدم. Reset/Change Password
+وتغيير الهاتف المؤكد يبطلان الجلسات القديمة.
 
 الاستجابة تعيد `activeWorkspaces` و`pendingApplications` معًا. وجود طلب معلّق لا يمنع المستخدم من دخول مساحة أخرى يملك فيها `WorkspaceMembership.Active`.
 
@@ -208,6 +259,11 @@ FreelanceOwner يرشح هوية موجودة
 | refresh/logout-all/reset/change password | `/api/auth/refresh`، `/logout-all`، `/forget-password`، `/reset-password`، `/change-password` |
 | تسجيل هوية عالمية | `POST /api/identity/register` |
 | دخول هوية عالمي | `POST /api/identity/login` |
+| طلب/تحقق دخول الهاتف | `POST /api/identity/phone-login/request`، `POST /api/identity/phone-login/verify` |
+| تحقق/تغيير الهاتف | `POST /api/identity/phone/request`، `POST /api/identity/phone/verify` |
+| استعادة كلمة المرور بالهاتف | `POST /api/identity/phone/password-reset/request`، `POST /api/identity/phone/password-reset/confirm` |
+| OTP للعملية الحساسة | `POST /api/identity/step-up/request`، `POST /api/identity/step-up/verify` |
+| دخول إدارة المنصة | `POST /api/platform/auth/login` ثم `POST /api/platform/auth/otp/verify` |
 | اختيار مساحة | `POST /api/identity/select-workspace` |
 | استعادة جلسة متابعة | `POST /api/identity/application-tracking-sessions` |
 | إنشاء طلب مدرب حر | `POST /api/workspace-applications/freelance` |

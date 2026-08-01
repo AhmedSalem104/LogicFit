@@ -61,17 +61,42 @@ function Get-AuthorizationLabel {
     $all = "$ClassAttributes`n$MethodAttributes"
     if ($MethodAttributes -match 'AllowAnonymous') { return 'Anonymous (no token required)' }
 
-    $authorization = [regex]::Matches($all, '\[Authorize(?<args>\([^\]]*\))?\]') | Select-Object -Last 1
-    if ($null -eq $authorization) { return 'Server default (not declared explicitly)' }
+    $authorizations = @([regex]::Matches($all, '\[Authorize(?<args>\([^\]]*\))?\]'))
+    if ($authorizations.Count -eq 0) { return 'Server default (not declared explicitly)' }
 
-    $args = $authorization.Groups['args'].Value
-    if ($args -match 'Policy\s*=\s*(?<policy>[^,\)]+)') {
-        return ('JWT + Policy: `{0}`' -f $matches['policy'].Trim())
+    $policies = [System.Collections.Generic.List[string]]::new()
+    $roles = [System.Collections.Generic.List[string]]::new()
+    $hasPlainAuthorization = $false
+    foreach ($authorization in $authorizations) {
+        $args = $authorization.Groups['args'].Value
+        if ($args -match 'Policy\s*=\s*(?<policy>[^,\)]+)') {
+            $policies.Add($matches['policy'].Trim())
+        }
+        elseif ($args -match 'Roles\s*=\s*"(?<roles>[^"]+)"') {
+            $roles.Add($matches['roles'])
+        }
+        else {
+            $hasPlainAuthorization = $true
+        }
     }
-    if ($args -match 'Roles\s*=\s*"(?<roles>[^"]+)"') {
-        return ('JWT + Roles: `{0}`' -f $matches['roles'])
+
+    $uniquePolicies = @($policies | Select-Object -Unique)
+    $uniqueRoles = @($roles | Select-Object -Unique)
+    if ($uniquePolicies.Count -eq 1 -and $uniqueRoles.Count -eq 0) {
+        return ('JWT + Policy: `{0}`' -f $uniquePolicies[0])
     }
-    return 'JWT required'
+    if ($uniquePolicies.Count -gt 1 -and $uniqueRoles.Count -eq 0) {
+        return ('JWT + Policies: {0}' -f (($uniquePolicies | ForEach-Object { '`' + $_ + '`' }) -join ' AND '))
+    }
+    if ($uniqueRoles.Count -eq 1 -and $uniquePolicies.Count -eq 0) {
+        return ('JWT + Roles: `{0}`' -f $uniqueRoles[0])
+    }
+
+    $requirements = [System.Collections.Generic.List[string]]::new()
+    foreach ($policy in $uniquePolicies) { $requirements.Add(('Policy `{0}`' -f $policy)) }
+    foreach ($role in $uniqueRoles) { $requirements.Add(('Roles `{0}`' -f $role)) }
+    if ($hasPlainAuthorization -and $requirements.Count -eq 0) { return 'JWT required' }
+    return ('JWT + {0}' -f ($requirements -join ' AND '))
 }
 
 function Get-ResponseTypes {
