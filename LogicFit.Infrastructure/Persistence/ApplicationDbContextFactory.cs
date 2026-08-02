@@ -12,9 +12,13 @@ public sealed class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Ap
 {
     public ApplicationDbContext CreateDbContext(string[] args)
     {
+        var operatorConnectionString = Environment.GetEnvironmentVariable("LOGICFIT_EF_CONNECTION_STRING");
+        var connectionString = string.IsNullOrWhiteSpace(operatorConnectionString)
+            ? "Server=(localdb)\\MSSQLLocalDB;Database=LogicFitDesignTime;Trusted_Connection=True;TrustServerCertificate=True;"
+            : operatorConnectionString;
+
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseSqlServer(
-                "Server=(localdb)\\MSSQLLocalDB;Database=LogicFitDesignTime;Trusted_Connection=True;TrustServerCertificate=True;")
+            .UseSqlServer(connectionString)
             .Options;
 
         return new ApplicationDbContext(

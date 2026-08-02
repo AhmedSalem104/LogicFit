@@ -3,7 +3,15 @@ param(
     [Parameter(Mandatory = $true)] [string] $PublishSettingsPath,
     [Parameter(Mandatory = $true)] [string] $ContentPath,
     [string] $MsDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe",
-    [string] $HealthCheckUrl
+    [string] $HealthCheckUrl,
+    [switch] $ApplyMigrations,
+    [string] $VerifiedBackupReference,
+    [string] $MigrationScriptPath,
+    [switch] $ApproveDestructiveMigrationReview,
+    [string] $MigrationConnectionEnvironmentVariable = "LOGICFIT_PRODUCTION_DB_CONNECTION",
+    [string] $MigrationProject = (Join-Path $PSScriptRoot "..\LogicFit.Infrastructure\LogicFit.Infrastructure.csproj"),
+    [string] $StartupProject = (Join-Path $PSScriptRoot "..\LogicFit.API\LogicFit.API.csproj"),
+    [ValidateSet("Debug", "Release")] [string] $Configuration = "Release"
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,11 +20,94 @@ if (-not (Test-Path -LiteralPath $PublishSettingsPath)) { throw "Publish setting
 if (-not (Test-Path -LiteralPath $ContentPath)) { throw "Publish content path not found" }
 if (-not (Test-Path -LiteralPath $MsDeployPath)) { throw "MSDeploy executable not found" }
 
+if ($ApplyMigrations) {
+    if ([string]::IsNullOrWhiteSpace($VerifiedBackupReference)) {
+        throw "-ApplyMigrations requires -VerifiedBackupReference for a backup verified before deployment."
+    }
+
+    if ($VerifiedBackupReference.Contains("`r") -or $VerifiedBackupReference.Contains("`n")) {
+        throw "Verified backup reference must be a single line."
+    }
+
+    if ([string]::IsNullOrWhiteSpace($HealthCheckUrl)) {
+        throw "-ApplyMigrations requires -HealthCheckUrl so the rollout can be verified."
+    }
+
+    if ([string]::IsNullOrWhiteSpace($MigrationScriptPath)) {
+        throw "-ApplyMigrations requires -MigrationScriptPath for the reviewed idempotent SQL."
+    }
+
+    if ($MigrationConnectionEnvironmentVariable -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
+        throw "Migration connection environment variable name is invalid."
+    }
+
+    $migrationConnectionString = [Environment]::GetEnvironmentVariable($MigrationConnectionEnvironmentVariable)
+    if ([string]::IsNullOrWhiteSpace($migrationConnectionString)) {
+        throw "The protected migration connection environment variable is missing."
+    }
+
+    if (-not (Test-Path -LiteralPath $MigrationProject)) { throw "Migration project not found" }
+    if (-not (Test-Path -LiteralPath $StartupProject)) { throw "Migration startup project not found" }
+}
+
 [xml] $settings = Get-Content -LiteralPath $PublishSettingsPath -Raw -Encoding UTF8
 $profile = $settings.publishData.publishProfile | Select-Object -First 1
 if ($null -eq $profile -or $profile.publishMethod -ne "MSDeploy") { throw "The publish settings file is not an MSDeploy profile" }
 if ([string]::IsNullOrWhiteSpace($profile.publishUrl) -or [string]::IsNullOrWhiteSpace($profile.msdeploySite)) { throw "MSDeploy host/site is missing" }
 if ([string]::IsNullOrWhiteSpace($profile.userName) -or [string]::IsNullOrWhiteSpace($profile.userPWD)) { throw "MSDeploy credentials are missing" }
+
+if ($ApplyMigrations) {
+    # Migrations run as an explicit deployment operation, never from the IIS startup path.
+    # The protected connection is copied into the explicit EF operator variable only for the
+    # lifetime of this process and is never printed. ApplicationDbContextFactory otherwise
+    # remains isolated on its local design-time database.
+    $hadAspNetCoreEnvironment = Test-Path Env:ASPNETCORE_ENVIRONMENT
+    $previousAspNetCoreEnvironment = $env:ASPNETCORE_ENVIRONMENT
+    $hadEfConnectionEnvironment = Test-Path Env:LOGICFIT_EF_CONNECTION_STRING
+    $previousEfConnectionEnvironment = $env:LOGICFIT_EF_CONNECTION_STRING
+
+    try {
+        $env:ASPNETCORE_ENVIRONMENT = "Production"
+        $env:LOGICFIT_EF_CONNECTION_STRING = $migrationConnectionString
+
+        & dotnet ef --version *> $null
+        if ($LASTEXITCODE -ne 0) { throw "dotnet-ef 8.x must be installed before applying migrations." }
+
+        if (-not (Test-Path -LiteralPath $MigrationScriptPath)) { throw "Reviewed migration script was not found" }
+        if ((Get-Item -LiteralPath $MigrationScriptPath).Length -le 0) { throw "Reviewed migration script is empty" }
+
+        $migrationScript = Get-Content -LiteralPath $MigrationScriptPath -Raw
+        if ($migrationScript -notmatch '__EFMigrationsHistory') {
+            throw "Migration script is not an EF idempotent migration script."
+        }
+
+        $containsDestructiveSql = $migrationScript -match '(?im)\b(DROP\s+(TABLE|COLUMN|DATABASE)|TRUNCATE\s+TABLE|DELETE\s+FROM\s+(?!\[?__EFMigrationsHistory\]?))'
+        if ($containsDestructiveSql -and -not $ApproveDestructiveMigrationReview) {
+            throw "Migration script contains destructive SQL. Review it and pass -ApproveDestructiveMigrationReview explicitly."
+        }
+
+        $scriptHash = (Get-FileHash -LiteralPath $MigrationScriptPath -Algorithm SHA256).Hash
+        Write-Host "Applying reviewed idempotent migration plan (SHA256: $scriptHash)."
+
+        & dotnet ef database update --project $MigrationProject --startup-project $StartupProject --configuration $Configuration --no-build
+        if ($LASTEXITCODE -ne 0) { throw "Database migration failed with exit code $LASTEXITCODE" }
+
+        $migrationListOutput = & dotnet ef migrations list --project $MigrationProject --startup-project $StartupProject --configuration $Configuration --no-build 2>&1
+        if ($LASTEXITCODE -ne 0) { throw "Post-migration history verification failed with exit code $LASTEXITCODE" }
+        if (($migrationListOutput -join "`n") -match '(?i)\(Pending\)') {
+            throw "Database migration verification found pending migrations."
+        }
+
+        Write-Host "Database migrations completed and no pending EF migrations remain."
+    }
+    finally {
+        if ($hadAspNetCoreEnvironment) { $env:ASPNETCORE_ENVIRONMENT = $previousAspNetCoreEnvironment }
+        else { Remove-Item Env:ASPNETCORE_ENVIRONMENT -ErrorAction SilentlyContinue }
+
+        if ($hadEfConnectionEnvironment) { $env:LOGICFIT_EF_CONNECTION_STRING = $previousEfConnectionEnvironment }
+        else { Remove-Item Env:LOGICFIT_EF_CONNECTION_STRING -ErrorAction SilentlyContinue }
+    }
+}
 
 $destination = "https://$($profile.publishUrl):8172/msdeploy.axd?site=$($profile.msdeploySite)"
 $arguments = @(

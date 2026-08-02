@@ -9,6 +9,13 @@
 > مرجع كامل لكل ما يخص **الدخول والتسجيل وإنشاء المستخدمين** في منصة LogicFit — لكل نوع مستخدم، مع الـ requests والـ responses حرفياً.
 > كل الـ JSON بصيغة **camelCase**، وكل التواريخ **UTC (ISO 8601)**.
 
+> **تنبيه مرجعي حديث (Issue #143، 2026-08-02):** المرجع التنفيذي الحالي هو
+> `docs/AUTHENTICATION-AND-WORKSPACE-FLOWS.md` والـAPI الموحد داخل `LogicFit.API`. دخول الهوية
+> يدعم Email + Password أو Phone + OTP. الهاتف يرسل E.164، والطلب المتكرر من نفس جلسة
+> المتصفح يستعيد التحدي النشط دون إعادة إرسال. أول OTP ناجح لهوية ذات بريد مؤكد يثبت الهاتف؛
+> لا يمنح الكود الثابت المؤقت جلسة لرقم غير مرتبط بهوية. الأقسام القديمة أدناه محفوظة لتوثيق
+> مسار التوافق، ولا تعني وجود مشروع Platform API مستقل.
+
 ---
 
 ## جدول المحتويات
@@ -104,24 +111,25 @@ Authorization: Bearer <accessToken>
 > **مبدأ**: العميل فقط هو من يسجّل نفسه ذاتياً. باقي الأنواع يُنشَأون من مستخدم أعلى. كل مستخدم جديد يحصل على **دور RBAC تلقائياً** وقت إنشائه، فتظهر صلاحياته في التوكن مباشرة عند أول دخول.
 
 ### 4.1 Platform Owner / Admin
-- **الإنشاء**: الـ PlatformOwner **مزروع تلقائياً** أول تشغيل: `owner@platform.local` / `ChangeMe#12345` (**غيّره فوراً**).
+- **الإنشاء/الإصلاح الأول**: لا توجد بيانات ثابتة. يستخدم المشغل `PlatformBootstrap` مؤقتًا
+  بقيم من Server Secrets، ثم يعطله ويحذف القيم بعد أول دخول ناجح.
 - **الدخول** (Platform API):
 ```http
 POST {{PLATFORM_API}}/api/platform/auth/login
 Content-Type: application/json
 
-{ "email": "owner@platform.local", "password": "ChangeMe#12345" }
+{ "email": "platform-owner@example.com", "password": "<operator-supplied-secret>", "sessionBinding": "<browser-session-id>" }
 ```
-**Response** — نفس شكل `AuthResponseDto` لكن **بدون tenantId** وبصلاحيات المنصة:
+**Response** — تحدي OTP فقط؛ لا تصدر جلسة بعد كلمة المرور وحدها:
 ```json
 {
-  "userId": "GUID", "email": "owner@platform.local", "phoneNumber": null, "fullName": "Platform Owner",
-  "role": "PlatformOwner", "roles": ["PlatformOwner"],
-  "permissions": ["ManagePlatform","ManageTenants","ManagePlans","ManagePaymentRequests","ManagePlatformReports"],
-  "tenantId": "00000000-0000-0000-0000-0000000000a1",
-  "accessToken": "JWT...", "refreshToken": "opaque...", "expiresAt": "2026-07-08T12:15:00Z"
+  "challengeId": "GUID", "purpose": "PlatformAdminLogin", "maskedPhoneNumber": "+20***678",
+  "expiresAtUtc": "2026-08-01T18:05:00Z", "resendAvailableAtUtc": "2026-08-01T18:01:00Z"
 }
 ```
+بعدها ترسل الواجهة `challengeId + code + sessionBinding` إلى
+`POST /api/platform/auth/otp/verify`. عند النجاح فقط يعود Access Token وتُكتب Refresh Cookie
+من نوع HttpOnly؛ لا يعود Refresh Token في JSON.
 
 ### 4.2 Owner (صاحب الجيم) — يُنشأ من المنصة مع الجيم
 ```http

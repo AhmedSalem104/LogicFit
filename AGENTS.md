@@ -72,12 +72,14 @@ Do not record secrets, passwords, refresh tokens, connection strings, publish pr
 - Production deployment must run only after CI passes.
 - Required production secrets must stay in GitHub Environment secrets or the server secret store; never commit them.
 - `appsettings.Production.json` is server-only and must never enter a publish artifact. WebDeploy must also skip it explicitly; `DoNotDeleteRule` alone does not prevent overwriting an existing file.
-- Database migrations must be idempotent/reviewed and applied separately from application startup.
+- Database migrations must be idempotent and reviewed before release. The unified API applies any
+  reviewed pending migrations at startup before seeding; the protected deployment pre-apply step
+  remains preferred and a verified backup plus rollback plan are still mandatory.
 - A failed health check must stop the rollout and trigger rollback or operator review.
 - Monster ASP deployment details must be recorded before enabling automatic deployment: host, user, app directory, service/container command, backup command, migration command, health URL, and rollback command.
 - The supplied `logicfit-platform.runasp.net-WebDeploy.publishSettings` is a Platform API MSDeploy profile only. Its password must be stored as a protected GitHub Environment secret and must never be committed or printed.
 - Tenant API deployment requires a separate WebDeploy profile or equivalent target before production CD can deploy the complete application.
-- The protected CD workflow requires `RUNASP_UNIFIED_PUBLISH_SETTINGS_B64` and `RUNASP_UNIFIED_HEALTHCHECK_URL` in the GitHub `production` Environment. The profile is decoded only into the ephemeral Windows runner.
+- The protected CD workflow requires `RUNASP_UNIFIED_PUBLISH_SETTINGS_B64`, `RUNASP_UNIFIED_HEALTHCHECK_URL`, and `LOGICFIT_PRODUCTION_DB_CONNECTION` in the GitHub `production` Environment. The profile is decoded and the database connection is injected only into the ephemeral Windows runner; neither value may be printed.
 
 ## GitHub branching and review policy
 
@@ -135,13 +137,16 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 ### 2026-07-28 — production migration incident prevention
 
 - A Git migration file is not a database deployment. Every production migration must have an explicit apply step, a recorded target database, and a post-apply health check.
-- Before enabling startup migrations, inspect `__EFMigrationsHistory` and the actual production schema. Production may contain columns added manually or may be missing columns that exist in the EF model.
+- Before applying production migrations, inspect `__EFMigrationsHistory` and the actual production schema. Production may contain columns added manually or may be missing columns that exist in the EF model.
 - Migrations targeting shared/legacy Monster databases must be idempotent against both states: use guarded `COL_LENGTH`/`OBJECT_ID` SQL for add/drop/constraint operations when the target schema may differ. Never assume `AddColumn` or `DropColumn` is safe merely because the migration is new.
 - Never make a migration change that drops an existing column without verifying the column exists in every supported production schema. Preserve data and constraints; use a reviewed backup and rollback plan.
 - Do not treat EF model warnings about query filters as startup failures. The release blocker is the first `SqlException`/`Unhandled exception` in stdout, not the preceding warnings.
 - If IIS reports `ISAPI reported an unhealthy condition`, retrieve `stdout_*.log` before changing code. This message is only a symptom of a startup crash/recycle.
 - For Monster ASP, deploy with stdout logging enabled during diagnosis, ensure the logs directory is writable, capture the first root exception, then disable verbose stdout after recovery.
-- Production startup migration is enabled only for the single unified host after schema review. If the database account lacks DDL permission, disable startup migration and apply the reviewed idempotent SQL with an operator-controlled database connection.
+- Startup migration is the final safety net after Issue #147: the unified API serializes migration
+  execution across workers, applies compiled pending migrations before seeding, and verifies that
+  none remain. If the database account lacks DDL permission, stop and use the approved database
+  operator procedure.
 - After each migration fix, run `dotnet build`, `dotnet test`, generate an idempotent migration script, deploy to a schema that represents the production drift, and verify `/health` before merging/releasing.
 - QR/media changes must not introduce storage-provider startup failures: local storage remains the default; R2 is selected only when all required R2 settings are present. Keep sensitive files private and test the authenticated media endpoint separately.
 - Do not declare a deployment healthy from a successful WebDeploy sync alone. Require application startup, database migration completion, `/health` 200, and a smoke test for the affected endpoint.
@@ -151,6 +156,13 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 - Issue #137 traced IIS `500.30` to a publish overwrite of the server-only production configuration, removing the required `Otp:HmacSecret`.
 - Recovery must use the protected GitHub `production` Environment, bind the profile to an explicit Monster site id, capture configuration/web.config for rollback, recycle the app, and require repeated health checks.
 - Protected recovery secrets are `LOGICFIT_OTP_HMAC_SECRET`, `LOGICFIT_JWT_SECRET`, and `LOGICFIT_PASSWORD_RESET_SECRET`; never print or persist their values in artifacts.
+
+### 2026-08-01 — protected migration-aware publishing
+
+- The manual production workflow pre-applies reviewed pending migrations before WebDeploy. The IIS
+  startup migrator repeats the pending check and normally performs no work.
+- A production migration run requires a verified BACPAC reference, the reviewed idempotent SQL artifact, explicit approval for destructive statements, and the protected database connection secret.
+- A migration failure or remaining pending migration stops the rollout before WebDeploy; a failed health check stops completion and requires operator review.
 
 ### 2026-07-25
 
@@ -178,3 +190,21 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
   preserve divergent local tips, and never continue from a failed fast-forward.
 - Migration delivery requires three separate checks: the file in `origin/master`, the file in the
   canonical workspace, and the migration/schema state in the target database.
+
+### 2026-08-01 — Platform Owner recovery
+
+- Never seed a fixed Platform Owner password or log bootstrap credentials. Initial creation and
+  legacy-identity repair must be an explicit, temporary server-secret operation.
+- Disable and remove all `PlatformBootstrap__*` settings immediately after the verified recovery
+  run; routine password changes and account recovery must use the normal authenticated flows.
+
+### 2026-08-02 — startup migration safety net
+
+- Issue #147 changes the unified API to apply compiled pending EF migrations before `DataSeeder`
+  and before serving requests. SQL Server `sp_getapplock` serializes the operation across IIS
+  workers, and startup verifies that no migration remains pending.
+- This runtime safety net does not generate migration source files, replace migration review, or
+  remove the backup/rollback requirement. The protected pre-publish migration step remains the
+  preferred production path.
+- `Database__StartupMigrations__Enabled=false` is an emergency operator switch only. The default is
+  enabled; lock and command timeouts are bounded configuration values.

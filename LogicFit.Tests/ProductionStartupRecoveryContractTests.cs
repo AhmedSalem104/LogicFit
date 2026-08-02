@@ -43,6 +43,20 @@ public sealed class ProductionStartupRecoveryContractTests
     }
 
     [Fact]
+    public void Protected_deploy_accepts_base64_or_direct_publish_settings_xml()
+    {
+        var workflow = File.ReadAllText(Path.Combine(RepositoryRoot, ".github", "workflows", "cd.yml"));
+
+        Assert.Contains("$profilePath = \"$env:RUNNER_TEMP/unified.publishSettings\"", workflow);
+        Assert.Contains("$xmlStart = $profilePayload.IndexOf('<')", workflow);
+        Assert.Contains("$profileDocument = [xml]$profilePayload", workflow);
+        Assert.Contains("[Convert]::FromBase64String($profilePayload)", workflow);
+        Assert.Contains(
+            "The protected unified publish profile is neither Base64 nor publish-settings XML.",
+            workflow);
+    }
+
+    [Fact]
     public void Authentication_request_payloads_are_never_written_by_exception_behavior()
     {
         var behavior = File.ReadAllText(Path.Combine(
