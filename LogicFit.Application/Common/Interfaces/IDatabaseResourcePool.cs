@@ -27,7 +27,9 @@ public sealed record DatabaseProvisioningResult(
     Guid? ResourceId,
     string? Provider,
     string? DatabaseName,
-    string? ErrorCode = null);
+    string? ErrorCode = null,
+    Guid? LocalUserId = null,
+    string? SchemaVersion = null);
 
 public interface IDatabaseProvisioningProvider
 {

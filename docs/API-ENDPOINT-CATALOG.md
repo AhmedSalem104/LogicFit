@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-02 14:27 UTC`  |  Total endpoints: **375**
+Generated: `2026-08-02 14:50 UTC`  |  Total endpoints: **376**
 
 ## Contract rules
 
@@ -437,6 +437,12 @@ Generated: `2026-08-02 14:27 UTC`  |  Total endpoints: **375**
 
 - **Access:** JWT + Policy: `Permissions.ManageTenants`
 - **Inputs:** Body `request`: `RequestInformationRequest`<br>Handler signature: `Guid id, [FromBody] RequestInformationRequest request`
+- **Declared response:** Task<ActionResult<PlatformApplicationDto>>
+
+#### `POST /api/platform/workspace-applications/{id:guid}/retry-provisioning` - `RetryProvisioning`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult<PlatformApplicationDto>>
 
 #### `POST /api/platform/workspace-applications/{id:guid}/start-review` - `StartReview`
