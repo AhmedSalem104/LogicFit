@@ -142,6 +142,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ProvisioningJob> ProvisioningJobs => Set<ProvisioningJob>();
     public DbSet<BackupBatch> BackupBatches => Set<BackupBatch>();
     public DbSet<DatabaseBackup> DatabaseBackups => Set<DatabaseBackup>();
+    public DbSet<SensitiveActionGrant> SensitiveActionGrants => Set<SensitiveActionGrant>();
+    public DbSet<TenantBackupExport> TenantBackupExports => Set<TenantBackupExport>();
+    public DbSet<TenantBackupDownloadGrant> TenantBackupDownloadGrants => Set<TenantBackupDownloadGrant>();
     public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
     public DbSet<SubscriptionInvoice> SubscriptionInvoices => Set<SubscriptionInvoice>();
     public DbSet<TenantUsage> TenantUsages => Set<TenantUsage>();

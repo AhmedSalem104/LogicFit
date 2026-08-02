@@ -118,6 +118,9 @@ public interface IApplicationDbContext
     DbSet<ProvisioningJob> ProvisioningJobs { get; }
     DbSet<BackupBatch> BackupBatches { get; }
     DbSet<DatabaseBackup> DatabaseBackups { get; }
+    DbSet<SensitiveActionGrant> SensitiveActionGrants { get; }
+    DbSet<TenantBackupExport> TenantBackupExports { get; }
+    DbSet<TenantBackupDownloadGrant> TenantBackupDownloadGrants { get; }
     DbSet<SubscriptionPayment> SubscriptionPayments { get; }
     DbSet<SubscriptionInvoice> SubscriptionInvoices { get; }
     DbSet<TenantUsage> TenantUsages { get; }

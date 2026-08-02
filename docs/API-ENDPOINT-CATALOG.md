@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-02 16:03 UTC`  |  Total endpoints: **379**
+Generated: `2026-08-02 16:34 UTC`  |  Total endpoints: **386**
 
 ## Contract rules
 
@@ -2124,6 +2124,50 @@ Generated: `2026-08-02 16:03 UTC`  |  Total endpoints: **379**
 - **Access:** JWT + Policy: `Permissions.ManageSettings`
 - **Inputs:** Handler signature: `Guid id, UpdateTaxSettingCommand command`
 - **Declared response:** Task<ActionResult>
+
+### TenantBackups
+
+#### `GET /api/tenant/backups/exports` - `List`
+
+- **Access:** JWT + Policy: `Permissions.CreateAndDownloadTenantBackup`
+- **Inputs:** No request input.
+- **Declared response:** Task<ActionResult<IReadOnlyList<TenantBackupExportDto>>>
+
+#### `POST /api/tenant/backups/exports` - `Create`
+
+- **Access:** JWT + Policy: `Permissions.CreateAndDownloadTenantBackup`
+- **Inputs:** Body `request`: `TenantBackupExportRequest`<br>Handler signature: `[FromBody] TenantBackupExportRequest request`
+- **Declared response:** Task<ActionResult<TenantBackupExportDto>>
+
+#### `GET /api/tenant/backups/exports/{exportId:guid}` - `Get`
+
+- **Access:** JWT + Policy: `Permissions.CreateAndDownloadTenantBackup`
+- **Inputs:** Handler signature: `Guid exportId`
+- **Declared response:** Task<ActionResult<TenantBackupExportDto>>
+
+#### `GET /api/tenant/backups/exports/{exportId:guid}/download` - `Download`
+
+- **Access:** JWT + Policy: `Permissions.CreateAndDownloadTenantBackup`
+- **Inputs:** Query `token`: `string`<br>Handler signature: `Guid exportId, [FromQuery] string token`
+- **Declared response:** Task<IActionResult>
+
+#### `POST /api/tenant/backups/exports/{exportId:guid}/download-grant` - `CreateDownloadGrant`
+
+- **Access:** JWT + Policy: `Permissions.CreateAndDownloadTenantBackup`
+- **Inputs:** Body `request`: `SensitiveGrantRequest`<br>Handler signature: `Guid exportId, [FromBody] SensitiveGrantRequest request`
+- **Declared response:** Task<ActionResult<TenantBackupDownloadGrantDto>>
+
+#### `POST /api/tenant/backups/reauthenticate` - `Reauthenticate`
+
+- **Access:** JWT + Policy: `Permissions.CreateAndDownloadTenantBackup`
+- **Inputs:** Body `request`: `PasswordReauthenticationRequest`<br>Handler signature: `[FromBody] PasswordReauthenticationRequest request`
+- **Declared response:** Task<ActionResult<SensitiveActionGrantDto>>
+
+#### `POST /api/tenant/backups/reauthenticate-download` - `ReauthenticateForDownload`
+
+- **Access:** JWT + Policy: `Permissions.CreateAndDownloadTenantBackup`
+- **Inputs:** Body `request`: `PasswordReauthenticationRequest`<br>Handler signature: `[FromBody] PasswordReauthenticationRequest request`
+- **Declared response:** Task<ActionResult<SensitiveActionGrantDto>>
 
 ### TenantBilling
 

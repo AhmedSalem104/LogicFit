@@ -41,8 +41,9 @@ private BACPAC and manifest files using `Backup:RetentionDays`.
 
 The current provider is BACPAC export through DacFx because the application can write the file
 itself.  Native Monster backup, restore, capacity alerts, and tenant-owner download grants are
-separate capabilities and must stay disabled until the corresponding provider and hosting
-assessment is approved.
+Native Monster backup/restore and capacity alerts remain separate capabilities. Tenant-owner
+BACPAC export/download is implemented in [TENANT-BACKUP-EXPORT.md](TENANT-BACKUP-EXPORT.md) and
+uses this service only after server-side tenant authorization and password reauthentication.
 
 ## Database changes
 
@@ -50,6 +51,8 @@ The additive migrations are:
 
 - `LogicFit.Infrastructure`: `20260802155234_AddCentralBackupOrchestration`
 - `LogicFit.Platform.Migrations`: `20260802155354_AddCentralBackupOrchestration`
+- `LogicFit.Infrastructure`: `20260802162826_AddTenantBackupExportSecurity`
+- `LogicFit.Platform.Migrations`: `20260802162856_AddTenantBackupExportSecurity`
 
 They add only `BackupBatches` and `DatabaseBackups` to platform-compatible stores.  No tenant
 migration is changed and no production database is modified by this PR.
