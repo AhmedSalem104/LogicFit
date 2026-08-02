@@ -71,6 +71,7 @@ Do not record secrets, passwords, refresh tokens, connection strings, publish pr
 - Never deploy directly without a protected production environment, backup, migration review, health check, and rollback plan.
 - Production deployment must run only after CI passes.
 - Required production secrets must stay in GitHub Environment secrets or the server secret store; never commit them.
+- `appsettings.Production.json` is server-only and must never enter a publish artifact. WebDeploy must also skip it explicitly; `DoNotDeleteRule` alone does not prevent overwriting an existing file.
 - Database migrations must be idempotent and reviewed before release. The unified API applies any
   reviewed pending migrations at startup before seeding; the protected deployment pre-apply step
   remains preferred and a verified backup plus rollback plan are still mandatory.
@@ -103,6 +104,7 @@ git push -u origin feature/<issue>-<slug>
 - Use unique constraints for duplicate prevention and idempotency keys for retried commands.
 - Do not use `Count + 1` for identifiers shared by concurrent requests.
 - Do not log passwords, reset tokens, refresh tokens, payment proofs, or sensitive health data.
+- Exception pipelines may log a request type/name, but must never serialize a command/query payload. Treat any production log containing credentials as exposed and rotate the affected credentials.
 - Keep private uploads out of public static-file paths; use authorization and signed URLs when storage is migrated.
 - Do not use destructive seed/reset operations in production without an explicit operator action and backup.
 
@@ -148,6 +150,12 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 - After each migration fix, run `dotnet build`, `dotnet test`, generate an idempotent migration script, deploy to a schema that represents the production drift, and verify `/health` before merging/releasing.
 - QR/media changes must not introduce storage-provider startup failures: local storage remains the default; R2 is selected only when all required R2 settings are present. Keep sensitive files private and test the authenticated media endpoint separately.
 - Do not declare a deployment healthy from a successful WebDeploy sync alone. Require application startup, database migration completion, `/health` 200, and a smoke test for the affected endpoint.
+
+### 2026-08-01 — production startup configuration incident
+
+- Issue #137 traced IIS `500.30` to a publish overwrite of the server-only production configuration, removing the required `Otp:HmacSecret`.
+- Recovery must use the protected GitHub `production` Environment, bind the profile to an explicit Monster site id, capture configuration/web.config for rollback, recycle the app, and require repeated health checks.
+- Protected recovery secrets are `LOGICFIT_OTP_HMAC_SECRET`, `LOGICFIT_JWT_SECRET`, and `LOGICFIT_PASSWORD_RESET_SECRET`; never print or persist their values in artifacts.
 
 ### 2026-08-01 — protected migration-aware publishing
 

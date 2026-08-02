@@ -21,7 +21,28 @@ public sealed class PlatformSessionIssuer : IPlatformSessionIssuer
             x.TenantId == PlatformConstants.PlatformTenantId && x.IdentityAccountId == identityAccountId &&
             (x.Role == Domain.Enums.UserRole.PlatformOwner || x.Role == Domain.Enums.UserRole.PlatformAdmin) && x.IsActive && !x.IsDeleted, ct)
             ?? throw new UnauthorizedException("Invalid credentials");
+
+        var expectedSystemRole = user.Role == Domain.Enums.UserRole.PlatformOwner
+            ? SystemRoles.PlatformOwner
+            : SystemRoles.PlatformAdmin;
         var auth = await _rbac.GetUserAuthorizationAsync(user.Id, ct);
+
+        // Some legacy Platform users already have an unrelated UserRoles row. The startup
+        // backfill used to treat that as fully migrated, which allowed the UI's legacy Role
+        // value to say PlatformOwner while the signed JWT carried no PlatformOwner claim.
+        // Repair the required system-role assignment before issuing the session so the
+        // backend and frontend always authorize from the same effective role.
+        if (!auth.Roles.Contains(expectedSystemRole, StringComparer.Ordinal))
+        {
+            await _rbac.EnsureUserInRoleAsync(user.Id, tenantId: null, expectedSystemRole, ct);
+            user.PermissionsVersion++;
+            await _context.SaveChangesAsync(ct);
+            auth = await _rbac.GetUserAuthorizationAsync(user.Id, ct);
+        }
+
+        if (!auth.Roles.Contains(expectedSystemRole, StringComparer.Ordinal))
+            throw new InvalidOperationException("The Platform account system role could not be reconciled.");
+
         var access = _jwt.GenerateAccessToken(user.Id, user.Email, tenantId: null, auth.Roles, auth.Permissions, user.PermissionsVersion);
         var refresh = _refresh.Issue(user, _current.IpAddress, Common.Services.RefreshTokenService.SurfacePlatform);
         await _context.SaveChangesAsync(ct);

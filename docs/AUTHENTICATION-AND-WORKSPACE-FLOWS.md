@@ -1,6 +1,13 @@
 # المصادقة وتدفقات مساحات العمل
 
-> **Issue #152 — local implementation, not released:** OTP remains part of authentication flows only. No operation after sign-in requires an OTP step-up proof; authorization continues through the authenticated JWT, role/permission policies, tenant/workspace gates, ownership checks, and concurrency controls.
+> **Issue #152 — released to `master`:** OTP remains part of authentication flows only. No operation after sign-in requires an OTP step-up proof; authorization continues through the authenticated JWT, role/permission policies, tenant/workspace gates, ownership checks, and concurrency controls.
+
+> **Issue #156 — task branch:** Platform session issuance reconciles the trusted legacy
+> `User.Role` with its required `PlatformOwner` or `PlatformAdmin` system-role assignment before
+> signing the JWT. Startup RBAC reconciliation now repairs a missing mapped assignment even when
+> the user already has another role, bumps `PermissionsVersion`, preserves unrelated assignments,
+> and remains idempotent. This prevents a fresh Platform login from displaying owner UI while the
+> backend correctly rejects `ManageTenants` because the signed role was missing.
 
 > حالة المرجع: تم إصدار Issue #118 إلى فروع الإنتاج بتاريخ 2026-08-01، وما زال النشر والتحقق الفعلي يتطلبان تطبيق الـMigration وإعداد أسرار الخادم عبر مسار النشر المحمي. يضيف Issue #127 مزود اختبار مستضاف مؤقتًا ومحدد الصلاحية حتى يتوفر مزود الإرسال الخارجي.
 
@@ -136,6 +143,8 @@ POST /api/platform/auth/login { email, password, sessionBinding }
   -> ينشئ PlatformAdminLogin challenge ولا يصدر جلسة
 POST /api/platform/auth/otp/verify { challengeId, code, sessionBinding }
   -> يستهلك التحدي مرة واحدة
+  -> يصالح PlatformOwner/PlatformAdmin مع تعيين System Role الفعلي عند الحاجة
+  -> يحمل الأدوار والصلاحيات الفعلية بعد المصالحة
   -> يصدر Platform JWT ويضع refresh token في HttpOnly cookie
 ```
 
