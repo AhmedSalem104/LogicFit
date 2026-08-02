@@ -158,6 +158,19 @@ Platform Dashboard
 ```
 **اقتراح العرض**: 6 بطاقات إحصائية (KPI cards) + إبراز `pendingApprovalGyms` كتنبيه (جيمات تنتظر الموافقة).
 
+يضيف العقد الحالي حقل `operations` إلى الاستجابة. استخدمه لعرض طوابير مراجعة الطلبات والدفع،
+سعة Database Resource Pool، حالات Provisioning، ومؤشرات النسخ والاستعادة. كما تتوفر الشاشات
+التشغيلية الآتية:
+
+- `GET /api/platform/database-resources` — قائمة paged للحالة والـWorkspace والفحص والحجم وSchema
+  بدون اسم قاعدة البيانات أو أي Connection Material، وتتطلب `ManagePlatformBackups`.
+- `GET /api/platform/operations/provisioning` — قائمة paged للوظائف ومحاولات إعادة التشغيل وأكواد
+  الخطأ الآمنة، وتتطلب `ManagePlatformReports`.
+- `GET /api/platform/diagnostics/version` — `apiContractVersion` و`buildSha` ونسخ التشغيل فقط.
+
+لا تعرض الواجهة إجراءً إلا إذا كانت الصلاحية موجودة، ولا تستخدم هذه المؤشرات لتجاوز حارس
+السعة أو حالة `AwaitingDatabaseCapacity`.
+
 ---
 
 ## 6. الشاشة 2: Tenants / Gyms

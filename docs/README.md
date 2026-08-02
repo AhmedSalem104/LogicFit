@@ -75,3 +75,4 @@ Keep those references synchronized with the source in the same Pull Request. `AP
 - [Central Backup Orchestration](CENTRAL-BACKUP-ORCHESTRATION.md)
 - [Tenant Backup Export](TENANT-BACKUP-EXPORT.md)
 - [Conditional Restore](CONDITIONAL-RESTORE.md)
+- [Platform Dashboard Contract](PLATFORM-DASHBOARD-CONTRACT.md)
