@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-02 14:50 UTC`  |  Total endpoints: **376**
+Generated: `2026-08-02 16:03 UTC`  |  Total endpoints: **379**
 
 ## Contract rules
 
@@ -94,6 +94,24 @@ Generated: `2026-08-02 14:50 UTC`  |  Total endpoints: **376**
 - **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
 - **Inputs:** Handler signature: `string fileName`
 - **Declared response:** IActionResult
+
+#### `POST /api/platform/backups/batch` - `CreateBatch`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `BackupBatchRequest`<br>Handler signature: `[FromBody] BackupBatchRequest request`
+- **Declared response:** Task<ActionResult<BackupBatchDto>>
+
+#### `GET /api/platform/backups/batches` - `Batches`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Query `take`: `int`<br>Handler signature: `[FromQuery] int take = 50`
+- **Declared response:** ActionResult<IReadOnlyList<BackupBatchDto>>
+
+#### `POST /api/platform/backups/batches/{batchId:guid}/retry` - `Retry`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid batchId`
+- **Declared response:** Task<ActionResult<BackupBatchDto>>
 
 #### `GET /api/platform/backups/status` - `Status`
 

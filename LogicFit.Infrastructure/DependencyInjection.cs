@@ -212,7 +212,7 @@ public static class DependencyInjection
             services.AddScoped<IEmailSender, UnconfiguredEmailSender>();
         services.AddScoped<IEmailService, LoggingEmailService>();
         services.AddScoped<INotificationService, NotificationService>();
-        services.AddSingleton<IBackupService, SqlServerBackupService>();
+        services.AddScoped<IBackupService, DatabaseBackupService>();
         services.AddSingleton<IMediaBackupService, LocalMediaBackupService>();
 
         if (configuration.GetValue("Backup:Enabled", false))

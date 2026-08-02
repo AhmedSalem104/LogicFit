@@ -25,7 +25,8 @@ public static class DbContextOwnership
         typeof(Plan), typeof(Feature), typeof(FeatureDependency), typeof(FeatureQuotaDefinition),
         typeof(PlanFeature), typeof(TenantSubscription), typeof(TenantFeature),
         typeof(SubscriptionFeatureSnapshot), typeof(TenantPaymentMethod), typeof(PaymentRequest), typeof(PaymentProof), typeof(ProvisioningJob),
-        typeof(SubscriptionPayment), typeof(SubscriptionInvoice), typeof(TenantUsage)
+        typeof(SubscriptionPayment), typeof(SubscriptionInvoice), typeof(TenantUsage),
+        typeof(BackupBatch), typeof(DatabaseBackup)
     };
 
     public static readonly IReadOnlySet<Type> TenantEntities = new HashSet<Type>

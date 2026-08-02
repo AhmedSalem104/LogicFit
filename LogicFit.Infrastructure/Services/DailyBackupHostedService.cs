@@ -28,8 +28,12 @@ public sealed class DailyBackupHostedService(
             {
                 using var scope = scopeFactory.CreateScope();
                 var service = scope.ServiceProvider.GetRequiredService<IBackupService>();
-                var result = await service.CreateAsync(stoppingToken);
-                logger.LogInformation("Daily database backup completed: {FileName} ({SizeBytes} bytes)", result.FileName, result.SizeBytes);
+                var result = await service.CreateBatchAsync(
+                    new BackupBatchRequest(
+                        LogicFit.Domain.Enums.BackupScope.FullSystem,
+                        IdempotencyKey: $"daily:{timeProvider.GetUtcNow():yyyyMMdd}"),
+                    stoppingToken);
+                logger.LogInformation("Daily database backup batch completed: {BatchId} ({Status})", result.Id, result.Status);
 
                 try
                 {

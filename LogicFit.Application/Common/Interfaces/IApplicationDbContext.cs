@@ -116,6 +116,8 @@ public interface IApplicationDbContext
     DbSet<PaymentRequest> PaymentRequests { get; }
     DbSet<PaymentProof> PaymentProofs { get; }
     DbSet<ProvisioningJob> ProvisioningJobs { get; }
+    DbSet<BackupBatch> BackupBatches { get; }
+    DbSet<DatabaseBackup> DatabaseBackups { get; }
     DbSet<SubscriptionPayment> SubscriptionPayments { get; }
     DbSet<SubscriptionInvoice> SubscriptionInvoices { get; }
     DbSet<TenantUsage> TenantUsages { get; }

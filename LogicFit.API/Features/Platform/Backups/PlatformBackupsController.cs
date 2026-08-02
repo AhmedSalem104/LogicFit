@@ -60,4 +60,49 @@ public sealed class PlatformBackupsController(IBackupService backupService) : Co
                 detail: ex.Message);
         }
     }
+
+    [HttpPost("batch")]
+    public async Task<ActionResult<BackupBatchDto>> CreateBatch(
+        [FromBody] BackupBatchRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await backupService.CreateBatchAsync(request, cancellationToken));
+        }
+        catch (ArgumentException ex)
+        {
+            return ValidationProblem(detail: ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "Backup service is not ready.", detail: ex.Message);
+        }
+    }
+
+    [HttpGet("batches")]
+    public ActionResult<IReadOnlyList<BackupBatchDto>> Batches([FromQuery] int take = 50)
+        => Ok(backupService.ListBatches(take));
+
+    [HttpPost("batches/{batchId:guid}/retry")]
+    public async Task<ActionResult<BackupBatchDto>> Retry(Guid batchId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await backupService.RetryBatchAsync(batchId, cancellationToken));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (ArgumentException ex)
+        {
+            return ValidationProblem(detail: ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { errorCode = "BACKUP_RETRY_NOT_ALLOWED", message = ex.Message });
+        }
+    }
 }

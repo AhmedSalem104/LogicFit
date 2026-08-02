@@ -49,6 +49,8 @@ public class PlatformDbContext : IdentityDbContext<ApplicationUser, IdentityRole
     public DbSet<Domain.Entities.PaymentRequest> PaymentRequests => Set<Domain.Entities.PaymentRequest>();
     public DbSet<Domain.Entities.PaymentProof> PaymentProofs => Set<Domain.Entities.PaymentProof>();
     public DbSet<Domain.Entities.ProvisioningJob> ProvisioningJobs => Set<Domain.Entities.ProvisioningJob>();
+    public DbSet<Domain.Entities.BackupBatch> BackupBatches => Set<Domain.Entities.BackupBatch>();
+    public DbSet<Domain.Entities.DatabaseBackup> DatabaseBackups => Set<Domain.Entities.DatabaseBackup>();
     public DbSet<Domain.Entities.SubscriptionPayment> SubscriptionPayments => Set<Domain.Entities.SubscriptionPayment>();
     public DbSet<Domain.Entities.SubscriptionInvoice> SubscriptionInvoices => Set<Domain.Entities.SubscriptionInvoice>();
     public DbSet<Domain.Entities.TenantUsage> TenantUsages => Set<Domain.Entities.TenantUsage>();
