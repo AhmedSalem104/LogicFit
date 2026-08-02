@@ -12,7 +12,12 @@ public class PaymentRequest : AuditableEntity, ISoftDeletable
 {
     public Guid TenantId { get; set; }
     public Guid? TenantSubscriptionId { get; set; }
+    public Guid? ApplicationRequestId { get; set; }
+    public Guid? IdentityAccountId { get; set; }
     public Guid PlanId { get; set; }
+    public BillingCycle BillingCycle { get; set; } = BillingCycle.Monthly;
+    public string? PlanSnapshotJson { get; set; }
+    public string? IdempotencyKey { get; set; }
     public PaymentRequestOperation Operation { get; set; } = PaymentRequestOperation.NewSubscription;
     public int? ExtensionDays { get; set; }
     public decimal Amount { get; set; }
@@ -40,4 +45,6 @@ public class PaymentRequest : AuditableEntity, ISoftDeletable
     public virtual Plan Plan { get; set; } = null!;
     public virtual TenantSubscription? TenantSubscription { get; set; }
     public virtual TenantPaymentMethod? PaymentMethod { get; set; }
+    public virtual ApplicationRequest? ApplicationRequest { get; set; }
+    public virtual ICollection<PaymentProof> Proofs { get; set; } = new List<PaymentProof>();
 }

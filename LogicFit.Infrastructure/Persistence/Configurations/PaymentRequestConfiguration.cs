@@ -18,10 +18,14 @@ public class PaymentRequestConfiguration : IEntityTypeConfiguration<PaymentReque
         builder.Property(e => e.Notes).HasMaxLength(1000);
         builder.Property(e => e.ReviewedBy).HasMaxLength(100);
         builder.Property(e => e.RejectReason).HasMaxLength(500);
+        builder.Property(e => e.PlanSnapshotJson).HasColumnType("nvarchar(max)");
+        builder.Property(e => e.IdempotencyKey).HasMaxLength(100);
         builder.Property(e => e.RowVersion).IsRowVersion();
 
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => e.Status);
+        builder.HasIndex(e => e.ApplicationRequestId).IsUnique().HasFilter("[ApplicationRequestId] IS NOT NULL");
+        builder.HasIndex(e => e.IdempotencyKey).IsUnique().HasFilter("[IdempotencyKey] IS NOT NULL");
 
         builder.HasOne(e => e.Tenant)
             .WithMany()
@@ -41,6 +45,11 @@ public class PaymentRequestConfiguration : IEntityTypeConfiguration<PaymentReque
         builder.HasOne(e => e.PaymentMethod)
             .WithMany()
             .HasForeignKey(e => e.PaymentMethodId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(e => e.ApplicationRequest)
+            .WithMany()
+            .HasForeignKey(e => e.ApplicationRequestId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

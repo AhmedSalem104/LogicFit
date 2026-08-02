@@ -42,6 +42,12 @@ Last reviewed: 2026-08-02
 > cross-tenant, or undecryptable mappings. No database name or connection string is accepted from
 > frontend contracts, and no Production mapping or schema was changed.
 
+> **Issue #168 implementation:** Workspace onboarding now persists an immutable plan snapshot,
+> private versioned payment-proof metadata, payment/application idempotency, and the explicit
+> `PendingActivation` subscription gate. Application payment approval no longer starts the paid
+> term or activates the placeholder; provisioning (#166) must complete first. The additive Platform
+> and compatibility migrations are review-only and have not been applied to Production.
+
 > **Issue #143, task branch:** Production diagnosis found that the reviewed fixed OTP was being
 > consumed correctly, but legacy identity phones were stored as local Egyptian `01...` values and
 > had no verification timestamp, so phone-login requests became enumeration-safe decoy challenges

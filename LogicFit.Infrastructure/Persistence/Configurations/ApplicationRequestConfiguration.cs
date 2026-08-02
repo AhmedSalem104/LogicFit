@@ -18,6 +18,7 @@ public class ApplicationRequestConfiguration : IEntityTypeConfiguration<Applicat
         builder.Property(x => x.ReservedWorkspaceIdentifier).HasMaxLength(100);
         builder.Property(x => x.ReviewedBy).HasMaxLength(100);
         builder.Property(x => x.RowVersion).IsRowVersion().IsConcurrencyToken();
+        builder.Property(x => x.PlanSnapshotJson).HasColumnType("nvarchar(max)");
         builder.HasIndex(x => new { x.IdentityAccountId, x.TargetWorkspaceId, x.ApplicationType, x.Status });
         builder.HasIndex(x => new { x.IdentityAccountId, x.TargetScopeKey, x.ApplicationType })
             .IsUnique()
@@ -25,6 +26,7 @@ public class ApplicationRequestConfiguration : IEntityTypeConfiguration<Applicat
         builder.HasIndex(x => x.ReservedWorkspaceIdentifier).IsUnique().HasFilter("[ReservedWorkspaceIdentifier] IS NOT NULL AND [Status] IN (1, 2, 3, 4)");
         builder.HasOne(x => x.IdentityAccount).WithMany(x => x.Applications).HasForeignKey(x => x.IdentityAccountId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.TargetWorkspace).WithMany().HasForeignKey(x => x.TargetWorkspaceId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.Plan).WithMany().HasForeignKey(x => x.PlanId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Tenant>().WithMany().HasForeignKey(x => x.ProvisionedWorkspaceId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<WorkspaceMembership>().WithMany().HasForeignKey(x => x.SponsoredByMembershipId).OnDelete(DeleteBehavior.Restrict);
     }

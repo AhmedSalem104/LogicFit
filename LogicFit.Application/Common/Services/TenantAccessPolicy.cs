@@ -51,6 +51,8 @@ public static class TenantAccessPolicy
             case TenantStatus.ProvisioningFailed:
                 return Block("WORKSPACE_PROVISIONING_FAILED", 503);
             case TenantStatus.PendingApproval:
+            case TenantStatus.PendingSubscription:
+            case TenantStatus.AwaitingDatabaseCapacity:
                 return new TenantAccessDecision(TenantAccessMode.BillingOnly);
             // Legacy tenant-level cancellation is read-only under the new subscription policy.
             case TenantStatus.Cancelled:
@@ -66,7 +68,7 @@ public static class TenantAccessPolicy
 
         return state.SubscriptionStatus switch
         {
-            TenantSubscriptionStatus.None or TenantSubscriptionStatus.PendingPayment
+            TenantSubscriptionStatus.None or TenantSubscriptionStatus.PendingPayment or TenantSubscriptionStatus.PendingActivation
                 => new TenantAccessDecision(TenantAccessMode.BillingOnly),
             TenantSubscriptionStatus.Trial or TenantSubscriptionStatus.Active or TenantSubscriptionStatus.PastDue or TenantSubscriptionStatus.GracePeriod
                 => new TenantAccessDecision(TenantAccessMode.Full),

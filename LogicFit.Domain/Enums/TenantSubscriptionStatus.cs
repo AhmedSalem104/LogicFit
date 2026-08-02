@@ -11,5 +11,6 @@ public enum TenantSubscriptionStatus
     Suspended = 5,
     Cancelled = 6,
     Expired = 7,
-    GracePeriod = 8
+    GracePeriod = 8,
+    PendingActivation = 9
 }

@@ -34,6 +34,7 @@ public class ApprovePaymentRequestCommandHandler : IRequestHandler<ApprovePaymen
             .Include(p => p.Plan)
             .ThenInclude(p => p!.PlanFeatures)
             .ThenInclude(pf => pf.Feature)
+            .Include(p => p.Proofs)
             .FirstOrDefaultAsync(p => p.Id == request.PaymentRequestId, cancellationToken);
 
         if (pr == null)
@@ -53,6 +54,57 @@ public class ApprovePaymentRequestCommandHandler : IRequestHandler<ApprovePaymen
         pr.Status = PaymentRequestStatus.Approved;
         pr.ReviewedBy = reviewer;
         pr.ReviewedAt = now;
+
+        // New workspace applications are intentionally not activated by payment review. The
+        // provisioning saga (#166) must reserve a database, migrate/seed it, and create the owner
+        // before the subscription can start. Payment approval only moves the subscription to the
+        // activation gate.
+        if (pr.ApplicationRequestId.HasValue)
+        {
+            var pendingSubscription = pr.TenantSubscriptionId.HasValue
+                ? await _context.TenantSubscriptions.FirstOrDefaultAsync(
+                    s => s.Id == pr.TenantSubscriptionId.Value, cancellationToken)
+                : null;
+            if (pendingSubscription is null)
+            {
+                pendingSubscription = new TenantSubscription
+                {
+                    TenantId = pr.TenantId,
+                    PlanId = pr.PlanId,
+                    BillingCycle = pr.BillingCycle,
+                    Amount = pr.Amount,
+                    Currency = pr.Currency,
+                    Status = TenantSubscriptionStatus.PendingPayment
+                };
+                _context.TenantSubscriptions.Add(pendingSubscription);
+                pr.TenantSubscriptionId = pendingSubscription.Id;
+            }
+
+            if (!TenantSubscriptionStateMachine.CanTransition(
+                    pendingSubscription.Status,
+                    TenantSubscriptionStatus.PendingActivation))
+                throw new ConflictException($"Subscription cannot transition from {pendingSubscription.Status} to PendingActivation.");
+
+            pendingSubscription.Status = TenantSubscriptionStatus.PendingActivation;
+            pendingSubscription.PlanId = pr.PlanId;
+            pendingSubscription.BillingCycle = pr.BillingCycle;
+            pendingSubscription.Amount = pr.Amount;
+            pendingSubscription.Currency = pr.Currency;
+            pendingSubscription.StartDate = null;
+            pendingSubscription.EndDate = null;
+
+            var applicationTenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Id == pr.TenantId, cancellationToken);
+            if (applicationTenant is not null)
+                applicationTenant.Status = TenantStatus.PendingSubscription;
+
+            await _context.SaveChangesAsync(cancellationToken);
+            await _notificationService.NotifyTenantOwnerAsync(
+                pr.TenantId,
+                Common.Notifications.NotificationTemplates.PaymentRequestApproved,
+                null,
+                cancellationToken);
+            return ToDto(pr, pr.Plan?.Name);
+        }
 
         // Activate or extend the subscription.
         var subscription = pr.TenantSubscriptionId.HasValue
@@ -165,6 +217,11 @@ public class ApprovePaymentRequestCommandHandler : IRequestHandler<ApprovePaymen
         PlanId = pr.PlanId,
         PlanName = planName,
         TenantSubscriptionId = pr.TenantSubscriptionId,
+        ApplicationRequestId = pr.ApplicationRequestId,
+        IdentityAccountId = pr.IdentityAccountId,
+        BillingCycle = pr.BillingCycle,
+        PlanSnapshotJson = pr.PlanSnapshotJson,
+        ProofVersion = pr.Proofs.FirstOrDefault(x => x.IsCurrent)?.Version ?? 0,
         Amount = pr.Amount,
         Currency = pr.Currency,
         PaymentMethodId = pr.PaymentMethodId,
