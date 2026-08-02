@@ -23,6 +23,10 @@
   <ItemGroup>
     <ProjectReference Include="..\LogicFit.Application\LogicFit.Application.csproj" />
     <ProjectReference Include="..\LogicFit.Infrastructure\LogicFit.Infrastructure.csproj" />
+    <!-- Keep both migration assemblies in the published API so provisioning can select the
+         correct history without loading the legacy shared-context migrations. -->
+    <ProjectReference Include="..\LogicFit.Platform.Migrations\LogicFit.Platform.Migrations.csproj" />
+    <ProjectReference Include="..\LogicFit.Tenant.Migrations\LogicFit.Tenant.Migrations.csproj" />
   </ItemGroup>
 
   <ItemGroup>
