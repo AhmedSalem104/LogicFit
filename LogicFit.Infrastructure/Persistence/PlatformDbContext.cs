@@ -54,6 +54,7 @@ public class PlatformDbContext : IdentityDbContext<ApplicationUser, IdentityRole
     public DbSet<Domain.Entities.SensitiveActionGrant> SensitiveActionGrants => Set<Domain.Entities.SensitiveActionGrant>();
     public DbSet<Domain.Entities.TenantBackupExport> TenantBackupExports => Set<Domain.Entities.TenantBackupExport>();
     public DbSet<Domain.Entities.TenantBackupDownloadGrant> TenantBackupDownloadGrants => Set<Domain.Entities.TenantBackupDownloadGrant>();
+    public DbSet<Domain.Entities.RestoreJob> RestoreJobs => Set<Domain.Entities.RestoreJob>();
     public DbSet<Domain.Entities.SubscriptionPayment> SubscriptionPayments => Set<Domain.Entities.SubscriptionPayment>();
     public DbSet<Domain.Entities.SubscriptionInvoice> SubscriptionInvoices => Set<Domain.Entities.SubscriptionInvoice>();
     public DbSet<Domain.Entities.TenantUsage> TenantUsages => Set<Domain.Entities.TenantUsage>();

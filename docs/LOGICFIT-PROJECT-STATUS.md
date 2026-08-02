@@ -18,6 +18,12 @@ Last reviewed: 2026-08-02
 > additive migration is review-only and has not been applied to Production. Native restore remains
 > Platform-only and capability-gated.
 
+> **Issue #165 implementation:** Conditional restore is now represented by a persistent
+> `RestoreJob` and provider contract. `ManualMonster` remains `ManualOnly`; only an explicitly
+> enabled Development `LocalSql` provider can import a BACPAC into a pre-created pool resource,
+> run a health check, and switch the mapping. PlatformOwner password reauthentication and a
+> single-use grant are required. No restore, mapping switch, or Production data change was run.
+
 > **Issue #172 planning gate:** Monster Free capability assessment is documented in
 > [MONSTER-CAPABILITY-ASSESSMENT.md](MONSTER-CAPABILITY-ASSESSMENT.md). The current SQL account
 > can connect and run `BACKUP DATABASE` for the Platform database, but cannot create databases or

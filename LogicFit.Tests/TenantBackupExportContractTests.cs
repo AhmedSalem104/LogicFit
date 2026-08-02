@@ -2,6 +2,7 @@ using LogicFit.API.Features.TenantBackups;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Enums;
+using LogicFit.Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
@@ -23,6 +24,25 @@ public sealed class TenantBackupExportContractTests
         Assert.DoesNotContain(properties, x => x.Contains("Connection", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(properties, x => x.Contains("Database", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(nameof(TenantBackupDownloadGrantDto.DownloadToken), properties);
+    }
+
+    [Fact]
+    public void Monster_restore_provider_is_manual_only_by_default()
+    {
+        var provider = new ManualMonsterDatabaseRestoreProvider();
+        var capabilities = provider.GetCapabilities();
+
+        Assert.False(capabilities.Enabled);
+        Assert.Equal("ManualOnly", capabilities.Mode);
+        Assert.False(capabilities.SupportsMappingSwitch);
+    }
+
+    [Fact]
+    public void Restore_job_contract_does_not_expose_connection_material()
+    {
+        var names = typeof(RestoreJobDto).GetProperties().Select(x => x.Name).ToArray();
+        Assert.DoesNotContain(names, x => x.Contains("Connection", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(names, x => x.Contains("DatabaseName", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

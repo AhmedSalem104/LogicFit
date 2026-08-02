@@ -121,6 +121,7 @@ public interface IApplicationDbContext
     DbSet<SensitiveActionGrant> SensitiveActionGrants { get; }
     DbSet<TenantBackupExport> TenantBackupExports { get; }
     DbSet<TenantBackupDownloadGrant> TenantBackupDownloadGrants { get; }
+    DbSet<RestoreJob> RestoreJobs { get; }
     DbSet<SubscriptionPayment> SubscriptionPayments { get; }
     DbSet<SubscriptionInvoice> SubscriptionInvoices { get; }
     DbSet<TenantUsage> TenantUsages { get; }

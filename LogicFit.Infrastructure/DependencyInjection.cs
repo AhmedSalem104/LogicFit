@@ -215,6 +215,13 @@ public static class DependencyInjection
         services.AddScoped<IBackupService, DatabaseBackupService>();
         services.AddScoped<ISensitiveActionGrantService, SensitiveActionGrantService>();
         services.AddScoped<ITenantBackupExportService, TenantBackupExportService>();
+        services.AddScoped<LocalSqlDatabaseRestoreProvider>();
+        services.AddScoped<ManualMonsterDatabaseRestoreProvider>();
+        services.AddScoped<IDatabaseRestoreProvider>(provider =>
+            configuration["Restore:Provider"]?.Equals("LocalSql", StringComparison.OrdinalIgnoreCase) == true
+                ? provider.GetRequiredService<LocalSqlDatabaseRestoreProvider>()
+                : provider.GetRequiredService<ManualMonsterDatabaseRestoreProvider>());
+        services.AddScoped<IDatabaseRestoreService, DatabaseRestoreService>();
         services.AddSingleton<IMediaBackupService, LocalMediaBackupService>();
 
         if (configuration.GetValue("Backup:Enabled", false))
