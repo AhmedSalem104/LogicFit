@@ -70,6 +70,10 @@ workspace-selection sessions.
 `ManageClientSubscriptions`، `ManagePOS`، `ManageInventory`، `ManageEmployees`،
 `ManageBranches`، `ManageFinance` و`ManageSettings`.
 
+Tenant owners may also receive `CreateAndDownloadTenantBackup`. This permission is tenant-scoped
+and never grants Platform backup/restore access. Every export/download still requires password
+reauthentication and a short-lived single-use grant; the server derives the active TenantId.
+
 ## قواعد حسابات الإدارة
 
 1. حساب إداري واحد لكل شخص؛ لا مشاركة حسابات أو Refresh Tokens.

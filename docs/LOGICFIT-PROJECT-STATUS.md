@@ -10,6 +10,14 @@
 
 Last reviewed: 2026-08-02
 
+> **Issue #167 implementation:** Tenant backup export now uses the existing central BACPAC
+> orchestration with a server-resolved tenant mapping. Owner/explicit-permission access requires
+> password reauthentication and a five-minute single-use SensitiveActionGrant; download grants are
+> separately reauthenticated, hashed, tenant-bound, and consumed atomically. Export status,
+> idempotency, daily/concurrent limits, and audit events are persisted in the Platform DB. The
+> additive migration is review-only and has not been applied to Production. Native restore remains
+> Platform-only and capability-gated.
+
 > **Issue #172 planning gate:** Monster Free capability assessment is documented in
 > [MONSTER-CAPABILITY-ASSESSMENT.md](MONSTER-CAPABILITY-ASSESSMENT.md). The current SQL account
 > can connect and run `BACKUP DATABASE` for the Platform database, but cannot create databases or

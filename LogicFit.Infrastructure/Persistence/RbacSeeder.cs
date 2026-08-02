@@ -336,7 +336,7 @@ public class RbacSeeder
         [Permissions.ManageClientSubscriptions] = "إدارة اشتراكات العملاء", [Permissions.ManagePOS] = "إدارة نقاط البيع",
         [Permissions.ManageInventory] = "إدارة المخزون", [Permissions.ManageEmployees] = "إدارة الموظفين", [Permissions.ManageBranches] = "إدارة الفروع",
         [Permissions.ManageFinance] = "إدارة المالية", [Permissions.ViewReports] = "عرض التقارير", [Permissions.ManageReports] = "إدارة التقارير",
-        [Permissions.ManageSettings] = "إدارة الإعدادات", [Permissions.ManageTenantBilling] = "إدارة فوترة الجيم",
+        [Permissions.ManageSettings] = "إدارة الإعدادات", [Permissions.ManageTenantBilling] = "إدارة فوترة الجيم", [Permissions.CreateAndDownloadTenantBackup] = "إنشاء وتنزيل نسخة Workspace",
         [Permissions.ManagePlatform] = "إدارة المنصة", [Permissions.ManageTenants] = "إدارة الجيمات", [Permissions.ManagePlans] = "إدارة الباقات",
         [Permissions.ManagePaymentRequests] = "إدارة طلبات الدفع", [Permissions.ManagePlatformReports] = "إدارة تقارير المنصة", [Permissions.ManagePlatformBackups] = "إدارة النسخ الاحتياطية"
     };
@@ -356,7 +356,7 @@ public class RbacSeeder
         Permissions.ManageClientSubscriptions => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0634\u062a\u0631\u0627\u0643\u0627\u062a \u0627\u0644\u0639\u0645\u0644\u0627\u0621", Permissions.ManagePOS => "\u0625\u062f\u0627\u0631\u0629 \u0646\u0642\u0627\u0637 \u0627\u0644\u0628\u064a\u0639",
         Permissions.ManageInventory => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u062e\u0632\u0648\u0646", Permissions.ManageEmployees => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646", Permissions.ManageBranches => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0641\u0631\u0648\u0639",
         Permissions.ManageFinance => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0627\u0644\u064a\u0629", Permissions.ViewReports => "\u0639\u0631\u0636 \u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631", Permissions.ManageReports => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631",
-        Permissions.ManageSettings => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a", Permissions.ManageTenantBilling => "\u0625\u062f\u0627\u0631\u0629 \u0641\u0648\u062a\u0631\u0629 \u0627\u0644\u062c\u064a\u0645",
+        Permissions.ManageSettings => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0625\u0639\u062f\u0627\u062f\u0627\u062a", Permissions.ManageTenantBilling => "\u0625\u062f\u0627\u0631\u0629 \u0641\u0648\u062a\u0631\u0629 \u0627\u0644\u062c\u064a\u0645", Permissions.CreateAndDownloadTenantBackup => "\u0625\u0646\u0634\u0627\u0621 \u0648\u062a\u0646\u0632\u064a\u0644 \u0646\u0633\u062e\u0629 Workspace",
         Permissions.ManagePlatform => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0646\u0635\u0629", Permissions.ManageTenants => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u062c\u064a\u0645\u0627\u062a", Permissions.ManagePlans => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0628\u0627\u0642\u0627\u062a",
         Permissions.ManagePaymentRequests => "\u0625\u062f\u0627\u0631\u0629 \u0637\u0644\u0628\u0627\u062a \u0627\u0644\u062f\u0641\u0639", Permissions.ManagePlatformReports => "\u0625\u062f\u0627\u0631\u0629 \u062a\u0642\u0627\u0631\u064a\u0631 \u0627\u0644\u0645\u0646\u0635\u0629", Permissions.ManagePlatformBackups => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0646\u0633\u062e \u0627\u0644\u0627\u062d\u062a\u064a\u0627\u0637\u064a\u0629",
         _ => code
