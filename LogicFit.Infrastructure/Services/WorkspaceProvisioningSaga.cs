@@ -94,6 +94,9 @@ public sealed class WorkspaceProvisioningSaga(
         var localUserId = result.LocalUserId ?? throw new InvalidOperationException("Provider did not return the local owner id.");
         var compatibilityUser = await db.Set<User>().IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.Id == localUserId, cancellationToken);
+        if (compatibilityUser is not null &&
+            (compatibilityUser.TenantId != tenantId || compatibilityUser.IdentityAccountId != application.IdentityAccountId))
+            throw new InvalidOperationException("The provider returned a local user id owned by another workspace.");
         if (compatibilityUser is null)
         {
             compatibilityUser = new User
