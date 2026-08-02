@@ -86,8 +86,9 @@ Do not record secrets, passwords, refresh tokens, connection strings, publish pr
 - `develop` is the protected daily integration branch; `main` (or `master`, if that is the repository release branch) is protected production/release history.
 - Never push directly to `develop`, `main`, or `master`, and never force-push or delete them.
 - Start every task from the latest `origin/develop` and use `feature/<issue>-<slug>`, `fix/<issue>-<slug>`, or `chore/<issue>-<slug>`.
-- Open a Pull Request from the task branch into `develop`. CI must pass and at least one reviewer must approve before merge.
-- Release changes move from `develop` to `main`/`master` through a reviewed Pull Request.
+- Open a Pull Request from the task branch into `develop`. CI must pass before merge.
+- Release changes move from `develop` to `main`/`master` through a Pull Request with the required CI,
+  migration, health-check, and rollback validations.
 
 ```powershell
 git fetch origin
@@ -208,3 +209,8 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
   preferred production path.
 - `Database__StartupMigrations__Enabled=false` is an emergency operator switch only. The default is
   enabled; lock and command timeouts are bounded configuration values.
+
+### 2026-08-02 â€” merge gate
+
+- A human Reviewer approval is not a required merge gate. Pull Requests may merge after the
+  required CI, migration validation, health-check, and rollback checks pass.
