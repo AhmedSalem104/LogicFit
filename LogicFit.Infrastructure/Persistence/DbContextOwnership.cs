@@ -15,7 +15,7 @@ public static class DbContextOwnership
 {
     public static readonly IReadOnlySet<Type> PlatformEntities = new HashSet<Type>
     {
-        typeof(Tenant), typeof(TenantBrandAsset), typeof(IdentityAccount),
+        typeof(Tenant), typeof(DatabaseResource), typeof(TenantDatabaseMapping), typeof(TenantBrandAsset), typeof(IdentityAccount),
         typeof(IdentityEmailActionToken), typeof(IdentityWorkspaceSession),
         typeof(WorkspaceMembership), typeof(WorkspaceInvite), typeof(WorkspaceClientJoinCode),
         typeof(ApplicationRequest), typeof(ApplicationRequestRevision),

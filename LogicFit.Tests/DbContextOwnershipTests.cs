@@ -46,4 +46,13 @@ public sealed class DbContextOwnershipTests
         Assert.DoesNotContain("TenantSubscriptions", tables);
         Assert.Equal(TenantId, context.TenantId);
     }
+
+    [Fact]
+    public void Legacy_context_exposes_resource_pool_for_compatibility_migration()
+    {
+        using var context = new LogicFit.Infrastructure.Persistence.ApplicationDbContextFactory().CreateDbContext([]);
+        var tables = context.Model.GetEntityTypes().Select(entity => entity.GetTableName()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("DatabaseResources", tables);
+        Assert.Contains("TenantDatabaseMappings", tables);
+    }
 }

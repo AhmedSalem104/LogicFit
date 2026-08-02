@@ -30,6 +30,12 @@ Last reviewed: 2026-08-02
 > final auth decision (Email + Password only, with no OTP/Phone Login/Passkey/WebAuthn) remains the
 > scope of #161 and is not silently changed by this schema PR.
 
+> **Issue #174 implementation:** Platform now has an operator-managed `DatabaseResource` pool and
+> encrypted `TenantDatabaseMapping` contract. Reservation is serializable and fail-closed when
+> Monster Free has no Available capacity; `ManualMonsterProvisioningProvider` does not create or
+> delete Monster databases. Additive migrations are local/review-only and no Production schema or
+> data was changed.
+
 > **Issue #143, task branch:** Production diagnosis found that the reviewed fixed OTP was being
 > consumed correctly, but legacy identity phones were stored as local Egyptian `01...` values and
 > had no verification timestamp, so phone-login requests became enumeration-safe decoy challenges

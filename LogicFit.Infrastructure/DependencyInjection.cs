@@ -23,6 +23,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton(TimeProvider.System);
+        services.AddDataProtection();
 
         // Database
         services.AddDbContext<ApplicationDbContext>(options =>
@@ -31,6 +32,9 @@ public static class DependencyInjection
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        services.AddScoped<IDatabaseResourcePool, DatabaseResourcePoolService>();
+        services.AddScoped<IDatabaseProvisioningProvider, ManualMonsterProvisioningProvider>();
+        services.AddSingleton<IConnectionStringProtector, DataProtectionConnectionStringProtector>();
         services.AddOptions<StartupDatabaseMigrationOptions>()
             .Bind(configuration.GetSection(StartupDatabaseMigrationOptions.SectionName))
             .Validate(

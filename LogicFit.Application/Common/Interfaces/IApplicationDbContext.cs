@@ -8,6 +8,8 @@ namespace LogicFit.Application.Common.Interfaces;
 public interface IApplicationDbContext
 {
     DbSet<Tenant> Tenants { get; }
+    DbSet<DatabaseResource> DatabaseResources { get; }
+    DbSet<TenantDatabaseMapping> TenantDatabaseMappings { get; }
     DbSet<TenantBrandAsset> TenantBrandAssets { get; }
     DbSet<IdentityAccount> IdentityAccounts { get; }
     DbSet<IdentityEmailActionToken> IdentityEmailActionTokens { get; }
