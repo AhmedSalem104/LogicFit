@@ -153,11 +153,8 @@ public static class DependencyInjection
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
         services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ActiveTenantAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, OtpStepUpHandler>();
         services.AddAuthorization(options =>
         {
-            options.AddPolicy(OtpStepUpRequirement.PolicyName, policy =>
-                policy.RequireAuthenticatedUser().AddRequirements(new OtpStepUpRequirement()));
             // Endpoints with a plain [Authorize] (no permission policy) still enforce the gym-status rule.
             options.DefaultPolicy = new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()

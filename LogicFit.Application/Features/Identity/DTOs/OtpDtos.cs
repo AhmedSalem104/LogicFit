@@ -10,9 +10,3 @@ public sealed class OtpChallengeDto
     public DateTime ResendAvailableAtUtc { get; init; }
     public string MaskedPhoneNumber { get; init; } = string.Empty;
 }
-
-public sealed class OtpStepUpDto
-{
-    public string Token { get; init; } = string.Empty;
-    public DateTime ExpiresAtUtc { get; init; }
-}

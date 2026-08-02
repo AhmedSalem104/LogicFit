@@ -18,11 +18,13 @@ E.164 `NormalizedPhoneNumber`, plus separate email/phone verification timestamps
 `IdentityEmailActionToken` keeps one-use email verification/reset links as SHA-256 hashes.
 `OtpChallenge` stores the identity (optional for enumeration-safe requests), normalized phone,
 purpose, HMAC hash and per-challenge salt, expiry/attempt/resend counters, delivery/provider
-metadata, consume/revoke state, and SQL `rowversion`. `OtpStepUpSession` stores only the hash
-of the short step-up proof and binds it to identity, OTP challenge, browser session, purpose,
-expiry, and one-use/revocation state. `RefreshToken.RowVersion` serializes rotation and reuse
+metadata, consume/revoke state, and SQL `rowversion`. `RefreshToken.RowVersion` serializes rotation and reuse
 detection. Migration `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp` removes the
 obsolete Passkey tables and creates these OTP records without changing tenant business data.
+
+Issue #152 removes the obsolete `OtpStepUpSession` runtime model and table through the guarded
+`20260802091114_RemovePostLoginOtpStepUp` migration. It does not remove authentication OTP
+challenges or change tenant business data.
 
 Migration `20260730143000_AddIdentityEmailSecurity` is additive and guards for existing production schemas. It marks existing identities verified during backfill so deployed identity users are not locked out, then adds the token table. It is applied separately through the reviewed migration procedure; its `Down` path is intentionally non-destructive.
 

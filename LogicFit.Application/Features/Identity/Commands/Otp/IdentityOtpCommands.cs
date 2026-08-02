@@ -17,8 +17,6 @@ public sealed record VerifyPhoneLoginOtpCommand(Guid ChallengeId, string Code, s
 public sealed record RequestIdentityPhoneOtpCommand(string PhoneNumber, OtpPurpose Purpose, string? WorkspaceSelectionToken, string? SessionBinding) : IRequest<OtpChallengeDto>;
 public sealed record VerifyIdentityPhoneOtpCommand(Guid ChallengeId, string Code, OtpPurpose Purpose, string? WorkspaceSelectionToken, string? SessionBinding) : IRequest;
 public sealed record ResetPasswordWithPhoneOtpCommand(Guid ChallengeId, string Code, string NewPassword, string? SessionBinding) : IRequest;
-public sealed record RequestOtpStepUpCommand(string? SessionBinding) : IRequest<OtpChallengeDto>;
-public sealed record VerifyOtpStepUpCommand(Guid ChallengeId, string Code, string? SessionBinding) : IRequest<OtpStepUpDto>;
 
 public sealed class RequestPhoneLoginOtpValidator : AbstractValidator<RequestPhoneLoginOtpCommand>
 {
@@ -174,44 +172,6 @@ public sealed class ResetPasswordWithPhoneOtpHandler : IRequestHandler<ResetPass
         var sessions = await _db.IdentityWorkspaceSessions.Where(x => x.IdentityAccountId == identity.Id && x.RevokedAt == null).ToListAsync(ct);
         foreach (var session in sessions) session.RevokedAt = _clock.UtcNow;
         await _db.SaveChangesAsync(ct);
-    }
-}
-
-public sealed class RequestOtpStepUpHandler : IRequestHandler<RequestOtpStepUpCommand, OtpChallengeDto>
-{
-    private readonly IApplicationDbContext _db; private readonly ICurrentUserService _current; private readonly IDateTimeService _clock; private readonly IOtpService _otp;
-    public RequestOtpStepUpHandler(IApplicationDbContext db, ICurrentUserService current, IDateTimeService clock, IOtpService otp)
-        => (_db, _current, _clock, _otp) = (db, current, clock, otp);
-    public async Task<OtpChallengeDto> Handle(RequestOtpStepUpCommand request, CancellationToken ct)
-    {
-        var identityId = await OtpIdentityResolver.ResolveAsync(_db, _current, _clock, null, ct);
-        var identity = await _db.IdentityAccounts.SingleAsync(x => x.Id == identityId, ct);
-        if (identity.PhoneVerifiedAt is null || string.IsNullOrWhiteSpace(identity.NormalizedPhoneNumber))
-            throw new ConflictException("VERIFIED_PHONE_REQUIRED");
-        return await _otp.RequestAsync(identity.NormalizedPhoneNumber, OtpPurpose.SensitiveActionStepUp, identityId, request.SessionBinding, ct);
-    }
-}
-
-public sealed class VerifyOtpStepUpHandler : IRequestHandler<VerifyOtpStepUpCommand, OtpStepUpDto>
-{
-    private readonly IApplicationDbContext _db; private readonly ICurrentUserService _current; private readonly IDateTimeService _clock; private readonly IOtpService _otp;
-    public VerifyOtpStepUpHandler(IApplicationDbContext db, ICurrentUserService current, IDateTimeService clock, IOtpService otp)
-        => (_db, _current, _clock, _otp) = (db, current, clock, otp);
-    public async Task<OtpStepUpDto> Handle(VerifyOtpStepUpCommand request, CancellationToken ct)
-    {
-        var identityId = await OtpIdentityResolver.ResolveAsync(_db, _current, _clock, null, ct);
-        var challenge = await _otp.VerifyAsync(request.ChallengeId, request.Code, OtpPurpose.SensitiveActionStepUp, request.SessionBinding, ct);
-        if (challenge.IdentityAccountId != identityId) throw new UnauthorizedException("OTP_INVALID");
-        var raw = IdentityEmailActionToken.CreateRaw();
-        var expires = _clock.UtcNow.AddMinutes(5);
-        _db.OtpStepUpSessions.Add(new OtpStepUpSession
-        {
-            IdentityAccountId = identityId, OtpChallengeId = challenge.Id,
-            TokenHash = IdentityEmailActionToken.Hash(raw), SessionBinding = request.SessionBinding,
-            ExpiresAtUtc = expires
-        });
-        await _db.SaveChangesAsync(ct);
-        return new OtpStepUpDto { Token = raw, ExpiresAtUtc = expires };
     }
 }
 
