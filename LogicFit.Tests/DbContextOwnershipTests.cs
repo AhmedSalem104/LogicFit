@@ -44,6 +44,8 @@ public sealed class DbContextOwnershipTests
         Assert.DoesNotContain("IdentityAccounts", tables);
         Assert.DoesNotContain("ApplicationRequests", tables);
         Assert.DoesNotContain("TenantSubscriptions", tables);
+        Assert.DoesNotContain("BackupBatches", tables);
+        Assert.DoesNotContain("DatabaseBackups", tables);
         Assert.Equal(TenantId, context.TenantId);
     }
 
