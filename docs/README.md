@@ -67,3 +67,4 @@ Keep those references synchronized with the source in the same Pull Request. `AP
 السكربت ومراجعة التغيّر الناتج قبل الـPull Request. هذا يمنع فقد endpoint من
 التوثيق، ولا يلغي الحاجة إلى توثيق قرار الـDomain أو تدفق المستخدم في الملفات
 المتخصصة أعلاه.
+- [Platform/Tenant DbContext and Migration Split](DBCONTEXT-MIGRATION-SPLIT.md)

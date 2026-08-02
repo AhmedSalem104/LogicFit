@@ -22,6 +22,14 @@ Last reviewed: 2026-08-02
 > shared-contract concerns. The current 52 source migrations are legacy shared-schema history;
 > the target must use separate Platform/Tenant migration assemblies and a clean Tenant baseline.
 
+> **Issue #170 implementation:** `PlatformDbContext` and `TenantDbContext` now have explicit
+> ownership contracts, independent migration assemblies/history tables, and model-isolation tests.
+> The Tenant context requires a server-supplied TenantId and rejects cross-scope writes. The
+> existing `ApplicationDbContext` remains the compatibility context until #174/#175/#166 complete
+> resolver and provisioning cutover; no Production database was migrated by this change. The
+> final auth decision (Email + Password only, with no OTP/Phone Login/Passkey/WebAuthn) remains the
+> scope of #161 and is not silently changed by this schema PR.
+
 > **Issue #143, task branch:** Production diagnosis found that the reviewed fixed OTP was being
 > consumed correctly, but legacy identity phones were stored as local Egyptian `01...` values and
 > had no verification timestamp, so phone-login requests became enumeration-safe decoy challenges
