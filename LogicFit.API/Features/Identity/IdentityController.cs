@@ -144,20 +144,6 @@ public sealed class IdentityController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("step-up/request")]
-    [Authorize]
-    [EnableRateLimiting("otp-request")]
-    public async Task<ActionResult<OtpChallengeDto>> RequestStepUp(
-        [FromBody] RequestOtpStepUpCommand command, CancellationToken cancellationToken)
-        => Accepted(await _mediator.Send(command, cancellationToken));
-
-    [HttpPost("step-up/verify")]
-    [Authorize]
-    [EnableRateLimiting("otp-verify")]
-    public async Task<ActionResult<OtpStepUpDto>> VerifyStepUp(
-        [FromBody] VerifyOtpStepUpCommand command, CancellationToken cancellationToken)
-        => Ok(await _mediator.Send(command, cancellationToken));
-
     [HttpPost("application-tracking-sessions")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(IReadOnlyList<ApplicationTrackingSessionDto>), StatusCodes.Status200OK)]

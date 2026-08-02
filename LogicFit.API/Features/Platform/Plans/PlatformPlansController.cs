@@ -8,7 +8,6 @@ using LogicFit.API.Features.Platform.Common;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using LogicFit.Infrastructure.Authorization;
 
 namespace LogicFit.API.Features.Platform.Plans;
 
@@ -37,7 +36,6 @@ public class PlatformPlansController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(typeof(PlanDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<PlanDto>> CreatePlan([FromBody] CreatePlanCommand command)
     {
@@ -46,7 +44,6 @@ public class PlatformPlansController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(typeof(PlanDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<PlanDto>> UpdatePlan(Guid id, [FromBody] UpdatePlanCommand command)
     {
@@ -56,7 +53,6 @@ public class PlatformPlansController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> DeletePlan(Guid id)
     {

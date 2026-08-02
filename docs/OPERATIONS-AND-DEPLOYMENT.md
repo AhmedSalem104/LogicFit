@@ -42,9 +42,14 @@ from Meta to this provider. To retire the exception, switch to `MetaWhatsApp` an
 Before rollout: backup; review/apply
 `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp`; configure the secrets; publish
 Backend, Tenant Angular, and Platform Angular as one coordinated release; verify `/health`;
-then smoke-test email login, Phone + OTP, Platform password+OTP, sensitive-action step-up,
+then smoke-test email login, Phone + OTP, Platform password+OTP, representative RBAC-protected mutations,
 refresh rotation, logout-all, and password-reset session revocation. Roll back the binaries
 and stop the rollout on health/OTP failure; do not reverse the migration destructively.
+
+Issue #152 adds `20260802091114_RemovePostLoginOtpStepUp`. Review its guarded drop of the obsolete
+`OtpStepUpSessions` table, include it in the migration script and backup/rollback record, deploy the
+Backend before or with the Platform dashboard change, then verify that workspace review and other
+authorized operations complete without `/api/identity/step-up/*` traffic.
 
 ### Platform Owner recovery bootstrap (Issue #140)
 

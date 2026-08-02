@@ -37,7 +37,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<IdentityEmailActionToken> IdentityEmailActionTokens => Set<IdentityEmailActionToken>();
     public DbSet<IdentityWorkspaceSession> IdentityWorkspaceSessions => Set<IdentityWorkspaceSession>();
     public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
-    public DbSet<OtpStepUpSession> OtpStepUpSessions => Set<OtpStepUpSession>();
     public DbSet<WorkspaceMembership> WorkspaceMemberships => Set<WorkspaceMembership>();
     public DbSet<WorkspaceInvite> WorkspaceInvites => Set<WorkspaceInvite>();
     public DbSet<WorkspaceClientJoinCode> WorkspaceClientJoinCodes => Set<WorkspaceClientJoinCode>();
