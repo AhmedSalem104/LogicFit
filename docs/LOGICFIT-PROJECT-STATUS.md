@@ -1,5 +1,7 @@
 # LogicFit Project Status
 
+> **Issue #152 — local implementation, not released:** OTP is restricted to authentication flows. Post-login Platform and Tenant operations use their existing JWT, permission, workspace, subscription, ownership, and concurrency gates without OTP step-up.
+
 Last reviewed: 2026-08-02
 
 > **Issue #143, task branch:** Production diagnosis found that the reviewed fixed OTP was being
@@ -25,7 +27,7 @@ Last reviewed: 2026-08-02
 LogicFit is a multi-tenant gym-management SaaS. The platform operator manages gyms, plans, features, payment methods, and manual payment approvals. Each gym receives an isolated tenant workspace for staff and clients. Billing is intentionally manual: no gateway, webhook, or automatic card charge is enabled.
 
 > **Released to `master` in Issue #118; production binary deployment remains to be verified:** centralized E.164 OTP, Phone + OTP identity login/recovery,
-> mandatory Platform Admin OTP, OTP step-up, Meta WhatsApp provider integration, and
+> mandatory Platform Admin login OTP, Meta WhatsApp provider integration, and
 > HttpOnly refresh cookies are merged across the Backend, Tenant UI, and Platform UI. Passkey/WebAuthn is removed.
 > Migration `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp` and every preceding canonical
 > migration were applied to production `db60976` after a structurally verified BACPAC on 2026-08-01;
@@ -100,7 +102,7 @@ sequenceDiagram
 - Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed. The third migration adds the tenant row-version used to serialize final membership-capacity approval. `20260729133325_SeedFreelanceSystemRoles` is an idempotent corrective data migration that creates or restores the three freelance system roles and their permission maps. All four canonical migrations are present in production; the legacy server-only history row `20260729141315_SeedFreelanceSystemRoles` is preserved rather than edited manually.
 - Team membership now uses `/api/freelance/team/invites` and `/api/workspace-invites/{preview,accept}`. The invitation is tied to normalized email, workspace, and role; acceptance requires a verified identity session and a live quota check.
 - Client acquisition supports owner-generated `/api/workspace/client-join-codes` plus preview/join endpoints. Raw codes are returned only once, stored as hashes, expire/revoke, and either activate the client or create a pending owner approval according to workspace settings.
-- OTP challenges are purpose-bound, five-minute, one-use, HMAC-hashed with per-challenge salt, and concurrency protected. Platform login requires password then OTP, while sensitive Platform mutations require a recent OTP step-up bound to the identity and browser session.
+- OTP challenges are purpose-bound, five-minute, one-use, HMAC-hashed with per-challenge salt, and concurrency protected. Platform login requires password then OTP; no post-login Platform or Tenant mutation requires another OTP challenge.
 - Refresh tokens are no longer serialized to either Angular app or stored in localStorage. The API transports them only in secure `__Host-` HttpOnly cookies, rotates them on refresh, detects reuse, and revokes all linked sessions on password reset/change.
 
 ## API contracts

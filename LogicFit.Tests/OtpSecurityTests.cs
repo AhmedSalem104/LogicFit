@@ -1,6 +1,5 @@
 using System.Net;
 using System.Reflection;
-using System.Security.Claims;
 using LogicFit.API.Security;
 using LogicFit.Application.Features.Platform.Auth.Commands.PlatformOtpLogin;
 using LogicFit.Application.Features.Identity.Commands.Otp;
@@ -13,11 +12,9 @@ using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
 using LogicFit.Infrastructure;
-using LogicFit.Infrastructure.Authorization;
 using LogicFit.Infrastructure.Persistence;
 using LogicFit.Infrastructure.Services;
 using LogicFit.Tests.Fakes;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -201,7 +198,7 @@ public sealed class OtpSecurityTests
     {
         await using var fixture = await OtpFixture.CreateAsync();
         var challenge = await fixture.Service.RequestAsync(
-            "+201012345683", OtpPurpose.SensitiveActionStepUp, null, "session-1");
+            "+201012345683", OtpPurpose.PasswordReset, null, "session-1");
 
         await using var firstDb = fixture.CreateContext();
         await using var secondDb = fixture.CreateContext();
@@ -213,7 +210,7 @@ public sealed class OtpSecurityTests
             try
             {
                 await service.VerifyAsync(
-                    challengeId, "1234", OtpPurpose.SensitiveActionStepUp, "session-1");
+                    challengeId, "1234", OtpPurpose.PasswordReset, "session-1");
                 return true;
             }
             catch (UnauthorizedException)
@@ -335,71 +332,6 @@ public sealed class OtpSecurityTests
     }
 
     [Fact]
-    public async Task Sensitive_action_step_up_cannot_be_used_by_another_session()
-    {
-        await using var fixture = await OtpFixture.CreateAsync();
-        var identity = new IdentityAccount
-        {
-            FullName = "Step Up Admin",
-            Email = "stepup@logicfit.test",
-            NormalizedEmail = "STEPUP@LOGICFIT.TEST",
-            EmailVerifiedAt = fixture.Clock.UtcNow,
-            PhoneNumber = "+201012345671",
-            NormalizedPhoneNumber = "+201012345671",
-            PhoneVerifiedAt = fixture.Clock.UtcNow,
-            PasswordHash = "not-used"
-        };
-        var tenant = new Tenant { Name = "Step Up Tenant", Status = TenantStatus.Active };
-        var user = new User
-        {
-            TenantId = tenant.Id,
-            IdentityAccountId = identity.Id,
-            Email = identity.Email,
-            PasswordHash = "not-used",
-            Role = UserRole.Owner,
-            IsActive = true
-        };
-        fixture.Db.Tenants.Add(tenant);
-        fixture.Db.IdentityAccounts.Add(identity);
-        fixture.Db.Set<User>().Add(user);
-        await fixture.Db.SaveChangesAsync();
-        var challenge = await fixture.Service.RequestAsync(
-            identity.NormalizedPhoneNumber!, OtpPurpose.SensitiveActionStepUp,
-            identity.Id, "browser-a");
-        await fixture.Service.VerifyAsync(
-            challenge.ChallengeId, "1234", OtpPurpose.SensitiveActionStepUp, "browser-a");
-        const string rawToken = "step-up-opaque-token";
-        fixture.Db.OtpStepUpSessions.Add(new OtpStepUpSession
-        {
-            IdentityAccountId = identity.Id,
-            OtpChallengeId = challenge.ChallengeId,
-            TokenHash = LogicFit.Application.Features.Identity.IdentityEmailActionToken.Hash(rawToken),
-            SessionBinding = "browser-a",
-            ExpiresAtUtc = fixture.Clock.UtcNow.AddMinutes(5)
-        });
-        await fixture.Db.SaveChangesAsync();
-
-        var principal = new ClaimsPrincipal(new ClaimsIdentity(
-            new[] { new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()) }, "test"));
-        var requirement = new OtpStepUpRequirement();
-        var http = new DefaultHttpContext { User = principal };
-        http.Request.Headers[OtpStepUpRequirement.HeaderName] = rawToken;
-        http.Request.Headers["X-Session-Id"] = "browser-b";
-        var handler = new OtpStepUpHandler(
-            fixture.Db, fixture.Clock, new HttpContextAccessor { HttpContext = http });
-        var wrongSession = new AuthorizationHandlerContext(
-            new[] { requirement }, principal, null);
-        await handler.HandleAsync(wrongSession);
-        Assert.False(wrongSession.HasSucceeded);
-
-        http.Request.Headers["X-Session-Id"] = "browser-a";
-        var correctSession = new AuthorizationHandlerContext(
-            new[] { requirement }, principal, null);
-        await handler.HandleAsync(correctSession);
-        Assert.True(correctSession.HasSucceeded);
-    }
-
-    [Fact]
     public void Development_provider_and_fixed_code_are_rejected_outside_development()
     {
         var productionWithDevelopmentProvider = Configuration("Production", "Development", "1234");
@@ -496,7 +428,7 @@ public sealed class OtpSecurityTests
     }
 
     [Fact]
-    public void Runtime_types_and_routes_contain_no_passkey_or_webauthn_feature()
+    public void Runtime_types_and_routes_contain_no_passkey_webauthn_or_post_login_otp_step_up_feature()
     {
         var assemblies = new[]
         {
@@ -510,13 +442,24 @@ public sealed class OtpSecurityTests
             .Select(x => x.FullName ?? x.Name).ToArray();
         Assert.DoesNotContain(runtimeTypes, x =>
             x.Contains("Passkey", StringComparison.OrdinalIgnoreCase) ||
-            x.Contains("WebAuthn", StringComparison.OrdinalIgnoreCase));
+            x.Contains("WebAuthn", StringComparison.OrdinalIgnoreCase) ||
+            x.Contains("OtpStepUp", StringComparison.OrdinalIgnoreCase));
         var routes = typeof(RefreshTokenCookieManager).Assembly.GetTypes()
             .Where(x => typeof(Microsoft.AspNetCore.Mvc.ControllerBase).IsAssignableFrom(x))
             .SelectMany(x => x.GetMethods())
             .SelectMany(x => x.GetCustomAttributes<Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute>())
             .Select(x => x.Template ?? string.Empty);
         Assert.DoesNotContain(routes, x => x.Contains("passkey", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(routes, x => x.Contains("step-up", StringComparison.OrdinalIgnoreCase));
+
+        var authorizationPolicies = typeof(RefreshTokenCookieManager).Assembly.GetTypes()
+            .Where(x => typeof(Microsoft.AspNetCore.Mvc.ControllerBase).IsAssignableFrom(x))
+            .SelectMany(x => x.GetCustomAttributes<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
+                .Concat(x.GetMethods().SelectMany(method =>
+                    method.GetCustomAttributes<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>())))
+            .Select(x => x.Policy ?? string.Empty);
+        Assert.DoesNotContain(authorizationPolicies,
+            x => x.Contains("OtpStepUp", StringComparison.OrdinalIgnoreCase));
     }
 
     private static IConfiguration Configuration(string environment, string provider, string? fixedCode)

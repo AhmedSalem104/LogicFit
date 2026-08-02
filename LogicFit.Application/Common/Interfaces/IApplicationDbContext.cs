@@ -13,7 +13,6 @@ public interface IApplicationDbContext
     DbSet<IdentityEmailActionToken> IdentityEmailActionTokens { get; }
     DbSet<IdentityWorkspaceSession> IdentityWorkspaceSessions { get; }
     DbSet<OtpChallenge> OtpChallenges { get; }
-    DbSet<OtpStepUpSession> OtpStepUpSessions { get; }
     DbSet<WorkspaceMembership> WorkspaceMemberships { get; }
     DbSet<WorkspaceInvite> WorkspaceInvites { get; }
     DbSet<WorkspaceClientJoinCode> WorkspaceClientJoinCodes { get; }

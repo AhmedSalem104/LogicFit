@@ -8,7 +8,6 @@ using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using LogicFit.Infrastructure.Authorization;
 
 namespace LogicFit.API.Features.Platform.Subscriptions;
 
@@ -41,12 +40,10 @@ public class PlatformSubscriptionsController : ControllerBase
         => Ok(await _mediator.Send(new GetTenantUsageQuery()));
 
     [HttpPost("{id:guid}/transition")]
-    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<ActionResult<TenantSubscriptionStatus>> Transition(Guid id, [FromBody] TransitionSubscriptionCommand command)
         => Ok(await _mediator.Send(new TransitionSubscriptionCommand { SubscriptionId = id, TargetStatus = command.TargetStatus }));
 
     [HttpPost("{id:guid}/extend")]
-    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<ActionResult<DateTime>> Extend(Guid id, [FromBody] ExtendSubscriptionCommand command)
         => Ok(await _mediator.Send(new ExtendSubscriptionCommand { SubscriptionId = id, Days = command.Days }));
 

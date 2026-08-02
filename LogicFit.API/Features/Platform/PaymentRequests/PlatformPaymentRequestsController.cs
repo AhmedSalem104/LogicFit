@@ -14,7 +14,6 @@ using System.Net.Mime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.AspNetCore.WebUtilities;
-using LogicFit.Infrastructure.Authorization;
 
 namespace LogicFit.API.Features.Platform.PaymentRequests;
 
@@ -56,7 +55,6 @@ public class PlatformPaymentRequestsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/approve")]
-    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(typeof(PaymentRequestDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<PaymentRequestDto>> Approve(Guid id)
     {
@@ -65,7 +63,6 @@ public class PlatformPaymentRequestsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/reject")]
-    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     [ProducesResponseType(typeof(PaymentRequestDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<PaymentRequestDto>> Reject(Guid id, [FromBody] RejectPaymentRequestCommand command)
     {

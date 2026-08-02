@@ -1,5 +1,7 @@
 # المصادقة وتدفقات مساحات العمل
 
+> **Issue #152 — local implementation, not released:** OTP remains part of authentication flows only. No operation after sign-in requires an OTP step-up proof; authorization continues through the authenticated JWT, role/permission policies, tenant/workspace gates, ownership checks, and concurrency controls.
+
 > حالة المرجع: تم إصدار Issue #118 إلى فروع الإنتاج بتاريخ 2026-08-01، وما زال النشر والتحقق الفعلي يتطلبان تطبيق الـMigration وإعداد أسرار الخادم عبر مسار النشر المحمي. يضيف Issue #127 مزود اختبار مستضاف مؤقتًا ومحدد الصلاحية حتى يتوفر مزود الإرسال الخارجي.
 
 > **Issue #143 — قيد المراجعة:** يعالج فقدان `challengeId` عند إعادة التحميل، ويجعل طلب
@@ -24,7 +26,6 @@ LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إل
 | `IdentityWorkspaceSession` | token اختيار مساحة قصير العمر (10 دقائق) محفوظ كـhash | JWT أو refresh token |
 | `ApplicationTrackingSession` | token متابعة طلب قصير العمر، بلا refresh token | دخول إلى بيانات المساحة أو بيانات العملاء |
 | `OtpChallenge` | تحدٍ مركزي لغرض واحد وهاتف E.164، يخزن HMAC+salt وحالة التسليم والمحاولات والصلاحية و`RowVersion` | جلسة مستخدم أو دليلًا على نجاح التحقق |
-| `OtpStepUpSession` | إثبات قصير (5 دقائق) مشتق من OTP ناجح ومربوط بالهوية والجلسة والغرض | صلاحية دائمة أو بديلًا عن RBAC |
 
 العزل بـ`TenantId` وملكية المورد وعضوية المساحة حدود أمنية. لا تعتمد واجهة المستخدم أو إخفاء زر كبديل عن فحص API.
 
@@ -100,7 +101,7 @@ The raw 256-bit email token is placed in the **frontend URL fragment**, is store
 بعد أول دخول ناجح. لا يوجد حساب أو كلمة مرور Bootstrap ثابتة داخل الكود.
 
 الأغراض المسجلة هي `PhoneVerification`, `PasswordlessLogin`, `PlatformAdminLogin`,
-`SensitiveActionStepUp`, `PasswordReset`, `ChangePhone`, و`InviteAcceptance`.
+`PasswordReset`, `ChangePhone`, و`InviteAcceptance`.
 لا يقبل الخادم كودًا بلا `challengeId` صحيح، ولا يخزن الكود الصريح. لكل تحدٍ salt مستقل
 وHMAC-SHA256، والمقارنة ثابتة زمنيًا، والاستهلاك ذري ومحمي بـSQL `rowversion`.
 
@@ -138,10 +139,10 @@ POST /api/platform/auth/otp/verify { challengeId, code, sessionBinding }
   -> يصدر Platform JWT ويضع refresh token في HttpOnly cookie
 ```
 
-العمليات الحساسة في tenants/plans/roles/workspace applications تتطلب
-`POST /api/identity/step-up/request` ثم `/step-up/verify`. ترسل الواجهة الإثبات القصير
-في `X-LogicFit-OTP-Step-Up` وربط الجلسة في `X-Session-Id`. لا يتجاوز الإثبات صلاحيات
-المسؤول الأصلية، ولا يعمل لهوية أو جلسة أخرى.
+بعد نجاح تسجيل الدخول لا تطلب عمليات tenants/plans/roles/workspace applications أو أي عملية
+تشغيلية أخرى OTP جديدًا. تعتمد هذه العمليات على JWT المصادق عليه وسياسات الدور والصلاحيات
+وحالة الحساب والمساحة والاشتراك وملكية المورد و`RowVersion`. لا تستخدم الواجهة `403` لبدء
+تدفق OTP، ولا ترسل `X-LogicFit-OTP-Step-Up` أو `X-Session-Id` كإثبات إضافي للعملية.
 
 ### Refresh session transport
 
@@ -283,7 +284,6 @@ FreelanceOwner يرشح هوية موجودة
 | طلب/تحقق دخول الهاتف | `POST /api/identity/phone-login/request`، `POST /api/identity/phone-login/verify` |
 | تحقق/تغيير الهاتف | `POST /api/identity/phone/request`، `POST /api/identity/phone/verify` |
 | استعادة كلمة المرور بالهاتف | `POST /api/identity/phone/password-reset/request`، `POST /api/identity/phone/password-reset/confirm` |
-| OTP للعملية الحساسة | `POST /api/identity/step-up/request`، `POST /api/identity/step-up/verify` |
 | دخول إدارة المنصة | `POST /api/platform/auth/login` ثم `POST /api/platform/auth/otp/verify` |
 | اختيار مساحة | `POST /api/identity/select-workspace` |
 | استعادة جلسة متابعة | `POST /api/identity/application-tracking-sessions` |
