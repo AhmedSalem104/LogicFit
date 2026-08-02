@@ -10,6 +10,13 @@
 
 Last reviewed: 2026-08-02
 
+> **Issue #172 planning gate:** Monster Free capability assessment is documented in
+> [MONSTER-CAPABILITY-ASSESSMENT.md](MONSTER-CAPABILITY-ASSESSMENT.md). The current SQL account
+> can connect and run `BACKUP DATABASE` for the Platform database, but cannot create databases or
+> run `RESTORE VERIFYONLY`; Always-On is unavailable. Database-per-Workspace remains the target
+> architecture. Native restore/download and final activation stay capability-gated until an
+> upgraded/prepared Monster environment proves the required permissions and file-transfer path.
+
 > **Issue #143, task branch:** Production diagnosis found that the reviewed fixed OTP was being
 > consumed correctly, but legacy identity phones were stored as local Egyptian `01...` values and
 > had no verification timestamp, so phone-login requests became enumeration-safe decoy challenges
