@@ -114,6 +114,7 @@ public interface IApplicationDbContext
     DbSet<SubscriptionFeatureSnapshot> SubscriptionFeatureSnapshots { get; }
     DbSet<TenantPaymentMethod> TenantPaymentMethods { get; }
     DbSet<PaymentRequest> PaymentRequests { get; }
+    DbSet<PaymentProof> PaymentProofs { get; }
     DbSet<SubscriptionPayment> SubscriptionPayments { get; }
     DbSet<SubscriptionInvoice> SubscriptionInvoices { get; }
     DbSet<TenantUsage> TenantUsages { get; }

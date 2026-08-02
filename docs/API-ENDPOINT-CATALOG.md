@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-02 09:21 UTC`  |  Total endpoints: **375**
+Generated: `2026-08-02 14:27 UTC`  |  Total endpoints: **375**
 
 ## Contract rules
 
@@ -2354,7 +2354,7 @@ Generated: `2026-08-02 09:21 UTC`  |  Total endpoints: **375**
 #### `POST /api/workspace-applications/freelance` - `SubmitFreelance`
 
 - **Access:** Server default (not declared explicitly)
-- **Inputs:** Body `command`: `SubmitFreelanceWorkspaceApplicationCommand` { `Email`: string; `PhoneNumber`: string?; `Password`: string; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `Specialties`: IReadOnlyList<string>?; `Certifications`: IReadOnlyList<string>?; `WelcomeMessage`: string?; `BookingSettings`: System.Text.Json.JsonElement? }<br>Handler signature: `[FromBody] SubmitFreelanceWorkspaceApplicationCommand command`
+- **Inputs:** Body `command`: `SubmitFreelanceWorkspaceApplicationCommand` { `Email`: string; `PhoneNumber`: string?; `Password`: string; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `Specialties`: IReadOnlyList<string>?; `Certifications`: IReadOnlyList<string>?; `WelcomeMessage`: string?; `BookingSettings`: System.Text.Json.JsonElement?; `PlanId`: Guid; `BillingCycle`: BillingCycle; `PaymentAmount`: decimal; `PaymentTransactionNumber`: string?; `PaymentDate`: DateTime?; `ProofStorageKey`: string }<br>Handler signature: `[FromBody] SubmitFreelanceWorkspaceApplicationCommand command`
 - **Declared response:** typeof(ApplicationTrackingSessionDto), StatusCodes.Status201Created
 
 #### `GET /api/workspace-applications/tracking` - `GetTrackingStatus`

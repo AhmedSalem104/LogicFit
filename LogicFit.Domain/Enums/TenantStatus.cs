@@ -16,5 +16,7 @@ public enum TenantStatus
     Archived = 7,
     Deleted = 8,
     Provisioning = 9,
-    ProvisioningFailed = 10
+    ProvisioningFailed = 10,
+    PendingSubscription = 11,
+    AwaitingDatabaseCapacity = 12
 }

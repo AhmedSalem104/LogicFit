@@ -24,7 +24,7 @@ public static class DbContextOwnership
         typeof(OutboxMessage), typeof(JobExecutionLog), typeof(AuditLog),
         typeof(Plan), typeof(Feature), typeof(FeatureDependency), typeof(FeatureQuotaDefinition),
         typeof(PlanFeature), typeof(TenantSubscription), typeof(TenantFeature),
-        typeof(SubscriptionFeatureSnapshot), typeof(TenantPaymentMethod), typeof(PaymentRequest),
+        typeof(SubscriptionFeatureSnapshot), typeof(TenantPaymentMethod), typeof(PaymentRequest), typeof(PaymentProof),
         typeof(SubscriptionPayment), typeof(SubscriptionInvoice), typeof(TenantUsage)
     };
 
