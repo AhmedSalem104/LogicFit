@@ -58,6 +58,7 @@ The existing guides remain useful by audience. The following two references are 
 |---|---|
 | [Feature catalog](FEATURE-CATALOG.md) | Complete registry of the Platform, workspace, finance, fitness, HR, inventory, communication, identity, and frontend feature families, including the implementation source and responsible roles. |
 | [Authentication and workspace flows](AUTHENTICATION-AND-WORKSPACE-FLOWS.md) | The current legacy and identity-first login flows, workspace selection, freelance applications, review, approval, team membership, session recovery, and access gates. |
+| [Monster capability assessment](MONSTER-CAPABILITY-ASSESSMENT.md) | Current hosting limits, provider guards, and evidence required before native backup/restore or tenant activation. |
 
 Keep those references synchronized with the source in the same Pull Request. `API-ENDPOINT-CATALOG.md` remains the generated authority for the exact HTTP contract; it complements, rather than replaces, the user-flow documentation.
 
