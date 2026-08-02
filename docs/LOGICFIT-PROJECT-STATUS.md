@@ -10,6 +10,13 @@
 
 Last reviewed: 2026-08-02
 
+> **Issue #162 implementation:** Platform dashboard contracts now expose permission-filtered
+> operational summaries for application/payment review, database-pool capacity, provisioning,
+> backup and restore state. Read-only resource and provisioning lists are server-paged and omit
+> database names, connection material and storage paths. `/api/platform/diagnostics/version`
+> reports API contract/build compatibility metadata without secrets. No migration or Production
+> change was required.
+
 > **Issue #167 implementation:** Tenant backup export now uses the existing central BACPAC
 > orchestration with a server-resolved tenant mapping. Owner/explicit-permission access requires
 > password reauthentication and a five-minute single-use SensitiveActionGrant; download grants are

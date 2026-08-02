@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-02 16:51 UTC`  |  Total endpoints: **390**
+Generated: `2026-08-02 17:11 UTC`  |  Total endpoints: **393**
 
 ## Contract rules
 
@@ -133,6 +133,22 @@ Generated: `2026-08-02 16:51 UTC`  |  Total endpoints: **390**
 - **Inputs:** Query `search`: `string?`<br>Query `status`: `TenantStatus?`<br>Query `planId`: `Guid?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] string? search = null, [FromQuery] TenantStatus? status = null, [FromQuery] Guid? planId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize`
 - **Declared response:** Task<IActionResult>
 
+### PlatformDatabaseResources
+
+#### `GET /api/platform/database-resources` - `List`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Query `status`: `DatabaseResourceStatus?`<br>Query `tenantId`: `Guid?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] DatabaseResourceStatus? status = null, [FromQuery] Guid? tenantId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize`
+- **Declared response:** Task<ActionResult<PlatformPage<PlatformDatabaseResourceDto>>>
+
+### PlatformDiagnostics
+
+#### `GET /api/platform/diagnostics/version` - `Version`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformReports`
+- **Inputs:** No request input.
+- **Declared response:** ActionResult<PlatformVersionDiagnosticsDto>
+
 ### PlatformFeatures
 
 #### `GET /api/platform/features` - `GetFeatures`
@@ -241,6 +257,12 @@ Generated: `2026-08-02 16:51 UTC`  |  Total endpoints: **390**
 
 - **Access:** JWT + Policy: `Permissions.ManagePlatformReports`
 - **Inputs:** Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize`
+- **Declared response:** Task<IActionResult>
+
+#### `GET /api/platform/operations/provisioning` - `GetProvisioning`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformReports`
+- **Inputs:** Query `status`: `ProvisioningJobStatus?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] ProvisioningJobStatus? status = null, [FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize`
 - **Declared response:** Task<IActionResult>
 
 ### PlatformPaymentMethods

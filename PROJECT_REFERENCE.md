@@ -1295,6 +1295,11 @@ GET /plans → POST /subscription/select-plan → GET /payment-methods → [دف
 { "totalGyms": 42, "activeGyms": 30, "trialGyms": 5, "pendingApprovalGyms": 3, "suspendedGyms": 4, "totalMembers": 8600 }
 ```
 
+The current `PlatformDashboardDto` also returns an `operations` object with application/payment
+review, database-pool, provisioning, backup and restore summaries. Platform clients can query
+`/api/platform/database-resources`, `/api/platform/operations/provisioning` and
+`/api/platform/diagnostics/version`; these contracts omit database names and connection material.
+
 ---
 
 # 6. Enums Reference
