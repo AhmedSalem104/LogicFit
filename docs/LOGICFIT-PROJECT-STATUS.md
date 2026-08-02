@@ -48,6 +48,17 @@ Last reviewed: 2026-08-02
 > term or activates the placeholder; provisioning (#166) must complete first. The additive Platform
 > and compatibility migrations are review-only and have not been applied to Production.
 
+> **Issue #166 implementation:** Approved applications now enter a persistent provisioning saga
+> backed by `ProvisioningJobs` and a unique idempotency key. The saga reserves an operator-managed
+> database resource, applies the isolated Tenant migration assembly, creates the local owner,
+> validates connectivity, records the encrypted mapping, and only then activates the workspace,
+> membership, and subscription dates. Capacity shortages remain `AwaitingDatabaseCapacity` and
+> provider errors remain `ProvisioningFailed` for an explicit retry through the Platform API.
+> `ManualMonsterProvisioningProvider` never creates/deletes Monster databases; `LocalSql` is a
+> Development/CI provider over pre-created local resources. The two additive migrations are
+> review-only and no Production schema or data was changed. See
+> [PROVISIONING-SAGA.md](PROVISIONING-SAGA.md).
+
 > **Issue #143, task branch:** Production diagnosis found that the reviewed fixed OTP was being
 > consumed correctly, but legacy identity phones were stored as local Egyptian `01...` values and
 > had no verification timestamp, so phone-login requests became enumeration-safe decoy challenges
