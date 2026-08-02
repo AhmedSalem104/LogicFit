@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-02 16:34 UTC`  |  Total endpoints: **386**
+Generated: `2026-08-02 16:51 UTC`  |  Total endpoints: **390**
 
 ## Contract rules
 
@@ -334,6 +334,32 @@ Generated: `2026-08-02 16:34 UTC`  |  Total endpoints: **386**
 - **Access:** JWT + Policy: `Permissions.ManagePlatformReports`
 - **Inputs:** No request input.
 - **Declared response:** Task<IActionResult>
+
+### PlatformRestores
+
+#### `GET /api/platform/restores` - `List`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** No request input.
+- **Declared response:** Task<ActionResult<IReadOnlyList<RestoreJobDto>>>
+
+#### `POST /api/platform/restores` - `Restore`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `PlatformRestoreRequest`<br>Handler signature: `[FromBody] PlatformRestoreRequest request`
+- **Declared response:** Task<ActionResult<RestoreJobDto>>
+
+#### `GET /api/platform/restores/capabilities` - `Capabilities`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** No request input.
+- **Declared response:** ActionResult<DatabaseRestoreCapabilities>
+
+#### `POST /api/platform/restores/reauthenticate` - `Reauthenticate`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `PlatformPasswordReauthenticationRequest`<br>Handler signature: `[FromBody] PlatformPasswordReauthenticationRequest request`
+- **Declared response:** Task<ActionResult<SensitiveActionGrantDto>>
 
 ### PlatformRoles
 

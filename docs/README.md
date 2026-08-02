@@ -74,3 +74,4 @@ Keep those references synchronized with the source in the same Pull Request. `AP
 - [Workspace Provisioning Saga](PROVISIONING-SAGA.md)
 - [Central Backup Orchestration](CENTRAL-BACKUP-ORCHESTRATION.md)
 - [Tenant Backup Export](TENANT-BACKUP-EXPORT.md)
+- [Conditional Restore](CONDITIONAL-RESTORE.md)

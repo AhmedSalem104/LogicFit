@@ -145,6 +145,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<SensitiveActionGrant> SensitiveActionGrants => Set<SensitiveActionGrant>();
     public DbSet<TenantBackupExport> TenantBackupExports => Set<TenantBackupExport>();
     public DbSet<TenantBackupDownloadGrant> TenantBackupDownloadGrants => Set<TenantBackupDownloadGrant>();
+    public DbSet<RestoreJob> RestoreJobs => Set<RestoreJob>();
     public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
     public DbSet<SubscriptionInvoice> SubscriptionInvoices => Set<SubscriptionInvoice>();
     public DbSet<TenantUsage> TenantUsages => Set<TenantUsage>();
