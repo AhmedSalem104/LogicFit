@@ -69,3 +69,4 @@ Keep those references synchronized with the source in the same Pull Request. `AP
 المتخصصة أعلاه.
 - [Platform/Tenant DbContext and Migration Split](DBCONTEXT-MIGRATION-SPLIT.md)
 - [Database Resource Pool](DATABASE-RESOURCE-POOL.md)
+- [Tenant Database Resolver](TENANT-DATABASE-RESOLVER.md)

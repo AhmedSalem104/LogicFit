@@ -35,6 +35,8 @@ public static class DependencyInjection
         services.AddScoped<IDatabaseResourcePool, DatabaseResourcePoolService>();
         services.AddScoped<IDatabaseProvisioningProvider, ManualMonsterProvisioningProvider>();
         services.AddSingleton<IConnectionStringProtector, DataProtectionConnectionStringProtector>();
+        services.AddScoped<ITenantDatabaseMappingReader, PlatformTenantDatabaseMappingReader>();
+        services.AddScoped<ITenantDatabaseResolver, TenantDatabaseResolver>();
         services.AddOptions<StartupDatabaseMigrationOptions>()
             .Bind(configuration.GetSection(StartupDatabaseMigrationOptions.SectionName))
             .Validate(

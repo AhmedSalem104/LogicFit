@@ -36,6 +36,12 @@ Last reviewed: 2026-08-02
 > delete Monster databases. Additive migrations are local/review-only and no Production schema or
 > data was changed.
 
+> **Issue #175 implementation:** Tenant database resolution is now a server-only boundary. The
+> resolver reads active mappings from Platform DB, requires an `Assigned` resource reserved for
+> the same tenant, decrypts connection material in memory, and fails closed for stale,
+> cross-tenant, or undecryptable mappings. No database name or connection string is accepted from
+> frontend contracts, and no Production mapping or schema was changed.
+
 > **Issue #143, task branch:** Production diagnosis found that the reviewed fixed OTP was being
 > consumed correctly, but legacy identity phones were stored as local Egyptian `01...` values and
 > had no verification timestamp, so phone-login requests became enumeration-safe decoy challenges
