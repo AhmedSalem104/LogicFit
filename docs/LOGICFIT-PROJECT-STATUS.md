@@ -1,6 +1,12 @@
 # LogicFit Project Status
 
-> **Issue #152 — local implementation, not released:** OTP is restricted to authentication flows. Post-login Platform and Tenant operations use their existing JWT, permission, workspace, subscription, ownership, and concurrency gates without OTP step-up.
+> **Issue #156 — task branch:** a fresh PlatformOwner/PlatformAdmin login now reconciles the
+> account's trusted legacy role with its required RBAC system-role assignment before signing the
+> JWT. Startup reconciliation also repairs missing mapped roles even when another assignment exists,
+> preserves unrelated roles, increments `PermissionsVersion`, and is idempotent. This fixes
+> `403 ManageTenants` responses caused by a Platform UI role and signed JWT role mismatch.
+
+> **Issue #152 — released to `master`:** OTP is restricted to authentication flows. Post-login Platform and Tenant operations use their existing JWT, permission, workspace, subscription, ownership, and concurrency gates without OTP step-up.
 
 Last reviewed: 2026-08-02
 

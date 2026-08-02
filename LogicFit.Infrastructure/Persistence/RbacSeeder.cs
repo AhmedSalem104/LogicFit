@@ -376,17 +376,15 @@ public class RbacSeeder
 
     private async Task BackfillUserRolesAsync()
     {
-        // Users that have no UserRole assignment yet.
-        var assignedUserIds = await _context.UserRoleAssignments
-            .IgnoreQueryFilters()
-            .Select(ur => ur.UserId)
-            .Distinct()
-            .ToListAsync();
-
+        // Preserve the legacy backfill for users with no assignments. In addition, reconcile
+        // PlatformOwner/PlatformAdmin even when another assignment exists: older logic skipped
+        // those accounts and could issue a Platform JWT without its required signed role.
+        // Tenant users with an existing assignment are deliberately left unchanged because their
+        // explicit RBAC assignment remains the source of truth during the legacy-role transition.
+        var mappedRoles = LegacyRoleMap.Keys.ToArray();
         var users = await _context.Set<User>()
             .IgnoreQueryFilters()
-            .Where(u => !assignedUserIds.Contains(u.Id))
-            .Select(u => new { u.Id, u.TenantId, u.Role })
+            .Where(u => mappedRoles.Contains(u.Role))
             .ToListAsync();
 
         if (users.Count == 0) return;
@@ -396,18 +394,34 @@ public class RbacSeeder
             .Where(r => r.TenantId == null)
             .ToDictionaryAsync(r => r.Name, r => r.Id);
 
+        var userIds = users.Select(x => x.Id).ToArray();
+        var existingAssignments = (await _context.UserRoleAssignments
+                .IgnoreQueryFilters()
+                .Where(ur => userIds.Contains(ur.UserId))
+                .Select(ur => new { ur.UserId, ur.RoleId })
+                .ToListAsync())
+            .Select(x => (x.UserId, x.RoleId))
+            .ToHashSet();
+        var assignedUserIds = existingAssignments.Select(x => x.UserId).ToHashSet();
+
         var added = 0;
         foreach (var user in users)
         {
             if (!LegacyRoleMap.TryGetValue(user.Role, out var roleName)) continue;
             if (!systemRoles.TryGetValue(roleName, out var roleId)) continue;
+            if (existingAssignments.Contains((user.Id, roleId))) continue;
+            var isPlatformRole = user.Role is UserRole.PlatformOwner or UserRole.PlatformAdmin;
+            if (!isPlatformRole && assignedUserIds.Contains(user.Id)) continue;
 
             _context.UserRoleAssignments.Add(new UserRoleAssignment
             {
                 UserId = user.Id,
                 RoleId = roleId,
-                TenantId = user.TenantId
+                TenantId = isPlatformRole ? null : user.TenantId
             });
+            user.PermissionsVersion++;
+            existingAssignments.Add((user.Id, roleId));
+            assignedUserIds.Add(user.Id);
             added++;
         }
 

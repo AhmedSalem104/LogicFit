@@ -188,6 +188,7 @@ CI يعمل على الفروع وPull Requests ويتحقق من البناء �
 | العرض | البداية الصحيحة للتشخيص |
 |---|---|
 | `401` من لوحة الإدارة | افحص انتهاء Access Token/Refresh Token وصلاحية المستخدم ثم Endpoint الحقيقي في Network. |
+| `403` بعد دخول Platform جديد مع ظهور شاشة مسموحة في الواجهة | افحص تطابق `Users.Role` مع `UserRoles` والدور الموقع داخل JWT و`PermissionsVersion`. Issue #156 يصالح `PlatformOwner`/`PlatformAdmin` عند Startup وإصدار الجلسة؛ بعد نشره أعد الدخول، ولا تحذف Policy مثل `ManageTenants`. |
 | `409` عند اعتماد مدرب حر | افحص حالة الطلب أولاً. إذا كانت `UnderReview` ورسالة اللوحة تشير إلى أدوار غير مهيأة، خذ Backup وطبّق `20260729133325_SeedFreelanceSystemRoles` عبر إجراء Migrations المعتمد، ثم حدّث الطابور وأعد المحاولة. |
 | `500` متكرر | راجع Application Logs وConnection String وMigration وحالة الجداول، ولا تكشف exception للعميل. |
 | `503` من النسخ | افحص تفعيل الخدمة وأداة/مسار النسخ وصلاحيات ملف التخزين ومساحة القرص. |
