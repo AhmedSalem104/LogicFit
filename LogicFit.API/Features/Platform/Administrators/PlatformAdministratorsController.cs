@@ -2,7 +2,6 @@ using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Enums;
 using LogicFit.API.Features.Platform.Common;
-using LogicFit.Infrastructure.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -27,7 +26,6 @@ public sealed class PlatformAdministratorsController(IApplicationDbContext conte
     public sealed record CreateAdministratorRequest(string Email, string Password, string FullName);
 
     [HttpPost]
-    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<IActionResult> Create([FromBody] CreateAdministratorRequest request, CancellationToken cancellationToken)
     {
         if (!User.IsInRole(SystemRoles.PlatformOwner)) return Forbid();
@@ -49,7 +47,6 @@ public sealed class PlatformAdministratorsController(IApplicationDbContext conte
     }
 
     [HttpPatch("{id:guid}/status")]
-    [Authorize(Policy = OtpStepUpRequirement.PolicyName)]
     public async Task<IActionResult> SetStatus(Guid id, [FromBody] bool isActive, CancellationToken cancellationToken)
     {
         if (!User.IsInRole(SystemRoles.PlatformOwner)) return Forbid();

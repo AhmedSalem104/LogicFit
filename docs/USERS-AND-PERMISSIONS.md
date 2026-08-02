@@ -13,8 +13,8 @@ An identity-first account may sign in with its verified, globally unique email a
 or a verified, unique E.164 phone and a purpose-bound OTP challenge. Email verification and
 password-reset links remain opaque, one-use, short-lived hash records. OTP codes are also
 one-use, short-lived HMAC records and are never returned by the API. Platform Owner/Admin
-must complete password plus OTP; sensitive Platform mutations require a fresh five-minute
-OTP step-up. None of these proofs grant workspace permission: `WorkspaceMembership.Active`,
+must complete password plus OTP during login. No post-login Platform or Tenant operation requires
+another OTP challenge. Authentication never replaces authorization: `WorkspaceMembership.Active`,
 local `User.Active`, workspace/subscription gates, permissions, and ownership checks still
 decide access. Password reset/change and confirmed phone change revoke linked refresh and
 workspace-selection sessions.
