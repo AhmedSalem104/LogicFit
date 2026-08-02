@@ -17,6 +17,8 @@ public class PlatformDbContext : IdentityDbContext<ApplicationUser, IdentityRole
     public PlatformDbContext(DbContextOptions options) : base(options) { }
 
     public DbSet<Domain.Entities.Tenant> Tenants => Set<Domain.Entities.Tenant>();
+    public DbSet<Domain.Entities.DatabaseResource> DatabaseResources => Set<Domain.Entities.DatabaseResource>();
+    public DbSet<Domain.Entities.TenantDatabaseMapping> TenantDatabaseMappings => Set<Domain.Entities.TenantDatabaseMapping>();
     public DbSet<Domain.Entities.TenantBrandAsset> TenantBrandAssets => Set<Domain.Entities.TenantBrandAsset>();
     public DbSet<Domain.Entities.IdentityAccount> IdentityAccounts => Set<Domain.Entities.IdentityAccount>();
     public DbSet<Domain.Entities.IdentityEmailActionToken> IdentityEmailActionTokens => Set<Domain.Entities.IdentityEmailActionToken>();
