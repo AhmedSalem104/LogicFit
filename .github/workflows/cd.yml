@@ -16,9 +16,35 @@ on:
         required: true
         type: string
       confirm:
-        description: 'Type DEPLOY-PRODUCTION to confirm a production deployment'
+        description: 'Type DEPLOY-PRODUCTION or RECOVER-PRODUCTION-STARTUP'
         required: true
         type: string
+      recovery_profile:
+        description: 'Protected WebDeploy profile used only for startup recovery'
+        required: false
+        default: platform
+        type: choice
+        options:
+          - platform
+          - tenant
+          - unified
+      recovery_expected_site:
+        description: 'Exact Monster ASP site id, for example site81260'
+        required: false
+        type: string
+      recovery_temporary_fixed_expiry_utc:
+        description: 'TemporaryFixed OTP expiry in UTC, no more than 31 days away'
+        required: false
+        type: string
+      recovery_management_host_override:
+        description: 'Optional current management hostname when the profile hostname is retired'
+        required: false
+        type: string
+      recovery_allow_untrusted_certificate:
+        description: 'Allow the management endpoint certificate only after operator review'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -125,12 +151,36 @@ jobs:
           dotnet publish LogicFit.API/LogicFit.API.csproj -c Release -o "$env:RUNNER_TEMP/unified-publish" /p:UseAppHost=false
           dotnet tool install --global dotnet-ef --version 8.*
 
-      - name: Decode protected publish profiles
+      - name: Decode protected unified publish profile
         shell: pwsh
         env:
           UNIFIED_PROFILE_B64: ${{ secrets.RUNASP_UNIFIED_PUBLISH_SETTINGS_B64 }}
         run: |
-          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP/unified.publishSettings", [Convert]::FromBase64String($env:UNIFIED_PROFILE_B64))
+          $profilePath = "$env:RUNNER_TEMP/unified.publishSettings"
+          $profilePayload = $env:UNIFIED_PROFILE_B64.Trim()
+          $xmlStart = $profilePayload.IndexOf('<')
+          if ($xmlStart -ge 0) {
+            # Accept legacy Environment secrets that contain the publish-settings XML directly.
+            $profilePayload = $profilePayload.Substring($xmlStart)
+            $profileDocument = [xml]$profilePayload
+            if ($null -eq $profileDocument.publishData.publishProfile) {
+              throw "The protected unified publish profile XML is invalid."
+            }
+            [IO.File]::WriteAllText(
+              $profilePath,
+              $profilePayload,
+              [Text.UTF8Encoding]::new($false))
+          }
+          else {
+            try {
+              [IO.File]::WriteAllBytes(
+                $profilePath,
+                [Convert]::FromBase64String($profilePayload))
+            }
+            catch [FormatException] {
+              throw "The protected unified publish profile is neither Base64 nor publish-settings XML."
+            }
+          }
 
       - name: Apply reviewed migrations and deploy unified LogicFit API
         shell: pwsh
@@ -147,3 +197,87 @@ jobs:
             -MigrationScriptPath "$env:RUNNER_TEMP/migration-plan/logicfit-migrations.sql" `
             -ApproveDestructiveMigrationReview `
             -HealthCheckUrl $env:UNIFIED_HEALTH_URL
+
+  recover-startup:
+    if: ${{ inputs.confirm == 'RECOVER-PRODUCTION-STARTUP' }}
+    runs-on: windows-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select protected recovery target
+        shell: pwsh
+        env:
+          RECOVERY_PROFILE: ${{ inputs.recovery_profile }}
+          EXPECTED_SITE: ${{ inputs.recovery_expected_site }}
+          PLATFORM_PROFILE_B64: ${{ secrets.RUNASP_PLATFORM_PUBLISH_SETTINGS_B64 }}
+          PLATFORM_HEALTH_URL: ${{ secrets.RUNASP_PLATFORM_HEALTHCHECK_URL }}
+          TENANT_PROFILE_B64: ${{ secrets.RUNASP_TENANT_PUBLISH_SETTINGS_B64 }}
+          TENANT_HEALTH_URL: ${{ secrets.RUNASP_TENANT_HEALTHCHECK_URL }}
+          UNIFIED_PROFILE_B64: ${{ secrets.RUNASP_UNIFIED_PUBLISH_SETTINGS_B64 }}
+          UNIFIED_HEALTH_URL: ${{ secrets.RUNASP_UNIFIED_HEALTHCHECK_URL }}
+        run: |
+          if ($env:EXPECTED_SITE -notmatch '^site[0-9]+$') {
+            throw "recovery_expected_site must use the site12345 format."
+          }
+          $selection = switch ($env:RECOVERY_PROFILE) {
+            'platform' { @($env:PLATFORM_PROFILE_B64, $env:PLATFORM_HEALTH_URL) }
+            'tenant' { @($env:TENANT_PROFILE_B64, $env:TENANT_HEALTH_URL) }
+            'unified' { @($env:UNIFIED_PROFILE_B64, $env:UNIFIED_HEALTH_URL) }
+            default { throw "Unsupported protected recovery profile." }
+          }
+          if ([string]::IsNullOrWhiteSpace($selection[0]) -or
+              [string]::IsNullOrWhiteSpace($selection[1])) {
+            throw "The selected protected publish profile or health URL is missing."
+          }
+          $profilePath = "$env:RUNNER_TEMP/recovery.publishSettings"
+          $profilePayload = $selection[0].Trim()
+          $xmlStart = $profilePayload.IndexOf('<')
+          if ($xmlStart -ge 0) {
+            # Older protected environments stored the publish-settings XML directly.
+            $profilePayload = $profilePayload.Substring($xmlStart)
+            $profileDocument = [xml]$profilePayload
+            if ($null -eq $profileDocument.publishData.publishProfile) {
+              throw "The selected protected publish profile XML is invalid."
+            }
+            [IO.File]::WriteAllText(
+              $profilePath,
+              $profilePayload,
+              [Text.UTF8Encoding]::new($false))
+          }
+          else {
+            try {
+              [IO.File]::WriteAllBytes(
+                $profilePath,
+                [Convert]::FromBase64String($profilePayload))
+            }
+            catch [FormatException] {
+              throw "The selected protected publish profile is neither Base64 nor publish-settings XML."
+            }
+          }
+          "RECOVERY_HEALTH_URL=$($selection[1])" >> $env:GITHUB_ENV
+
+      - name: Recover production startup configuration
+        shell: pwsh
+        env:
+          LOGICFIT_OTP_HMAC_SECRET: ${{ secrets.LOGICFIT_OTP_HMAC_SECRET }}
+          LOGICFIT_JWT_SECRET: ${{ secrets.LOGICFIT_JWT_SECRET }}
+          LOGICFIT_PASSWORD_RESET_SECRET: ${{ secrets.LOGICFIT_PASSWORD_RESET_SECRET }}
+          EXPECTED_SITE: ${{ inputs.recovery_expected_site }}
+          TEMPORARY_FIXED_EXPIRY_UTC: ${{ inputs.recovery_temporary_fixed_expiry_utc }}
+          MANAGEMENT_HOST_OVERRIDE: ${{ inputs.recovery_management_host_override }}
+          ALLOW_UNTRUSTED: ${{ inputs.recovery_allow_untrusted_certificate }}
+        run: |
+          $arguments = @{
+            PublishSettingsPath = "$env:RUNNER_TEMP/recovery.publishSettings"
+            ExpectedSite = $env:EXPECTED_SITE
+            HealthCheckUrl = $env:RECOVERY_HEALTH_URL
+            TemporaryFixedExpiryUtc = $env:TEMPORARY_FIXED_EXPIRY_UTC
+          }
+          if (-not [string]::IsNullOrWhiteSpace($env:MANAGEMENT_HOST_OVERRIDE)) {
+            $arguments.ManagementHostOverride = $env:MANAGEMENT_HOST_OVERRIDE
+          }
+          if ($env:ALLOW_UNTRUSTED -eq 'true') {
+            $arguments.AllowUntrustedManagementCertificate = $true
+          }
+          .\Scripts\recover-webdeploy-startup.ps1 @arguments

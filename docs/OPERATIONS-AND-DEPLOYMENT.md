@@ -86,7 +86,9 @@ the bootstrap enabled, or use it as a routine password-reset path. This recovery
 يُنشأ `appsettings.Production.json` داخل موقع Monster ASP فقط ولا يُرفع إلى Git. يضع
 المشغّل فيه `ConnectionStrings:DefaultConnection` و`JwtSettings:Secret` وأي إعدادات
 خاصة بالإنتاج. سكربت WebDeploy يحتفظ بالملفات الإضافية على الخادم عبر
-`DoNotDeleteRule`، لذلك لا يحذف هذا الملف أثناء نشر التطبيق. لا تُسجّل محتويات الملف
+`LogicFit.API.csproj` excludes it from publish output and `deploy-webdeploy.ps1` skips it
+explicitly at the destination. `DoNotDeleteRule` alone prevents deletion but still allows an
+existing file to be overwritten. لا تُسجّل محتويات الملف
 أو كلمات المرور في التذاكر أو السجلات.
 
 ## فحص ما قبل النشر
@@ -127,7 +129,25 @@ publish credentials:
   -HealthCheckUrl https://your-host/health
 ```
 
+### Protected IIS 500.30 startup recovery
+
+Issue #137 recovered `site81605` after stdout identified a missing `Otp:HmacSecret`. The same
+procedure is available through the manual protected CD workflow with
+`confirm=RECOVER-PRODUCTION-STARTUP`. It selects an existing GitHub Environment publish profile,
+requires the exact Monster site id, captures the existing production configuration and web.config
+for rollback, injects protected OTP/JWT/password-reset secrets, forces one recycle, restores the
+original web.config, and requires health after both recycles. It changes neither the database nor
+the application binary.
+
+Never leave stdout enabled after diagnosis. Never upload captured stdout as an artifact when it can
+contain authentication payloads. Rotate exposed application credentials and remove or redact the
+affected server logs through an explicitly approved operator action.
+
 The connection is read from `LOGICFIT_PRODUCTION_DB_CONNECTION` in the current protected process and is passed to the EF design-time factory through the short-lived `LOGICFIT_EF_CONNECTION_STRING` operator variable. Without that explicit override, EF remains pinned to LocalDB and cannot reach production accidentally. The GitHub `production` Environment must store the production secret together with `RUNASP_UNIFIED_PUBLISH_SETTINGS_B64` and `RUNASP_UNIFIED_HEALTHCHECK_URL`. The manual workflow also requires `backup_reference`, `migration_review=MIGRATIONS-REVIEWED`, and `confirm=DEPLOY-PRODUCTION`. `-ApproveDestructiveMigrationReview` is used only after reviewing a plan containing intentional `DROP`, `DELETE`, or `TRUNCATE` statements.
+
+The protected WebDeploy secret may contain either the Base64-encoded publish-settings file or the
+publish-settings XML itself for compatibility with the existing Environment configuration. The
+workflow validates direct XML before writing the short-lived runner file and never prints it.
 
 Startup settings are optional because safe defaults are compiled in: enabled, 120-second lock
 wait, and 300-second command timeout. Override them only in the server secret/configuration store

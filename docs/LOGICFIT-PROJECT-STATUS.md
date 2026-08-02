@@ -147,10 +147,11 @@ flowchart LR
 
 ## Current deployment position
 
-- Production database `db60976` has all 50 canonical `origin/master` migrations plus the preserved legacy server-only `20260729141315_SeedFreelanceSystemRoles` row. No canonical migration remains pending; the new identity, invite, client-join, and OTP tables/columns were verified after application on 2026-08-01.
-- Verified live endpoint: `https://logicfit.runasp.net/health` returns `200 Healthy`. The retired `logicfit-platform.runasp.net` hostname did not resolve during the 2026-08-01 verification and must not be used as the unified health URL.
-- The live binary still returned `404` for `/api/workspace-invites/preview` and `/api/workspace/client-join-codes/preview` immediately after the schema rollout, proving that the released `master` binary had not yet reached the site. The first attempted CD was stopped in preflight because Linux OTP tests lacked SQL Server; no WebDeploy ran. Issue #134 adds the missing test database service before the next rollout.
-- The supplied publish profile targets the intended unified API site `site78301`; its password is intentionally not recorded.
+- Issue #137 confirmed that `logicfit-saas-model.runasp.net` (`site81605`) failed with IIS `500.30` after publish replaced the server-only configuration and removed `Otp:HmacSecret`. A rollback-safe configuration recovery restored repeated `200 Healthy` responses and DB-backed API smoke checks on 2026-08-02; stdout was disabled again.
+- `logicfit-saas.runasp.net` is a separate current Platform host associated with the active `site81260` publish target. It remained on `500.30` pending execution of the new protected recovery job with the current GitHub Environment profile; stale local encrypted profiles cannot be used as credentials.
+- `logicfit.runasp.net/health` remained `200 Healthy` throughout the incident. The production frontend routes Platform requests to the recovered `logicfit-saas-model.runasp.net` host.
+- Retired `site78301` profiles are not valid recovery credentials. The current documented targets are `site81260` for `logicfit-saas`, `site45954` for `logicfit.runasp.net`, and `site81605` for the hosted model site; protected GitHub Environment profiles remain authoritative.
+- Production database `db60976` contains every canonical migration through `20260801214750_NormalizeLegacyIdentityPhonesToE164` plus the preserved legacy server-only `20260729141315_SeedFreelanceSystemRoles` history row. Post-apply verification found no remaining legacy identity phones, domain/user phone mismatches, or pending canonical migration.
 - GitHub Clone-to-`/wwwroot` is not used: it clones source files and cannot safely host the compiled ASP.NET Core application.
 - The released operation remains manual Visual Studio/WebDeploy publishing. After Issue #134 is merged and released, the supported helper/workflow will require the released master tree, verified backup reference, reviewed migration plan, protected database connection, WebDeploy, and health verification in one ordered operation.
 
@@ -341,9 +342,9 @@ fails startup if apply or post-apply verification fails.
 - Move private uploads to object storage with signed URLs and malware scanning.
 - Add distributed locks/idempotency for background lifecycle jobs.
 - Add integration, end-to-end, load, concurrency, and tenant-isolation tests.
-- Keep production deployment manual and protected until the Monster ASP target, backup/restore, migration, health, and binary rollback procedures are all operator-verified.
-- A local WebDeploy settings file was provided for `logicfit-platform.runasp.net` (`MSDeploy`, site `site78301`). It is the candidate profile for the unified API; its password is intentionally not recorded. Verify the target, backup/migration/rollback procedure, and health URL before enabling production CD.
-- `Scripts/deploy-webdeploy.ps1` performs credential-safe migration and MSDeploy orchestration from one unified release. With `-ApplyMigrations`, it requires a verified BACPAC reference, reviewed SQL, the protected `LOGICFIT_PRODUCTION_DB_CONNECTION`, and a health URL; migration failure stops the rollout before WebDeploy.
+- Define the Monster ASP deployment target, application directory, service manager, backup command, and health URL before enabling automatic production deployment.
+- Stale local WebDeploy profiles are diagnostic metadata only. Production actions select the current protected GitHub Environment profile and require an exact expected Monster site id before any remote write.
+- `Scripts/deploy-webdeploy.ps1` performs credential-safe migration and MSDeploy orchestration and explicitly skips the server-only production configuration. With `-ApplyMigrations`, it requires a verified BACPAC reference, reviewed SQL, the protected database connection, and a health URL. `Scripts/recover-webdeploy-startup.ps1` is configuration-only incident recovery with rollback and health gates.
 
 ## Change log
 
@@ -354,6 +355,13 @@ fails startup if apply or post-apply verification fails.
 - Added SQL Server application locking, bounded lock/command timeouts, post-apply pending
   verification, configuration validation, and regression tests. No frontend or API route changes
   are required.
+
+### 2026-08-01 — production startup recovery hardening (Issue #137)
+
+- Excluded `appsettings.Production.json` from publish artifacts and added an MSDeploy skip rule so server-only secrets cannot be overwritten by a developer-local file.
+- Allowed the protected deployment workflow to consume either Base64 or validated direct publish-settings XML, fixing the pre-deploy decode failure without exposing the profile.
+- Added a protected, site-bound startup-recovery operation with configuration/web.config rollback, OTP/JWT/password-reset secret injection, controlled recycle, and repeated health verification.
+- Added regression coverage preventing authentication request payload logging and production configuration publication.
 
 ### 2026-08-01 — protected migration-aware publishing (Issue #134, task branch)
 
