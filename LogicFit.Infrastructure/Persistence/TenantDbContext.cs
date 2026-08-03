@@ -1,6 +1,7 @@
 using LogicFit.Domain.Common.Interfaces;
 using LogicFit.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace LogicFit.Infrastructure.Persistence;
 
@@ -103,6 +104,7 @@ public class TenantDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, TenantDbContextModelCacheKeyFactory>();
         optionsBuilder.UseSqlServer(sql => sql
             .MigrationsAssembly(MigrationsAssemblyName)
             .MigrationsHistoryTable(MigrationHistoryTable));
@@ -135,10 +137,26 @@ public class TenantDbContext : DbContext
 
     private void EnforceTenantBoundary()
     {
-        foreach (var entry in ChangeTracker.Entries<ITenantEntity>())
+        foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity.TenantId != TenantId)
+            if (!DbContextOwnership.TenantEntities.Contains(entry.Metadata.ClrType))
+                continue;
+
+            if (entry.Entity is ITenantEntity tenantEntity && tenantEntity.TenantId != TenantId)
                 throw new InvalidOperationException("The entity TenantId does not match the TenantDbContext scope.");
+
+            var tenantProperty = entry.Metadata.FindProperty(nameof(ITenantEntity.TenantId));
+            if (tenantProperty is null)
+                continue;
+
+            var value = entry.Property(tenantProperty.Name).CurrentValue;
+            if (value is Guid otherTenantId && otherTenantId != TenantId)
+                throw new InvalidOperationException("The entity TenantId does not match the TenantDbContext scope.");
+
+            // UserRoleAssignment is tenant-local even though its legacy property is nullable;
+            // a null assignment must never be created in an isolated workspace database.
+            if (entry.Metadata.ClrType == typeof(UserRoleAssignment) && value is not Guid)
+                throw new InvalidOperationException("A tenant-local user role assignment requires the TenantDbContext scope.");
         }
     }
 }

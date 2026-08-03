@@ -20,7 +20,7 @@ namespace LogicFit.Infrastructure.Services;
 /// database names or connection strings.
 /// </summary>
 public sealed class DatabaseBackupService(
-    ApplicationDbContext db,
+    PlatformDbContext db,
     IConfiguration configuration,
     IHostEnvironment environment,
     IConnectionStringProtector connectionStringProtector,

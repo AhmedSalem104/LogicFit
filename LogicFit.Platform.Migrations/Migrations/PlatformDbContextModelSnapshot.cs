@@ -832,93 +832,6 @@ namespace LogicFit.Platform.Migrations
                     b.ToTable("JobExecutionLogs");
                 });
 
-            modelBuilder.Entity("LogicFit.Domain.Entities.OtpChallenge", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("AttemptCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CodeHash")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CodeSalt")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ConsumedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("DeliveryStatus")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("IdentityAccountId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("LastSentAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("MaxAttempts")
-                        .HasColumnType("int");
-
-                    b.Property<string>("NormalizedPhoneNumber")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ProviderMessageId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Purpose")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ResendCount")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsRequired()
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<string>("SessionBinding")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IdentityAccountId");
-
-                    b.ToTable("OtpChallenge");
-                });
-
             modelBuilder.Entity("LogicFit.Domain.Entities.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3013,15 +2926,6 @@ namespace LogicFit.Platform.Migrations
                     b.Navigation("IdentityAccount");
                 });
 
-            modelBuilder.Entity("LogicFit.Domain.Entities.OtpChallenge", b =>
-                {
-                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
-                        .WithMany("OtpChallenges")
-                        .HasForeignKey("IdentityAccountId");
-
-                    b.Navigation("IdentityAccount");
-                });
-
             modelBuilder.Entity("LogicFit.Domain.Entities.PaymentProof", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.PaymentRequest", "PaymentRequest")
@@ -3318,8 +3222,6 @@ namespace LogicFit.Platform.Migrations
                     b.Navigation("EmailActionTokens");
 
                     b.Navigation("Memberships");
-
-                    b.Navigation("OtpChallenges");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.PaymentRequest", b =>

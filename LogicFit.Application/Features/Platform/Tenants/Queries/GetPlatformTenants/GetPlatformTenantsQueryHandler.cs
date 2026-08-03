@@ -30,25 +30,34 @@ public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenants
 
         var (page, pageSize) = PageRequest.Normalize(request.Page, request.PageSize);
         var totalCount = await query.CountAsync(cancellationToken);
-        var items = await query
+        var tenants = await query
             .OrderByDescending(t => t.CreatedAt)
-            .Select(t => new PlatformTenantDto
-            {
-                Id = t.Id,
-                Name = t.Name,
-                Subdomain = t.Subdomain,
-                Status = t.Status,
-                Email = t.Email,
-                PhoneNumber = t.PhoneNumber,
-                // Platform queries run with CurrentTenantId == null, so the tenant query filter is
-                // already bypassed; an explicit IgnoreQueryFilters here would not translate in a subquery.
-                MembersCount = _context.Users
-                    .Count(u => u.TenantId == t.Id && u.Role == UserRole.Client && !u.IsDeleted),
-                CreatedAt = t.CreatedAt
-            })
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
+
+        // User rows are still a compatibility projection while existing workspaces are being
+        // transferred.  Do not put this DbSet inside the Platform query: it is served by the
+        // legacy compatibility context and EF cannot translate roots from two DbContexts.
+        var tenantIds = tenants.Select(t => t.Id).ToArray();
+        var memberCounts = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => tenantIds.Contains(u.TenantId) && u.Role == UserRole.Client && !u.IsDeleted)
+            .GroupBy(u => u.TenantId)
+            .Select(group => new { TenantId = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(x => x.TenantId, x => x.Count, cancellationToken);
+
+        var items = tenants.Select(t => new PlatformTenantDto
+        {
+            Id = t.Id,
+            Name = t.Name,
+            Subdomain = t.Subdomain,
+            Status = t.Status,
+            Email = t.Email,
+            PhoneNumber = t.PhoneNumber,
+            MembersCount = memberCounts.GetValueOrDefault(t.Id),
+            CreatedAt = t.CreatedAt
+        }).ToList();
 
         return PagedResult<PlatformTenantDto>.Create(items, totalCount, page, pageSize);
     }
