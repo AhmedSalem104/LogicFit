@@ -141,6 +141,34 @@ operator flow. Never disable startup migration merely to bypass a pending schema
 6. اختبر الدخول، لوحة المتابعة، خطط المنصة، تنبيهات، Jobs، ونسخة احتياطية من حساب
    Platform Owner محدود للاختبار.
 
+### Redis cache and distributed request controls (Issue #197)
+
+The tenant-access gate uses `IDistributedCache`. In non-production environments without Redis it
+falls back to the in-memory provider. Production requires Redis by default and fails before the
+host starts when the connection is missing. Configure either a complete secret-backed
+`ConnectionStrings__Redis` value, or keep the endpoint separate from the credential:
+
+```text
+Redis__Endpoint=<redis-host-and-port-or-redis-url>
+Redis__PasswordFile=<server-only-secret-file>
+Redis__InstanceName=LogicFit
+Redis__Required=true
+```
+
+`Redis__PasswordFile` is read only during startup and its contents are never written to logs,
+Git, or documentation. The local credential file supplied for development can be used through
+this setting once the Redis provider's endpoint is supplied separately; the credential alone is
+not a Redis connection string. A direct `Redis__Password` is supported for a secret manager but
+must never be committed.
+
+When the application owns rate limiting, the global and named fixed-window policies use the same
+Redis namespace and an atomic Lua counter, so all API instances share the limits. If an upstream
+gateway owns those policies, set `RateLimiting__ManagedByGateway=true`; the API then skips its
+local limiter instead of enforcing a second, instance-local limit. A production deployment must
+choose Redis-backed application limiting or an explicitly configured gateway. Redis remains a
+coordination/cache layer only: SQL Server is still the source of truth for wallet, stock, and
+other business data.
+
 ## CI/CD
 
 CI يعمل على الفروع وPull Requests ويتحقق من البناء والاختبارات ومراجعة migrations
