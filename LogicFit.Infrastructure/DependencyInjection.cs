@@ -34,6 +34,12 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
         services.AddSingleton<IDistributedLockProvider, SqlServerDistributedLockProvider>();
         services.AddScoped<IDatabaseResourcePool, DatabaseResourcePoolService>();
+        services.AddOptions<DatabaseResourcePoolOptions>()
+            .Bind(configuration.GetSection(DatabaseResourcePoolOptions.SectionName))
+            .Validate(
+                DatabaseResourcePoolOptions.IsValid,
+                "Database resource pool configuration is invalid.");
+        services.AddScoped<DatabaseResourceSeeder>();
         services.AddScoped<ManualMonsterProvisioningProvider>();
         services.AddScoped<LocalSqlProvisioningProvider>();
         services.AddScoped<IDatabaseProvisioningProvider>(provider =>

@@ -51,7 +51,10 @@ public sealed class ApproveFreelanceWorkspaceApplicationCommandHandler
         if (application.Status == ApplicationRequestStatus.Approved)
         {
             if (application.ProvisionedWorkspaceId.HasValue)
-                await _provisioningSaga.RunAsync(application.Id, cancellationToken);
+            {
+                var retryOutcome = await _provisioningSaga.RunAsync(application.Id, cancellationToken);
+                ThrowIfDatabaseCapacityIsUnavailable(retryOutcome);
+            }
             return PlatformApplicationMapper.ToDto(application, application.IdentityAccount.Email, application.IdentityAccount.PhoneNumber);
         }
 
@@ -80,7 +83,8 @@ public sealed class ApproveFreelanceWorkspaceApplicationCommandHandler
         application.ReviewedAt = _dateTimeService.UtcNow;
         application.ReviewedBy = _currentUserService.UserId;
         await _context.SaveChangesAsync(cancellationToken);
-        await _provisioningSaga.RunAsync(application.Id, cancellationToken);
+        var provisioning = await _provisioningSaga.RunAsync(application.Id, cancellationToken);
+        ThrowIfDatabaseCapacityIsUnavailable(provisioning);
 
         return PlatformApplicationMapper.ToDto(application, application.IdentityAccount.Email, application.IdentityAccount.PhoneNumber);
     }
@@ -144,5 +148,11 @@ public sealed class ApproveFreelanceWorkspaceApplicationCommandHandler
         {
             throw new ValidationException("Payload", "The freelance application payload is invalid.");
         }
+    }
+
+    private static void ThrowIfDatabaseCapacityIsUnavailable(WorkspaceProvisioningOutcome outcome)
+    {
+        if (outcome.Status == ProvisioningJobStatus.AwaitingDatabaseCapacity)
+            throw new ConflictException("لا توجد قاعدة بيانات متاحة أضف Connection جديدا أولا.");
     }
 }
