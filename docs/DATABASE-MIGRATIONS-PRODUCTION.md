@@ -79,6 +79,7 @@ dotnet ef migrations script --idempotent `
   --configuration Release `
   --project LogicFit.Infrastructure `
   --startup-project LogicFit.API `
+  --context LogicFit.Infrastructure.Persistence.ApplicationDbContext `
   --output <reviewed-migration-script>
 
 .\Scripts\deploy-webdeploy.ps1 `

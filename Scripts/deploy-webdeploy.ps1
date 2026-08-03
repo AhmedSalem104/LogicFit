@@ -89,10 +89,10 @@ if ($ApplyMigrations) {
         $scriptHash = (Get-FileHash -LiteralPath $MigrationScriptPath -Algorithm SHA256).Hash
         Write-Host "Applying reviewed idempotent migration plan (SHA256: $scriptHash)."
 
-        & dotnet ef database update --project $MigrationProject --startup-project $StartupProject --configuration $Configuration --no-build
+        & dotnet ef database update --project $MigrationProject --startup-project $StartupProject --configuration $Configuration --context LogicFit.Infrastructure.Persistence.ApplicationDbContext --no-build
         if ($LASTEXITCODE -ne 0) { throw "Database migration failed with exit code $LASTEXITCODE" }
 
-        $migrationListOutput = & dotnet ef migrations list --project $MigrationProject --startup-project $StartupProject --configuration $Configuration --no-build 2>&1
+        $migrationListOutput = & dotnet ef migrations list --project $MigrationProject --startup-project $StartupProject --configuration $Configuration --context LogicFit.Infrastructure.Persistence.ApplicationDbContext --no-build 2>&1
         if ($LASTEXITCODE -ne 0) { throw "Post-migration history verification failed with exit code $LASTEXITCODE" }
         if (($migrationListOutput -join "`n") -match '(?i)\(Pending\)') {
             throw "Database migration verification found pending migrations."

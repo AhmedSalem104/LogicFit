@@ -78,7 +78,7 @@ existing file to be overwritten. لا تُسجّل محتويات الملف
 ```powershell
 dotnet build LogicFit.sln -c Release --no-restore
 dotnet test LogicFit.sln -c Release --no-build --verbosity minimal
-dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --startup-project LogicFit.API
+dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --startup-project LogicFit.API --context LogicFit.Infrastructure.Persistence.ApplicationDbContext
 ```
 
 ### Migrations and health verification
