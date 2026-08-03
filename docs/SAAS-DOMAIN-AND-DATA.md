@@ -85,6 +85,12 @@ Production schema state is advanced only by the explicit deployment migration st
 - لا تستخدم `Count + 1` لإنتاج رقم يشارك فيه أكثر من طلب؛ رقم الفاتورة له مولّد
   آمن متسلسل.
 
+تحديث WalletBalance يتم كعملية SQL محروسة داخل Transaction، ثم يكتب سجل
+`WalletTransaction` مع `BalanceAfter` الناتج من نفس التحديث. لا يُعاد حساب الرصيد من آخر
+سجل Ledger، ولا يسمح شرط الخصم بتجاوز الرصيد المتاح. وبالمثل، تغييرات `StockItem.Quantity`
+في التعديل/التحويل/POS تستخدم SQL arithmetic guarded، وتُحفظ حركة المخزون والسجل التجاري
+معاً؛ مسارات إنشاء صف المخزون تعمل تحت Serializable transaction.
+
 ## Outbox وJobs والمراقبة
 
 Domain Event يكتب مع معاملة الأعمال، ثم يسجل في Outbox. عامل خلفي يعالج الرسالة

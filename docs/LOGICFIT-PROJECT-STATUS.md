@@ -18,7 +18,7 @@
 > Password-only contract. Platform and Tenant operations use their existing JWT, permission,
 > workspace, subscription, ownership, and concurrency gates.
 
-Last reviewed: 2026-08-02
+Last reviewed: 2026-08-03
 
 > **Issue #162 implementation:** Platform dashboard contracts now expose permission-filtered
 > operational summaries for application/payment review, database-pool capacity, provisioning,
@@ -421,7 +421,6 @@ fails startup if apply or post-apply verification fails.
 ## Known remaining work
 
 - Replace in-process rate limiting and memory cache with gateway/Redis-backed distributed controls for multi-instance production.
-- Use atomic SQL updates/transactions for wallet and stock hot paths, and add concurrency integration tests.
 - Add coupon usage idempotency and payment request idempotency keys.
 - Move private uploads to object storage with signed URLs and malware scanning.
 - Add distributed locks/idempotency for background lifecycle jobs.
@@ -431,6 +430,19 @@ fails startup if apply or post-apply verification fails.
 - `Scripts/deploy-webdeploy.ps1` performs credential-safe migration and MSDeploy orchestration and explicitly skips the server-only production configuration. With `-ApplyMigrations`, it requires a verified BACPAC reference, reviewed SQL, the protected database connection, and a health URL. `Scripts/recover-webdeploy-startup.ps1` is configuration-only incident recovery with rollback and health gates.
 
 ## Change log
+
+### 2026-08-03 — wallet and stock concurrency hardening (Issue #195, task branch)
+
+- Wallet balance mutations now use guarded SQL arithmetic inside the same database transaction
+  as the wallet ledger row. Subscription wallet payments and manual transactions no longer
+  derive the balance from the latest ledger row, so concurrent debits cannot lose updates or
+  create a negative balance.
+- Stock adjustments, transfers, and POS checkout use guarded SQL quantity updates. Stock
+  movements and business records commit with the quantity change; stock creation paths use a
+  serializable transaction to protect the unique tenant/product/branch boundary.
+- Added SQL Server concurrency integration coverage for competing wallet debits and stock
+  decrements. No new API route, frontend contract, or database migration is introduced; this
+  change is unreleased and has not been deployed to Production.
 
 ### 2026-08-02 — startup migration safety net (Issue #147)
 

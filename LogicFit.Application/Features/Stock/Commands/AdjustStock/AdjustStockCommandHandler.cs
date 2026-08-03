@@ -1,4 +1,6 @@
+using System.Data;
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
@@ -38,44 +40,88 @@ public class AdjustStockCommandHandler : IRequestHandler<AdjustStockCommand>
         if (!branchExists)
             throw new NotFoundException("Branch", request.BranchId);
 
-        var stockItem = await _context.StockItems
-            .FirstOrDefaultAsync(s => s.ProductId == request.ProductId && s.BranchId == request.BranchId && s.TenantId == tenantId, cancellationToken);
+        await using var dbTransaction = await _context.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
 
-        if (stockItem == null)
-        {
-            stockItem = new StockItem
-            {
-                Id = Guid.NewGuid(),
-                TenantId = tenantId,
-                ProductId = request.ProductId,
-                BranchId = request.BranchId,
-                Quantity = 0
-            };
-            _context.StockItems.Add(stockItem);
-        }
-
-        var isIn = request.Type == StockMovementType.In || (request.Type == StockMovementType.Adjustment);
+        decimal? quantityAfter;
         if (request.Type == StockMovementType.Out)
         {
-            if (stockItem.Quantity < request.Quantity)
-                throw new DomainException($"Insufficient stock. Available: {stockItem.Quantity}");
-            stockItem.Quantity -= request.Quantity;
+            quantityAfter = await StockConcurrencyOperations.TryDecreaseExistingAsync(
+                _context,
+                tenantId,
+                request.ProductId,
+                request.BranchId,
+                request.Quantity,
+                now,
+                cancellationToken);
+
+            if (!quantityAfter.HasValue)
+            {
+                var available = await _context.StockItems
+                    .Where(s => s.ProductId == request.ProductId &&
+                                s.BranchId == request.BranchId &&
+                                s.TenantId == tenantId)
+                    .Select(s => (decimal?)s.Quantity)
+                    .SingleOrDefaultAsync(cancellationToken) ?? 0m;
+                throw new DomainException($"Insufficient stock. Available: {available}");
+            }
         }
         else if (request.Type == StockMovementType.In)
         {
-            stockItem.Quantity += request.Quantity;
+            quantityAfter = await StockConcurrencyOperations.TryIncreaseExistingAsync(
+                _context,
+                tenantId,
+                request.ProductId,
+                request.BranchId,
+                request.Quantity,
+                now,
+                cancellationToken);
+
+            if (!quantityAfter.HasValue)
+            {
+                quantityAfter = request.Quantity;
+                _context.StockItems.Add(new StockItem
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenantId,
+                    ProductId = request.ProductId,
+                    BranchId = request.BranchId,
+                    Quantity = request.Quantity,
+                    LastMovementAt = now
+                });
+            }
         }
         else if (request.Type == StockMovementType.Adjustment)
         {
-            // Adjustment: quantity is the new absolute value
-            stockItem.Quantity = request.Quantity;
+            // Adjustment: quantity is the new absolute value.
+            quantityAfter = await StockConcurrencyOperations.TrySetExistingAsync(
+                _context,
+                tenantId,
+                request.ProductId,
+                request.BranchId,
+                request.Quantity,
+                now,
+                cancellationToken);
+
+            if (!quantityAfter.HasValue)
+            {
+                quantityAfter = request.Quantity;
+                _context.StockItems.Add(new StockItem
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenantId,
+                    ProductId = request.ProductId,
+                    BranchId = request.BranchId,
+                    Quantity = request.Quantity,
+                    LastMovementAt = now
+                });
+            }
         }
         else
         {
             throw new DomainException("Use transfer endpoint for Transfer type");
         }
-
-        stockItem.LastMovementAt = now;
 
         Guid? userId = null;
         if (Guid.TryParse(_currentUserService.UserId, out var uid)) userId = uid;
@@ -88,7 +134,7 @@ public class AdjustStockCommandHandler : IRequestHandler<AdjustStockCommand>
             BranchId = request.BranchId,
             Type = request.Type,
             Quantity = request.Quantity,
-            QuantityAfter = stockItem.Quantity,
+            QuantityAfter = quantityAfter.Value,
             Reason = request.Reason,
             ReferenceType = "Manual",
             MovedAt = now,
@@ -96,5 +142,6 @@ public class AdjustStockCommandHandler : IRequestHandler<AdjustStockCommand>
         });
 
         await _context.SaveChangesAsync(cancellationToken);
+        await dbTransaction.CommitAsync(cancellationToken);
     }
 }

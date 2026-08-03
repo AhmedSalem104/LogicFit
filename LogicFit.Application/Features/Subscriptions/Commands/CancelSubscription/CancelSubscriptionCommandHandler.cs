@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
@@ -23,7 +24,6 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
         var tenantId = _tenantService.GetCurrentTenantId();
 
         var subscription = await _context.ClientSubscriptions
-            .Include(s => s.Client)
             .Include(s => s.Plan)
             .Include(s => s.Freezes)
             .FirstOrDefaultAsync(s => s.Id == request.SubscriptionId && s.TenantId == tenantId, cancellationToken);
@@ -33,6 +33,8 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
 
         if (subscription.Status == SubscriptionStatus.Cancelled)
             throw new ConflictException("Subscription is already cancelled");
+
+        await using var dbTransaction = await _context.BeginTransactionAsync(cancellationToken);
 
         // Handle refund
         if (request.RefundToWallet && subscription.AmountPaid > 0)
@@ -55,7 +57,12 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
 
             if (refundAmount > 0)
             {
-                subscription.Client.WalletBalance += refundAmount;
+                var balanceAfter = await WalletBalanceOperations.ApplyAsync(
+                    _context,
+                    tenantId,
+                    subscription.ClientId,
+                    refundAmount,
+                    cancellationToken);
 
                 var transaction = new WalletTransaction
                 {
@@ -63,7 +70,7 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
                     UserId = subscription.ClientId,
                     Type = TransactionType.Refund,
                     Amount = refundAmount,
-                    BalanceAfter = subscription.Client.WalletBalance,
+                    BalanceAfter = balanceAfter,
                     Description = $"Subscription refund - {subscription.Plan.Name}",
                     ReferenceType = "Subscription",
                     ReferenceId = subscription.Id
@@ -81,6 +88,7 @@ public class CancelSubscriptionCommandHandler : IRequestHandler<CancelSubscripti
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+        await dbTransaction.CommitAsync(cancellationToken);
 
         return true;
     }

@@ -107,6 +107,18 @@ publish credentials:
   -HealthCheckUrl https://your-host/health
 ```
 
+### Wallet and stock concurrency rollout (Issue #195, unreleased)
+
+Wallet debits/credits and their ledger rows commit in one database transaction. Stock
+adjustments, transfers, and POS checkout use guarded SQL quantity updates; stock creation
+paths use Serializable transactions. A failed balance/quantity guard rolls back the related
+ledger, movement, sale, invoice, payment, and commission changes.
+
+Issue #195 introduces no EF schema migration; it relies on the existing SQL Server row-version
+columns and tenant/product/branch uniqueness. Validate the Release build and the concurrency
+integration tests before release. Redis is not used as the source of truth for wallet or stock,
+and no Redis credential belongs in repository configuration.
+
 ### Protected IIS 500.30 startup recovery
 
 Issue #137 recovered `site81605` after stdout identified a missing required secret. The same
