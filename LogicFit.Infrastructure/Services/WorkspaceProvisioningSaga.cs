@@ -30,9 +30,14 @@ public sealed class WorkspaceProvisioningSaga(
             throw new InvalidOperationException("The application has no central workspace placeholder.");
 
         var tenantId = application.ProvisionedWorkspaceId.Value;
+        var isGymWorkspace = application.ApplicationType == ApplicationType.GymWorkspaceCreation;
+        var isFreelanceWorkspace = application.ApplicationType == ApplicationType.FreelanceWorkspaceCreation;
+        if (!isGymWorkspace && !isFreelanceWorkspace)
+            throw new InvalidOperationException("Only gym and freelance workspace applications can be provisioned.");
+
         var payment = await db.PaymentRequests
             .FirstOrDefaultAsync(x => x.ApplicationRequestId == applicationRequestId, cancellationToken);
-        if (payment?.Status != PaymentRequestStatus.Approved)
+        if (isFreelanceWorkspace && payment?.Status != PaymentRequestStatus.Approved)
             throw new InvalidOperationException("Payment approval is required before provisioning.");
 
         var job = await db.ProvisioningJobs
@@ -60,6 +65,7 @@ public sealed class WorkspaceProvisioningSaga(
         var tenant = await db.Tenants.IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.Id == tenantId, cancellationToken)
             ?? throw new InvalidOperationException("The workspace placeholder was not found.");
+        var statusBeforeProvisioning = tenant.Status;
         tenant.Status = TenantStatus.Provisioning;
         await db.SaveChangesAsync(cancellationToken);
 
@@ -115,6 +121,9 @@ public sealed class WorkspaceProvisioningSaga(
             });
         }
 
+        var membershipStatus = isGymWorkspace
+            ? WorkspaceMembershipStatus.PendingPlatformApproval
+            : WorkspaceMembershipStatus.Active;
         var membership = await db.WorkspaceMemberships.IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.IdentityAccountId == application.IdentityAccountId, cancellationToken);
         if (membership is null)
@@ -125,13 +134,16 @@ public sealed class WorkspaceProvisioningSaga(
                 IdentityAccountId = application.IdentityAccountId,
                 UserId = localUserId,
                 Role = application.RequestedRole ?? UserRole.Owner,
-                Status = WorkspaceMembershipStatus.Active,
-                ApprovedAt = now,
-                ApprovedBy = "provisioning-saga"
+                Status = membershipStatus,
+                ApprovedAt = isGymWorkspace ? null : now,
+                ApprovedBy = isGymWorkspace ? null : "provisioning-saga"
             };
             db.WorkspaceMemberships.Add(membership);
         }
-        membership.Status = WorkspaceMembershipStatus.Active;
+        if (isFreelanceWorkspace)
+            membership.Status = WorkspaceMembershipStatus.Active;
+        else if (membership.Status != WorkspaceMembershipStatus.Active)
+            membership.Status = WorkspaceMembershipStatus.PendingPlatformApproval;
         membership.UserId = localUserId;
 
         var roleName = membership.Role == UserRole.FreelanceOwner ? SystemRoles.FreelanceOwner : SystemRoles.Owner;
@@ -148,21 +160,33 @@ public sealed class WorkspaceProvisioningSaga(
             });
         }
 
-        var subscription = await db.TenantSubscriptions
-            .FirstOrDefaultAsync(x => x.Id == payment.TenantSubscriptionId, cancellationToken)
-            ?? throw new InvalidOperationException("The pending subscription was not found.");
-        if (subscription.Status != TenantSubscriptionStatus.PendingActivation)
-            throw new InvalidOperationException($"Subscription is {subscription.Status}, not PendingActivation.");
-        var durationDays = subscription.PlanId == Guid.Empty
-            ? 30
-            : await db.Plans.Where(x => x.Id == subscription.PlanId).Select(x => x.DurationInDays).FirstOrDefaultAsync(cancellationToken);
-        durationDays = durationDays <= 0 ? 30 : durationDays;
-        subscription.Status = TenantSubscriptionStatus.Active;
-        subscription.StartDate = now;
-        subscription.EndDate = now.AddDays(durationDays);
-        subscription.RenewDate = subscription.EndDate;
-        subscription.ApprovedAt = now;
-        tenant.Status = TenantStatus.Active;
+        if (isFreelanceWorkspace)
+        {
+            var subscription = await db.TenantSubscriptions
+                .FirstOrDefaultAsync(x => x.Id == payment!.TenantSubscriptionId, cancellationToken)
+                ?? throw new InvalidOperationException("The pending subscription was not found.");
+            if (subscription.Status != TenantSubscriptionStatus.PendingActivation)
+                throw new InvalidOperationException($"Subscription is {subscription.Status}, not PendingActivation.");
+            var durationDays = subscription.PlanId == Guid.Empty
+                ? 30
+                : await db.Plans.Where(x => x.Id == subscription.PlanId).Select(x => x.DurationInDays).FirstOrDefaultAsync(cancellationToken);
+            durationDays = durationDays <= 0 ? 30 : durationDays;
+            subscription.Status = TenantSubscriptionStatus.Active;
+            subscription.StartDate = now;
+            subscription.EndDate = now.AddDays(durationDays);
+            subscription.RenewDate = subscription.EndDate;
+            subscription.ApprovedAt = now;
+            tenant.Status = TenantStatus.Active;
+        }
+        else
+        {
+            // Platform-created gyms still follow the existing approval gate. Their database is
+            // allocated and migrated now; the owner/membership becomes active when the platform
+            // operator approves the tenant.
+            tenant.Status = statusBeforeProvisioning == TenantStatus.Active
+                ? TenantStatus.Active
+                : TenantStatus.PendingApproval;
+        }
         job.Status = ProvisioningJobStatus.Completed;
         job.CompletedAtUtc = now;
         db.OutboxMessages.Add(new OutboxMessage
