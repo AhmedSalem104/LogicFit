@@ -1,5 +1,12 @@
 # LogicFit Project Status
 
+> **Issue #161 — implementation branch:** authentication controllers now use Email + Password
+> only. Platform login validates the linked active identity and platform RBAC assignment before
+> issuing a Platform session; the former Platform OTP verification route and identity phone/OTP
+> routes are no longer exposed. No database migration or Production data change was performed.
+> The generated API catalog and authentication flow document describe the active contract; older
+> OTP/provider notes are historical until the compatibility cleanup is reviewed.
+
 > **Issue #156 — task branch:** a fresh PlatformOwner/PlatformAdmin login now reconciles the
 > account's trusted legacy role with its required RBAC system-role assignment before signing the
 > JWT. Startup reconciliation also repairs missing mapped roles even when another assignment exists,

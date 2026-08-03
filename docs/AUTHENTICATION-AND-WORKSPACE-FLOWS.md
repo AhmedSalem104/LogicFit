@@ -1,303 +1,128 @@
-# المصادقة وتدفقات مساحات العمل
+# Authentication and workspace flows
 
-> **Issue #152 — released to `master`:** OTP remains part of authentication flows only. No operation after sign-in requires an OTP step-up proof; authorization continues through the authenticated JWT, role/permission policies, tenant/workspace gates, ownership checks, and concurrency controls.
+## Current contract (Issue #161)
 
-> **Issue #156 — task branch:** Platform session issuance reconciles the trusted legacy
-> `User.Role` with its required `PlatformOwner` or `PlatformAdmin` system-role assignment before
-> signing the JWT. Startup RBAC reconciliation now repairs a missing mapped assignment even when
-> the user already has another role, bumps `PermissionsVersion`, preserves unrelated assignments,
-> and remains idempotent. This prevents a fresh Platform login from displaying owner UI while the
-> backend correctly rejects `ManageTenants` because the signed role was missing.
+The active authentication system is Identity-first and Email + Password only. Phone Login, OTP,
+Passkey, WebAuthn, and unlinked legacy sessions are not active flows. Email verification and
+password recovery use short-lived, single-use links whose hashes are stored server-side.
 
-> حالة المرجع: تم إصدار Issue #118 إلى فروع الإنتاج بتاريخ 2026-08-01، وما زال النشر والتحقق الفعلي يتطلبان تطبيق الـMigration وإعداد أسرار الخادم عبر مسار النشر المحمي. يضيف Issue #127 مزود اختبار مستضاف مؤقتًا ومحدد الصلاحية حتى يتوفر مزود الإرسال الخارجي.
-
-> **Issue #143 — قيد المراجعة:** يعالج فقدان `challengeId` عند إعادة التحميل، ويجعل طلب
-> OTP المتكرر من نفس `sessionBinding` خلال مهلة الإرسال يعيد نفس التحدي النشط دون رسالة
-> ثانية. كما يطبّع هواتف التسجيل الجديدة إلى E.164 ويحوّل الأرقام المصرية القديمة غير
-> الملتبسة بـMigration بيانات منفصلة. نجاح `PasswordlessLogin` لهوية نشطة ذات بريد مؤكد
-> يثبت الهاتف لأول مرة؛ أما التحدي الوهمي غير المرتبط بهوية فلا يصدر جلسة مطلقًا.
-
-LogicFit ينتقل تدريجيًا من حساب محلي داخل جيم إلى **هوية عالمية أولًا ثم اختيار مساحة العمل**. لذلك يوجد تدفقان مدعومان حاليًا: التدفق التقليدي المتوافق، وتدفق الهوية الجديد. لا يجوز حذف الأول قبل نقل كل الواجهات والبيانات إليه.
-
-> **Released – Issue #118; deployment verification pending:** Email + Password remains supported, and Phone + OTP is added as a complete identity sign-in and recovery path. Passkey/WebAuthn is removed from runtime code, APIs, permissions, and both frontends.
-
-## الكيانات وحدود الأمان
-
-| الكيان | الغرض | لا يعني |
-|---|---|---|
-| `IdentityAccount` | هوية عالمية ببريد فريد مطبّع وكلمة مرور؛ قد ترتبط بأكثر من مساحة. يمكن ربط هاتف E.164 فريد ومؤكد واستخدامه مع OTP. | منح صلاحية أو Tenant context بمفردها |
-| `User` / `DomainUser` | حساب محلي داخل `TenantId`، profile، دور وحالة كلمة مرور | أن المستخدم يستطيع الدخول إلى مساحة أخرى لها الاسم نفسه |
-| `WorkspaceMembership` | رابط الهوية بالحساب المحلي والمساحة، والدور وحالة الاعتماد | بديلًا عن RBAC أو اشتراك المساحة |
-| `ApplicationRequest` | طلب إنشاء مساحة أو انضمام عضو، بحالات ومراجعة و`RowVersion` | جلسة مستخدم عادية |
-| `ApplicationRequestRevision` | لقطة تدقيق لكل إعادة تقديم/تعديل مطلوب | تعديل البيانات بلا أثر تدقيقي |
-| `IdentityWorkspaceSession` | token اختيار مساحة قصير العمر (10 دقائق) محفوظ كـhash | JWT أو refresh token |
-| `ApplicationTrackingSession` | token متابعة طلب قصير العمر، بلا refresh token | دخول إلى بيانات المساحة أو بيانات العملاء |
-| `OtpChallenge` | تحدٍ مركزي لغرض واحد وهاتف E.164، يخزن HMAC+salt وحالة التسليم والمحاولات والصلاحية و`RowVersion` | جلسة مستخدم أو دليلًا على نجاح التحقق |
-
-العزل بـ`TenantId` وملكية المورد وعضوية المساحة حدود أمنية. لا تعتمد واجهة المستخدم أو إخفاء زر كبديل عن فحص API.
-
-## تدفق الدخول المتوافق مع الجيم (Legacy)
-
-هذا ما يزال مدعومًا لحماية جميع حسابات الجيم الحالية.
+## Identity login
 
 ```text
-واجهة الجيم
-  -> POST /api/auth/login { phoneNumber, password, subdomain | tenantId }
-  -> حل المساحة: subdomain أولًا أو tenantId صريح
-  -> فحص حالة المساحة
-  -> فحص User المحلي وكلمة المرور والحالة
-  -> جسر التوافق: إنشاء/ربط IdentityAccount وWorkspaceMembership عند الإمكان
-  -> تحميل الأدوار والصلاحيات
-  -> إصدار tenant JWT ووضع refresh token داخل Cookie آمنة HttpOnly
-  -> توجيه الواجهة حسب الدور والصلاحيات
+POST /api/identity/login { email, password }
+  -> normalize email and validate active, email-verified IdentityAccount
+  -> apply lockout and audit rules without logging credentials
+  -> return identity context: activeWorkspaces, pendingApplications, invitations, nextAction
 ```
 
-النقاط المهمة:
+The identity context does not contain tenant permissions or a tenant JWT. A user with one active
+workspace can continue automatically; a user with multiple workspaces chooses one. Pending
+applications remain visible and do not block access to another active workspace.
 
-- يدخل الحساب في مساحة واحدة محددة؛ لا تظهر له قائمة مساحات في هذا endpoint.
-- الجسر لا يكسر دخولًا قديمًا إذا وُجدت هوية عالمية متعارضة بكلمة مرور مختلفة؛ يبقى الحساب محليًا إلى أن يحل دمج الهوية بتدفق مستقل.
-- قبل إصدار token يفحص حارس المساحة الحظر الكامل. في `PendingApproval` يمكن الدخول فقط إلى الأسطح التي يسمح بها حارس الوصول (فوترة/تهيئة)، وليس التشغيل العادي.
-
-## تدفق الهوية أولًا ثم اختيار مساحة (المستهدف)
+## Platform login
 
 ```text
-شاشة الدخول الموحدة (أحد المسارين)
-  -> POST /api/identity/login { email, password }
-  أو
-  -> POST /api/identity/phone-login/request { phoneNumber(E.164), sessionBinding }
-  -> POST /api/identity/phone-login/verify { challengeId, code, sessionBinding }
-  <- WorkspaceSelectionToken (10 دقائق)
-     + activeWorkspaces[]
-     + pendingApplications[]
-     + requiresWorkspaceSelection
-
-إذا كانت هناك عضوية نشطة:
-  المستخدم يختار مساحة (أو تكمل الواجهة تلقائيًا عند عضوية واحدة)
-  -> POST /api/identity/select-workspace { workspaceSelectionToken, workspaceId }
-  -> فحص Membership.Active + User.Active + حالة المساحة
-  <- tenant JWT + roles + permissions + TenantId
-  + Set-Cookie للـrefresh token؛ لا يظهر في JSON ولا يستطيع JavaScript قراءته
-
-إذا كانت هناك طلبات معلقة:
-  يمكن استعراض حالتها بالتوازي مع الدخول لمساحة نشطة.
+POST /api/platform/auth/login { email, password }
+  -> normalize email and locate an active PlatformOwner/PlatformAdmin linked to that identity
+  -> require active identity and verified email; apply lockout and audit rules
+  -> load/repair the effective platform RBAC assignment and PermissionsVersion
+  -> issue Platform JWT and Platform refresh cookie
 ```
 
-### Email verification and password recovery (Issue #113, unreleased)
+There is no second OTP/passkey request. The Platform token has a separate audience and no TenantId.
+`POST /api/platform/auth/refresh` rotates the Platform HttpOnly cookie; logout-all revokes the
+server-side token family and clears the cookie.
+
+## Registration and email links
 
 ```text
 POST /api/identity/register { fullName, email, password, phoneNumber? }
-  -> validates an optional phone as E.164, creates an unverified IdentityAccount,
-     and emails a 30-minute one-time link
+  -> normalize and uniquely index NormalizedEmail
+  -> create an unverified IdentityAccount (phone is contact data only)
+  -> issue a hashed, single-use email verification link
 POST /api/identity/verify-email { token }
-  -> atomically consumes the hashed token and enables identity-first sign-in
-
+  -> atomically consume the token and allow Email + Password login
 POST /api/identity/password-reset { email }
-  -> accepted response without revealing account existence; sends a one-time link when eligible
+  -> generic accepted response; send a reset link when eligible
 POST /api/identity/password-reset/confirm { token, newPassword }
-  -> atomically consumes the link, updates the global password and linked local passwords,
-     and revokes all local refresh tokens plus identity workspace-selection sessions
+  -> atomically consume the link, change the password, and revoke old sessions
 ```
 
-The raw 256-bit email token is placed in the **frontend URL fragment**, is stored only as a SHA-256 hash, and is never included in application or audit logs. Verification and reset endpoints are anonymous, but registration and reset requests are rate-limited. `NormalizedEmail` keeps its global unique index. Email + Password remains available while a separately verified, unique E.164 phone enables Phone + OTP.
+Raw links, passwords, access tokens, refresh tokens, and private uploads never appear in logs.
 
-## نظام OTP المركزي (Issues #118 و#127)
-
-حساب `PlatformOwner` القديم الذي لا يملك `IdentityAccount` وهاتف E.164 مؤكد لا يستطيع بدء
-تحدي OTP، حتى لو كانت كلمة المرور المحلية صحيحة. يعالج Issue #140 هذه الحالة بتهيئة تشغيلية
-مؤقتة من Server Secrets تنشئ/تصلح الهوية وتلغي الجلسات القديمة، ثم يجب تعطيلها وحذف أسرارها
-بعد أول دخول ناجح. لا يوجد حساب أو كلمة مرور Bootstrap ثابتة داخل الكود.
-
-الأغراض المسجلة هي `PhoneVerification`, `PasswordlessLogin`, `PlatformAdminLogin`,
-`PasswordReset`, `ChangePhone`, و`InviteAcceptance`.
-لا يقبل الخادم كودًا بلا `challengeId` صحيح، ولا يخزن الكود الصريح. لكل تحدٍ salt مستقل
-وHMAC-SHA256، والمقارنة ثابتة زمنيًا، والاستهلاك ذري ومحمي بـSQL `rowversion`.
-
-القواعد الافتراضية:
-
-- الصلاحية 5 دقائق، حد المحاولات 5، ومدة انتظار إعادة الإرسال 60 ثانية.
-- إصدار كود جديد يبطل التحدي المعلق السابق لنفس الهاتف والغرض.
-- إعادة نفس الطلب داخل مهلة الـ60 ثانية وبنفس الهاتف والغرض و`sessionBinding` تعيد بيانات
-  التحدي المعلق نفسه دون إنشاء سجل أو إرسال رسالة جديدة. اختلاف الجلسة يبقى `409` ولا يكشف
-  `challengeId` لمتصفح آخر.
-- الهاتف يُطبّع ويُرفض ما لم يطابق E.164.
-- بعد تأكيد البريد، يمكن لأول `PasswordlessLogin` ناجح أن يثبت الهاتف المخزن على الهوية
-  ثم يصدر سياق اختيار المساحة. لا يكفي `1234` وحده: يجب أن يكون التحدي مرتبطًا بهوية مطابقة.
-- توجد حدود حسب IP/الجهاز في middleware، وبحسب الهاتف/التحدي/اليوم في قاعدة البيانات.
-- لا يعاد OTP في response ولا يسجل في application/audit logs.
-- `DevelopmentOtpProvider` لا يعمل إلا عندما تكون البيئة `Development` ويستخدم `1234`
-  داخل تحدٍ حقيقي. اختيار المزود خارج Development أو وجود fixed code في Staging/Production
-  يوقف Startup فورًا.
-- `TemporaryFixedOtpProvider` استثناء مؤقت للاختبار المستضاف فقط. لا يعمل إلا مع تفعيل صريح
-  من أسرار الخادم، والكود `1234` بالضبط، وتاريخ انتهاء مستقبلي لا يتجاوز 31 يومًا. بعد انتهاء
-  التاريخ يرفض الخادم إصدار تحديات جديدة. لا يتجاوز هذا المزود `challengeId` أو الـHash أو حدود
-  المحاولات والإرسال أو الاستهلاك الذري، ولا يعيد الكود في الاستجابة.
-- `MetaWhatsAppOtpProvider` ينفذ نفس `IOtpSender` ويستخدم WhatsApp Authentication Template.
-  يخزن `ProviderMessageId` ويدعم حالات `Queued`, `Sent`, `Delivered`, `Failed` وWebhook
-  موقعًا. نجاح الإرسال لا ينشئ جلسة؛ الجلسة لا تصدر إلا بعد تحقق الكود داخليًا.
-
-### دخول Platform Admin والتحقق الإضافي
+## Workspace selection
 
 ```text
-POST /api/platform/auth/login { email, password, sessionBinding }
-  -> يفحص الحساب والبريد والهاتف المؤكدين
-  -> ينشئ PlatformAdminLogin challenge ولا يصدر جلسة
-POST /api/platform/auth/otp/verify { challengeId, code, sessionBinding }
-  -> يستهلك التحدي مرة واحدة
-  -> يصالح PlatformOwner/PlatformAdmin مع تعيين System Role الفعلي عند الحاجة
-  -> يحمل الأدوار والصلاحيات الفعلية بعد المصالحة
-  -> يصدر Platform JWT ويضع refresh token في HttpOnly cookie
+POST /api/identity/select-workspace { workspaceSelectionToken, workspaceId }
+  -> resolve the selection server-side
+  -> require IdentityAccount.Active, Membership.Active, local User.Active,
+     Workspace.Active, subscription access, and effective RBAC permissions
+  <- tenant JWT + roles[] + permissions[] + TenantId + PermissionsVersion
 ```
 
-بعد نجاح تسجيل الدخول لا تطلب عمليات tenants/plans/roles/workspace applications أو أي عملية
-تشغيلية أخرى OTP جديدًا. تعتمد هذه العمليات على JWT المصادق عليه وسياسات الدور والصلاحيات
-وحالة الحساب والمساحة والاشتراك وملكية المورد و`RowVersion`. لا تستخدم الواجهة `403` لبدء
-تدفق OTP، ولا ترسل `X-LogicFit-OTP-Step-Up` أو `X-Session-Id` كإثبات إضافي للعملية.
+The browser cannot submit a database name, connection string, or arbitrary TenantId. Tenant data
+is resolved server-side through the active TenantDatabaseMapping.
 
-### Refresh session transport
+## Creating a Gym or Freelance workspace
 
-الـAccess Token قصير العمر ويبقى عقد Bearer الحالي. أما Refresh Token فلا يظهر في
-`AuthResponseDto` ولا في localStorage: يكتبه الخادم في Cookie تبدأ بـ`__Host-` بخصائص
-`HttpOnly; Secure; SameSite=None; Path=/`. `/refresh` يقرأ الـCookie فقط، يدورها،
-ويكتشف إعادة استخدام النسخة القديمة فيبطل عائلة جلسات المستخدم. Reset/Change Password
-وتغيير الهاتف المؤكد يبطلان الجلسات القديمة.
+1. The authenticated identity chooses Gym or FreelanceCoach; it never submits an owner role.
+2. The application is saved as Draft and collects the minimal business/contact fields.
+3. The user selects Monthly, SemiAnnual, or Annual billing and receives an immutable Plan Snapshot.
+4. A PaymentRequest is created and a JPG/JPEG/PNG/PDF proof is uploaded to private storage.
+5. Submit changes Application to Submitted, PaymentRequest to PendingReview, Subscription to
+   PendingPayment, Workspace to PendingApproval, and Membership to Pending.
+6. Platform Admin uses explicit `ManageTenants` and `ManagePaymentRequests` permissions to review,
+   request information, approve/reject payment, or reject the application with a reason.
 
-الاستجابة تعيد `activeWorkspaces` و`pendingApplications` معًا. وجود طلب معلّق لا يمنع المستخدم من دخول مساحة أخرى يملك فيها `WorkspaceMembership.Active`.
+Application transitions are concurrency-safe and audited: Draft -> Submitted -> UnderReview ->
+NeedsMoreInformation -> Submitted, or UnderReview -> Approved/Rejected. Repeated submissions use
+revision history and idempotency keys.
 
-`requiresWorkspaceSelection` يساوي `true` عندما لا يوجد بالضبط workspace واحدة نشطة. على الواجهة أن تعرض اختيار المساحة بصورة صريحة عند تعدد المساحات أو غيابها، وألا تفترض أن أول عنصر هو الصحيح.
-
-## إنشاء مساحة مدرب حر ومتابعة الطلب
+## Provisioning and activation
 
 ```text
-زائر/مدرب مستقل
-  -> POST /api/workspace-applications/freelance
-       { email, phoneNumber?, password, workspaceName, workspaceIdentifier,
-         ownerFullName, branding/profile/booking fields }
-  -> إنشاء/استخدام IdentityAccount
-  -> إنشاء ApplicationRequest: FreelanceWorkspaceCreation / Submitted
-  -> إنشاء ApplicationRequestRevision وجلسة متابعة قصيرة العمر
-  <- 201 { applicationId, status, trackingToken, expiresAt }
-
-متابعة الطلب في المتصفح
-  X-Application-Tracking-Token: trackingToken
-  -> GET /api/workspace-applications/tracking
-
-إذا طلبت الإدارة معلومات:
-  -> PATCH /api/workspace-applications/tracking/fields
-       (الحقول المدرجة فقط في RequestedFields)
-  -> POST /api/workspace-applications/tracking/resubmit
-  -> إنشاء revision جديدة ثم Submitted
+Application Approved + Payment Approved
+  -> Subscription PendingActivation
+  -> reserve an Available DatabaseResource atomically
+  -> apply Tenant migrations and seed
+  -> create the local owner and RBAC role
+  -> health-check the tenant database and record the encrypted mapping
+  -> Workspace Active + Membership Active
+  -> Subscription Active/Trial with StartDate and EndDate set now
 ```
 
-طلب مساحة المدرب الحر يحمل هوية مستقلة: الاسم التجاري/اسم المدرب، logo/photo، صور الغلاف والخلفية، الألوان، bio، specialties، certifications، social links، welcome message، booking settings و`workspaceIdentifier`. بعد الاعتماد تصبح هذه هوية المساحة التي يعمل تحتها كل من Freelance Owner وFreelance Coach وFreelance Assistant وClients؛ المدرب المنضم إلى مساحة شخص آخر لا يحصل تلقائيًا على مساحة أو علامة مستقلة.
+Capacity shortages remain `AwaitingDatabaseCapacity`; provider failures remain
+`ProvisioningFailed`. Neither starts a subscription term or issues a tenant session. The saga is
+retryable and idempotent; Platform DB Outbox records coordinate work across databases.
 
-جلسة المتابعة قصيرة العمر ومن دون refresh token عمدًا. عند انتهاءها أو إغلاق المتصفح تكون طريقة الاستعادة هي:
+## Invitations and clients
+
+Workspace invitations are single-use email-bound links. The recipient must sign in with the
+invited, verified email and accept the displayed workspace/role; the server creates the membership
+and local user. No OTP challenge is required or exposed. Clients join through the configured invite,
+join-code, or QR flow and receive no administrative permissions; AutoApproveClients controls their
+membership state.
+
+## Access gate and session boundaries
 
 ```text
-POST /api/identity/login
-  -> الحصول على WorkspaceSelectionToken
-  -> POST /api/identity/application-tracking-sessions
-       { workspaceSelectionToken }
-  <- tracking sessions جديدة للطلبات النشطة
-  -> العودة إلى شاشة حالة الطلب باستخدام token الجديد
+Identity Active
+  -> Membership Active
+  -> User Active
+  -> Workspace Allowed (not Suspended/Archived/ProvisioningFailed)
+  -> Subscription Allowed
+  -> RBAC Permission Allowed
 ```
 
-لا تمنح هذه الجلسة أي JWT للمساحة ولا تكشف بيانات صحية أو تدريبية؛ تعيد فقط ما يلزم للمتابعة ومراجعة المعلومات المطلوبة.
+Identity, Platform, and Tenant refresh cookies are separate. Changing a password, role, or
+permission version revokes old refresh sessions. Frontend route guards only improve navigation; the
+Backend remains the security boundary.
 
-## دورة حالات الطلب والمراجعة
+## Canonical references
 
-| الحالة | من يصل إليها | الانتقالات المسموحة |
-|---|---|---|
-| `Draft` | طلب جديد قبل الإرسال | `Submitted`، `Cancelled` |
-| `Submitted` | مقدم الطلب بعد الإرسال/إعادة التقديم | `UnderReview`، `Cancelled`، `Expired` |
-| `UnderReview` | مسؤول منصة بدأ المراجعة | `NeedsMoreInformation`، `Approved`، `Rejected`، `Expired` |
-| `NeedsMoreInformation` | الإدارة طلبت حقولًا محددة | `Submitted`، `Cancelled`، `Expired` |
-| `Approved` | قرار نهائي ناجح | نهائية |
-| `Rejected` | قرار رفض نهائي | نهائية؛ إعادة المحاولة تكون طلبًا جديدًا مربوطًا بـ`PreviousApplicationId` |
-| `Cancelled` أو `Expired` | إلغاء أو انتهاء | نهائية |
-
-كل قرار مراجعة يحمل `RowVersion`: الواجهة ترسل النسخة التي قرأتها، ويؤدي التعديل المتزامن أو التكرار إلى `409 Conflict` بدل الموافقة مرتين. يسجل النظام المراجع والوقت والسبب، ويستخدم Outbox للإشعارات. الرفض يبطل جلسات متابعة الطلب.
-
-### واجهة منصة المراجعة
-
-| العملية | endpoint | الجسم/الشرط |
-|---|---|---|
-| القائمة | `GET /api/platform/workspace-applications` | filter بـ`applicationType` و`status` وpagination |
-| بدء المراجعة | `POST /{id}/start-review` | `rowVersion` |
-| طلب معلومات | `POST /{id}/request-information` | `rowVersion`، `message`، `requestedFields` المسموح بها |
-| اعتماد مساحة حرة | `POST /{id}/approve-freelance` | `rowVersion`؛ للنوع `FreelanceWorkspaceCreation` فقط |
-| اعتماد عضوية | `POST /{id}/approve-membership` | `rowVersion`؛ لطلبات الفريق/العميل فقط |
-| رفض | `POST /{id}/reject` | `rowVersion` و`reason` |
-
-المسار الكامل لكل عملية في الجدول هو تحت `/api/platform/workspace-applications`. يتطلب `ManageTenants`. واجهة المراجعة تعرض الحد الأدنى اللازم لاتخاذ القرار، ولا تعرض بيانات صحة أو تدريب العملاء.
-
-## اعتماد مساحة المدرب الحر
-
-```text
-UnderReview + RowVersion صحيح
-  -> تحقق idempotent من ApplicationType والحالة ووجود FreelanceOwner system role
-  -> حجز WorkspaceIdentifier
-  -> إنشاء/إعادة استخدام Tenant بحالة Provisioning
-  -> إنشاء User محلي للمالك + WorkspaceMembership.Active + FreelanceOwner role
-  -> حفظ branding وFreelanceWorkspaceProfile
-  -> Active
-```
-
-إذا حدث فشل قاعدة بيانات أثناء التجهيز تسجل المساحة `ProvisioningFailed` ليستطيع المشغل إعادة المحاولة بأمان؛ لا يجوز لإنعاش الطلب أو ضغط الزر مرتين إنشاء مساحتين. تتطلب الموافقة تطبيق migration التي تزرع `FreelanceOwner` و`FreelanceCoach` و`FreelanceAssistant` وخرائط الصلاحيات قبل الاعتماد.
-
-## انضمام فريق أو عميل إلى مساحة حرة
-
-```text
-FreelanceOwner يرشح هوية موجودة
-  -> POST /api/freelance/team/applications
-       { identity identifier, requestedRole: FreelanceCoach | FreelanceAssistant | Client }
-  -> CoachMembership | AssistantMembership | ClientMembership / Submitted
-  -> Platform Admin يراجع ويعتمد باستخدام RowVersion
-  -> يعيد فحص حد الخطة لحظة الاعتماد
-  -> ينشئ User محليًا + Role + WorkspaceMembership.Active
-```
-
-يُفحص حد الباقة مرتين: عند التقديم وعند الموافقة. إذا امتلأت المساحة بينهما لا تصبح العضوية نشطة ويعاد خطأ `PLAN_MEMBER_LIMIT_REACHED` أو `PLAN_CLIENT_LIMIT_REACHED`. لا توجد دعوة أو عضوية نشطة تلقائية بمجرد ترشيح المالك.
-
-## طبقات الحراسة والوصول بعد تسجيل الدخول
-
-ترتيب القرار إلزامي: **WorkspaceStatus → MembershipStatus → SubscriptionStatus → roles/permissions**.
-
-| الشرط | النتيجة |
-|---|---|
-| `WorkspaceMembership` ليست `Active` أو الحساب المحلي غير نشط | لا يصدر token لاختيار تلك المساحة |
-| `WorkspaceStatus` = `Suspended` أو `Archived` | حظر تشغيلي كامل |
-| `Provisioning` أو `ProvisioningFailed` | حظر مؤقت/تشغيلي كامل بالكود المناسب |
-| اشتراك `None` أو `PendingPayment` | billing فقط؛ هذا الوضع الافتراضي لمساحة مدرب حر جديدة بلا اشتراك |
-| `Trial` أو `Active` أو `PastDue` أو `GracePeriod` | وصول تشغيلي عادي ضمن حدود الخطة |
-| `Cancelled` ووقت التشغيل قبل `EndDate` | وصول كامل حتى نهاية الدورة المدفوعة مع إيقاف التجديد التلقائي |
-| `Expired` أو `Cancelled` عند/بعد `EndDate` أو subscription `Suspended` | قراءة فقط مع فوترة وتجديد حيث تسمح السياسة |
-| جيم قديم بلا سجل اشتراك SaaS | يحافظ على الوصول القديم مؤقتًا لتوافق الترحيل |
-
-### الحارس الموحد المنفذ أثناء الترحيل
-
-كل session خاصة بمساحة تمر الآن بالحارس نفسه عند `login` و`refresh` و`select-workspace` وكل طلب tenant مصادق عليه. القرار يمنع فورًا الهوية غير النشطة، العضوية غير النشطة، أو الحساب المحلي غير النشط قبل حارس المساحة والاشتراك والصلاحيات.
-
-الحساب المحلي الذي لم يرتبط بعد بـ`IdentityAccount` لا يعامل كعضوية مكتملة؛ يعمل فقط بوضع توافق مرحلي واضح. الإعداد `Authentication__IdentityAccess__AllowUnlinkedLegacySessions` قيمته الافتراضية `true` لحماية المستخدمين الحاليين من القطع. لا يجوز تحويله إلى `false` قبل تنفيذ ربط الحساب القديم المثبت بالبريد والتحقق من القياسات والسجلات؛ عندها يعيد الحارس `IDENTITY_MIGRATION_REQUIRED` بدل إصدار أو قبول session جديدة.
-
-بعد تجاوز الحارس، لا يزال JWT يحمل `TenantId` وroles وpermissions و`PermissionsVersion`. كل endpoint محمي يطبق policy/permission وفحوص ملكية المورد؛ لا يعتمد على اختيار الواجهة لمسار أو شاشة.
-
-## endpoints المرجعية للمصادقة
-
-| الغرض | endpoint |
-|---|---|
-| تسجيل مساحة/حساب تقليدي | `POST /api/auth/register` |
-| دخول تقليدي | `POST /api/auth/login` |
-| refresh/logout-all/reset/change password | `/api/auth/refresh`، `/logout-all`، `/forget-password`، `/reset-password`، `/change-password` |
-| تسجيل هوية عالمية | `POST /api/identity/register` |
-| دخول هوية عالمي | `POST /api/identity/login` |
-| طلب/تحقق دخول الهاتف | `POST /api/identity/phone-login/request`، `POST /api/identity/phone-login/verify` |
-| تحقق/تغيير الهاتف | `POST /api/identity/phone/request`، `POST /api/identity/phone/verify` |
-| استعادة كلمة المرور بالهاتف | `POST /api/identity/phone/password-reset/request`، `POST /api/identity/phone/password-reset/confirm` |
-| دخول إدارة المنصة | `POST /api/platform/auth/login` ثم `POST /api/platform/auth/otp/verify` |
-| اختيار مساحة | `POST /api/identity/select-workspace` |
-| استعادة جلسة متابعة | `POST /api/identity/application-tracking-sessions` |
-| إنشاء طلب مدرب حر | `POST /api/workspace-applications/freelance` |
-| متابعة/تعديل/إعادة تقديم | `GET /tracking`، `PATCH /tracking/fields`، `POST /tracking/resubmit` تحت `/api/workspace-applications` |
-| ترشيح فريق المدرب الحر | `POST /api/freelance/team/applications` |
-
-الـroutes وسياسات التفويض والعقود الدقيقة مولدة في [API-ENDPOINT-CATALOG.md](API-ENDPOINT-CATALOG.md). أي تغيير في هذا التدفق يجب أن يحدّث هذا الملف، [FEATURE-CATALOG.md](FEATURE-CATALOG.md)، ووثائق الواجهات المتأثرة في Pull Request نفسه.
+- [API endpoint catalog](API-ENDPOINT-CATALOG.md) — generated from controllers.
+- [Feature catalog](FEATURE-CATALOG.md) — implementation source and roles.
+- [Users and permissions](USERS-AND-PERMISSIONS.md) — RBAC and isolation.
+- [SaaS domain and data](SAAS-DOMAIN-AND-DATA.md) — states, snapshots, and migrations.
+- [Operations and deployment](OPERATIONS-AND-DEPLOYMENT.md) — secrets, migrations, health checks,
+  and rollback.

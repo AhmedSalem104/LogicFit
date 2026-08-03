@@ -3,7 +3,7 @@ using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.Auth.Commands.LogoutAll;
 using LogicFit.Application.Features.Auth.Commands.RefreshToken;
 using LogicFit.Application.Features.Auth.DTOs;
-using LogicFit.Application.Features.Platform.Auth.Commands.PlatformOtpLogin;
+using LogicFit.Application.Features.Platform.Auth.Commands.PlatformPasswordLogin;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.Identity.DTOs;
 using MediatR;
@@ -29,22 +29,11 @@ public class PlatformAuthController : ControllerBase
     [HttpPost("login")]
     [AllowAnonymous]
     [EnableRateLimiting("auth-login")]
-    [ProducesResponseType(typeof(OtpChallengeDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<OtpChallengeDto>> Login([FromBody] RequestPlatformLoginOtpCommand command)
+    public async Task<ActionResult<AuthResponseDto>> Login([FromBody] PlatformPasswordLoginCommand command)
     {
         var result = await _mediator.Send(command);
-        return Ok(result);
-    }
-
-    [HttpPost("otp/verify")]
-    [AllowAnonymous]
-    [EnableRateLimiting("otp-verify")]
-    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<AuthResponseDto>> VerifyOtp(
-        [FromBody] VerifyPlatformLoginOtpCommand command, CancellationToken cancellationToken)
-    {
-        var result = await _mediator.Send(command, cancellationToken);
         _refreshCookies.Write(Response, result.RefreshToken, RefreshTokenService.SurfacePlatform);
         return Ok(result);
     }

@@ -8,7 +8,6 @@ using LogicFit.Application.Features.Identity.Commands.ReissueApplicationTracking
 using LogicFit.Application.Features.Identity.Commands.ResetIdentityPassword;
 using LogicFit.Application.Features.Identity.Commands.SelectIdentityWorkspace;
 using LogicFit.Application.Features.Identity.Commands.VerifyIdentityEmail;
-using LogicFit.Application.Features.Identity.Commands.Otp;
 using LogicFit.Application.Features.Identity.DTOs;
 using LogicFit.Application.Features.WorkspaceApplications.DTOs;
 using MediatR;
@@ -94,55 +93,6 @@ public sealed class IdentityController : ControllerBase
         return Ok(result);
     }
 
-    [HttpPost("phone-login/request")]
-    [AllowAnonymous]
-    [EnableRateLimiting("otp-request")]
-    public async Task<ActionResult<OtpChallengeDto>> RequestPhoneLogin(
-        [FromBody] RequestPhoneLoginOtpCommand command, CancellationToken cancellationToken)
-        => Accepted(await _mediator.Send(command, cancellationToken));
-
-    [HttpPost("phone-login/verify")]
-    [AllowAnonymous]
-    [EnableRateLimiting("otp-verify")]
-    public async Task<ActionResult<IdentitySignInDto>> VerifyPhoneLogin(
-        [FromBody] VerifyPhoneLoginOtpCommand command, CancellationToken cancellationToken)
-        => Ok(await _mediator.Send(command, cancellationToken));
-
-    [HttpPost("phone/password-reset/request")]
-    [AllowAnonymous]
-    [EnableRateLimiting("otp-request")]
-    public async Task<ActionResult<OtpChallengeDto>> RequestPhonePasswordReset(
-        [FromBody] RequestPhonePasswordResetOtpCommand command, CancellationToken cancellationToken)
-        => Accepted(await _mediator.Send(command, cancellationToken));
-
-    [HttpPost("phone/password-reset/confirm")]
-    [AllowAnonymous]
-    [EnableRateLimiting("otp-verify")]
-    public async Task<IActionResult> ConfirmPhonePasswordReset(
-        [FromBody] ResetPasswordWithPhoneOtpCommand command, CancellationToken cancellationToken)
-    {
-        await _mediator.Send(command, cancellationToken);
-        _refreshCookies.Delete(Response, RefreshTokenService.SurfaceTenant);
-        return NoContent();
-    }
-
-    [HttpPost("phone/request")]
-    [AllowAnonymous]
-    [EnableRateLimiting("otp-request")]
-    public async Task<ActionResult<OtpChallengeDto>> RequestPhoneVerification(
-        [FromBody] RequestIdentityPhoneOtpCommand command, CancellationToken cancellationToken)
-        => Accepted(await _mediator.Send(command, cancellationToken));
-
-    [HttpPost("phone/verify")]
-    [AllowAnonymous]
-    [EnableRateLimiting("otp-verify")]
-    public async Task<IActionResult> VerifyPhone(
-        [FromBody] VerifyIdentityPhoneOtpCommand command, CancellationToken cancellationToken)
-    {
-        await _mediator.Send(command, cancellationToken);
-        _refreshCookies.Delete(Response, RefreshTokenService.SurfaceTenant);
-        return NoContent();
-    }
 
     [HttpPost("application-tracking-sessions")]
     [AllowAnonymous]
