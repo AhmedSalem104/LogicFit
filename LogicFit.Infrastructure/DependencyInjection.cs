@@ -82,6 +82,7 @@ public static class DependencyInjection
                 "Database resource pool configuration is invalid.");
         services.AddScoped<DatabaseResourceSeeder>();
         services.AddScoped<TenantDatabaseSeeder>();
+        services.AddScoped<TenantReferenceCatalogSeeder>();
         services.AddScoped<ManualMonsterProvisioningProvider>();
         services.AddScoped<LocalSqlProvisioningProvider>();
         services.AddScoped<IDatabaseProvisioningProvider>(provider =>

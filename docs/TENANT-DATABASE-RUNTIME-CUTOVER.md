@@ -53,8 +53,9 @@ for a resolved tenant request.
 2. `WorkspaceProvisioningSaga` reserves one `Available` resource in Platform DB using a
    serializable transaction.
 3. `ManualMonsterProvisioningProvider` decrypts the protected resource value in memory, runs the
-   Tenant migration assembly, checks connectivity, seeds the local tenant RBAC projection, then
-   creates/repairs the local owner assignment before recording the active encrypted mapping.
+   Tenant migration assembly, checks connectivity, seeds the local reference catalog and tenant
+   RBAC projection, then creates/repairs the local owner assignment before recording the active
+   encrypted mapping.
 4. The resource becomes `Assigned`; the workspace/membership/subscription is activated only
    after the mapping exists.
 5. A retry is idempotent: an existing valid mapping is health-checked and reused.

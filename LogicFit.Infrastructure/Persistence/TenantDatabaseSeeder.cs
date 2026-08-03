@@ -10,7 +10,9 @@ namespace LogicFit.Infrastructure.Persistence;
 /// owns the catalog definitions, but each tenant database needs its own copy because operational
 /// queries must never cross a database boundary.
 /// </summary>
-public sealed class TenantDatabaseSeeder(ILogger<TenantDatabaseSeeder> logger)
+public sealed class TenantDatabaseSeeder(
+    ILogger<TenantDatabaseSeeder> logger,
+    TenantReferenceCatalogSeeder referenceCatalogSeeder)
 {
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> RolePermissions =
         new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
@@ -55,6 +57,7 @@ public sealed class TenantDatabaseSeeder(ILogger<TenantDatabaseSeeder> logger)
 
     public async Task SeedAsync(TenantDbContext context, CancellationToken cancellationToken = default)
     {
+        await referenceCatalogSeeder.SeedAsync(context, cancellationToken);
         await SeedPermissionsAsync(context, cancellationToken);
         await SeedRolesAsync(context, cancellationToken);
         logger.LogInformation("Tenant reference and RBAC seed completed for TenantId {TenantId}.", context.TenantId);
