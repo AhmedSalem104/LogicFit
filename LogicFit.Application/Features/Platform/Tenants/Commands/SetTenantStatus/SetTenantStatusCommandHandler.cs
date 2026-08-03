@@ -11,10 +11,17 @@ namespace LogicFit.Application.Features.Platform.Tenants.Commands.SetTenantStatu
 public class SetTenantStatusCommandHandler : IRequestHandler<SetTenantStatusCommand, PlatformTenantDto>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IDateTimeService _dateTimeService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public SetTenantStatusCommandHandler(IApplicationDbContext context)
+    public SetTenantStatusCommandHandler(
+        IApplicationDbContext context,
+        IDateTimeService dateTimeService,
+        ICurrentUserService currentUserService)
     {
         _context = context;
+        _dateTimeService = dateTimeService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<PlatformTenantDto> Handle(SetTenantStatusCommand request, CancellationToken cancellationToken)
@@ -37,6 +44,26 @@ public class SetTenantStatusCommandHandler : IRequestHandler<SetTenantStatusComm
         tenant.SuspensionReason = request.Status == Domain.Enums.TenantStatus.Suspended
             ? Domain.Enums.SuspensionReason.ManualByAdmin
             : Domain.Enums.SuspensionReason.None;
+
+        if (request.Status == Domain.Enums.TenantStatus.Active)
+        {
+            var now = _dateTimeService.UtcNow;
+            var approvedBy = _currentUserService.UserId ?? "platform-admin";
+            var pendingMemberships = await _context.WorkspaceMemberships
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenant.Id &&
+                            x.Status == Domain.Enums.WorkspaceMembershipStatus.PendingPlatformApproval &&
+                            !x.IsDeleted)
+                .ToListAsync(cancellationToken);
+
+            foreach (var membership in pendingMemberships)
+            {
+                membership.Status = Domain.Enums.WorkspaceMembershipStatus.Active;
+                membership.ApprovedAt = now;
+                membership.ApprovedBy = approvedBy;
+            }
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return new PlatformTenantDto
