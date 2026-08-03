@@ -20,43 +20,14 @@ secrets to the server. No Production deployment or migration was performed by th
 
 Before enabling email registration or identity password reset, configure these server-only settings (environment-variable form shown; values are never committed): `Email__Provider=smtp`, `Email__Smtp__Host`, `Email__Smtp__Port`, `Email__Smtp__UseSsl`, `Email__Smtp__UserName`, `Email__Smtp__Password`, `Email__Smtp__FromEmail`, `Email__Smtp__FromName`, and `IdentityEmailLinks__FrontendBaseUrl` (HTTPS only). The API returns `503 IDENTITY_EMAIL_NOT_CONFIGURED` until both delivery and HTTPS frontend-link settings are present. Do not log the generated link or raw token. Apply `20260730143000_AddIdentityEmailSecurity` from a reviewed idempotent script after backup, publish, then verify `/health` and a non-production email flow.
 
-### OTP delivery and Meta WhatsApp (Issues #118 and #127)
+### Email/password authentication (Issue #161)
 
-OTP settings exist only in environment variables or the server secret store. Development uses
-`ASPNETCORE_ENVIRONMENT=Development`, `Otp__Provider=Development`,
-`Otp__DevelopmentFixedCode=1234`, and a private `Otp__HmacSecret` of at least 32 characters.
-The API still creates and hashes a real challenge. Startup fails if the Development provider
-or fixed code appears outside Development.
-
-Production uses `Otp__Provider=MetaWhatsApp` and must set `Otp__HmacSecret`,
-`MetaWhatsApp__AccessToken`, `MetaWhatsApp__PhoneNumberId`,
-`MetaWhatsApp__BusinessAccountId`, `MetaWhatsApp__TemplateName`,
-`MetaWhatsApp__TemplateLanguage`, and `MetaWhatsApp__GraphApiVersion`. Secure webhook
-verification additionally uses `MetaWhatsApp__WebhookVerifyToken` and
-`MetaWhatsApp__AppSecret`. Never put any of these values in a published `appsettings.json`.
-There is no fallback to `1234` if Meta fails.
-
-Until the external provider subscription is available, Issue #127 permits a reviewed hosted-test
-exception. Configure it only in the server secret store with `Otp__Provider=TemporaryFixed`,
-`Otp__AllowTemporaryFixedCode=true`, `Otp__TemporaryFixedCode=1234`,
-`Otp__TemporaryFixedCodeExpiresAtUtc=<future UTC value no more than 31 days away>`, and a private
-`Otp__HmacSecret` of at least 32 characters. The API still creates, hashes, rate-limits, and atomically
-consumes a real challenge; it never returns the code. Startup fails if the explicit flag, exact code,
-or bounded future expiry is missing. Runtime requests fail after expiry. There is no automatic fallback
-from Meta to this provider. To retire the exception, switch to `MetaWhatsApp` and remove all three
-`TemporaryFixedCode` settings from the server.
-
-Before rollout: backup; review/apply
-`20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp`; configure the secrets; publish
-Backend, Tenant Angular, and Platform Angular as one coordinated release; verify `/health`;
-then smoke-test email login, Phone + OTP, Platform password+OTP, representative RBAC-protected mutations,
-refresh rotation, logout-all, and password-reset session revocation. Roll back the binaries
-and stop the rollout on health/OTP failure; do not reverse the migration destructively.
-
-Issue #152 adds `20260802091114_RemovePostLoginOtpStepUp`. Review its guarded drop of the obsolete
-`OtpStepUpSessions` table, include it in the migration script and backup/rollback record, deploy the
-Backend before or with the Platform dashboard change, then verify that workspace review and other
-authorized operations complete without `/api/identity/step-up/*` traffic.
+All active authentication surfaces use Email + Password. Email verification and password reset
+are single-use, short-lived email links backed by hashed tokens. There is no Phone Login, OTP,
+Passkey, WebAuthn, Meta WhatsApp, or OTP secret configuration. The compatibility migration
+`20260803090742_RemoveLegacyOtpArtifacts` is guarded with `OBJECT_ID` and only removes the old
+`OtpChallenges` table when it exists; review and apply it separately after a verified backup.
+No Production migration or deployment is implied by a source merge.
 
 ### Platform Owner recovery bootstrap (Issue #140)
 
@@ -70,10 +41,10 @@ be an operator-controlled E.164 number. The bootstrap creates or repairs one act
 marks the operator-asserted email and phone as verified, clears lockout, and revokes existing refresh
 sessions when resetting the password. It never logs the configured values.
 
-After one successful recycle, verify that `/api/platform/auth/login` returns an OTP challenge,
-complete OTP, then immediately set `PlatformBootstrap__Enabled=false`, remove every other
-`PlatformBootstrap__*` value from the server, and recycle again. Do not commit these values, keep
-the bootstrap enabled, or use it as a routine password-reset path. This recovery has no migration.
+After one successful recycle, verify that `/api/platform/auth/login` accepts the configured email
+and password and returns a Platform session, then immediately set `PlatformBootstrap__Enabled=false`,
+remove every other `PlatformBootstrap__*` value from the server, and recycle again. Do not commit
+these values, keep the bootstrap enabled, or use it as a routine password-reset path.
 
 تُخزن في إعدادات الموقع/Secret Store الخاصة بالخادم، لا في source control:
 
@@ -138,11 +109,11 @@ publish credentials:
 
 ### Protected IIS 500.30 startup recovery
 
-Issue #137 recovered `site81605` after stdout identified a missing `Otp:HmacSecret`. The same
+Issue #137 recovered `site81605` after stdout identified a missing required secret. The same
 procedure is available through the manual protected CD workflow with
 `confirm=RECOVER-PRODUCTION-STARTUP`. It selects an existing GitHub Environment publish profile,
 requires the exact Monster site id, captures the existing production configuration and web.config
-for rollback, injects protected OTP/JWT/password-reset secrets, forces one recycle, restores the
+for rollback, injects protected JWT/password-reset secrets, forces one recycle, restores the
 original web.config, and requires health after both recycles. It changes neither the database nor
 the application binary.
 
@@ -175,7 +146,7 @@ operator flow. Never disable startup migration merely to bypass a pending schema
 CI يعمل على الفروع وPull Requests ويتحقق من البناء والاختبارات ومراجعة migrations
 وبناء الصور. إنتاجياً لا يحق للنشر أن يبدأ قبل CI أخضر وبيئة محمية وخطة Rollback.
 يستخدم preflight الخاص بالنشر SQL Server مؤقتًا و`LOGICFIT_TEST_CONNECTION_STRING` مثل CI؛
-لا يسمح باختبارات OTP التي تسقط إلى LocalDB غير المدعوم على Linux.
+لا يسمح باختبارات قواعد البيانات التي تسقط إلى LocalDB غير المدعوم على Linux.
 الـCD يظل يدوياً ومحميًا. لا يبدأ إلا من شجرة مطابقة لـ`origin/master` وبعد CI ناجح،
 ونسخة BACPAC متحقق منها، ومراجعة SQL، وخطة Rollback، وتخزين أسرار WebDeploy وقاعدة
 البيانات وhealth URL في GitHub Environment `production` فقط.

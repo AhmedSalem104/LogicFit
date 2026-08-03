@@ -8,7 +8,6 @@ using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
 using LogicFit.Infrastructure.Persistence;
 using LogicFit.Infrastructure.Services;
-using LogicFit.Tests.Fakes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -99,7 +98,10 @@ public sealed class AuthSecurityTests
         Assert.DoesNotContain(routes, x =>
             x.Contains("passkey", StringComparison.OrdinalIgnoreCase) ||
             x.Contains("step-up", StringComparison.OrdinalIgnoreCase) ||
-            x.Contains("phone-login", StringComparison.OrdinalIgnoreCase));
+            x.Contains("phone-login", StringComparison.OrdinalIgnoreCase) ||
+            x.Equals("api/Auth/login", StringComparison.OrdinalIgnoreCase) ||
+            x.Equals("api/Auth/register", StringComparison.OrdinalIgnoreCase) ||
+            x.Contains("otp", StringComparison.OrdinalIgnoreCase));
 
         var authorizationPolicies = assembly.GetTypes()
             .Where(x => typeof(ControllerBase).IsAssignableFrom(x))

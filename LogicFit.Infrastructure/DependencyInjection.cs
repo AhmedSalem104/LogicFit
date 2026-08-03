@@ -56,9 +56,8 @@ public static class DependencyInjection
         PlatformOwnerBootstrapOptions.Validate(platformBootstrap);
         services.Configure<PlatformOwnerBootstrapOptions>(
             configuration.GetSection(PlatformOwnerBootstrapOptions.SectionName));
-        // OTP/phone providers are intentionally not registered. Authentication is Email +
-        // Password only; historical OTP tables and services remain outside the active API until
-        // their reviewed cleanup migration is delivered.
+        // Authentication is Email + Password only. Phone remains contact data and is never a
+        // credential or a second-factor provider.
 
         // Identity
         services.AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
@@ -120,7 +119,6 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IDateTimeService, DateTimeService>();
         services.AddScoped<IJwtService, JwtService>();
-        services.AddScoped<IPasswordResetTokenService, PasswordResetTokenService>();
         var storageProvider = configuration["Storage:Provider"] ?? "local";
         if (storageProvider.Equals("r2", StringComparison.OrdinalIgnoreCase))
         {

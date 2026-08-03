@@ -13,18 +13,13 @@ LogicFit.Tests            اختبارات الانحدار والأمان وق�
 
 ## Identity email-security data (Issue #113, unreleased)
 
-`IdentityAccount` owns globally unique `NormalizedEmail` and, when present, a unique
-E.164 `NormalizedPhoneNumber`, plus separate email/phone verification timestamps.
+`IdentityAccount` owns globally unique `NormalizedEmail` and, when present, a unique E.164
+`NormalizedPhoneNumber` for contact data only, plus separate email/phone verification timestamps.
 `IdentityEmailActionToken` keeps one-use email verification/reset links as SHA-256 hashes.
-`OtpChallenge` stores the identity (optional for enumeration-safe requests), normalized phone,
-purpose, HMAC hash and per-challenge salt, expiry/attempt/resend counters, delivery/provider
-metadata, consume/revoke state, and SQL `rowversion`. `RefreshToken.RowVersion` serializes rotation and reuse
-detection. Migration `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp` removes the
-obsolete Passkey tables and creates these OTP records without changing tenant business data.
-
-Issue #152 removes the obsolete `OtpStepUpSession` runtime model and table through the guarded
-`20260802091114_RemovePostLoginOtpStepUp` migration. It does not remove authentication OTP
-challenges or change tenant business data.
+`RefreshToken.RowVersion` serializes rotation and reuse detection. The final authentication model
+contains no OTP, phone-login, Passkey, or WebAuthn runtime entity. Migration
+`20260803090742_RemoveLegacyOtpArtifacts` removes the obsolete `OtpChallenges` table with a guarded
+drop and does not change tenant business data.
 
 Migration `20260730143000_AddIdentityEmailSecurity` is additive and guards for existing production schemas. It marks existing identities verified during backfill so deployed identity users are not locked out, then adds the token table. It is applied separately through the reviewed migration procedure; its `Down` path is intentionally non-destructive.
 

@@ -20,7 +20,7 @@ public sealed class PlatformOwnerBootstrapOptions
     public bool ResetPassword { get; set; }
 
     public string GetNormalizedEmail() => IdentityEmailAddress.Normalize(Email!);
-    public string GetNormalizedPhoneNumber() => OtpService.NormalizePhone(PhoneNumber!);
+    public string GetNormalizedPhoneNumber() => PhoneNumberNormalizer.Normalize(PhoneNumber!);
 
     public static void Validate(PlatformOwnerBootstrapOptions options)
     {

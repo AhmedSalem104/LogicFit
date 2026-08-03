@@ -26,7 +26,7 @@ public sealed class RegisterIdentityCommandHandler : IRequestHandler<RegisterIde
         var normalizedEmail = IdentityEmailAddress.Normalize(request.Email);
         var normalizedPhone = string.IsNullOrWhiteSpace(request.PhoneNumber)
             ? null
-            : OtpService.NormalizePhone(request.PhoneNumber);
+            : PhoneNumberNormalizer.Normalize(request.PhoneNumber);
         var identity = await _context.IdentityAccounts
             .SingleOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail, cancellationToken);
         if (identity is not null && identity.EmailVerifiedAt is not null)

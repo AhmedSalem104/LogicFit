@@ -1,11 +1,12 @@
 # LogicFit Project Status
 
-> **Issue #161 — implementation branch:** authentication controllers now use Email + Password
+> **Issue #161 — merged to `develop`:** authentication controllers now use Email + Password
 > only. Platform login validates the linked active identity and platform RBAC assignment before
 > issuing a Platform session; the former Platform OTP verification route and identity phone/OTP
 > routes are no longer exposed. No database migration or Production data change was performed.
-> The generated API catalog and authentication flow document describe the active contract; older
-> OTP/provider notes are historical until the compatibility cleanup is reviewed.
+> The generated API catalog and authentication flow document describe the active contract. The
+> compatibility cleanup migration `20260803090742_RemoveLegacyOtpArtifacts` drops only the
+> obsolete OTP table when it exists; it has not been applied to Production.
 
 > **Issue #156 — task branch:** a fresh PlatformOwner/PlatformAdmin login now reconciles the
 > account's trusted legacy role with its required RBAC system-role assignment before signing the
@@ -13,7 +14,9 @@
 > preserves unrelated roles, increments `PermissionsVersion`, and is idempotent. This fixes
 > `403 ManageTenants` responses caused by a Platform UI role and signed JWT role mismatch.
 
-> **Issue #152 — released to `master`:** OTP is restricted to authentication flows. Post-login Platform and Tenant operations use their existing JWT, permission, workspace, subscription, ownership, and concurrency gates without OTP step-up.
+> **Issue #152 historical note:** post-login OTP step-up was removed before the final Email +
+> Password-only contract. Platform and Tenant operations use their existing JWT, permission,
+> workspace, subscription, ownership, and concurrency gates.
 
 Last reviewed: 2026-08-02
 
@@ -109,14 +112,10 @@ Last reviewed: 2026-08-02
 
 LogicFit is a multi-tenant gym-management SaaS. The platform operator manages gyms, plans, features, payment methods, and manual payment approvals. Each gym receives an isolated tenant workspace for staff and clients. Billing is intentionally manual: no gateway, webhook, or automatic card charge is enabled.
 
-> **Released to `master` in Issue #118; production binary deployment remains to be verified:** centralized E.164 OTP, Phone + OTP identity login/recovery,
-> mandatory Platform Admin login OTP, Meta WhatsApp provider integration, and
-> HttpOnly refresh cookies are merged across the Backend, Tenant UI, and Platform UI. Passkey/WebAuthn is removed.
-> Migration `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp` and every preceding canonical
-> migration were applied to production `db60976` after a structurally verified BACPAC on 2026-08-01;
-> schema/history verification succeeded. Production OTP and Meta secrets are server-only. Issue #127 adds an
-> explicitly enabled, time-bounded `TemporaryFixed` provider for hosted pre-provider testing with code
-> `1234`; it preserves real OTP challenges and must be removed when Meta WhatsApp is enabled.
+> **Historical superseded release note (Issue #118):** an earlier release contained centralized
+> Phone/OTP authentication. It is no longer part of the active contract. The current source removes
+> the runtime providers and uses Email + Password only; any old OTP table is cleaned by the guarded
+> `20260803090742_RemoveLegacyOtpArtifacts` migration. Do not configure OTP or Meta secrets.
 
 ## Product map
 
@@ -174,7 +173,7 @@ sequenceDiagram
 ## Freelance workspace foundation (production migrations verified)
 
 - `WorkspaceType.FreelanceCoach` keeps an independent coach in the existing tenant isolation boundary; legacy tenants default to `Gym`.
-- A global `IdentityAccount` is linked to tenant-local `DomainUsers` and `WorkspaceMemberships`. Existing `/api/auth/login` remains supported and creates this link lazily after a successful legacy login; it never fails an existing login because of an identity collision.
+- A global `IdentityAccount` is linked to tenant-local `DomainUsers` and `WorkspaceMemberships`. The retired `/api/auth/login` compatibility route is no longer active; authenticated access uses the Identity-first Email + Password flow.
 - New `/api/identity/login` performs identity-first sign-in and returns active workspaces and pending applications together. `/api/identity/select-workspace` exchanges its short-lived opaque selection token for the existing tenant JWT/refresh-token contract.
 - Public freelance onboarding uses `ApplicationRequests`, immutable submission revisions, and short-lived opaque tracking sessions. Applicants may edit only the field names requested by Platform Admin, then resubmit; rejected requests remain terminal evidence.
 - Platform Admin reviews a minimal, non-health/non-training application view through `/api/platform/workspace-applications`. Review, information-request, approval, and rejection use row-version concurrency; rejection revokes tracking sessions and review decisions enqueue an Outbox event.
@@ -185,7 +184,8 @@ sequenceDiagram
 - Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed. The third migration adds the tenant row-version used to serialize final membership-capacity approval. `20260729133325_SeedFreelanceSystemRoles` is an idempotent corrective data migration that creates or restores the three freelance system roles and their permission maps. All four canonical migrations are present in production; the legacy server-only history row `20260729141315_SeedFreelanceSystemRoles` is preserved rather than edited manually.
 - Team membership now uses `/api/freelance/team/invites` and `/api/workspace-invites/{preview,accept}`. The invitation is tied to normalized email, workspace, and role; acceptance requires a verified identity session and a live quota check.
 - Client acquisition supports owner-generated `/api/workspace/client-join-codes` plus preview/join endpoints. Raw codes are returned only once, stored as hashes, expire/revoke, and either activate the client or create a pending owner approval according to workspace settings.
-- OTP challenges are purpose-bound, five-minute, one-use, HMAC-hashed with per-challenge salt, and concurrency protected. Platform login requires password then OTP; no post-login Platform or Tenant mutation requires another OTP challenge.
+- Authentication is Email + Password only. Phone is contact data; no OTP challenge, Passkey, or
+  WebAuthn provider is registered. Email verification and password reset use single-use links.
 - Refresh tokens are no longer serialized to either Angular app or stored in localStorage. The API transports them only in secure `__Host-` HttpOnly cookies, rotates them on refresh, detects reuse, and revokes all linked sessions on password reset/change.
 
 ## API contracts
@@ -225,12 +225,12 @@ flowchart LR
 - `develop` is protected integration; `master` is protected release history.
 - Direct pushes, force pushes, and branch deletion are prohibited.
 - Every non-trivial task requires a GitHub Issue, task branch, tests, documentation impact, and PR.
-- GitHub CI is active on every push and pull request. It restores, builds, tests, validates EF migrations, and builds the unified API Docker image. Database-backed OTP and refresh-token concurrency tests use an ephemeral SQL Server service in the Linux `verify` job; local Windows runs continue to use LocalDB unless `LOGICFIT_TEST_CONNECTION_STRING` is supplied.
+- GitHub CI is active on every push and pull request. It restores, builds, tests, validates EF migrations, and builds the unified API Docker image. Database-backed auth and refresh-token concurrency tests use an ephemeral SQL Server service in the Linux `verify` job; local Windows runs continue to use LocalDB unless `LOGICFIT_TEST_CONNECTION_STRING` is supplied.
 - Monster ASP CD remains a manual protected workflow. Issue #134 adds the missing migration-apply stage to that workflow; it does not enable unattended deployment.
 
 ## Current deployment position
 
-- Issue #137 confirmed that `logicfit-saas-model.runasp.net` (`site81605`) failed with IIS `500.30` after publish replaced the server-only configuration and removed `Otp:HmacSecret`. A rollback-safe configuration recovery restored repeated `200 Healthy` responses and DB-backed API smoke checks on 2026-08-02; stdout was disabled again.
+- Issue #137 confirmed that `logicfit-saas-model.runasp.net` (`site81605`) failed with IIS `500.30` after publish replaced the server-only configuration and removed a required secret. A rollback-safe configuration recovery restored repeated `200 Healthy` responses and DB-backed API smoke checks on 2026-08-02; stdout was disabled again.
 - `logicfit-saas.runasp.net` is a separate current Platform host associated with the active `site81260` publish target. It remained on `500.30` pending execution of the new protected recovery job with the current GitHub Environment profile; stale local encrypted profiles cannot be used as credentials.
 - `logicfit.runasp.net/health` remained `200 Healthy` throughout the incident. The production frontend routes Platform requests to the recovered `logicfit-saas-model.runasp.net` host.
 - Retired `site78301` profiles are not valid recovery credentials. The current documented targets are `site81260` for `logicfit-saas`, `site45954` for `logicfit.runasp.net`, and `site81605` for the hosted model site; protected GitHub Environment profiles remain authoritative.
@@ -444,17 +444,18 @@ fails startup if apply or post-apply verification fails.
 
 - Excluded `appsettings.Production.json` from publish artifacts and added an MSDeploy skip rule so server-only secrets cannot be overwritten by a developer-local file.
 - Allowed the protected deployment workflow to consume either Base64 or validated direct publish-settings XML, fixing the pre-deploy decode failure without exposing the profile.
-- Added a protected, site-bound startup-recovery operation with configuration/web.config rollback, OTP/JWT/password-reset secret injection, controlled recycle, and repeated health verification.
+- Added a protected, site-bound startup-recovery operation with configuration/web.config rollback,
+  JWT/password-reset secret injection, controlled recycle, and repeated health verification.
 - Added regression coverage preventing authentication request payload logging and production configuration publication.
 
 ### 2026-08-01 — protected migration-aware publishing (Issue #134, task branch)
 
 - Added a reviewed migration stage before WebDeploy; the stage requires a verified backup reference and a protected database connection and verifies no EF migration remains pending.
-- Added release-tree, migration-review, destructive-SQL, and post-publish health gates to the manual production workflow. The preflight now provisions the same ephemeral SQL Server and test connection as CI, preventing Linux from falling back to unsupported LocalDB during OTP tests. This workflow behavior is not released until the Issue #134 PR is reviewed, merged to `develop`, released to `master`, and production-verified.
+- Added release-tree, migration-review, destructive-SQL, and post-publish health gates to the manual production workflow. The preflight now provisions the same ephemeral SQL Server and test connection as CI, preventing Linux from falling back to unsupported LocalDB during database tests. This workflow behavior is not released until the Issue #134 PR is reviewed, merged to `develop`, released to `master`, and production-verified.
 
 ### 2026-07-30 — identity-first access foundation
 
-- Added one identity/membership/local-user gate to legacy login, refresh rotation, workspace selection, and every authenticated tenant request. Linked accounts now lose access immediately when their identity, membership, or tenant-local user becomes inactive; unlinked legacy accounts remain behind an explicit temporary compatibility setting.
+- Added one identity/membership/local-user gate to refresh rotation, workspace selection, and every authenticated tenant request. Linked accounts now lose access immediately when their identity, membership, or tenant-local user becomes inactive; unlinked legacy sessions fail closed.
 - Normalized subscription access for cancellation: a cancelled subscription remains operational strictly before `EndDate`, then resolves to `Expired` and read-only without waiting for a background lifecycle update.
 - Deferred verified-email legacy linking, invitations, QR/join code, and workspace-owned client approval to issue #113 so no incomplete public-registration or approval flow is introduced.
 
