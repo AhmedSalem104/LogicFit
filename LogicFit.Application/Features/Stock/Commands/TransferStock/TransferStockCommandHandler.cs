@@ -1,4 +1,6 @@
+using System.Data;
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
@@ -32,34 +34,76 @@ public class TransferStockCommandHandler : IRequestHandler<TransferStockCommand>
         var tenantId = _tenantService.GetCurrentTenantId();
         var now = _dateTimeService.UtcNow;
 
-        var source = await _context.StockItems
-            .FirstOrDefaultAsync(s => s.ProductId == request.ProductId && s.BranchId == request.FromBranchId && s.TenantId == tenantId, cancellationToken)
-            ?? throw new DomainException("Source branch has no stock for this product");
+        await using var dbTransaction = await _context.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
 
-        if (source.Quantity < request.Quantity)
-            throw new DomainException($"Insufficient stock in source branch. Available: {source.Quantity}");
-
-        source.Quantity -= request.Quantity;
-        source.LastMovementAt = now;
-
-        var destination = await _context.StockItems
-            .FirstOrDefaultAsync(s => s.ProductId == request.ProductId && s.BranchId == request.ToBranchId && s.TenantId == tenantId, cancellationToken);
-
-        if (destination == null)
+        async Task<decimal> DecreaseSourceAsync()
         {
-            destination = new StockItem
+            var result = await StockConcurrencyOperations.TryDecreaseExistingAsync(
+                _context,
+                tenantId,
+                request.ProductId,
+                request.FromBranchId,
+                request.Quantity,
+                now,
+                cancellationToken);
+
+            if (result.HasValue)
+                return result.Value;
+
+            var available = await _context.StockItems
+                .Where(s => s.ProductId == request.ProductId &&
+                            s.BranchId == request.FromBranchId &&
+                            s.TenantId == tenantId)
+                .Select(s => (decimal?)s.Quantity)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (!available.HasValue)
+                throw new DomainException("Source branch has no stock for this product");
+
+            throw new DomainException($"Insufficient stock in source branch. Available: {available.Value}");
+        }
+
+        async Task<decimal> IncreaseDestinationAsync()
+        {
+            var result = await StockConcurrencyOperations.TryIncreaseExistingAsync(
+                _context,
+                tenantId,
+                request.ProductId,
+                request.ToBranchId,
+                request.Quantity,
+                now,
+                cancellationToken);
+
+            if (result.HasValue)
+                return result.Value;
+
+            _context.StockItems.Add(new StockItem
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
                 ProductId = request.ProductId,
                 BranchId = request.ToBranchId,
-                Quantity = 0
-            };
-            _context.StockItems.Add(destination);
+                Quantity = request.Quantity,
+                LastMovementAt = now
+            });
+
+            return request.Quantity;
         }
 
-        destination.Quantity += request.Quantity;
-        destination.LastMovementAt = now;
+        // Lock both branch rows in a stable order so opposing transfers cannot deadlock.
+        decimal sourceAfter;
+        decimal destinationAfter;
+        if (request.FromBranchId.CompareTo(request.ToBranchId) < 0)
+        {
+            sourceAfter = await DecreaseSourceAsync();
+            destinationAfter = await IncreaseDestinationAsync();
+        }
+        else
+        {
+            destinationAfter = await IncreaseDestinationAsync();
+            sourceAfter = await DecreaseSourceAsync();
+        }
 
         Guid? userId = null;
         if (Guid.TryParse(_currentUserService.UserId, out var uid)) userId = uid;
@@ -72,7 +116,7 @@ public class TransferStockCommandHandler : IRequestHandler<TransferStockCommand>
             BranchId = request.FromBranchId,
             Type = StockMovementType.Transfer,
             Quantity = request.Quantity,
-            QuantityAfter = source.Quantity,
+            QuantityAfter = sourceAfter,
             Reason = request.Reason,
             ReferenceType = "Transfer",
             MovedAt = now,
@@ -88,7 +132,7 @@ public class TransferStockCommandHandler : IRequestHandler<TransferStockCommand>
             BranchId = request.ToBranchId,
             Type = StockMovementType.In,
             Quantity = request.Quantity,
-            QuantityAfter = destination.Quantity,
+            QuantityAfter = destinationAfter,
             Reason = "Transfer-in from branch " + request.FromBranchId,
             ReferenceType = "Transfer",
             MovedAt = now,
@@ -96,5 +140,6 @@ public class TransferStockCommandHandler : IRequestHandler<TransferStockCommand>
         });
 
         await _context.SaveChangesAsync(cancellationToken);
+        await dbTransaction.CommitAsync(cancellationToken);
     }
 }

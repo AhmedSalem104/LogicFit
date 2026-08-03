@@ -85,12 +85,26 @@ Production schema state is advanced only by the explicit deployment migration st
 - لا تستخدم `Count + 1` لإنتاج رقم يشارك فيه أكثر من طلب؛ رقم الفاتورة له مولّد
   آمن متسلسل.
 
+تحديث WalletBalance يتم كعملية SQL محروسة داخل Transaction، ثم يكتب سجل
+`WalletTransaction` مع `BalanceAfter` الناتج من نفس التحديث. لا يُعاد حساب الرصيد من آخر
+سجل Ledger، ولا يسمح شرط الخصم بتجاوز الرصيد المتاح. وبالمثل، تغييرات `StockItem.Quantity`
+في التعديل/التحويل/POS تستخدم SQL arithmetic guarded، وتُحفظ حركة المخزون والسجل التجاري
+معاً؛ مسارات إنشاء صف المخزون تعمل تحت Serializable transaction.
+
 ## Outbox وJobs والمراقبة
 
 Domain Event يكتب مع معاملة الأعمال، ثم يسجل في Outbox. عامل خلفي يعالج الرسالة
 ويعلمها `Processed` أو `Failed` مع عدد المحاولات والخطأ. لا تحذف الرسالة مباشرة؛
 الأرشفة تأتي بعد فترة احتفاظ محددة. Jobs الانتهاء/Grace/الإشعارات قابلة للتكرار بلا
 تكرار أثرها (Idempotent).
+
+عند تشغيل أكثر من نسخة من الـAPI، تستخدم Jobs الخلفية SQL Server application locks
+بموارد مستقلة: `LogicFit:Background:TenantSubscriptionLifecycle` و
+`LogicFit:Background:PlatformSubscriptionLifecycle` و
+`LogicFit:Background:OutboxProcessor`. النسخة التي لا تملك القفل تتخطى الدورة، بينما
+يمنع unique index على `OutboxMessages.IdempotencyKey` إنشاء نفس رسالة الحدث مرتين.
+Migration التنسيق يوقف التطبيق إذا كانت هناك مفاتيح مكررة تحتاج مراجعة تشغيلية؛ لا يحذف
+رسائل تاريخية تلقائياً.
 
 أضف Logs وMetrics وAlerts لفشل المدفوعات، Jobs، Outbox وانتقالات حالات الاشتراك.
 قبل نشر Migration كبير: Dry Run، Backup، تقرير مخالفات، Rollback Test وFeature Flag

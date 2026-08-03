@@ -31,14 +31,15 @@ public static class DependencyInjection
                 configuration.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
-          services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
-          services.AddScoped<IDatabaseResourcePool, DatabaseResourcePoolService>();
-          services.AddScoped<ManualMonsterProvisioningProvider>();
-          services.AddScoped<LocalSqlProvisioningProvider>();
-          services.AddScoped<IDatabaseProvisioningProvider>(provider =>
-              configuration["DatabaseResourcePool:ProvisioningProvider"]?.Equals("LocalSql", StringComparison.OrdinalIgnoreCase) == true
-                  ? provider.GetRequiredService<LocalSqlProvisioningProvider>()
-                  : provider.GetRequiredService<ManualMonsterProvisioningProvider>());
+        services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        services.AddSingleton<IDistributedLockProvider, SqlServerDistributedLockProvider>();
+        services.AddScoped<IDatabaseResourcePool, DatabaseResourcePoolService>();
+        services.AddScoped<ManualMonsterProvisioningProvider>();
+        services.AddScoped<LocalSqlProvisioningProvider>();
+        services.AddScoped<IDatabaseProvisioningProvider>(provider =>
+            configuration["DatabaseResourcePool:ProvisioningProvider"]?.Equals("LocalSql", StringComparison.OrdinalIgnoreCase) == true
+                ? provider.GetRequiredService<LocalSqlProvisioningProvider>()
+                : provider.GetRequiredService<ManualMonsterProvisioningProvider>());
         services.AddScoped<IWorkspaceProvisioningSaga, WorkspaceProvisioningSaga>();
         services.AddSingleton<IConnectionStringProtector, DataProtectionConnectionStringProtector>();
         services.AddScoped<ITenantDatabaseMappingReader, PlatformTenantDatabaseMappingReader>();

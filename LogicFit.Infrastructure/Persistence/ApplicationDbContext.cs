@@ -1,3 +1,4 @@
+using System.Data;
 using System.Reflection;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Common.Interfaces;
@@ -15,6 +16,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 {
     public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
         => Database.BeginTransactionAsync(cancellationToken);
+
+    public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(
+        IsolationLevel isolationLevel,
+        CancellationToken cancellationToken = default)
+        => Database.BeginTransactionAsync(isolationLevel, cancellationToken);
     private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeService _dateTimeService;

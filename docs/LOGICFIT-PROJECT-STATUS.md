@@ -400,8 +400,8 @@ fails startup if apply or post-apply verification fails.
 
 ## Verification status
 
-- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 158 passing tests on 2026-08-03 after the Issue #197 distributed-controls changes.
-- `dotnet build LogicFit.sln -c Release --no-restore`: successful with no warnings on 2026-08-03.
+- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 160 passing tests on 2026-08-03 after the Issue #193, #195, and #197 changes.
+- `dotnet build LogicFit.sln -c Release --no-restore`: successful on 2026-08-03; five pre-existing nullable warnings remain in Application query projections.
 - `npm run build` in `LogiFit_Platform_Admin_Dashboard`: successful.
 
 ## CI/CD policy
@@ -423,10 +423,8 @@ fails startup if apply or post-apply verification fails.
 
 - Provide the protected production Redis endpoint/credential and complete a multi-instance rollout
   verification for Issue #197; no Production deployment is implied by the source change.
-- Use atomic SQL updates/transactions for wallet and stock hot paths, and add concurrency integration tests.
 - Add coupon usage idempotency and payment request idempotency keys.
 - Move private uploads to object storage with signed URLs and malware scanning.
-- Add distributed locks/idempotency for background lifecycle jobs.
 - Add integration, end-to-end, load, concurrency, and tenant-isolation tests.
 - Define the Monster ASP deployment target, application directory, service manager, backup command, and health URL before enabling automatic production deployment.
 - Stale local WebDeploy profiles are diagnostic metadata only. Production actions select the current protected GitHub Environment profile and require an exact expected Monster site id before any remote write.
@@ -443,6 +441,30 @@ fails startup if apply or post-apply verification fails.
   to an upstream gateway.
 - No API route, frontend, business-data, or EF migration change was required. Redis is not the
   source of truth for wallet or stock.
+### 2026-08-03 — wallet and stock concurrency hardening (Issue #195, task branch)
+
+- Wallet balance mutations now use guarded SQL arithmetic inside the same database transaction
+  as the wallet ledger row. Subscription wallet payments and manual transactions no longer
+  derive the balance from the latest ledger row, so concurrent debits cannot lose updates or
+  create a negative balance.
+- Stock adjustments, transfers, and POS checkout use guarded SQL quantity updates. Stock
+  movements and business records commit with the quantity change; stock creation paths use a
+  serializable transaction to protect the unique tenant/product/branch boundary.
+- Added SQL Server concurrency integration coverage for competing wallet debits and stock
+  decrements. No new API route, frontend contract, or database migration was introduced; the
+  change is merged to `develop` and has not been deployed to Production.
+### 2026-08-03 — background job coordination (Issue #193, task branch)
+
+- Added SQL Server session-owned application locks for tenant subscription lifecycle,
+  platform subscription lifecycle, and Outbox processing. When another API instance owns
+  the lock, the current pass skips safely instead of duplicating work.
+- Added a bounded unique `OutboxMessages.IdempotencyKey`, a processing-order index, and
+  migrations for the legacy, Platform, and Tenant database contexts. The migration stops
+  with an operator-review error when existing duplicate keys are found; it never deletes
+  historical messages automatically.
+- Added contract coverage for lock acquisition, lock release, distinct job resources, and
+  the database idempotency model. This is not deployed to Production and has no API route
+  or frontend contract change.
 
 ### 2026-08-02 — startup migration safety net (Issue #147)
 
