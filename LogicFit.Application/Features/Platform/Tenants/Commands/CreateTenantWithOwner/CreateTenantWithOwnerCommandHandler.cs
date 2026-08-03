@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Features.Identity;
 using LogicFit.Application.Features.Platform.Tenants.DTOs;
 using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
@@ -14,11 +15,16 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
 {
     private readonly IApplicationDbContext _context;
     private readonly IRbacService _rbacService;
+    private readonly IDateTimeService _dateTimeService;
 
-    public CreateTenantWithOwnerCommandHandler(IApplicationDbContext context, IRbacService rbacService)
+    public CreateTenantWithOwnerCommandHandler(
+        IApplicationDbContext context,
+        IRbacService rbacService,
+        IDateTimeService dateTimeService)
     {
         _context = context;
         _rbacService = rbacService;
+        _dateTimeService = dateTimeService;
     }
 
     public async Task<PlatformTenantDto> Handle(CreateTenantWithOwnerCommand request, CancellationToken cancellationToken)
@@ -34,6 +40,28 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
                 throw new ConflictException($"Subdomain '{subdomain}' is already taken");
             }
         }
+
+        var normalizedOwnerEmail = IdentityEmailAddress.Normalize(request.OwnerEmail);
+        var ownerIdentityExists = await _context.IdentityAccounts
+            .IgnoreQueryFilters()
+            .AnyAsync(x => x.NormalizedEmail == normalizedOwnerEmail, cancellationToken);
+        if (ownerIdentityExists)
+        {
+            throw new ConflictException("The owner email is already registered. Use another email or the workspace invitation flow.");
+        }
+
+        var ownerPasswordHash = BCrypt.Net.BCrypt.HashPassword(request.OwnerPassword);
+        var ownerIdentity = new IdentityAccount
+        {
+            FullName = request.OwnerFullName.Trim(),
+            Email = request.OwnerEmail.Trim(),
+            NormalizedEmail = normalizedOwnerEmail,
+            PhoneNumber = request.OwnerPhoneNumber,
+            PasswordHash = ownerPasswordHash,
+            // This identity was provisioned by an authenticated platform operator.
+            EmailVerifiedAt = _dateTimeService.UtcNow
+        };
+        _context.IdentityAccounts.Add(ownerIdentity);
 
         var tenant = new Tenant
         {
@@ -52,14 +80,24 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
 
         var owner = new User
         {
+            IdentityAccountId = ownerIdentity.Id,
             TenantId = tenant.Id,
             Email = request.OwnerEmail,
             PhoneNumber = request.OwnerPhoneNumber,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.OwnerPassword),
+            PasswordHash = ownerPasswordHash,
             Role = UserRole.Owner,
             IsActive = true
         };
         _context.Users.Add(owner);
+
+        _context.WorkspaceMemberships.Add(new WorkspaceMembership
+        {
+            IdentityAccountId = ownerIdentity.Id,
+            TenantId = tenant.Id,
+            UserId = owner.Id,
+            Role = UserRole.Owner,
+            Status = WorkspaceMembershipStatus.PendingPlatformApproval
+        });
 
         if (!string.IsNullOrWhiteSpace(request.OwnerFullName))
         {
