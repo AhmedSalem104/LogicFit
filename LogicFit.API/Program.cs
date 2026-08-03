@@ -51,26 +51,6 @@ builder.Services.AddRateLimiter(options =>
                 QueueLimit = 0,
                 AutoReplenishment = true
             }));
-    options.AddPolicy("otp-request", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            SecurityPartition(context),
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 5,
-                Window = TimeSpan.FromMinutes(15),
-                QueueLimit = 0,
-                AutoReplenishment = true
-            }));
-    options.AddPolicy("otp-verify", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            SecurityPartition(context),
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(15),
-                QueueLimit = 0,
-                AutoReplenishment = true
-            }));
     options.AddPolicy("invite-acceptance", context =>
         RateLimitPartition.GetFixedWindowLimiter(
             SecurityPartition(context),

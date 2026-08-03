@@ -1,5 +1,13 @@
 # المستخدمون والصلاحيات والعزل
 
+## Issue #161 authentication boundary
+
+All users, including PlatformOwner and PlatformAdmin, authenticate with Email + Password. The
+Platform session is issued only after the linked identity is active, the email is verified, and
+the server reconciles the platform RBAC assignment. Authentication does not grant tenant access:
+the selected active membership, workspace/subscription gates, and permission claims remain
+required. Phone Login, OTP, Passkey, and WebAuthn are not active routes.
+
 ## مبدأ الحماية
 
 الـUI يحسن التجربة بإخفاء ما لا يملكه المستخدم، لكنه ليس حد أمان. كل Endpoint حساس

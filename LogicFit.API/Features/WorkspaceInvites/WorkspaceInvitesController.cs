@@ -23,14 +23,6 @@ public sealed class WorkspaceInvitesController : ControllerBase
         [FromBody] PreviewWorkspaceInviteCommand command, CancellationToken cancellationToken)
         => Ok(await _mediator.Send(command, cancellationToken));
 
-    [HttpPost("otp/request")]
-    [AllowAnonymous]
-    [EnableRateLimiting("otp-request")]
-    [ProducesResponseType(typeof(OtpChallengeDto), StatusCodes.Status202Accepted)]
-    public async Task<ActionResult<OtpChallengeDto>> RequestOtp(
-        [FromBody] RequestWorkspaceInviteOtpCommand command, CancellationToken cancellationToken)
-        => Accepted(await _mediator.Send(command, cancellationToken));
-
     [HttpPost("accept")]
     [AllowAnonymous]
     [EnableRateLimiting("invite-acceptance")]

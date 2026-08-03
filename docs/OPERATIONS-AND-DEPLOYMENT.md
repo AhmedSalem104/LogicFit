@@ -1,5 +1,12 @@
 # التشغيل والنشر والاستعادة
 
+## Issue #161 authentication deployment note
+
+The active login contract is Email + Password for Identity and Platform surfaces. Deploy the
+Backend and Platform Dashboard together because `/api/platform/auth/login` returns the session
+directly and no OTP verification call is valid. Do not add OTP, Phone Login, Passkey, or WebAuthn
+secrets to the server. No Production deployment or migration was performed by this change.
+
 ## بيئات ومكونات النشر
 
 - `LogicFit.API` هو المضيف الموحد؛ يحتوي Platform وTenant modules ويستخدم إعدادات

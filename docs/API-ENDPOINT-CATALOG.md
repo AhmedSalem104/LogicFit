@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-02 17:11 UTC`  |  Total endpoints: **393**
+Generated: `2026-08-03 08:37 UTC`  |  Total endpoints: **383**
 
 ## Contract rules
 
@@ -54,20 +54,14 @@ Generated: `2026-08-02 17:11 UTC`  |  Total endpoints: **393**
 #### `POST /api/platform/auth/login` - `Login`
 
 - **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `RequestPlatformLoginOtpCommand`<br>Handler signature: `[FromBody] RequestPlatformLoginOtpCommand command`
-- **Declared response:** typeof(OtpChallengeDto), StatusCodes.Status200OK<br>StatusCodes.Status401Unauthorized
+- **Inputs:** Body `command`: `PlatformPasswordLoginCommand`<br>Handler signature: `[FromBody] PlatformPasswordLoginCommand command`
+- **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK<br>StatusCodes.Status401Unauthorized
 
 #### `POST /api/platform/auth/logout-all` - `LogoutAll`
 
 - **Access:** JWT required
 - **Inputs:** No request input.
 - **Declared response:** StatusCodes.Status204NoContent
-
-#### `POST /api/platform/auth/otp/verify` - `VerifyOtp`
-
-- **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `VerifyPlatformLoginOtpCommand`<br>Handler signature: `[FromBody] VerifyPlatformLoginOtpCommand command`
-- **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK
 
 #### `POST /api/platform/auth/refresh` - `Refresh`
 
@@ -1431,42 +1425,6 @@ Generated: `2026-08-02 17:11 UTC`  |  Total endpoints: **393**
 - **Inputs:** Body `command`: `ResetIdentityPasswordCommand` { `Token`: string; `NewPassword`: string }<br>Handler signature: `[FromBody] ResetIdentityPasswordCommand command`
 - **Declared response:** StatusCodes.Status204NoContent
 
-#### `POST /api/identity/phone/password-reset/confirm` - `ConfirmPhonePasswordReset`
-
-- **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `ResetPasswordWithPhoneOtpCommand`<br>Handler signature: `[FromBody] ResetPasswordWithPhoneOtpCommand command`
-- **Declared response:** Task<IActionResult>
-
-#### `POST /api/identity/phone/password-reset/request` - `RequestPhonePasswordReset`
-
-- **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `RequestPhonePasswordResetOtpCommand`<br>Handler signature: `[FromBody] RequestPhonePasswordResetOtpCommand command`
-- **Declared response:** Task<ActionResult<OtpChallengeDto>>
-
-#### `POST /api/identity/phone/request` - `RequestPhoneVerification`
-
-- **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `RequestIdentityPhoneOtpCommand`<br>Handler signature: `[FromBody] RequestIdentityPhoneOtpCommand command`
-- **Declared response:** Task<ActionResult<OtpChallengeDto>>
-
-#### `POST /api/identity/phone/verify` - `VerifyPhone`
-
-- **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `VerifyIdentityPhoneOtpCommand`<br>Handler signature: `[FromBody] VerifyIdentityPhoneOtpCommand command`
-- **Declared response:** Task<IActionResult>
-
-#### `POST /api/identity/phone-login/request` - `RequestPhoneLogin`
-
-- **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `RequestPhoneLoginOtpCommand`<br>Handler signature: `[FromBody] RequestPhoneLoginOtpCommand command`
-- **Declared response:** Task<ActionResult<OtpChallengeDto>>
-
-#### `POST /api/identity/phone-login/verify` - `VerifyPhoneLogin`
-
-- **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `VerifyPhoneLoginOtpCommand`<br>Handler signature: `[FromBody] VerifyPhoneLoginOtpCommand command`
-- **Declared response:** Task<ActionResult<IdentitySignInDto>>
-
 #### `POST /api/identity/register` - `Register`
 
 - **Access:** Anonymous (no token required)
@@ -1610,20 +1568,6 @@ Generated: `2026-08-02 17:11 UTC`  |  Total endpoints: **393**
 - **Access:** JWT + Policy: `Permissions.ManageMembers`
 - **Inputs:** Handler signature: `IssueMembershipCardCommand command`
 - **Declared response:** typeof(Guid), StatusCodes.Status200OK
-
-### MetaWhatsAppOtpWebhook
-
-#### `GET /api/otp/webhooks/meta-whatsapp` - `Verify`
-
-- **Access:** Server default (not declared explicitly)
-- **Inputs:** Handler signature: `[FromQuery(Name = "hub.mode")] string? mode, [FromQuery(Name = "hub.verify_token")] string? token, [FromQuery(Name = "hub.challenge")] string? challenge`
-- **Declared response:** IActionResult
-
-#### `POST /api/otp/webhooks/meta-whatsapp` - `Status`
-
-- **Access:** Server default (not declared explicitly)
-- **Inputs:** No request input.
-- **Declared response:** Task<IActionResult>
 
 ### Muscles
 
@@ -2522,14 +2466,8 @@ Generated: `2026-08-02 17:11 UTC`  |  Total endpoints: **393**
 #### `POST /api/workspace-invites/accept` - `Accept`
 
 - **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `AcceptWorkspaceInviteCommand` { `Token`: string; `WorkspaceSelectionToken`: string; `ChallengeId`: Guid?; `Code`: string?; `SessionBinding`: string? }<br>Handler signature: `[FromBody] AcceptWorkspaceInviteCommand command`
+- **Inputs:** Body `command`: `AcceptWorkspaceInviteCommand` { `Token`: string; `WorkspaceSelectionToken`: string }<br>Handler signature: `[FromBody] AcceptWorkspaceInviteCommand command`
 - **Declared response:** StatusCodes.Status204NoContent
-
-#### `POST /api/workspace-invites/otp/request` - `RequestOtp`
-
-- **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `RequestWorkspaceInviteOtpCommand`<br>Handler signature: `[FromBody] RequestWorkspaceInviteOtpCommand command`
-- **Declared response:** typeof(OtpChallengeDto), StatusCodes.Status202Accepted
 
 #### `POST /api/workspace-invites/preview` - `Preview`
 

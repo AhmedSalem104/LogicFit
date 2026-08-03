@@ -1,7 +1,6 @@
 using System.Net;
 using System.Reflection;
 using LogicFit.API.Security;
-using LogicFit.Application.Features.Platform.Auth.Commands.PlatformOtpLogin;
 using LogicFit.Application.Features.Identity.Commands.Otp;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Common.Services;
@@ -269,66 +268,6 @@ public sealed class OtpSecurityTests
         var storedReplacement = await fixture.Db.RefreshTokens.SingleAsync(x => x.Token == replacementValue);
         Assert.NotNull(storedOriginal.RevokedAt);
         Assert.NotNull(storedReplacement.RevokedAt);
-    }
-
-    [Fact]
-    public async Task Platform_password_phase_issues_only_an_otp_challenge_and_no_session()
-    {
-        await using var fixture = await OtpFixture.CreateAsync();
-        var identity = new IdentityAccount
-        {
-            FullName = "Platform Admin",
-            Email = "admin@logicfit.test",
-            NormalizedEmail = "ADMIN@LOGICFIT.TEST",
-            EmailVerifiedAt = fixture.Clock.UtcNow,
-            PhoneNumber = "+201012345672",
-            NormalizedPhoneNumber = "+201012345672",
-            PhoneVerifiedAt = fixture.Clock.UtcNow,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Password1")
-        };
-        var platformTenant = new Tenant
-        {
-            Id = PlatformConstants.PlatformTenantId,
-            Name = "LogicFit Platform",
-            Status = TenantStatus.Active
-        };
-        var user = new User
-        {
-            TenantId = platformTenant.Id,
-            IdentityAccountId = identity.Id,
-            Email = identity.Email,
-            PhoneNumber = identity.PhoneNumber,
-            PasswordHash = identity.PasswordHash,
-            Role = UserRole.PlatformAdmin,
-            IsActive = true
-        };
-        fixture.Db.Tenants.Add(platformTenant);
-        fixture.Db.IdentityAccounts.Add(identity);
-        fixture.Db.Set<User>().Add(user);
-        await fixture.Db.SaveChangesAsync();
-
-        var handler = new RequestPlatformLoginOtpHandler(
-            fixture.Db, fixture.Service, fixture.Clock, fixture.CurrentUser);
-        var challenge = await handler.Handle(
-            new RequestPlatformLoginOtpCommand(identity.Email, "Password1", "platform-browser"),
-            CancellationToken.None);
-
-        Assert.Equal(OtpPurpose.PlatformAdminLogin, challenge.Purpose);
-        Assert.Empty(await fixture.Db.RefreshTokens.ToListAsync());
-        Assert.Empty(await fixture.Db.IdentityWorkspaceSessions.ToListAsync());
-        Assert.Single(fixture.Sender.Messages);
-        var auditPayloads = await fixture.Db.AuditLogs
-            .Where(x => x.EntityName == "SecurityAuthEvent")
-            .Select(x => x.NewValues ?? string.Empty)
-            .ToListAsync();
-        Assert.Contains(auditPayloads, value => value.Contains("PlatformPasswordLoginSucceeded", StringComparison.Ordinal));
-        Assert.All(auditPayloads, value =>
-        {
-            Assert.DoesNotContain("Password1", value, StringComparison.Ordinal);
-            Assert.DoesNotContain("1234", value, StringComparison.Ordinal);
-            Assert.DoesNotContain(identity.Email, value, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain(identity.PhoneNumber!, value, StringComparison.Ordinal);
-        });
     }
 
     [Fact]
