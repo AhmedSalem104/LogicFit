@@ -1,17 +1,12 @@
 using LogicFit.API.Security;
 using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.Auth.Commands.ChangePassword;
-using LogicFit.Application.Features.Auth.Commands.ForgetPassword;
-using LogicFit.Application.Features.Auth.Commands.Login;
 using LogicFit.Application.Features.Auth.Commands.LogoutAll;
 using LogicFit.Application.Features.Auth.Commands.RefreshToken;
-using LogicFit.Application.Features.Auth.Commands.Register;
-using LogicFit.Application.Features.Auth.Commands.ResetPassword;
 using LogicFit.Application.Features.Auth.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 
 namespace LogicFit.API.Features.Auth;
 
@@ -26,30 +21,6 @@ public class AuthController : ControllerBase
     {
         _mediator = mediator;
         _refreshCookies = refreshCookies;
-    }
-
-    [HttpPost("register")]
-    [AllowAnonymous]
-    [EnableRateLimiting("auth-login")]
-    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<AuthResponseDto>> Register([FromBody] RegisterCommand command)
-    {
-        var result = await _mediator.Send(command);
-        _refreshCookies.Write(Response, result.RefreshToken, RefreshTokenService.SurfaceTenant);
-        return Ok(result);
-    }
-
-    [HttpPost("login")]
-    [AllowAnonymous]
-    [EnableRateLimiting("auth-login")]
-    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginCommand command)
-    {
-        var result = await _mediator.Send(command);
-        _refreshCookies.Write(Response, result.RefreshToken, RefreshTokenService.SurfaceTenant);
-        return Ok(result);
     }
 
     [HttpPost("refresh")]
@@ -77,29 +48,6 @@ public class AuthController : ControllerBase
         await _mediator.Send(new LogoutAllCommand());
         _refreshCookies.Delete(Response, RefreshTokenService.SurfaceTenant);
         return NoContent();
-    }
-
-    [HttpPost("forget-password")]
-    [AllowAnonymous]
-    [EnableRateLimiting("identity-email-actions")]
-    [ProducesResponseType(typeof(ForgetPasswordResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ForgetPasswordResponse>> ForgetPassword([FromBody] ForgetPasswordCommand command)
-    {
-        var result = await _mediator.Send(command);
-        return Ok(result);
-    }
-
-    [HttpPost("reset-password")]
-    [AllowAnonymous]
-    [EnableRateLimiting("identity-email-actions")]
-    [ProducesResponseType(typeof(ResetPasswordResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<ResetPasswordResponse>> ResetPassword([FromBody] ResetPasswordCommand command)
-    {
-        var result = await _mediator.Send(command);
-        _refreshCookies.Delete(Response, RefreshTokenService.SurfaceTenant);
-        return Ok(result);
     }
 
     /// <summary>Authenticated self-service password change (current + new).</summary>

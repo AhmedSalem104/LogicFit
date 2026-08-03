@@ -1,3 +1,10 @@
+# Archived compatibility reference (superseded 2026-08-03)
+
+> This document contains the retired phone/password and legacy `/api/auth/*` flow. It is kept
+> for historical context only; do not implement or call any endpoint shown below.
+> The active contract is Email + Password only (phone is contact data). Use the generated
+> `docs/API-ENDPOINT-CATALOG.md` and `docs/AUTHENTICATION-AND-WORKSPACE-FLOWS.md`.
+
 # LogicFit — ملخص التسجيل والدخول لكل المستخدمين (للفرونت)
 
 > ملخص مركّز يوضّح **إزاي كل نوع مستخدم بيتعمل (Registration) وبيسجّل دخول (Login)** بالتفصيل.

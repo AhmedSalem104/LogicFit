@@ -27,7 +27,6 @@ public sealed class ProductionStartupRecoveryContractTests
         Assert.Contains("RECOVER-PRODUCTION-STARTUP", workflow);
         Assert.Contains("recover-startup:", workflow);
         Assert.Contains("environment: production", workflow);
-        Assert.Contains("LOGICFIT_OTP_HMAC_SECRET", workflow);
         Assert.Contains("LOGICFIT_JWT_SECRET", workflow);
         Assert.Contains("LOGICFIT_PASSWORD_RESET_SECRET", workflow);
         Assert.Contains("$xmlStart = $profilePayload.IndexOf('<')", workflow);
@@ -35,7 +34,7 @@ public sealed class ProductionStartupRecoveryContractTests
         Assert.Contains("[Convert]::FromBase64String($profilePayload)", workflow);
 
         Assert.Contains("does not match expected site", recovery);
-        Assert.Contains("Temporary fixed OTP expiry", recovery);
+        Assert.DoesNotContain("Temporary fixed OTP expiry", recovery);
         Assert.Contains("Recovery failed; restoring", recovery);
         Assert.Contains("Set-RemoteFile $remoteConfig $remoteConfigPath", recovery);
         Assert.Contains("Set-RemoteFile $remoteWebConfig $remoteWebConfigPath", recovery);

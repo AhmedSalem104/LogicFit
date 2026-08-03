@@ -32,10 +32,6 @@ on:
         description: 'Exact Monster ASP site id, for example site81260'
         required: false
         type: string
-      recovery_temporary_fixed_expiry_utc:
-        description: 'TemporaryFixed OTP expiry in UTC, no more than 31 days away'
-        required: false
-        type: string
       recovery_management_host_override:
         description: 'Optional current management hostname when the profile hostname is retired'
         required: false
@@ -260,11 +256,9 @@ jobs:
       - name: Recover production startup configuration
         shell: pwsh
         env:
-          LOGICFIT_OTP_HMAC_SECRET: ${{ secrets.LOGICFIT_OTP_HMAC_SECRET }}
           LOGICFIT_JWT_SECRET: ${{ secrets.LOGICFIT_JWT_SECRET }}
           LOGICFIT_PASSWORD_RESET_SECRET: ${{ secrets.LOGICFIT_PASSWORD_RESET_SECRET }}
           EXPECTED_SITE: ${{ inputs.recovery_expected_site }}
-          TEMPORARY_FIXED_EXPIRY_UTC: ${{ inputs.recovery_temporary_fixed_expiry_utc }}
           MANAGEMENT_HOST_OVERRIDE: ${{ inputs.recovery_management_host_override }}
           ALLOW_UNTRUSTED: ${{ inputs.recovery_allow_untrusted_certificate }}
         run: |
@@ -272,7 +266,6 @@ jobs:
             PublishSettingsPath = "$env:RUNNER_TEMP/recovery.publishSettings"
             ExpectedSite = $env:EXPECTED_SITE
             HealthCheckUrl = $env:RECOVERY_HEALTH_URL
-            TemporaryFixedExpiryUtc = $env:TEMPORARY_FIXED_EXPIRY_UTC
           }
           if (-not [string]::IsNullOrWhiteSpace($env:MANAGEMENT_HOST_OVERRIDE)) {
             $arguments.ManagementHostOverride = $env:MANAGEMENT_HOST_OVERRIDE

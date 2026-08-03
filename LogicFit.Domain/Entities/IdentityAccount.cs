@@ -29,5 +29,4 @@ public class IdentityAccount : AuditableEntity
     public ICollection<WorkspaceMembership> Memberships { get; set; } = new List<WorkspaceMembership>();
     public ICollection<ApplicationRequest> Applications { get; set; } = new List<ApplicationRequest>();
     public ICollection<IdentityEmailActionToken> EmailActionTokens { get; set; } = new List<IdentityEmailActionToken>();
-    public ICollection<OtpChallenge> OtpChallenges { get; set; } = new List<OtpChallenge>();
 }

@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-03 08:37 UTC`  |  Total endpoints: **383**
+Generated: `2026-08-03 09:08 UTC`  |  Total endpoints: **379**
 
 ## Contract rules
 
@@ -585,18 +585,6 @@ Generated: `2026-08-03 08:37 UTC`  |  Total endpoints: **383**
 - **Inputs:** Body `command`: `ChangePasswordCommand` { `CurrentPassword`: string; `NewPassword`: string }<br>Handler signature: `[FromBody] ChangePasswordCommand command`
 - **Declared response:** StatusCodes.Status204NoContent<br>StatusCodes.Status400BadRequest<br>StatusCodes.Status401Unauthorized
 
-#### `POST /api/Auth/forget-password` - `ForgetPassword`
-
-- **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `ForgetPasswordCommand` { `PhoneNumber`: string; `Subdomain`: string?; `TenantId`: Guid; `Success`: bool; `Message`: string; `ResetToken`: string? }<br>Handler signature: `[FromBody] ForgetPasswordCommand command`
-- **Declared response:** typeof(ForgetPasswordResponse), StatusCodes.Status200OK<br>StatusCodes.Status400BadRequest
-
-#### `POST /api/Auth/login` - `Login`
-
-- **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `LoginCommand` { `PhoneNumber`: string; `Password`: string; `Subdomain`: string?; `TenantId`: Guid }<br>Handler signature: `[FromBody] LoginCommand command`
-- **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK<br>StatusCodes.Status401Unauthorized
-
 #### `POST /api/Auth/logout-all` - `LogoutAll`
 
 - **Access:** JWT required
@@ -608,18 +596,6 @@ Generated: `2026-08-03 08:37 UTC`  |  Total endpoints: **383**
 - **Access:** Anonymous (no token required)
 - **Inputs:** No request input.
 - **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK<br>StatusCodes.Status401Unauthorized
-
-#### `POST /api/Auth/register` - `Register`
-
-- **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `RegisterCommand` { `Email`: string; `PhoneNumber`: string?; `Password`: string; `ConfirmPassword`: string; `FullName`: string; `Subdomain`: string?; `TenantId`: Guid }<br>Handler signature: `[FromBody] RegisterCommand command`
-- **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK<br>StatusCodes.Status400BadRequest
-
-#### `POST /api/Auth/reset-password` - `ResetPassword`
-
-- **Access:** Anonymous (no token required)
-- **Inputs:** Body `command`: `ResetPasswordCommand` { `PhoneNumber`: string; `ResetToken`: string; `NewPassword`: string; `Subdomain`: string?; `TenantId`: Guid; `Success`: bool; `Message`: string }<br>Handler signature: `[FromBody] ResetPasswordCommand command`
-- **Declared response:** typeof(ResetPasswordResponse), StatusCodes.Status200OK<br>StatusCodes.Status400BadRequest
 
 ### BodyMeasurements
 

@@ -355,8 +355,8 @@ Swagger UI is available in **Development** on each API. Detailed integration gui
 
 | Method | Endpoint | Description |
 |:------:|----------|-------------|
-| `POST` | `/api/auth/login` | Login by phone + password + gym `subdomain` → tokens + `roles[]` + `permissions[]` |
-| `POST` | `/api/auth/register` | Public registration — **Client only** |
+| `POST` | `/api/identity/login` | Email + password identity login; choose an authorized workspace afterward |
+| `POST` | `/api/identity/register` | Create an identity account and verify email via single-use link |
 | `POST` | `/api/auth/refresh` | Rotate tokens |
 | `POST` | `/api/auth/logout-all` | Revoke all refresh tokens |
 | `GET`  | `/api/branding/{subdomain}` | Public white-label branding (pre-login theming) |

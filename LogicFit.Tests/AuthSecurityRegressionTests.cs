@@ -1,5 +1,5 @@
 using LogicFit.Application.Features.Auth.Commands.ChangePassword;
-using LogicFit.Application.Features.Auth.Commands.ResetPassword;
+using LogicFit.Application.Features.Identity.Commands.ResetIdentityPassword;
 using Xunit;
 
 namespace LogicFit.Tests;
@@ -13,15 +13,10 @@ public class AuthSecurityRegressionTests
     [InlineData("NoDigitsHere")]
     public void Reset_password_rejects_weak_passwords(string password)
     {
-        var result = new ResetPasswordCommandValidator().Validate(new ResetPasswordCommand
-        {
-            PhoneNumber = "01000000000",
-            ResetToken = "123456",
-            NewPassword = password,
-            Subdomain = "demo"
-        });
+        var result = new ResetIdentityPasswordValidator().Validate(
+            new ResetIdentityPasswordCommand("token", password));
 
-        Assert.Contains(result.Errors, error => error.PropertyName == nameof(ResetPasswordCommand.NewPassword));
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(ResetIdentityPasswordCommand.NewPassword));
     }
 
     [Fact]

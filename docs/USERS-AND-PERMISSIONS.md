@@ -15,17 +15,14 @@ required. Phone Login, OTP, Passkey, and WebAuthn are not active routes.
 هوية المستخدم وسياق الطلب هما مصدر تحديد المستأجر. سجلات المال والمراجعة لا تحذف أو
 تعدل من واجهة عامة.
 
-## Identity and OTP security (Issue #118, unreleased)
+## Identity and password security (Issue #161)
 
-An identity-first account may sign in with its verified, globally unique email and password,
-or a verified, unique E.164 phone and a purpose-bound OTP challenge. Email verification and
-password-reset links remain opaque, one-use, short-lived hash records. OTP codes are also
-one-use, short-lived HMAC records and are never returned by the API. Platform Owner/Admin
-must complete password plus OTP during login. No post-login Platform or Tenant operation requires
-another OTP challenge. Authentication never replaces authorization: `WorkspaceMembership.Active`,
-local `User.Active`, workspace/subscription gates, permissions, and ownership checks still
-decide access. Password reset/change and confirmed phone change revoke linked refresh and
-workspace-selection sessions.
+An identity-first account signs in with its verified, globally unique email and password. Phone is
+optional contact data only. Email verification and password-reset links remain opaque, one-use,
+short-lived hash records. Platform Owner/Admin use the same Email + Password flow. Authentication
+never replaces authorization: `WorkspaceMembership.Active`, local `User.Active`,
+workspace/subscription gates, permissions, and ownership checks still decide access. Password
+reset/change revokes linked refresh and workspace-selection sessions.
 
 ## مستخدمو المنصة المركزية
 

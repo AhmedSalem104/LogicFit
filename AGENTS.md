@@ -156,7 +156,7 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 
 - Issue #137 traced IIS `500.30` to a publish overwrite of the server-only production configuration, removing the required `Otp:HmacSecret`.
 - Recovery must use the protected GitHub `production` Environment, bind the profile to an explicit Monster site id, capture configuration/web.config for rollback, recycle the app, and require repeated health checks.
-- Protected recovery secrets are `LOGICFIT_OTP_HMAC_SECRET`, `LOGICFIT_JWT_SECRET`, and `LOGICFIT_PASSWORD_RESET_SECRET`; never print or persist their values in artifacts.
+- Protected recovery secrets are `LOGICFIT_JWT_SECRET` and `LOGICFIT_PASSWORD_RESET_SECRET`; never print or persist their values in artifacts. OTP recovery settings are retired.
 
 ### 2026-08-01 — protected migration-aware publishing
 
@@ -214,3 +214,12 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 
 - A human Reviewer approval is not a required merge gate. Pull Requests may merge after the
   required CI, migration validation, health-check, and rollback checks pass.
+
+### 2026-08-03 — final Email + Password authentication
+
+- Issue #161 is merged to `develop`; active Identity and Platform authentication is Email +
+  Password only. Phone is contact data, not a credential or second factor.
+- Legacy `/api/Auth/login`, `/api/Auth/register`, phone-login, OTP, Passkey, and WebAuthn routes
+  and services are removed from the runtime. Email verification and reset use single-use links.
+- Migration `20260803090742_RemoveLegacyOtpArtifacts` is guarded and removes only the obsolete
+  `OtpChallenges` table when present. It has not been applied to Production.

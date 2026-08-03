@@ -21,8 +21,8 @@ All active authentication surfaces use Email + Password:
 | POST | `/api/identity/select-workspace` | Exchanges the identity context for a tenant session for an active membership. |
 
 There is no active Phone Login, OTP verification, Passkey, WebAuthn, or legacy login/register
-controller route. Historical OTP tables/providers remain only until their reviewed cleanup
-migration and are not reachable from the authentication API.
+controller route. Historical migrations may mention removed tables, but no OTP provider or runtime
+service is registered. `20260803090742_RemoveLegacyOtpArtifacts` is the guarded cleanup migration.
 
 ## Session and error rules
 

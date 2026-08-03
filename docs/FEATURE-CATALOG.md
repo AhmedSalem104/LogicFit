@@ -1,6 +1,8 @@
 # كتالوج ميزات LogicFit
 
-> **Issue #161 current state:** Identity and Platform authentication are Email + Password only.
+> **Current auth contract (Issue #161, merged to `develop`):** Identity and Platform authentication
+> are Email + Password only. Phone Login, OTP, Passkey, and WebAuthn are not active routes,
+> providers, or UI flows. Email verification and password reset use single-use email links.
 > Phone Login, OTP verification, Passkey, and WebAuthn are not active API features. Email
 > verification and password reset continue to use one-time links.
 
@@ -8,7 +10,8 @@
 
 هذا هو الفهرس المركزي لكل مجال وظيفي موجود في نظام LogicFit. لا يكرر قائمة الـendpoints؛ المرجع التفصيلي المولّد لها هو [كتالوج API](API-ENDPOINT-CATALOG.md). الغرض من هذا الملف أن يعرف مالك المنتج، الدعم، QA، والفرق الثلاثة أين توجد كل ميزة وما هو التدفق الذي يجب تحديثه عندما تتغير.
 
-> **Released – Issue #118; Issue #152 local change not released:** the identity feature keeps verified Email + Password and email-link recovery, centralized Phone + OTP, mandatory Platform login OTP, provider-independent delivery, and HttpOnly refresh cookies. Issue #152 removes post-login OTP step-up; Passkey/WebAuthn remains removed.
+> **Historical note:** earlier releases briefly contained Phone/OTP authentication. That behavior is
+> superseded by the Email + Password-only contract above and must not be enabled again.
 
 > **Issue #147 source implementation; production deployment not yet verified:** the Backend startup
 > checks and applies pending compiled EF migrations before seeding, serialized across SQL Server
@@ -41,7 +44,7 @@
 
 | المجال | ما هو مسجل حاليًا | مصدر التنفيذ / عائلة API | من يديره |
 |---|---|---|---|
-| دخول إدارة المنصة | بريد وكلمة مرور ثم OTP إلزامي، refresh cookie وتدوير/إلغاء الجلسات | `Features/Platform/Auth`، `/api/platform/auth/*` | `PlatformOwner`، `PlatformAdmin` |
+| دخول إدارة المنصة | بريد وكلمة مرور، refresh cookie وتدوير/إلغاء الجلسات | `Features/Platform/Auth`، `/api/platform/auth/*` | `PlatformOwner`، `PlatformAdmin` |
 | لوحة المتابعة | مؤشرات المنصة وقائمة المساحات | `Features/Platform/Dashboard`، `/api/platform/dashboard/*` | صلاحيات Platform المناسبة |
 | إدارة المساحات | إنشاء، قائمة، اعتماد، تعليق، تفعيل وأرشفة الجيم/المساحة | `Features/Platform/Tenants`، `/api/platform/tenants/*` | `ManageTenants` |
 | طلبات مساحة المدرب الحر | قائمة، بدء مراجعة، طلب معلومات، اعتماد مساحة، اعتماد عضوية ورفض مع `RowVersion` | `LogicFit.API/Features/Platform/WorkspaceApplications`، `/api/platform/workspace-applications/*` | `ManageTenants` |
@@ -57,8 +60,8 @@
 
 | المجال | ما هو مسجل حاليًا | مصدر التنفيذ / عائلة API | الأدوار/الحدود |
 |---|---|---|---|
-| المصادقة المتوافقة | تسجيل جيم تقليدي، دخول، refresh، logout-all، استعادة وتغيير كلمة المرور | `Features/Auth`، `/api/auth/*` | حساب محلي داخل مساحة محددة |
-| الهوية المستقلة | هوية عالمية، Email + Password أو Phone + OTP، اختيار مساحة، تغيير/تأكيد الهاتف وrecovery | `Features/Identity`، `/api/identity/*` | `IdentityAccount` لا يمنح دخول مساحة وحده؛ OTP للمصادقة ولا يطلب بعد الدخول |
+| المصادقة المتوافقة | refresh، logout-all، استعادة وتغيير كلمة المرور بعد الانتقال للهوية | `Features/Auth`، `/api/auth/*` | لا توجد Legacy login/register routes فعالة |
+| الهوية المستقلة | هوية عالمية، Email + Password، اختيار مساحة، تأكيد البريد وemail-link recovery | `Features/Identity`، `/api/identity/*` | `IdentityAccount` لا يمنح دخول مساحة وحده؛ الهاتف للتواصل فقط |
 | اختيار مساحة العمل | استبدال token اختيار قصير العمر بـJWT/refresh tenant الموجودين | `IdentityWorkspaceSession` و`WorkspaceMembership` | عضوية `Active` فقط؛ يطبق حارس المساحة قبل إصدار الجلسة |
 | حارس الهوية والعضوية | فحص موحد للحساب المحلي والهوية المرتبطة والعضوية عند login وrefresh واختيار المساحة وكل طلب tenant مصادق عليه | `IIdentityWorkspaceAccessGuard` و`IdentityWorkspaceAccessMiddleware` | الحسابات القديمة غير المرتبطة تعمل مؤقتًا بوضع توافق صريح قابل للإيقاف بعد ترحيل الربط المثبت بالبريد |
 | طلب مساحة مدرب حر | تقديم إنشاء مساحة وهوية وهوية بصرية مستقلة، جلسة متابعة محدودة، تعديل الحقول المطلوبة وإعادة التقديم | `Features/WorkspaceApplications`، `/api/workspace-applications/*` | public قبل الاعتماد؛ token المتابعة ليس JWT |

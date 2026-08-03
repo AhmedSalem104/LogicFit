@@ -1,3 +1,7 @@
+> **Archived compatibility reference (superseded 2026-08-03).** OTP and legacy authentication
+> examples below are historical and must not be used. The active Platform contract is Email +
+> Password only; see `docs/API-ENDPOINT-CATALOG.md`.
+
 <div align="center">
 
 # LogicFit — Platform Admin Dashboard

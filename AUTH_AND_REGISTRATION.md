@@ -1,3 +1,7 @@
+> **Archived compatibility reference (superseded 2026-08-03).** The historical OTP, phone-login,
+> and legacy `/api/auth/*` examples below are not active. Use the canonical documents under
+> `docs/` and `docs/API-ENDPOINT-CATALOG.md`; authentication is Email + Password only.
+
 <div align="center">
 
 # LogicFit — دليل المصادقة والتسجيل الكامل
