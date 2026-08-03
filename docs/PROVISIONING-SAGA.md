@@ -26,6 +26,11 @@ the provider reports a successful migration and connectivity check. A capacity s
 `AwaitingDatabaseCapacity`; provider failures produce `ProvisioningFailed`. Neither state starts
 the subscription term.
 
+Platform-created gyms use the same job/provider path but do not have a payment or subscription
+gate. After a successful allocation and migration, the resource is `Assigned` while the gym and
+owner membership remain `PendingApproval` until the platform operator approves the gym. Freelance
+workspace applications continue through payment and subscription activation.
+
 ## Persistent job and idempotency
 
 `ProvisioningJobs` is a Platform DB table with a unique

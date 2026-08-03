@@ -20,12 +20,6 @@
 
 Last reviewed: 2026-08-03
 
-> **Issue #202 — task branch:** the protected production migration plan and WebDeploy helper now
-> explicitly target the current compatibility `ApplicationDbContext`; no Platform/Tenant
-> baseline is applied to the shared Production database. This deployment correction is local and
-> unreleased until the protected CI, backup, migration review, health check, and rollback gates
-> pass.
-
 > **Issue #162 implementation:** Platform dashboard contracts now expose permission-filtered
 > operational summaries for application/payment review, database-pool capacity, provisioning,
 > backup and restore state. Read-only resource and provisioning lists are server-paged and omit
