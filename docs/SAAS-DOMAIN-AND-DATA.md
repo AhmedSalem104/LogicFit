@@ -92,6 +92,14 @@ Domain Event يكتب مع معاملة الأعمال، ثم يسجل في Outb
 الأرشفة تأتي بعد فترة احتفاظ محددة. Jobs الانتهاء/Grace/الإشعارات قابلة للتكرار بلا
 تكرار أثرها (Idempotent).
 
+عند تشغيل أكثر من نسخة من الـAPI، تستخدم Jobs الخلفية SQL Server application locks
+بموارد مستقلة: `LogicFit:Background:TenantSubscriptionLifecycle` و
+`LogicFit:Background:PlatformSubscriptionLifecycle` و
+`LogicFit:Background:OutboxProcessor`. النسخة التي لا تملك القفل تتخطى الدورة، بينما
+يمنع unique index على `OutboxMessages.IdempotencyKey` إنشاء نفس رسالة الحدث مرتين.
+Migration التنسيق يوقف التطبيق إذا كانت هناك مفاتيح مكررة تحتاج مراجعة تشغيلية؛ لا يحذف
+رسائل تاريخية تلقائياً.
+
 أضف Logs وMetrics وAlerts لفشل المدفوعات، Jobs، Outbox وانتقالات حالات الاشتراك.
 قبل نشر Migration كبير: Dry Run، Backup، تقرير مخالفات، Rollback Test وFeature Flag
 للتفعيل التدريجي.

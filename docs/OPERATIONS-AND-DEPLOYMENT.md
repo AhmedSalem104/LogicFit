@@ -107,6 +107,29 @@ publish credentials:
   -HealthCheckUrl https://your-host/health
 ```
 
+### Background jobs across multiple API instances (Issue #193, unreleased)
+
+The subscription lifecycle and Outbox workers coordinate through SQL Server session-owned
+application locks. The lock resources are
+`LogicFit:Background:TenantSubscriptionLifecycle`,
+`LogicFit:Background:PlatformSubscriptionLifecycle`, and
+`LogicFit:Background:OutboxProcessor`. A busy instance skips that pass; a lock or database
+failure must remain visible in logs/`JobExecutionLog` and must not be recorded as completed.
+
+Before applying the Issue #193 migrations, review duplicate Outbox keys in every affected
+database and resolve them through the approved operator procedure:
+
+```sql
+SELECT [IdempotencyKey], COUNT_BIG(*) AS [DuplicateCount]
+FROM [OutboxMessages]
+GROUP BY [IdempotencyKey]
+HAVING COUNT_BIG(*) > 1;
+```
+
+The migration intentionally throws before creating the unique index when this query returns
+rows. Do not delete Outbox history to force a migration through. The change is currently on
+the task branch and is not a Production deployment claim.
+
 ### Protected IIS 500.30 startup recovery
 
 Issue #137 recovered `site81605` after stdout identified a missing required secret. The same
