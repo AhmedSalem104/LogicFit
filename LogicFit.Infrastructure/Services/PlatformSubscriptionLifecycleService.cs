@@ -21,17 +21,21 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
     private const int GraceDays = 3;
     private const int PaymentRequestExpiryDays = 14;
     private const int ReminderDaysBefore = 7;
+    private const string LockResource = "LogicFit:Background:PlatformSubscriptionLifecycle";
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PlatformSubscriptionLifecycleService> _logger;
+    private readonly IDistributedLockProvider _distributedLockProvider;
     private readonly TimeSpan _period = TimeSpan.FromHours(24);
 
     public PlatformSubscriptionLifecycleService(
         IServiceScopeFactory scopeFactory,
-        ILogger<PlatformSubscriptionLifecycleService> logger)
+        ILogger<PlatformSubscriptionLifecycleService> logger,
+        IDistributedLockProvider distributedLockProvider)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _distributedLockProvider = distributedLockProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -42,53 +46,73 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
         {
             try
             {
-                using var scope = _scopeFactory.CreateScope();
-                var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                var usageCalculator = scope.ServiceProvider.GetRequiredService<ITenantUsageCalculator>();
-                var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
-                var execution = new JobExecutionLog
-                {
-                    JobName = nameof(PlatformSubscriptionLifecycleService),
-                    Status = "Running",
-                    StartedAtUtc = DateTime.UtcNow,
-                    AttemptCount = 1
-                };
-                context.JobExecutionLogs.Add(execution);
-                await context.SaveChangesAsync(stoppingToken);
-
-                await TransitionSubscriptionsAsync(context, notificationService, stoppingToken);
-                await SendExpiryRemindersAsync(context, notificationService, stoppingToken);
-                await ExpireStalePaymentRequestsAsync(context, stoppingToken);
-                await RecalculateUsageAsync(context, usageCalculator, stoppingToken);
-                execution.Status = "Completed";
-                execution.CompletedAtUtc = DateTime.UtcNow;
-                await context.SaveChangesAsync(stoppingToken);
+                await RunOnceAsync(stoppingToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in PlatformSubscriptionLifecycleService");
-                try
-                {
-                    using var failureScope = _scopeFactory.CreateScope();
-                    var failureContext = failureScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                    failureContext.JobExecutionLogs.Add(new JobExecutionLog
-                    {
-                        JobName = nameof(PlatformSubscriptionLifecycleService),
-                        Status = "Failed",
-                        StartedAtUtc = DateTime.UtcNow,
-                        CompletedAtUtc = DateTime.UtcNow,
-                        AttemptCount = 1,
-                        Error = ex.Message
-                    });
-                    await failureContext.SaveChangesAsync(stoppingToken);
-                }
-                catch (Exception logEx)
-                {
-                    _logger.LogError(logEx, "Unable to record failed platform job execution");
-                }
+                await RecordFailureAsync(ex, stoppingToken);
             }
 
             await Task.Delay(_period, stoppingToken);
+        }
+    }
+
+    private async Task RunOnceAsync(CancellationToken cancellationToken)
+    {
+        var lease = await _distributedLockProvider.TryAcquireAsync(LockResource, cancellationToken);
+        if (lease is null)
+        {
+            _logger.LogDebug("Skipping platform subscription lifecycle pass because another instance owns the lock.");
+            return;
+        }
+
+        await using (lease)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var usageCalculator = scope.ServiceProvider.GetRequiredService<ITenantUsageCalculator>();
+            var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+            var execution = new JobExecutionLog
+            {
+                JobName = nameof(PlatformSubscriptionLifecycleService),
+                Status = "Running",
+                StartedAtUtc = DateTime.UtcNow,
+                AttemptCount = 1
+            };
+            context.JobExecutionLogs.Add(execution);
+            await context.SaveChangesAsync(cancellationToken);
+
+            await TransitionSubscriptionsAsync(context, notificationService, cancellationToken);
+            await SendExpiryRemindersAsync(context, notificationService, cancellationToken);
+            await ExpireStalePaymentRequestsAsync(context, cancellationToken);
+            await RecalculateUsageAsync(context, usageCalculator, cancellationToken);
+            execution.Status = "Completed";
+            execution.CompletedAtUtc = DateTime.UtcNow;
+            await context.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private async Task RecordFailureAsync(Exception exception, CancellationToken cancellationToken)
+    {
+        _logger.LogError(exception, "Error in PlatformSubscriptionLifecycleService");
+        try
+        {
+            using var failureScope = _scopeFactory.CreateScope();
+            var failureContext = failureScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            failureContext.JobExecutionLogs.Add(new JobExecutionLog
+            {
+                JobName = nameof(PlatformSubscriptionLifecycleService),
+                Status = "Failed",
+                StartedAtUtc = DateTime.UtcNow,
+                CompletedAtUtc = DateTime.UtcNow,
+                AttemptCount = 1,
+                Error = exception.Message
+            });
+            await failureContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception logException)
+        {
+            _logger.LogError(logException, "Unable to record failed platform job execution");
         }
     }
 
@@ -128,13 +152,13 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
             {
                 sub.Status = TenantSubscriptionStatus.Expired;
                 if (tenant != null && tenant.Status == TenantStatus.Trial) tenant.Status = TenantStatus.Active;
-                context.OutboxMessages.Add(new OutboxMessage
+                await AddOutboxIfMissingAsync(context, new OutboxMessage
                 {
                     Type = "tenant.subscription.expired",
                     Payload = $"{{\"tenantId\":\"{sub.TenantId}\",\"subscriptionId\":\"{sub.Id}\"}}",
                     OccurredAtUtc = now,
                     IdempotencyKey = $"subscription:{sub.Id}:expired:{now:yyyyMMdd}"
-                });
+                }, cancellationToken);
                 expired++;
                 continue;
             }
@@ -147,13 +171,13 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
             {
                 sub.Status = TenantSubscriptionStatus.PastDue;
                 if (tenant != null) tenant.Status = TenantStatus.PastDue;
-                context.OutboxMessages.Add(new OutboxMessage
+                await AddOutboxIfMissingAsync(context, new OutboxMessage
                 {
                     Type = "tenant.subscription.past_due",
                     Payload = $"{{\"tenantId\":\"{sub.TenantId}\",\"subscriptionId\":\"{sub.Id}\"}}",
                     OccurredAtUtc = now,
                     IdempotencyKey = $"subscription:{sub.Id}:past-due:{now:yyyyMMdd}"
-                });
+                }, cancellationToken);
                 pastDue++;
                 continue;
             }
@@ -162,13 +186,13 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
             {
                 sub.Status = TenantSubscriptionStatus.Expired;
                 if (tenant != null && tenant.Status == TenantStatus.Cancelled) tenant.Status = TenantStatus.Active;
-                context.OutboxMessages.Add(new OutboxMessage
+                await AddOutboxIfMissingAsync(context, new OutboxMessage
                 {
                     Type = "tenant.subscription.expired",
                     Payload = $"{{\"tenantId\":\"{sub.TenantId}\",\"subscriptionId\":\"{sub.Id}\"}}",
                     OccurredAtUtc = now,
                     IdempotencyKey = $"subscription:{sub.Id}:expired:{now:yyyyMMdd}"
-                });
+                }, cancellationToken);
                 expired++;
                 continue;
             }
@@ -182,13 +206,13 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
                     sub.Status = TenantSubscriptionStatus.Expired;
                     if (tenant != null && tenant.Status == TenantStatus.PastDue)
                         tenant.Status = TenantStatus.Active;
-                    context.OutboxMessages.Add(new OutboxMessage
+                    await AddOutboxIfMissingAsync(context, new OutboxMessage
                     {
                         Type = "tenant.subscription.expired",
                         Payload = $"{{\"tenantId\":\"{sub.TenantId}\",\"subscriptionId\":\"{sub.Id}\"}}",
                         OccurredAtUtc = now,
                         IdempotencyKey = $"subscription:{sub.Id}:expired:{now:yyyyMMdd}"
-                    });
+                    }, cancellationToken);
                     expired++;
                 }
             }
@@ -199,6 +223,22 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
             await context.SaveChangesAsync(cancellationToken);
             _logger.LogInformation("Lifecycle: {PastDue} moved to PastDue, {Expired} moved to Expired", pastDue, expired);
         }
+    }
+
+    private static async Task AddOutboxIfMissingAsync(
+        ApplicationDbContext context,
+        OutboxMessage message,
+        CancellationToken cancellationToken)
+    {
+        if (context.OutboxMessages.Local.Any(existing => existing.IdempotencyKey == message.IdempotencyKey))
+            return;
+
+        if (await context.OutboxMessages.AnyAsync(
+                existing => existing.IdempotencyKey == message.IdempotencyKey,
+                cancellationToken))
+            return;
+
+        context.OutboxMessages.Add(message);
     }
 
     private async Task SendExpiryRemindersAsync(

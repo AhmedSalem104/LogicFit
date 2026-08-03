@@ -52,7 +52,7 @@
 | اشتراكات الـSaaS | العرض، الاستهلاك، lifecycle، التمديد ومعاينة الترقية | `Features/Platform/Subscriptions`، `/api/platform/subscriptions/*` | `ManageSubscriptions` |
 | الفوترة اليدوية | طرق الدفع، طلبات إثبات الدفع، الاعتماد/الرفض، فواتير المنصة | `PaymentMethods` و`PaymentRequests` و`Invoices`، `/api/platform/payment-*` و`/api/platform/invoices` | صلاحيات الفوترة المركزية |
 | مسؤولو المنصة وRBAC | إنشاء/تعطيل مسؤول، أدوار المنصة وخريطة صلاحياتها | `Administrators` و`Authorization`، `/api/platform/administrators/*` و`/api/platform/roles/*` | `PlatformOwner` |
-| المراقبة والتدقيق | alerts، audit logs، Outbox/jobs، النسخ الاحتياطي والتقارير | `Alerts`، `Audit`، `Operations`، `Backups`، `Reports` | أدوار تشغيل المنصة |
+| المراقبة والتدقيق | alerts، audit logs، Outbox/jobs مع تنسيق متعدد النسخ، النسخ الاحتياطي والتقارير | `Alerts`، `Audit`، `Operations`، `Backups`، `Reports` | أدوار تشغيل المنصة |
 | عقد تشغيل لوحة المنصة | ملخصات مراجعة الطلبات والدفع، سعة Pool، Provisioning، النسخ والاستعادة، وتشخيص إصدار الـAPI | `Features/Platform/Dashboard`، `DatabaseResources`، `Diagnostics`، `Operations`؛ `/api/platform/dashboard/*`، `/api/platform/database-resources`، `/api/platform/diagnostics/version`، `/api/platform/operations/provisioning` | `ManagePlatformReports` / `ManagePlatformBackups` |
 | الإشعارات المركزية | عرض الإشعارات وتعليمها كمقروءة | `Features/Platform/Notifications` | مسؤول المنصة المستهدف |
 
