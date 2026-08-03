@@ -13,14 +13,21 @@ public class DataSeeder
     private readonly ILogger<DataSeeder> _logger;
     private readonly RbacSeeder _rbacSeeder;
     private readonly PlanSeeder _planSeeder;
+    private readonly DatabaseResourceSeeder _databaseResourceSeeder;
     private readonly string _seedDataPath;
 
-    public DataSeeder(ApplicationDbContext context, ILogger<DataSeeder> logger, RbacSeeder rbacSeeder, PlanSeeder planSeeder)
+    public DataSeeder(
+        ApplicationDbContext context,
+        ILogger<DataSeeder> logger,
+        RbacSeeder rbacSeeder,
+        PlanSeeder planSeeder,
+        DatabaseResourceSeeder databaseResourceSeeder)
     {
         _context = context;
         _logger = logger;
         _rbacSeeder = rbacSeeder;
         _planSeeder = planSeeder;
+        _databaseResourceSeeder = databaseResourceSeeder;
         // Check multiple possible locations for seed data
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         _seedDataPath = Path.Combine(baseDir, "SeedData");
@@ -33,10 +40,11 @@ public class DataSeeder
         _logger.LogInformation("Seed data path: {Path}", _seedDataPath);
     }
 
-    public async Task SeedAsync()
+    public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
         try
         {
+            await _databaseResourceSeeder.SeedAsync(cancellationToken);
             await SeedTenantsAsync();
             await SeedMusclesAsync();
             await SeedExercisesAsync();

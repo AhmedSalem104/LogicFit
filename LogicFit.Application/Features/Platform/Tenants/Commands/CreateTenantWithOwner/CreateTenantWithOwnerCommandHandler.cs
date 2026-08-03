@@ -16,15 +16,18 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
     private readonly IApplicationDbContext _context;
     private readonly IRbacService _rbacService;
     private readonly IDateTimeService _dateTimeService;
+    private readonly IWorkspaceProvisioningSaga _provisioningSaga;
 
     public CreateTenantWithOwnerCommandHandler(
         IApplicationDbContext context,
         IRbacService rbacService,
-        IDateTimeService dateTimeService)
+        IDateTimeService dateTimeService,
+        IWorkspaceProvisioningSaga provisioningSaga)
     {
         _context = context;
         _rbacService = rbacService;
         _dateTimeService = dateTimeService;
+        _provisioningSaga = provisioningSaga;
     }
 
     public async Task<PlatformTenantDto> Handle(CreateTenantWithOwnerCommand request, CancellationToken cancellationToken)
@@ -69,6 +72,7 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
             Subdomain = request.Subdomain?.ToLowerInvariant(),
             Email = request.Email,
             PhoneNumber = request.PhoneNumber,
+            WorkspaceType = WorkspaceType.Gym,
             Status = TenantStatus.PendingApproval,
             BrandingSettings = new BrandingSettings
             {
@@ -106,7 +110,37 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
 
         await _rbacService.EnsureUserInRoleAsync(owner.Id, tenant.Id, SystemRoles.Owner, cancellationToken);
 
+        // A platform-created gym is an already-approved workspace application. Keeping the
+        // provisioning intent in ApplicationRequests lets the same retryable saga allocate one
+        // resource, migrate it, seed the owner and record the mapping.
+        var now = _dateTimeService.UtcNow;
+        var provisioningApplication = new ApplicationRequest
+        {
+            IdentityAccountId = ownerIdentity.Id,
+            ApplicationType = ApplicationType.GymWorkspaceCreation,
+            Status = ApplicationRequestStatus.Approved,
+            ProvisionedWorkspaceId = tenant.Id,
+            TargetScopeKey = $"platform-gym:{tenant.Id:N}",
+            RequestedRole = UserRole.Owner,
+            PayloadJson = "{}",
+            SubmittedAt = now,
+            ReviewedAt = now,
+            ReviewedBy = "platform-create"
+        };
+        _context.ApplicationRequests.Add(provisioningApplication);
+        _context.ApplicationRequestRevisions.Add(new ApplicationRequestRevision
+        {
+            ApplicationRequestId = provisioningApplication.Id,
+            RevisionNumber = 1,
+            PayloadJson = provisioningApplication.PayloadJson,
+            SubmittedAt = now,
+            SubmittedBy = "platform-create"
+        });
+
         await _context.SaveChangesAsync(cancellationToken);
+        var provisioning = await _provisioningSaga.RunAsync(provisioningApplication.Id, cancellationToken);
+        if (provisioning.Status == ProvisioningJobStatus.AwaitingDatabaseCapacity)
+            throw new ConflictException("لا توجد قاعدة بيانات متاحة أضف Connection جديدا أولا.");
 
         return new PlatformTenantDto
         {

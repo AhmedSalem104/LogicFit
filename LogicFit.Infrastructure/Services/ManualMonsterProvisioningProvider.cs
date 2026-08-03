@@ -152,6 +152,14 @@ public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningPro
             var localOwner = await tenantDb.Users
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(x => x.IdentityAccountId == application.IdentityAccountId && !x.IsDeleted, cancellationToken);
+            // Platform-created gyms already have a compatibility owner row. Reusing that id in
+            // the tenant database keeps the membership foreign key stable across the split. A
+            // freelance workspace has no central owner yet, so it receives a new local id.
+            var existingPlatformOwnerId = await platformDb.Set<User>()
+                .IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId && x.IdentityAccountId == application.IdentityAccountId && !x.IsDeleted)
+                .Select(x => (Guid?)x.Id)
+                .FirstOrDefaultAsync(cancellationToken);
             var ownerRoleName = application.RequestedRole == UserRole.FreelanceOwner
                 ? SystemRoles.FreelanceOwner
                 : SystemRoles.Owner;
@@ -194,6 +202,7 @@ public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningPro
             {
                 localOwner = new User
                 {
+                    Id = existingPlatformOwnerId ?? Guid.NewGuid(),
                     TenantId = tenantId,
                     IdentityAccountId = application.IdentityAccountId,
                     Email = application.IdentityAccount.Email,

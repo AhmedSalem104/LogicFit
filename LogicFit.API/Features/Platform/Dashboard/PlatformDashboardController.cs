@@ -28,11 +28,27 @@ public sealed class PlatformDashboardController(IMediator mediator, IApplication
         if (status.HasValue) tenants = tenants.Where(x => x.Status == status.Value);
         var subscriptions = context.TenantSubscriptions.AsNoTracking().IgnoreQueryFilters().Where(x => !x.IsDeleted);
         if (planId.HasValue) subscriptions = subscriptions.Where(x => x.PlanId == planId.Value);
+        var mappings = context.TenantDatabaseMappings.AsNoTracking().IgnoreQueryFilters().Where(x => x.IsActive);
+        var resources = context.DatabaseResources.AsNoTracking().IgnoreQueryFilters();
+        var provisioning = context.ProvisioningJobs.AsNoTracking().IgnoreQueryFilters();
+        var backups = context.DatabaseBackups.AsNoTracking().IgnoreQueryFilters();
         return Ok(await PlatformPaging.CreateAsync(tenants.OrderBy(x => x.Name).Select(tenant => new
         {
             tenant.Id, tenant.Name, tenant.Subdomain, tenant.Status, tenant.CreatedAt,
             MembersCount = context.Users.IgnoreQueryFilters().Count(user => user.TenantId == tenant.Id && user.Role == UserRole.Client && !user.IsDeleted),
-            Subscription = subscriptions.Where(subscription => subscription.TenantId == tenant.Id).OrderByDescending(subscription => subscription.CreatedAt).Select(subscription => new { subscription.Status, subscription.EndDate, subscription.PlanId, PlanName = subscription.Plan.Name }).FirstOrDefault()
+            Subscription = subscriptions.Where(subscription => subscription.TenantId == tenant.Id).OrderByDescending(subscription => subscription.CreatedAt).Select(subscription => new { subscription.Status, subscription.EndDate, subscription.PlanId, PlanName = subscription.Plan.Name }).FirstOrDefault(),
+            DatabaseResource = mappings.Where(mapping => mapping.TenantId == tenant.Id)
+                .Join(resources, mapping => mapping.DatabaseResourceId, resource => resource.Id,
+                    (mapping, resource) => new { resource.Id, resource.Status, resource.AssignedAtUtc, resource.LastHealthCheckAtUtc })
+                .FirstOrDefault(),
+            Provisioning = provisioning.Where(job => job.TenantId == tenant.Id)
+                .OrderByDescending(job => job.CreatedAt)
+                .Select(job => new { job.Status, job.DatabaseResourceId, job.LastErrorCode })
+                .FirstOrDefault(),
+            Backup = backups.Where(backup => backup.TenantId == tenant.Id)
+                .OrderByDescending(backup => backup.CompletedAtUtc ?? backup.StartedAtUtc)
+                .Select(backup => new { backup.Status, backup.CompletedAtUtc, backup.SizeBytes })
+                .FirstOrDefault()
         }), page, pageSize, cancellationToken));
     }
 }
