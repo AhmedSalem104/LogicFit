@@ -1,4 +1,6 @@
+using System.Data;
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
@@ -48,23 +50,6 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
 
         if (products.Count != productIds.Count)
             throw new DomainException("One or more products not found");
-
-        var stockItems = await _context.StockItems
-            .Where(s => s.TenantId == tenantId && s.BranchId == request.BranchId && productIds.Contains(s.ProductId))
-            .ToListAsync(cancellationToken);
-
-        // Stock check
-        foreach (var item in request.Items)
-        {
-            var product = products.First(p => p.Id == item.ProductId);
-            if (product.TrackStock)
-            {
-                var stock = stockItems.FirstOrDefault(s => s.ProductId == item.ProductId);
-                var available = stock?.Quantity ?? 0;
-                if (available < item.Quantity)
-                    throw new DomainException($"Insufficient stock for '{product.Name}'. Available: {available}");
-            }
-        }
 
         Coupon? coupon = null;
         if (request.CouponId.HasValue)
@@ -174,6 +159,39 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
         foreach (var si in saleItems)
             si.SaleId = sale.Id;
 
+        await using var dbTransaction = await _context.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+
+        var stockAfterByProduct = new Dictionary<Guid, decimal>();
+        foreach (var item in request.Items
+                     .Where(item => products.First(product => product.Id == item.ProductId).TrackStock)
+                     .OrderBy(item => item.ProductId))
+        {
+            var product = products.First(product => product.Id == item.ProductId);
+            var quantityAfter = await StockConcurrencyOperations.TryDecreaseExistingAsync(
+                _context,
+                tenantId,
+                product.Id,
+                request.BranchId,
+                item.Quantity,
+                now,
+                cancellationToken);
+
+            if (!quantityAfter.HasValue)
+            {
+                var available = await _context.StockItems
+                    .Where(stock => stock.TenantId == tenantId &&
+                                    stock.BranchId == request.BranchId &&
+                                    stock.ProductId == product.Id)
+                    .Select(stock => (decimal?)stock.Quantity)
+                    .SingleOrDefaultAsync(cancellationToken) ?? 0m;
+                throw new DomainException($"Insufficient stock for '{product.Name}'. Available: {available}");
+            }
+
+            stockAfterByProduct[product.Id] = quantityAfter.Value;
+        }
+
         _context.Sales.Add(sale);
         foreach (var si in saleItems)
             _context.SaleItems.Add(si);
@@ -184,22 +202,6 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
             var product = products.First(p => p.Id == item.ProductId);
             if (!product.TrackStock) continue;
 
-            var stock = stockItems.FirstOrDefault(s => s.ProductId == item.ProductId);
-            if (stock == null)
-            {
-                stock = new StockItem
-                {
-                    Id = Guid.NewGuid(),
-                    TenantId = tenantId,
-                    ProductId = item.ProductId,
-                    BranchId = request.BranchId,
-                    Quantity = 0
-                };
-                _context.StockItems.Add(stock);
-            }
-            stock.Quantity -= item.Quantity;
-            stock.LastMovementAt = now;
-
             _context.StockMovements.Add(new StockMovement
             {
                 Id = Guid.NewGuid(),
@@ -208,7 +210,7 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
                 BranchId = request.BranchId,
                 Type = StockMovementType.Out,
                 Quantity = item.Quantity,
-                QuantityAfter = stock.Quantity,
+                QuantityAfter = stockAfterByProduct[product.Id],
                 Reason = "Sale",
                 ReferenceType = "Sale",
                 ReferenceId = sale.Id,
@@ -298,6 +300,7 @@ public class CheckoutSaleCommandHandler : IRequestHandler<CheckoutSaleCommand, G
             $"Commission for Sale {saleNumber}", cancellationToken);
 
         await _context.SaveChangesAsync(cancellationToken);
+        await dbTransaction.CommitAsync(cancellationToken);
         return sale.Id;
     }
 

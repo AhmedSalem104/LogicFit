@@ -91,10 +91,10 @@
 | المجال | ما هو مسجل حاليًا | مصدر التنفيذ / عائلة API | المستخدمون الرئيسيون |
 |---|---|---|---|
 | اشتراكات العملاء | باقات واشتراكات العملاء داخل الجيم، حالة العضوية وتجديدها | `Subscriptions` | Owner / Reception / Accountant |
-| المبيعات والفواتير | POS، المبيعات، الفواتير، المدفوعات والمعاملات | `Sales`، `Invoices`، `Payments`، `Transactions` | Reception / Accountant / Owner |
+| المبيعات والفواتير | POS، المبيعات، الفواتير، المدفوعات والمعاملات مع خصم مخزون ذري | `Sales`، `Invoices`، `Payments`، `Transactions` | Reception / Accountant / Owner |
 | فوترة المساحة | بيانات اشتراك الجيم/المدرب الحر وطلبات الدفع اليدوي | `TenantBilling` | Owner / Platform review |
 | العروض والضرائب | كوبونات، إعدادات الضريبة وفئات المصروفات والمصروفات | `Coupons`، `TaxSettings`، `ExpenseCategories`، `Expenses` | Owner / Accountant |
-| الكتالوج والمخزون | فئات المنتجات، المنتجات، المخزون والموردون | `ProductCategories`، `Products`، `Stock`، `Suppliers` | Owner / Manager / Accountant |
+| الكتالوج والمخزون | فئات المنتجات، المنتجات، المخزون والموردون مع تحديثات كمية آمنة للتزامن | `ProductCategories`، `Products`، `Stock`، `Suppliers` | Owner / Manager / Accountant |
 | الأصول والصيانة | المعدات وخطط/سجلات الصيانة | `Equipment`، `Maintenance` | Owner / Manager |
 
 ## حالات الوصول التي يجب أن تراعيها كل ميزة

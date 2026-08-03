@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
@@ -22,19 +23,6 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
     {
         var tenantId = _tenantService.GetCurrentTenantId();
 
-        var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == request.UserId && u.TenantId == tenantId && !u.IsDeleted, cancellationToken)
-            ?? throw new NotFoundException("User", request.UserId);
-
-        // Get user's current balance from last transaction
-        var lastTransaction = await _context.WalletTransactions
-            .Where(t => t.TenantId == tenantId && t.UserId == request.UserId)
-            .OrderByDescending(t => t.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var currentBalance = lastTransaction?.BalanceAfter ?? 0;
-
-        // Calculate new balance based on transaction type
         var balanceChange = request.Type switch
         {
             TransactionType.Deposit => request.Amount,
@@ -42,19 +30,16 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
             TransactionType.Withdrawal => -request.Amount,
             TransactionType.Payment => -request.Amount,
             TransactionType.Adjustment => request.Amount, // Can be positive or negative
-            _ => 0
+            _ => throw new ValidationException("Type", "Unsupported wallet transaction type")
         };
 
-        var newBalance = currentBalance + balanceChange;
-
-        if ((request.Type == TransactionType.Withdrawal || request.Type == TransactionType.Payment)
-            && request.Amount > user.WalletBalance)
-            throw new ValidationException("Amount", "Insufficient wallet balance");
-
-        if (newBalance < 0)
-            throw new ValidationException("Amount", "Wallet balance cannot become negative");
-
-        user.WalletBalance = newBalance;
+        await using var dbTransaction = await _context.BeginTransactionAsync(cancellationToken);
+        var newBalance = await WalletBalanceOperations.ApplyAsync(
+            _context,
+            tenantId,
+            request.UserId,
+            balanceChange,
+            cancellationToken);
 
         var transaction = new WalletTransaction
         {
@@ -70,6 +55,7 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
 
         _context.WalletTransactions.Add(transaction);
         await _context.SaveChangesAsync(cancellationToken);
+        await dbTransaction.CommitAsync(cancellationToken);
 
         return transaction.Id;
     }
