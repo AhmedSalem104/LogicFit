@@ -379,7 +379,8 @@ Tenant requests resolve a tenant before authorization. Tenant query filters, ten
 - Duplicate subscription refunds are rejected.
 - Audit logs redact password and token properties.
 - Upload deletion is constrained to the uploads root; upload subfolders and MIME types are validated.
-- Global API rate limiting is enabled with configurable defaults.
+- Global and sensitive-endpoint API rate limiting is configurable for Redis-backed multi-instance
+  operation or explicit upstream-gateway ownership; non-production local fallback remains available.
 - Wallet and stock entities use SQL Server rowversion concurrency tokens.
 - Coupon uses use a rowversion concurrency token.
 - Manual wallet transactions validate balance and update the user wallet balance.
@@ -399,8 +400,8 @@ fails startup if apply or post-apply verification fails.
 
 ## Verification status
 
-- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 119 passing tests on 2026-08-01 after the Issue #134 deployment and EF operator changes.
-- `dotnet build LogicFit.sln -c Release --no-restore`: successful; four pre-existing nullable warnings remain in coach-client, gate-access, and client-subscription query projections.
+- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 160 passing tests on 2026-08-03 after the Issue #193, #195, and #197 changes.
+- `dotnet build LogicFit.sln -c Release --no-restore`: successful on 2026-08-03; five pre-existing nullable warnings remain in Application query projections.
 - `npm run build` in `LogiFit_Platform_Admin_Dashboard`: successful.
 
 ## CI/CD policy
@@ -420,7 +421,8 @@ fails startup if apply or post-apply verification fails.
 
 ## Known remaining work
 
-- Replace in-process rate limiting and memory cache with gateway/Redis-backed distributed controls for multi-instance production.
+- Provide the protected production Redis endpoint/credential and complete a multi-instance rollout
+  verification for Issue #197; no Production deployment is implied by the source change.
 - Add coupon usage idempotency and payment request idempotency keys.
 - Move private uploads to object storage with signed URLs and malware scanning.
 - Add integration, end-to-end, load, concurrency, and tenant-isolation tests.
@@ -430,6 +432,15 @@ fails startup if apply or post-apply verification fails.
 
 ## Change log
 
+### 2026-08-03 — distributed Redis controls (Issue #197)
+
+- Added secret-safe Redis connection resolution for the tenant-access distributed cache, including
+  production startup validation and a development-only in-memory fallback.
+- Replaced per-process fixed-window counters with atomic Redis-backed counters when application
+  rate limiting is enabled; `RateLimiting__ManagedByGateway=true` explicitly delegates the boundary
+  to an upstream gateway.
+- No API route, frontend, business-data, or EF migration change was required. Redis is not the
+  source of truth for wallet or stock.
 ### 2026-08-03 — wallet and stock concurrency hardening (Issue #195, task branch)
 
 - Wallet balance mutations now use guarded SQL arithmetic inside the same database transaction
@@ -440,8 +451,8 @@ fails startup if apply or post-apply verification fails.
   movements and business records commit with the quantity change; stock creation paths use a
   serializable transaction to protect the unique tenant/product/branch boundary.
 - Added SQL Server concurrency integration coverage for competing wallet debits and stock
-  decrements. No new API route, frontend contract, or database migration is introduced; this
-  change is unreleased and has not been deployed to Production.
+  decrements. No new API route, frontend contract, or database migration was introduced; the
+  change is merged to `develop` and has not been deployed to Production.
 ### 2026-08-03 — background job coordination (Issue #193, task branch)
 
 - Added SQL Server session-owned application locks for tenant subscription lifecycle,

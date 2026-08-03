@@ -1,4 +1,6 @@
+using LogicFit.API.Configuration;
 using LogicFit.API.Middleware;
+using LogicFit.API.RateLimiting;
 using LogicFit.API.Security;
 using LogicFit.Application;
 using LogicFit.Infrastructure;
@@ -7,6 +9,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using StackExchange.Redis;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 
@@ -29,7 +32,63 @@ builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IRefreshTokenCookieManager, RefreshTokenCookieManager>();
 
-builder.Services.AddRateLimiter(options =>
+var redisSettings = RedisConnectionSettings.TryResolve(builder.Configuration);
+var redisEnabled = RedisConnectionSettings.IsEnabled(builder.Configuration, redisSettings);
+var redisRequired = RedisConnectionSettings.IsRequired(builder.Configuration, builder.Environment);
+RedisConnectionSettings.Validate(redisRequired, redisEnabled, redisSettings);
+
+var redisMultiplexer = default(IConnectionMultiplexer);
+if (redisEnabled && redisSettings is not null)
+{
+    redisMultiplexer = ConnectionMultiplexer.Connect(redisSettings.CreateConfigurationOptions());
+    builder.Services.AddSingleton<IConnectionMultiplexer>(redisMultiplexer);
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.ConfigurationOptions = redisSettings.CreateConfigurationOptions();
+        options.InstanceName = redisSettings.InstanceName;
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+
+var rateLimitingManagedByGateway = builder.Configuration.GetValue("RateLimiting:ManagedByGateway", false);
+if (builder.Environment.IsProduction() && !rateLimitingManagedByGateway && redisMultiplexer is null)
+{
+    throw new InvalidOperationException(
+        "Production rate limiting requires Redis or an explicitly configured upstream gateway.");
+}
+
+RateLimiter CreateFixedWindowLimiter(
+    string policyName,
+    string partitionKey,
+    int permitLimit,
+    TimeSpan window)
+{
+    if (redisMultiplexer is not null)
+    {
+        return new RedisFixedWindowRateLimiter(
+            redisMultiplexer,
+            redisSettings!.InstanceName,
+            policyName,
+            partitionKey,
+            permitLimit,
+            window);
+    }
+
+    return new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
+    {
+        PermitLimit = permitLimit,
+        Window = window,
+        QueueLimit = 0,
+        AutoReplenishment = true
+    });
+}
+
+if (!rateLimitingManagedByGateway)
+{
+    builder.Services.AddRateLimiter(options =>
 {
     var permitLimit = builder.Configuration.GetValue("RateLimiting:PermitLimit", 120);
     var windowSeconds = builder.Configuration.GetValue("RateLimiting:WindowSeconds", 60);
@@ -42,72 +101,42 @@ builder.Services.AddRateLimiter(options =>
         return $"{ip}:{identity}:{(string.IsNullOrWhiteSpace(device) ? "unknown-device" : device)}";
     }
     options.AddPolicy("auth-login", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
+        RateLimitPartition.Get(
             SecurityPartition(context),
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(15),
-                QueueLimit = 0,
-                AutoReplenishment = true
-            }));
+            partitionKey => CreateFixedWindowLimiter(
+                "auth-login", partitionKey, 10, TimeSpan.FromMinutes(15))));
     options.AddPolicy("invite-acceptance", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
+        RateLimitPartition.Get(
             SecurityPartition(context),
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(15),
-                QueueLimit = 0,
-                AutoReplenishment = true
-            }));
+            partitionKey => CreateFixedWindowLimiter(
+                "invite-acceptance", partitionKey, 10, TimeSpan.FromMinutes(15))));
     options.AddPolicy("identity-email-actions", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
+        RateLimitPartition.Get(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 5,
-                Window = TimeSpan.FromMinutes(15),
-                QueueLimit = 0,
-                AutoReplenishment = true
-            }));
+            partitionKey => CreateFixedWindowLimiter(
+                "identity-email-actions", partitionKey, 5, TimeSpan.FromMinutes(15))));
     options.AddPolicy("identity-public-join", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
+        RateLimitPartition.Get(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(15),
-                QueueLimit = 0,
-                AutoReplenishment = true
-            }));
+            partitionKey => CreateFixedWindowLimiter(
+                "identity-public-join", partitionKey, 10, TimeSpan.FromMinutes(15))));
     options.AddPolicy("sensitive-action", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
+        RateLimitPartition.Get(
             SecurityPartition(context),
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 5,
-                Window = TimeSpan.FromMinutes(15),
-                QueueLimit = 0,
-                AutoReplenishment = true
-            }));
+            partitionKey => CreateFixedWindowLimiter(
+                "sensitive-action", partitionKey, 5, TimeSpan.FromMinutes(15))));
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-        RateLimitPartition.GetFixedWindowLimiter(
+        RateLimitPartition.Get(
             context.User?.Identity?.IsAuthenticated == true
                 ? context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown"
                 : context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = permitLimit,
-                Window = TimeSpan.FromSeconds(windowSeconds),
-                QueueLimit = 0,
-                AutoReplenishment = true
-            }));
-});
+            partitionKey => CreateFixedWindowLimiter(
+                "global", partitionKey, permitLimit, TimeSpan.FromSeconds(windowSeconds))));
+    });
+}
 
-// Short-lived distributed cache backing the tenant-access gate. In-memory today; swap to
-// AddStackExchangeRedisCache for multi-instance scale (config only — no code change).
-builder.Services.AddDistributedMemoryCache();
+// Tenant-access state is shared through Redis in production and can use the in-memory provider
+// only in explicitly non-production environments. Redis is never the wallet or stock source of truth.
 // Emits a typed TENANT_PENDING_APPROVAL body when the tenant authorization requirement fails.
 builder.Services.AddSingleton<
     Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler,
@@ -227,7 +256,10 @@ if (!Directory.Exists(uploadsPath))
 app.UseStaticFiles();
 
 app.UseCors("AppCors");
-app.UseRateLimiter();
+if (!rateLimitingManagedByGateway)
+{
+    app.UseRateLimiter();
+}
 
 app.UseAuthentication();
 
