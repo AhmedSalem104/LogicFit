@@ -2920,7 +2920,8 @@ namespace LogicFit.TenantDatabase.Migrations
 
                     b.Property<string>("IdempotencyKey")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("LastError")
                         .HasColumnType("nvarchar(max)");
@@ -2937,9 +2938,15 @@ namespace LogicFit.TenantDatabase.Migrations
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("ProcessedAtUtc", "OccurredAtUtc");
 
                     b.ToTable("OutboxMessages");
                 });

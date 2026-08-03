@@ -18,7 +18,7 @@
 > Password-only contract. Platform and Tenant operations use their existing JWT, permission,
 > workspace, subscription, ownership, and concurrency gates.
 
-Last reviewed: 2026-08-02
+Last reviewed: 2026-08-03
 
 > **Issue #162 implementation:** Platform dashboard contracts now expose permission-filtered
 > operational summaries for application/payment review, database-pool capacity, provisioning,
@@ -424,13 +424,25 @@ fails startup if apply or post-apply verification fails.
 - Use atomic SQL updates/transactions for wallet and stock hot paths, and add concurrency integration tests.
 - Add coupon usage idempotency and payment request idempotency keys.
 - Move private uploads to object storage with signed URLs and malware scanning.
-- Add distributed locks/idempotency for background lifecycle jobs.
 - Add integration, end-to-end, load, concurrency, and tenant-isolation tests.
 - Define the Monster ASP deployment target, application directory, service manager, backup command, and health URL before enabling automatic production deployment.
 - Stale local WebDeploy profiles are diagnostic metadata only. Production actions select the current protected GitHub Environment profile and require an exact expected Monster site id before any remote write.
 - `Scripts/deploy-webdeploy.ps1` performs credential-safe migration and MSDeploy orchestration and explicitly skips the server-only production configuration. With `-ApplyMigrations`, it requires a verified BACPAC reference, reviewed SQL, the protected database connection, and a health URL. `Scripts/recover-webdeploy-startup.ps1` is configuration-only incident recovery with rollback and health gates.
 
 ## Change log
+
+### 2026-08-03 — background job coordination (Issue #193, task branch)
+
+- Added SQL Server session-owned application locks for tenant subscription lifecycle,
+  platform subscription lifecycle, and Outbox processing. When another API instance owns
+  the lock, the current pass skips safely instead of duplicating work.
+- Added a bounded unique `OutboxMessages.IdempotencyKey`, a processing-order index, and
+  migrations for the legacy, Platform, and Tenant database contexts. The migration stops
+  with an operator-review error when existing duplicate keys are found; it never deletes
+  historical messages automatically.
+- Added contract coverage for lock acquisition, lock release, distinct job resources, and
+  the database idempotency model. This is not deployed to Production and has no API route
+  or frontend contract change.
 
 ### 2026-08-02 — startup migration safety net (Issue #147)
 
