@@ -13,18 +13,13 @@ LogicFit.Tests            اختبارات الانحدار والأمان وق�
 
 ## Identity email-security data (Issue #113, unreleased)
 
-`IdentityAccount` owns globally unique `NormalizedEmail` and, when present, a unique
-E.164 `NormalizedPhoneNumber`, plus separate email/phone verification timestamps.
+`IdentityAccount` owns globally unique `NormalizedEmail` and, when present, a unique E.164
+`NormalizedPhoneNumber` for contact data only, plus separate email/phone verification timestamps.
 `IdentityEmailActionToken` keeps one-use email verification/reset links as SHA-256 hashes.
-`OtpChallenge` stores the identity (optional for enumeration-safe requests), normalized phone,
-purpose, HMAC hash and per-challenge salt, expiry/attempt/resend counters, delivery/provider
-metadata, consume/revoke state, and SQL `rowversion`. `RefreshToken.RowVersion` serializes rotation and reuse
-detection. Migration `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp` removes the
-obsolete Passkey tables and creates these OTP records without changing tenant business data.
-
-Issue #152 removes the obsolete `OtpStepUpSession` runtime model and table through the guarded
-`20260802091114_RemovePostLoginOtpStepUp` migration. It does not remove authentication OTP
-challenges or change tenant business data.
+`RefreshToken.RowVersion` serializes rotation and reuse detection. The final authentication model
+contains no OTP, phone-login, Passkey, or WebAuthn runtime entity. Migration
+`20260803090742_RemoveLegacyOtpArtifacts` removes the obsolete `OtpChallenges` table with a guarded
+drop and does not change tenant business data.
 
 Migration `20260730143000_AddIdentityEmailSecurity` is additive and guards for existing production schemas. It marks existing identities verified during backfill so deployed identity users are not locked out, then adds the token table. It is applied separately through the reviewed migration procedure; its `Down` path is intentionally non-destructive.
 
@@ -90,12 +85,26 @@ Production schema state is advanced only by the explicit deployment migration st
 - لا تستخدم `Count + 1` لإنتاج رقم يشارك فيه أكثر من طلب؛ رقم الفاتورة له مولّد
   آمن متسلسل.
 
+تحديث WalletBalance يتم كعملية SQL محروسة داخل Transaction، ثم يكتب سجل
+`WalletTransaction` مع `BalanceAfter` الناتج من نفس التحديث. لا يُعاد حساب الرصيد من آخر
+سجل Ledger، ولا يسمح شرط الخصم بتجاوز الرصيد المتاح. وبالمثل، تغييرات `StockItem.Quantity`
+في التعديل/التحويل/POS تستخدم SQL arithmetic guarded، وتُحفظ حركة المخزون والسجل التجاري
+معاً؛ مسارات إنشاء صف المخزون تعمل تحت Serializable transaction.
+
 ## Outbox وJobs والمراقبة
 
 Domain Event يكتب مع معاملة الأعمال، ثم يسجل في Outbox. عامل خلفي يعالج الرسالة
 ويعلمها `Processed` أو `Failed` مع عدد المحاولات والخطأ. لا تحذف الرسالة مباشرة؛
 الأرشفة تأتي بعد فترة احتفاظ محددة. Jobs الانتهاء/Grace/الإشعارات قابلة للتكرار بلا
 تكرار أثرها (Idempotent).
+
+عند تشغيل أكثر من نسخة من الـAPI، تستخدم Jobs الخلفية SQL Server application locks
+بموارد مستقلة: `LogicFit:Background:TenantSubscriptionLifecycle` و
+`LogicFit:Background:PlatformSubscriptionLifecycle` و
+`LogicFit:Background:OutboxProcessor`. النسخة التي لا تملك القفل تتخطى الدورة، بينما
+يمنع unique index على `OutboxMessages.IdempotencyKey` إنشاء نفس رسالة الحدث مرتين.
+Migration التنسيق يوقف التطبيق إذا كانت هناك مفاتيح مكررة تحتاج مراجعة تشغيلية؛ لا يحذف
+رسائل تاريخية تلقائياً.
 
 أضف Logs وMetrics وAlerts لفشل المدفوعات، Jobs، Outbox وانتقالات حالات الاشتراك.
 قبل نشر Migration كبير: Dry Run، Backup، تقرير مخالفات، Rollback Test وFeature Flag

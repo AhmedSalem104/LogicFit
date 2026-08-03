@@ -58,6 +58,8 @@ The existing guides remain useful by audience. The following two references are 
 |---|---|
 | [Feature catalog](FEATURE-CATALOG.md) | Complete registry of the Platform, workspace, finance, fitness, HR, inventory, communication, identity, and frontend feature families, including the implementation source and responsible roles. |
 | [Authentication and workspace flows](AUTHENTICATION-AND-WORKSPACE-FLOWS.md) | The current legacy and identity-first login flows, workspace selection, freelance applications, review, approval, team membership, session recovery, and access gates. |
+| [Monster capability assessment](MONSTER-CAPABILITY-ASSESSMENT.md) | Current hosting limits, provider guards, and evidence required before native backup/restore or tenant activation. |
+| [Schema ownership inventory](SCHEMA-OWNERSHIP-INVENTORY.md) | Entity-by-entity Platform/Tenant ownership, shared contracts, and the baseline plan for the legacy migrations. |
 
 Keep those references synchronized with the source in the same Pull Request. `API-ENDPOINT-CATALOG.md` remains the generated authority for the exact HTTP contract; it complements, rather than replaces, the user-flow documentation.
 
@@ -65,3 +67,12 @@ Keep those references synchronized with the source in the same Pull Request. `AP
 السكربت ومراجعة التغيّر الناتج قبل الـPull Request. هذا يمنع فقد endpoint من
 التوثيق، ولا يلغي الحاجة إلى توثيق قرار الـDomain أو تدفق المستخدم في الملفات
 المتخصصة أعلاه.
+- [Platform/Tenant DbContext and Migration Split](DBCONTEXT-MIGRATION-SPLIT.md)
+- [Database Resource Pool](DATABASE-RESOURCE-POOL.md)
+- [Tenant Database Resolver](TENANT-DATABASE-RESOLVER.md)
+- [Application, Plan and Payment Activation](APPLICATION-PLAN-PAYMENT-ACTIVATION.md)
+- [Workspace Provisioning Saga](PROVISIONING-SAGA.md)
+- [Central Backup Orchestration](CENTRAL-BACKUP-ORCHESTRATION.md)
+- [Tenant Backup Export](TENANT-BACKUP-EXPORT.md)
+- [Conditional Restore](CONDITIONAL-RESTORE.md)
+- [Platform Dashboard Contract](PLATFORM-DASHBOARD-CONTRACT.md)

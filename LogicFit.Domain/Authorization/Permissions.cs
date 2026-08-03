@@ -24,6 +24,7 @@ public static class Permissions
     public const string ManageReports = "ManageReports";
     public const string ManageSettings = "ManageSettings";
     public const string ManageTenantBilling = "ManageTenantBilling";
+    public const string CreateAndDownloadTenantBackup = "CreateAndDownloadTenantBackup";
 
     // --- Platform permissions ---
     public const string ManagePlatform = "ManagePlatform";
@@ -38,7 +39,7 @@ public static class Permissions
     {
         ManageMembers, ViewMembers, CreateMembers, UpdateMembers, DeleteMembers, ManageCoaches, ManageAttendance, ManageClientSubscriptions,
         ManagePOS, ManageInventory, ManageEmployees, ManageBranches, ManageFinance,
-        ViewReports, ManageReports, ManageSettings, ManageTenantBilling
+        ViewReports, ManageReports, ManageSettings, ManageTenantBilling, CreateAndDownloadTenantBackup
     };
 
     /// <summary>All platform-scoped permission codes.</summary>

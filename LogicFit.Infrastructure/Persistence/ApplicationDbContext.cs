@@ -1,3 +1,4 @@
+using System.Data;
 using System.Reflection;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Common.Interfaces;
@@ -15,6 +16,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 {
     public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
         => Database.BeginTransactionAsync(cancellationToken);
+
+    public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(
+        IsolationLevel isolationLevel,
+        CancellationToken cancellationToken = default)
+        => Database.BeginTransactionAsync(isolationLevel, cancellationToken);
     private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeService _dateTimeService;
@@ -32,11 +38,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
     // DbSets
     public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<DatabaseResource> DatabaseResources => Set<DatabaseResource>();
+    public DbSet<TenantDatabaseMapping> TenantDatabaseMappings => Set<TenantDatabaseMapping>();
     public DbSet<TenantBrandAsset> TenantBrandAssets => Set<TenantBrandAsset>();
     public DbSet<IdentityAccount> IdentityAccounts => Set<IdentityAccount>();
     public DbSet<IdentityEmailActionToken> IdentityEmailActionTokens => Set<IdentityEmailActionToken>();
     public DbSet<IdentityWorkspaceSession> IdentityWorkspaceSessions => Set<IdentityWorkspaceSession>();
-    public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
     public DbSet<WorkspaceMembership> WorkspaceMemberships => Set<WorkspaceMembership>();
     public DbSet<WorkspaceInvite> WorkspaceInvites => Set<WorkspaceInvite>();
     public DbSet<WorkspaceClientJoinCode> WorkspaceClientJoinCodes => Set<WorkspaceClientJoinCode>();
@@ -136,6 +143,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<SubscriptionFeatureSnapshot> SubscriptionFeatureSnapshots => Set<SubscriptionFeatureSnapshot>();
     public DbSet<TenantPaymentMethod> TenantPaymentMethods => Set<TenantPaymentMethod>();
     public DbSet<PaymentRequest> PaymentRequests => Set<PaymentRequest>();
+    public DbSet<PaymentProof> PaymentProofs => Set<PaymentProof>();
+    public DbSet<ProvisioningJob> ProvisioningJobs => Set<ProvisioningJob>();
+    public DbSet<BackupBatch> BackupBatches => Set<BackupBatch>();
+    public DbSet<DatabaseBackup> DatabaseBackups => Set<DatabaseBackup>();
+    public DbSet<SensitiveActionGrant> SensitiveActionGrants => Set<SensitiveActionGrant>();
+    public DbSet<TenantBackupExport> TenantBackupExports => Set<TenantBackupExport>();
+    public DbSet<TenantBackupDownloadGrant> TenantBackupDownloadGrants => Set<TenantBackupDownloadGrant>();
+    public DbSet<RestoreJob> RestoreJobs => Set<RestoreJob>();
     public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
     public DbSet<SubscriptionInvoice> SubscriptionInvoices => Set<SubscriptionInvoice>();
     public DbSet<TenantUsage> TenantUsages => Set<TenantUsage>();

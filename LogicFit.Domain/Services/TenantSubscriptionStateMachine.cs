@@ -9,7 +9,8 @@ public static class TenantSubscriptionStateMachine
         new Dictionary<TenantSubscriptionStatus, TenantSubscriptionStatus[]>
         {
             [TenantSubscriptionStatus.None] = [TenantSubscriptionStatus.PendingPayment, TenantSubscriptionStatus.Trial, TenantSubscriptionStatus.Active],
-            [TenantSubscriptionStatus.PendingPayment] = [TenantSubscriptionStatus.Trial, TenantSubscriptionStatus.Active, TenantSubscriptionStatus.Cancelled],
+            [TenantSubscriptionStatus.PendingPayment] = [TenantSubscriptionStatus.PendingActivation, TenantSubscriptionStatus.Trial, TenantSubscriptionStatus.Active, TenantSubscriptionStatus.Cancelled],
+            [TenantSubscriptionStatus.PendingActivation] = [TenantSubscriptionStatus.Trial, TenantSubscriptionStatus.Active, TenantSubscriptionStatus.PendingPayment],
             [TenantSubscriptionStatus.Trial] = [TenantSubscriptionStatus.Active, TenantSubscriptionStatus.PendingPayment, TenantSubscriptionStatus.Expired, TenantSubscriptionStatus.Cancelled],
             [TenantSubscriptionStatus.Active] = [TenantSubscriptionStatus.GracePeriod, TenantSubscriptionStatus.PastDue, TenantSubscriptionStatus.Suspended, TenantSubscriptionStatus.Cancelled, TenantSubscriptionStatus.Expired],
             [TenantSubscriptionStatus.GracePeriod] = [TenantSubscriptionStatus.Active, TenantSubscriptionStatus.Expired, TenantSubscriptionStatus.Cancelled],

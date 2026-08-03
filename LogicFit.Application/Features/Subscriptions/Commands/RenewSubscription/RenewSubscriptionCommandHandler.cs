@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
@@ -29,7 +30,6 @@ public class RenewSubscriptionCommandHandler : IRequestHandler<RenewSubscription
 
         // Load existing subscription
         var oldSubscription = await _context.ClientSubscriptions
-            .Include(s => s.Client)
             .FirstOrDefaultAsync(s => s.Id == request.SubscriptionId && s.TenantId == tenantId, cancellationToken);
 
         if (oldSubscription == null)
@@ -58,16 +58,19 @@ public class RenewSubscriptionCommandHandler : IRequestHandler<RenewSubscription
         var amountPaid = request.AmountPaid ?? 0;
         var paymentMethod = request.PaymentMethod;
 
+        await using var dbTransaction = await _context.BeginTransactionAsync(cancellationToken);
+
         // Handle wallet payment
         if (request.PayFromWallet)
         {
             var walletPayAmount = amountPaid > 0 ? amountPaid : totalAmount;
-            var client = oldSubscription.Client;
-
-            if (client.WalletBalance < walletPayAmount)
-                throw new ValidationException("PayFromWallet", "Insufficient wallet balance");
-
-            client.WalletBalance -= walletPayAmount;
+            var balanceAfter = await WalletBalanceOperations.ApplyAsync(
+                _context,
+                tenantId,
+                oldSubscription.ClientId,
+                -walletPayAmount,
+                cancellationToken,
+                validationKey: "PayFromWallet");
             amountPaid = walletPayAmount;
             paymentMethod = Domain.Enums.PaymentMethod.Wallet;
 
@@ -77,7 +80,7 @@ public class RenewSubscriptionCommandHandler : IRequestHandler<RenewSubscription
                 UserId = oldSubscription.ClientId,
                 Type = TransactionType.Payment,
                 Amount = walletPayAmount,
-                BalanceAfter = client.WalletBalance,
+                BalanceAfter = balanceAfter,
                 Description = $"Subscription renewal - {plan.Name}",
                 ReferenceType = "Subscription"
             };
@@ -111,6 +114,7 @@ public class RenewSubscriptionCommandHandler : IRequestHandler<RenewSubscription
 
         _context.ClientSubscriptions.Add(newSubscription);
         await _context.SaveChangesAsync(cancellationToken);
+        await dbTransaction.CommitAsync(cancellationToken);
 
         return newSubscription.Id;
     }

@@ -1,3 +1,4 @@
+using System.Data;
 using LogicFit.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -8,11 +9,12 @@ namespace LogicFit.Application.Common.Interfaces;
 public interface IApplicationDbContext
 {
     DbSet<Tenant> Tenants { get; }
+    DbSet<DatabaseResource> DatabaseResources { get; }
+    DbSet<TenantDatabaseMapping> TenantDatabaseMappings { get; }
     DbSet<TenantBrandAsset> TenantBrandAssets { get; }
     DbSet<IdentityAccount> IdentityAccounts { get; }
     DbSet<IdentityEmailActionToken> IdentityEmailActionTokens { get; }
     DbSet<IdentityWorkspaceSession> IdentityWorkspaceSessions { get; }
-    DbSet<OtpChallenge> OtpChallenges { get; }
     DbSet<WorkspaceMembership> WorkspaceMemberships { get; }
     DbSet<WorkspaceInvite> WorkspaceInvites { get; }
     DbSet<WorkspaceClientJoinCode> WorkspaceClientJoinCodes { get; }
@@ -112,6 +114,14 @@ public interface IApplicationDbContext
     DbSet<SubscriptionFeatureSnapshot> SubscriptionFeatureSnapshots { get; }
     DbSet<TenantPaymentMethod> TenantPaymentMethods { get; }
     DbSet<PaymentRequest> PaymentRequests { get; }
+    DbSet<PaymentProof> PaymentProofs { get; }
+    DbSet<ProvisioningJob> ProvisioningJobs { get; }
+    DbSet<BackupBatch> BackupBatches { get; }
+    DbSet<DatabaseBackup> DatabaseBackups { get; }
+    DbSet<SensitiveActionGrant> SensitiveActionGrants { get; }
+    DbSet<TenantBackupExport> TenantBackupExports { get; }
+    DbSet<TenantBackupDownloadGrant> TenantBackupDownloadGrants { get; }
+    DbSet<RestoreJob> RestoreJobs { get; }
     DbSet<SubscriptionPayment> SubscriptionPayments { get; }
     DbSet<SubscriptionInvoice> SubscriptionInvoices { get; }
     DbSet<TenantUsage> TenantUsages { get; }
@@ -120,4 +130,7 @@ public interface IApplicationDbContext
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
     Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
+    Task<IDbContextTransaction> BeginTransactionAsync(
+        IsolationLevel isolationLevel,
+        CancellationToken cancellationToken = default);
 }

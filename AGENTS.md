@@ -86,8 +86,9 @@ Do not record secrets, passwords, refresh tokens, connection strings, publish pr
 - `develop` is the protected daily integration branch; `main` (or `master`, if that is the repository release branch) is protected production/release history.
 - Never push directly to `develop`, `main`, or `master`, and never force-push or delete them.
 - Start every task from the latest `origin/develop` and use `feature/<issue>-<slug>`, `fix/<issue>-<slug>`, or `chore/<issue>-<slug>`.
-- Open a Pull Request from the task branch into `develop`. CI must pass and at least one reviewer must approve before merge.
-- Release changes move from `develop` to `main`/`master` through a reviewed Pull Request.
+- Open a Pull Request from the task branch into `develop`. CI must pass before merge.
+- Release changes move from `develop` to `main`/`master` through a Pull Request with the required CI,
+  migration, health-check, and rollback validations.
 
 ```powershell
 git fetch origin
@@ -155,7 +156,7 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 
 - Issue #137 traced IIS `500.30` to a publish overwrite of the server-only production configuration, removing the required `Otp:HmacSecret`.
 - Recovery must use the protected GitHub `production` Environment, bind the profile to an explicit Monster site id, capture configuration/web.config for rollback, recycle the app, and require repeated health checks.
-- Protected recovery secrets are `LOGICFIT_OTP_HMAC_SECRET`, `LOGICFIT_JWT_SECRET`, and `LOGICFIT_PASSWORD_RESET_SECRET`; never print or persist their values in artifacts.
+- Protected recovery secrets are `LOGICFIT_JWT_SECRET` and `LOGICFIT_PASSWORD_RESET_SECRET`; never print or persist their values in artifacts. OTP recovery settings are retired.
 
 ### 2026-08-01 — protected migration-aware publishing
 
@@ -208,3 +209,17 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
   preferred production path.
 - `Database__StartupMigrations__Enabled=false` is an emergency operator switch only. The default is
   enabled; lock and command timeouts are bounded configuration values.
+
+### 2026-08-02 â€” merge gate
+
+- A human Reviewer approval is not a required merge gate. Pull Requests may merge after the
+  required CI, migration validation, health-check, and rollback checks pass.
+
+### 2026-08-03 — final Email + Password authentication
+
+- Issue #161 is merged to `develop`; active Identity and Platform authentication is Email +
+  Password only. Phone is contact data, not a credential or second factor.
+- Legacy `/api/Auth/login`, `/api/Auth/register`, phone-login, OTP, Passkey, and WebAuthn routes
+  and services are removed from the runtime. Email verification and reset use single-use links.
+- Migration `20260803090742_RemoveLegacyOtpArtifacts` is guarded and removes only the obsolete
+  `OtpChallenges` table when present. It has not been applied to Production.

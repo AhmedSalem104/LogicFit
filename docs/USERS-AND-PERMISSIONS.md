@@ -1,5 +1,13 @@
 # المستخدمون والصلاحيات والعزل
 
+## Issue #161 authentication boundary
+
+All users, including PlatformOwner and PlatformAdmin, authenticate with Email + Password. The
+Platform session is issued only after the linked identity is active, the email is verified, and
+the server reconciles the platform RBAC assignment. Authentication does not grant tenant access:
+the selected active membership, workspace/subscription gates, and permission claims remain
+required. Phone Login, OTP, Passkey, and WebAuthn are not active routes.
+
 ## مبدأ الحماية
 
 الـUI يحسن التجربة بإخفاء ما لا يملكه المستخدم، لكنه ليس حد أمان. كل Endpoint حساس
@@ -7,17 +15,14 @@
 هوية المستخدم وسياق الطلب هما مصدر تحديد المستأجر. سجلات المال والمراجعة لا تحذف أو
 تعدل من واجهة عامة.
 
-## Identity and OTP security (Issue #118, unreleased)
+## Identity and password security (Issue #161)
 
-An identity-first account may sign in with its verified, globally unique email and password,
-or a verified, unique E.164 phone and a purpose-bound OTP challenge. Email verification and
-password-reset links remain opaque, one-use, short-lived hash records. OTP codes are also
-one-use, short-lived HMAC records and are never returned by the API. Platform Owner/Admin
-must complete password plus OTP during login. No post-login Platform or Tenant operation requires
-another OTP challenge. Authentication never replaces authorization: `WorkspaceMembership.Active`,
-local `User.Active`, workspace/subscription gates, permissions, and ownership checks still
-decide access. Password reset/change and confirmed phone change revoke linked refresh and
-workspace-selection sessions.
+An identity-first account signs in with its verified, globally unique email and password. Phone is
+optional contact data only. Email verification and password-reset links remain opaque, one-use,
+short-lived hash records. Platform Owner/Admin use the same Email + Password flow. Authentication
+never replaces authorization: `WorkspaceMembership.Active`, local `User.Active`,
+workspace/subscription gates, permissions, and ownership checks still decide access. Password
+reset/change revokes linked refresh and workspace-selection sessions.
 
 ## مستخدمو المنصة المركزية
 
@@ -69,6 +74,10 @@ workspace-selection sessions.
 أهمها: `ManageMembers`/`ViewMembers`، `ManageCoaches`، `ManageAttendance`،
 `ManageClientSubscriptions`، `ManagePOS`، `ManageInventory`، `ManageEmployees`،
 `ManageBranches`، `ManageFinance` و`ManageSettings`.
+
+Tenant owners may also receive `CreateAndDownloadTenantBackup`. This permission is tenant-scoped
+and never grants Platform backup/restore access. Every export/download still requires password
+reauthentication and a short-lived single-use grant; the server derives the active TenantId.
 
 ## قواعد حسابات الإدارة
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.WorkspaceApplications.DTOs;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
@@ -62,6 +63,21 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
             throw new UnauthorizedException("Invalid credentials");
         }
 
+        var existingPayment = await _context.PaymentRequests
+            .Include(x => x.ApplicationRequest)
+            .FirstOrDefaultAsync(x => x.IdentityAccountId == identity.Id &&
+                                      x.IdempotencyKey == request.IdempotencyKey, cancellationToken);
+        if (existingPayment?.ApplicationRequest is not null)
+            return await CreateTrackingSessionAsync(existingPayment.ApplicationRequest, _dateTimeService.UtcNow, cancellationToken);
+
+        var plan = await _context.Plans
+            .Include(x => x.PlanFeatures)
+            .ThenInclude(x => x.Feature)
+            .FirstOrDefaultAsync(x => x.Id == request.PlanId && x.IsActive && !x.IsDeleted, cancellationToken)
+            ?? throw new NotFoundException(nameof(Plan), request.PlanId);
+        if (request.PaymentAmount != plan.Price)
+            throw new ValidationException("PaymentAmount", "The submitted amount must match the selected plan snapshot.");
+
         var duplicateExists = await _context.ApplicationRequests.AnyAsync(x =>
             x.IdentityAccountId == identity.Id &&
             x.ApplicationType == ApplicationType.FreelanceWorkspaceCreation &&
@@ -86,6 +102,17 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
             throw new ConflictException("This workspace identifier is already reserved.");
 
         var now = _dateTimeService.UtcNow;
+        var planSnapshot = PlanSnapshotFactory.Create(plan, request.BillingCycle, now);
+        var workspace = new Tenant
+        {
+            Name = string.IsNullOrWhiteSpace(request.BrandName) ? request.WorkspaceName.Trim() : request.BrandName.Trim(),
+            Subdomain = identifier,
+            WorkspaceType = WorkspaceType.FreelanceCoach,
+            Status = TenantStatus.PendingApproval,
+            Email = identity.Email,
+            PhoneNumber = identity.PhoneNumber
+        };
+        _context.Tenants.Add(workspace);
         var application = new ApplicationRequest
         {
             IdentityAccountId = identity.Id,
@@ -94,6 +121,10 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
             TargetScopeKey = WorkspaceCreationScope,
             ReservedWorkspaceIdentifier = identifier,
             RequestedRole = UserRole.FreelanceOwner,
+            PlanId = plan.Id,
+            BillingCycle = request.BillingCycle,
+            PlanSnapshotJson = planSnapshot,
+            PlanSnapshotAtUtc = now,
             PayloadJson = JsonSerializer.Serialize(new FreelanceWorkspaceApplicationPayload
             {
                 WorkspaceName = request.WorkspaceName.Trim(),
@@ -115,6 +146,7 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
             }),
             SubmittedAt = now
         };
+        application.ProvisionedWorkspaceId = workspace.Id;
         _context.ApplicationRequests.Add(application);
         _context.ApplicationRequestRevisions.Add(new ApplicationRequestRevision
         {
@@ -123,6 +155,47 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
             PayloadJson = application.PayloadJson,
             SubmittedAt = now,
             SubmittedBy = identity.Id.ToString()
+        });
+
+        var subscription = new TenantSubscription
+        {
+            TenantId = workspace.Id,
+            PlanId = plan.Id,
+            Status = TenantSubscriptionStatus.PendingPayment,
+            BillingCycle = request.BillingCycle,
+            Amount = plan.Price,
+            Currency = plan.Currency
+        };
+        _context.TenantSubscriptions.Add(subscription);
+        var paymentRequest = new PaymentRequest
+        {
+            TenantId = workspace.Id,
+            TenantSubscriptionId = subscription.Id,
+            ApplicationRequestId = application.Id,
+            IdentityAccountId = identity.Id,
+            PlanId = plan.Id,
+            BillingCycle = request.BillingCycle,
+            PlanSnapshotJson = planSnapshot,
+            IdempotencyKey = request.IdempotencyKey.Trim(),
+            Amount = plan.Price,
+            Currency = plan.Currency,
+            TransactionNumber = request.PaymentTransactionNumber?.Trim(),
+            PaymentDate = request.PaymentDate ?? now,
+            Status = PaymentRequestStatus.PendingReview,
+            Operation = PaymentRequestOperation.NewSubscription
+        };
+        _context.PaymentRequests.Add(paymentRequest);
+        _context.PaymentProofs.Add(new PaymentProof
+        {
+            PaymentRequestId = paymentRequest.Id,
+            Version = 1,
+            StorageKey = request.ProofStorageKey.Trim(),
+            OriginalFileName = request.ProofOriginalFileName.Trim(),
+            ContentType = request.ProofContentType,
+            SizeBytes = request.ProofSizeBytes,
+            Sha256 = request.ProofSha256.ToUpperInvariant(),
+            UploadedAtUtc = now,
+            UploadedBy = identity.Id.ToString()
         });
 
         var rawToken = ApplicationTrackingToken.CreateRaw();
@@ -137,6 +210,24 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
         await _context.SaveChangesAsync(cancellationToken);
 
         return new ApplicationTrackingSessionDto(application.Id, application.Status, rawToken, trackingSession.ExpiresAt);
+    }
+
+    private async Task<ApplicationTrackingSessionDto> CreateTrackingSessionAsync(
+        ApplicationRequest application,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var rawToken = ApplicationTrackingToken.CreateRaw();
+        var session = new ApplicationTrackingSession
+        {
+            ApplicationRequestId = application.Id,
+            TokenHash = ApplicationTrackingToken.Hash(rawToken),
+            ExpiresAt = now.AddMinutes(30),
+            CreatedByIp = _currentUserService.IpAddress
+        };
+        _context.ApplicationTrackingSessions.Add(session);
+        await _context.SaveChangesAsync(cancellationToken);
+        return new ApplicationTrackingSessionDto(application.Id, application.Status, rawToken, session.ExpiresAt);
     }
 
     private static string? NormalizePhone(string? value) => string.IsNullOrWhiteSpace(value)

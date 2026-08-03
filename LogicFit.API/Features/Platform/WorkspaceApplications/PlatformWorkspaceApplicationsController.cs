@@ -3,6 +3,7 @@ using LogicFit.Application.Features.WorkspaceApplications.Commands.ApproveFreela
 using LogicFit.Application.Features.WorkspaceApplications.Commands.ApproveMembershipApplication;
 using LogicFit.Application.Features.WorkspaceApplications.Commands.RejectApplication;
 using LogicFit.Application.Features.WorkspaceApplications.Commands.RequestApplicationInformation;
+using LogicFit.Application.Features.WorkspaceApplications.Commands.RetryWorkspaceProvisioning;
 using LogicFit.Application.Features.WorkspaceApplications.Commands.StartApplicationReview;
 using LogicFit.Application.Features.WorkspaceApplications.DTOs;
 using LogicFit.Application.Features.WorkspaceApplications.Queries.GetPlatformApplications;
@@ -77,6 +78,12 @@ public sealed class PlatformWorkspaceApplicationsController : ControllerBase
         [FromBody] ConcurrencyRequest request,
         CancellationToken cancellationToken)
         => Ok(await _mediator.Send(new ApproveMembershipApplicationCommand(id, request.RowVersion), cancellationToken));
+
+    [HttpPost("{id:guid}/retry-provisioning")]
+    public async Task<ActionResult<PlatformApplicationDto>> RetryProvisioning(
+        Guid id,
+        CancellationToken cancellationToken)
+        => Ok(await _mediator.Send(new RetryWorkspaceProvisioningCommand(id), cancellationToken));
 
     [HttpPost("{id:guid}/reject")]
     public async Task<ActionResult<PlatformApplicationDto>> Reject(

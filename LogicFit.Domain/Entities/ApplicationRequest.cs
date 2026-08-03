@@ -22,6 +22,11 @@ public class ApplicationRequest : AuditableEntity
     public string? ReservedWorkspaceIdentifier { get; set; }
     public UserRole? RequestedRole { get; set; }
     public Guid? SponsoredByMembershipId { get; set; }
+    public Guid? PlanId { get; set; }
+    public BillingCycle? BillingCycle { get; set; }
+    /// <summary>Immutable JSON snapshot of the selected plan at submission time.</summary>
+    public string? PlanSnapshotJson { get; set; }
+    public DateTime? PlanSnapshotAtUtc { get; set; }
     public Guid? PreviousApplicationId { get; set; }
     public int ResubmissionNumber { get; set; }
     public string PayloadJson { get; set; } = "{}";
@@ -37,4 +42,5 @@ public class ApplicationRequest : AuditableEntity
     public IdentityAccount IdentityAccount { get; set; } = null!;
     public Tenant? TargetWorkspace { get; set; }
     public ICollection<ApplicationRequestRevision> Revisions { get; set; } = new List<ApplicationRequestRevision>();
+    public Plan? Plan { get; set; }
 }

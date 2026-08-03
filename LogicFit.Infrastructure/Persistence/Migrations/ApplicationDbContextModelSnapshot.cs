@@ -31,6 +31,9 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Property<int>("ApplicationType")
                         .HasColumnType("int");
 
+                    b.Property<int?>("BillingCycle")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -50,6 +53,15 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("PayloadJson")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("PlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("PlanSnapshotAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PlanSnapshotJson")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("PreviousApplicationId")
@@ -108,6 +120,8 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PlanId");
 
                     b.HasIndex("ProvisionedWorkspaceId");
 
@@ -384,6 +398,65 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("AuditLogs", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.BackupBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ManifestStorageKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Scope")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "StartedAtUtc");
+
+                    b.ToTable("BackupBatches", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.BodyMeasurement", b =>
@@ -1527,6 +1600,157 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("DailyMeals", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.DatabaseBackup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BackupBatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DatabaseName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid?>("DatabaseResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Sha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StorageKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BackupBatchId", "TenantId");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("DatabaseBackups", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.DatabaseResource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AssignedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DatabaseName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("EncryptedConnectionString")
+                        .HasMaxLength(4096)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("LastHealthCheckAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("ReservedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ReservedForTenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SchemaVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ServerKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<long?>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReservedForTenantId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("Provider", "DatabaseName")
+                        .IsUnique();
+
+                    b.ToTable("DatabaseResources", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.DietPlan", b =>
@@ -3404,105 +3628,6 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.ToTable("NutrientDefinitions", (string)null);
                 });
 
-            modelBuilder.Entity("LogicFit.Domain.Entities.OtpChallenge", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("AttemptCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CodeHash")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<string>("CodeSalt")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<DateTime?>("ConsumedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("DeliveryStatus")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("IdentityAccountId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("LastSentAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("MaxAttempts")
-                        .HasColumnType("int");
-
-                    b.Property<string>("NormalizedPhoneNumber")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("ProviderMessageId")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<int>("Purpose")
-                        .HasColumnType("int");
-
-                    b.Property<int>("ResendCount")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
-                    b.Property<string>("SessionBinding")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IdentityAccountId");
-
-                    b.HasIndex("ProviderMessageId");
-
-                    b.HasIndex("NormalizedPhoneNumber", "Purpose", "Status");
-
-                    b.ToTable("OtpChallenges", (string)null);
-                });
-
             modelBuilder.Entity("LogicFit.Domain.Entities.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3517,7 +3642,8 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("IdempotencyKey")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("LastError")
                         .HasColumnType("nvarchar(max)");
@@ -3534,9 +3660,15 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Type")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("ProcessedAtUtc", "OccurredAtUtc");
 
                     b.ToTable("OutboxMessages");
                 });
@@ -3627,6 +3759,61 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.ToTable("Payments", (string)null);
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.PaymentProof", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsCurrent")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid>("PaymentRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("UploadedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UploadedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentRequestId", "IsCurrent");
+
+                    b.HasIndex("PaymentRequestId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("PaymentProofs", (string)null);
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.PaymentRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3636,6 +3823,12 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("Amount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("ApplicationRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("BillingCycle")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -3657,6 +3850,13 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Property<int?>("ExtensionDays")
                         .HasColumnType("int");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("IdentityAccountId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -3675,6 +3875,9 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("PlanId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PlanSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProofFileUrl")
                         .HasMaxLength(500)
@@ -3716,6 +3919,14 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ApplicationRequestId")
+                        .IsUnique()
+                        .HasFilter("[ApplicationRequestId] IS NOT NULL");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("[IdempotencyKey] IS NOT NULL");
 
                     b.HasIndex("PaymentMethodId");
 
@@ -4229,6 +4440,79 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.ToTable("ProgramRoutines", (string)null);
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.ProvisioningJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ApplicationRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("DatabaseResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("NextAttemptAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("NextAttemptAtUtc");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("ProvisioningJobs", (string)null);
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.PurchaseOrder", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4505,6 +4789,80 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("RefreshTokens", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.RestoreJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("PreviousMappingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("SourceDatabaseBackupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("TargetDatabaseResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WorkspaceNameConfirmation")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Status", "CreatedAt");
+
+                    b.ToTable("RestoreJobs", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Role", b =>
@@ -4890,6 +5248,69 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("SaleItems", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.SensitiveActionGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ConsumedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "TenantId", "Scope", "ExpiresAtUtc");
+
+                    b.ToTable("SensitiveActionGrants", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.SessionSet", b =>
@@ -5821,6 +6242,142 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.ToTable("Tenants", (string)null);
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantBackupDownloadGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ConsumedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ConsumedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("TenantBackupExportId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("TenantBackupExportId", "UserId", "ExpiresAtUtc");
+
+                    b.ToTable("TenantBackupDownloadGrants", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantBackupExport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("BackupBatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("DatabaseBackupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DownloadedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BackupBatchId");
+
+                    b.HasIndex("DatabaseBackupId");
+
+                    b.HasIndex("TenantId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "Status", "CreatedAt");
+
+                    b.ToTable("TenantBackupExports", (string)null);
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.TenantBrandAsset", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5890,6 +6447,69 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "AssetType", "SortOrder");
 
                     b.ToTable("TenantBrandAssets");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantDatabaseMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("DatabaseResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EncryptedConnectionString")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastValidatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SchemaVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DatabaseResourceId", "IsActive")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.HasIndex("TenantId", "IsActive")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.ToTable("TenantDatabaseMappings", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.TenantFeature", b =>
@@ -7022,6 +7642,11 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("LogicFit.Domain.Entities.Plan", "Plan")
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("LogicFit.Domain.Entities.Tenant", null)
                         .WithMany()
                         .HasForeignKey("ProvisionedWorkspaceId")
@@ -7038,6 +7663,8 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("IdentityAccount");
+
+                    b.Navigation("Plan");
 
                     b.Navigation("TargetWorkspace");
                 });
@@ -7402,6 +8029,17 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.DatabaseBackup", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.BackupBatch", "BackupBatch")
+                        .WithMany("Artifacts")
+                        .HasForeignKey("BackupBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BackupBatch");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.DietPlan", b =>
@@ -7816,16 +8454,6 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("Sender");
                 });
 
-            modelBuilder.Entity("LogicFit.Domain.Entities.OtpChallenge", b =>
-                {
-                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
-                        .WithMany("OtpChallenges")
-                        .HasForeignKey("IdentityAccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("IdentityAccount");
-                });
-
             modelBuilder.Entity("LogicFit.Domain.Entities.Payment", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.Branch", "Branch")
@@ -7864,8 +8492,24 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("Subscription");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.PaymentProof", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.PaymentRequest", "PaymentRequest")
+                        .WithMany("Proofs")
+                        .HasForeignKey("PaymentRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PaymentRequest");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.PaymentRequest", b =>
                 {
+                    b.HasOne("LogicFit.Domain.Entities.ApplicationRequest", "ApplicationRequest")
+                        .WithMany()
+                        .HasForeignKey("ApplicationRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("LogicFit.Domain.Entities.TenantPaymentMethod", "PaymentMethod")
                         .WithMany()
                         .HasForeignKey("PaymentMethodId")
@@ -7887,6 +8531,8 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("TenantSubscriptionId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ApplicationRequest");
 
                     b.Navigation("PaymentMethod");
 
@@ -8320,6 +8966,43 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantBackupDownloadGrant", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.TenantBackupExport", "TenantBackupExport")
+                        .WithMany("DownloadGrants")
+                        .HasForeignKey("TenantBackupExportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TenantBackupExport");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantBackupExport", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.BackupBatch", "BackupBatch")
+                        .WithMany()
+                        .HasForeignKey("BackupBatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LogicFit.Domain.Entities.DatabaseBackup", "DatabaseBackup")
+                        .WithMany()
+                        .HasForeignKey("DatabaseBackupId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("BackupBatch");
+
+                    b.Navigation("DatabaseBackup");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantDatabaseMapping", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.DatabaseResource", null)
+                        .WithMany()
+                        .HasForeignKey("DatabaseResourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.TenantFeature", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.Feature", "Feature")
@@ -8608,6 +9291,11 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("Revisions");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.BackupBatch", b =>
+                {
+                    b.Navigation("Artifacts");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.Branch", b =>
                 {
                     b.Navigation("OperatingHours");
@@ -8704,8 +9392,6 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("EmailActionTokens");
 
                     b.Navigation("Memberships");
-
-                    b.Navigation("OtpChallenges");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Invoice", b =>
@@ -8730,6 +9416,11 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("LogicFit.Domain.Entities.NutrientDefinition", b =>
                 {
                     b.Navigation("FoodMicronutrients");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.PaymentRequest", b =>
+                {
+                    b.Navigation("Proofs");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.PayrollItem", b =>
@@ -8827,6 +9518,11 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("Users");
 
                     b.Navigation("WorkspaceMemberships");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantBackupExport", b =>
+                {
+                    b.Navigation("DownloadGrants");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.TenantSubscription", b =>

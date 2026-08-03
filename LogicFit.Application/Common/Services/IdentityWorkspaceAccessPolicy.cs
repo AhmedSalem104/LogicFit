@@ -20,7 +20,7 @@ public sealed record IdentityWorkspaceAccessDecision(IdentityWorkspaceAccessMode
 /// <summary>
 /// Pure access policy used by login, refresh, workspace selection, and request middleware.
 /// Unlinked legacy accounts are an explicit compatibility mode, never equivalent to a verified
-/// identity membership. The switch is retired only after the OTP migration.
+/// identity membership. Unlinked legacy sessions are always rejected.
 /// </summary>
 public static class IdentityWorkspaceAccessPolicy
 {

@@ -1,3 +1,8 @@
+# Archived compatibility reference (superseded 2026-08-03)
+
+> Historical endpoint examples below are retained for traceability only and are not active
+> routes. Use the generated API catalog under `docs/`; authentication is Email + Password only.
+
 # LogicFit - التعديلات الكاملة و API Reference
 
 ---

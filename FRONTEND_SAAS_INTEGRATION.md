@@ -1,3 +1,9 @@
+# Archived compatibility reference (superseded 2026-08-03)
+
+> Endpoint examples below are historical and are not active API contracts. Authentication is
+> Email + Password only; OTP, phone login, and legacy auth routes are removed. Use the generated
+> API catalog under `docs/`.
+
 # LogicFit — دليل تكامل الفرونت إند (SaaS Features)
 
 > **النطاق**: كل ما أُضيف حديثاً لتطبيق الجيم (Tenant App). **مستثنى**: لوحة تحكم المنصة (Platform Admin Dashboard) — تُوثّق منفصلة.

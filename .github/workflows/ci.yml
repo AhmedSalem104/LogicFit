@@ -53,7 +53,10 @@ jobs:
         run: dotnet tool install --global dotnet-ef --version 8.*
 
       - name: Validate EF migrations
-        run: dotnet ef migrations script --idempotent --configuration Release --project LogicFit.Infrastructure --startup-project LogicFit.API --output /tmp/logicfit-migrations.sql
+        # The shared context remains the compatibility context until #174/#175/#166 cut over
+        # resolver/provisioning. The isolated contexts have their own migration assemblies and
+        # are validated by DbContextOwnershipTests in the same job.
+        run: dotnet ef migrations script --idempotent --configuration Release --project LogicFit.Infrastructure --startup-project LogicFit.API --context LogicFit.Infrastructure.Persistence.ApplicationDbContext --output /tmp/logicfit-migrations.sql
 
   docker:
     runs-on: ubuntu-latest

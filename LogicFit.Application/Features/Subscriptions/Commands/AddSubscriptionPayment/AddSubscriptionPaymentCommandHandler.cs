@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
@@ -23,7 +24,6 @@ public class AddSubscriptionPaymentCommandHandler : IRequestHandler<AddSubscript
         var tenantId = _tenantService.GetCurrentTenantId();
 
         var subscription = await _context.ClientSubscriptions
-            .Include(s => s.Client)
             .Include(s => s.Plan)
             .FirstOrDefaultAsync(s => s.Id == request.SubscriptionId && s.TenantId == tenantId, cancellationToken);
 
@@ -34,12 +34,17 @@ public class AddSubscriptionPaymentCommandHandler : IRequestHandler<AddSubscript
         if (request.Amount > remaining)
             throw new ValidationException("Amount", $"Payment exceeds the remaining subscription balance ({remaining:0.##})");
 
+        await using var dbTransaction = await _context.BeginTransactionAsync(cancellationToken);
+
         if (request.PayFromWallet)
         {
-            if (subscription.Client.WalletBalance < request.Amount)
-                throw new ValidationException("PayFromWallet", "Insufficient wallet balance");
-
-            subscription.Client.WalletBalance -= request.Amount;
+            var balanceAfter = await WalletBalanceOperations.ApplyAsync(
+                _context,
+                tenantId,
+                subscription.ClientId,
+                -request.Amount,
+                cancellationToken,
+                validationKey: "PayFromWallet");
 
             var transaction = new WalletTransaction
             {
@@ -47,7 +52,7 @@ public class AddSubscriptionPaymentCommandHandler : IRequestHandler<AddSubscript
                 UserId = subscription.ClientId,
                 Type = TransactionType.Payment,
                 Amount = request.Amount,
-                BalanceAfter = subscription.Client.WalletBalance,
+                BalanceAfter = balanceAfter,
                 Description = $"Subscription payment - {subscription.Plan.Name}",
                 ReferenceType = "Subscription",
                 ReferenceId = subscription.Id
@@ -59,6 +64,7 @@ public class AddSubscriptionPaymentCommandHandler : IRequestHandler<AddSubscript
         subscription.PaymentMethod = request.PayFromWallet ? Domain.Enums.PaymentMethod.Wallet : request.PaymentMethod;
 
         await _context.SaveChangesAsync(cancellationToken);
+        await dbTransaction.CommitAsync(cancellationToken);
 
         return true;
     }

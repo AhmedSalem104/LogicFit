@@ -1,5 +1,12 @@
 # التشغيل والنشر والاستعادة
 
+## Issue #161 authentication deployment note
+
+The active login contract is Email + Password for Identity and Platform surfaces. Deploy the
+Backend and Platform Dashboard together because `/api/platform/auth/login` returns the session
+directly and no OTP verification call is valid. Do not add OTP, Phone Login, Passkey, or WebAuthn
+secrets to the server. No Production deployment or migration was performed by this change.
+
 ## بيئات ومكونات النشر
 
 - `LogicFit.API` هو المضيف الموحد؛ يحتوي Platform وTenant modules ويستخدم إعدادات
@@ -13,43 +20,14 @@
 
 Before enabling email registration or identity password reset, configure these server-only settings (environment-variable form shown; values are never committed): `Email__Provider=smtp`, `Email__Smtp__Host`, `Email__Smtp__Port`, `Email__Smtp__UseSsl`, `Email__Smtp__UserName`, `Email__Smtp__Password`, `Email__Smtp__FromEmail`, `Email__Smtp__FromName`, and `IdentityEmailLinks__FrontendBaseUrl` (HTTPS only). The API returns `503 IDENTITY_EMAIL_NOT_CONFIGURED` until both delivery and HTTPS frontend-link settings are present. Do not log the generated link or raw token. Apply `20260730143000_AddIdentityEmailSecurity` from a reviewed idempotent script after backup, publish, then verify `/health` and a non-production email flow.
 
-### OTP delivery and Meta WhatsApp (Issues #118 and #127)
+### Email/password authentication (Issue #161)
 
-OTP settings exist only in environment variables or the server secret store. Development uses
-`ASPNETCORE_ENVIRONMENT=Development`, `Otp__Provider=Development`,
-`Otp__DevelopmentFixedCode=1234`, and a private `Otp__HmacSecret` of at least 32 characters.
-The API still creates and hashes a real challenge. Startup fails if the Development provider
-or fixed code appears outside Development.
-
-Production uses `Otp__Provider=MetaWhatsApp` and must set `Otp__HmacSecret`,
-`MetaWhatsApp__AccessToken`, `MetaWhatsApp__PhoneNumberId`,
-`MetaWhatsApp__BusinessAccountId`, `MetaWhatsApp__TemplateName`,
-`MetaWhatsApp__TemplateLanguage`, and `MetaWhatsApp__GraphApiVersion`. Secure webhook
-verification additionally uses `MetaWhatsApp__WebhookVerifyToken` and
-`MetaWhatsApp__AppSecret`. Never put any of these values in a published `appsettings.json`.
-There is no fallback to `1234` if Meta fails.
-
-Until the external provider subscription is available, Issue #127 permits a reviewed hosted-test
-exception. Configure it only in the server secret store with `Otp__Provider=TemporaryFixed`,
-`Otp__AllowTemporaryFixedCode=true`, `Otp__TemporaryFixedCode=1234`,
-`Otp__TemporaryFixedCodeExpiresAtUtc=<future UTC value no more than 31 days away>`, and a private
-`Otp__HmacSecret` of at least 32 characters. The API still creates, hashes, rate-limits, and atomically
-consumes a real challenge; it never returns the code. Startup fails if the explicit flag, exact code,
-or bounded future expiry is missing. Runtime requests fail after expiry. There is no automatic fallback
-from Meta to this provider. To retire the exception, switch to `MetaWhatsApp` and remove all three
-`TemporaryFixedCode` settings from the server.
-
-Before rollout: backup; review/apply
-`20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp`; configure the secrets; publish
-Backend, Tenant Angular, and Platform Angular as one coordinated release; verify `/health`;
-then smoke-test email login, Phone + OTP, Platform password+OTP, representative RBAC-protected mutations,
-refresh rotation, logout-all, and password-reset session revocation. Roll back the binaries
-and stop the rollout on health/OTP failure; do not reverse the migration destructively.
-
-Issue #152 adds `20260802091114_RemovePostLoginOtpStepUp`. Review its guarded drop of the obsolete
-`OtpStepUpSessions` table, include it in the migration script and backup/rollback record, deploy the
-Backend before or with the Platform dashboard change, then verify that workspace review and other
-authorized operations complete without `/api/identity/step-up/*` traffic.
+All active authentication surfaces use Email + Password. Email verification and password reset
+are single-use, short-lived email links backed by hashed tokens. There is no Phone Login, OTP,
+Passkey, WebAuthn, Meta WhatsApp, or OTP secret configuration. The compatibility migration
+`20260803090742_RemoveLegacyOtpArtifacts` is guarded with `OBJECT_ID` and only removes the old
+`OtpChallenges` table when it exists; review and apply it separately after a verified backup.
+No Production migration or deployment is implied by a source merge.
 
 ### Platform Owner recovery bootstrap (Issue #140)
 
@@ -63,10 +41,10 @@ be an operator-controlled E.164 number. The bootstrap creates or repairs one act
 marks the operator-asserted email and phone as verified, clears lockout, and revokes existing refresh
 sessions when resetting the password. It never logs the configured values.
 
-After one successful recycle, verify that `/api/platform/auth/login` returns an OTP challenge,
-complete OTP, then immediately set `PlatformBootstrap__Enabled=false`, remove every other
-`PlatformBootstrap__*` value from the server, and recycle again. Do not commit these values, keep
-the bootstrap enabled, or use it as a routine password-reset path. This recovery has no migration.
+After one successful recycle, verify that `/api/platform/auth/login` accepts the configured email
+and password and returns a Platform session, then immediately set `PlatformBootstrap__Enabled=false`,
+remove every other `PlatformBootstrap__*` value from the server, and recycle again. Do not commit
+these values, keep the bootstrap enabled, or use it as a routine password-reset path.
 
 تُخزن في إعدادات الموقع/Secret Store الخاصة بالخادم، لا في source control:
 
@@ -129,13 +107,47 @@ publish credentials:
   -HealthCheckUrl https://your-host/health
 ```
 
+### Wallet and stock concurrency rollout (Issue #195, unreleased)
+
+Wallet debits/credits and their ledger rows commit in one database transaction. Stock
+adjustments, transfers, and POS checkout use guarded SQL quantity updates; stock creation
+paths use Serializable transactions. A failed balance/quantity guard rolls back the related
+ledger, movement, sale, invoice, payment, and commission changes.
+
+Issue #195 introduces no EF schema migration; it relies on the existing SQL Server row-version
+columns and tenant/product/branch uniqueness. Validate the Release build and the concurrency
+integration tests before release. Redis is not used as the source of truth for wallet or stock,
+and no Redis credential belongs in repository configuration.
+### Background jobs across multiple API instances (Issue #193, unreleased)
+
+The subscription lifecycle and Outbox workers coordinate through SQL Server session-owned
+application locks. The lock resources are
+`LogicFit:Background:TenantSubscriptionLifecycle`,
+`LogicFit:Background:PlatformSubscriptionLifecycle`, and
+`LogicFit:Background:OutboxProcessor`. A busy instance skips that pass; a lock or database
+failure must remain visible in logs/`JobExecutionLog` and must not be recorded as completed.
+
+Before applying the Issue #193 migrations, review duplicate Outbox keys in every affected
+database and resolve them through the approved operator procedure:
+
+```sql
+SELECT [IdempotencyKey], COUNT_BIG(*) AS [DuplicateCount]
+FROM [OutboxMessages]
+GROUP BY [IdempotencyKey]
+HAVING COUNT_BIG(*) > 1;
+```
+
+The migration intentionally throws before creating the unique index when this query returns
+rows. Do not delete Outbox history to force a migration through. The change is currently on
+the task branch and is not a Production deployment claim.
+
 ### Protected IIS 500.30 startup recovery
 
-Issue #137 recovered `site81605` after stdout identified a missing `Otp:HmacSecret`. The same
+Issue #137 recovered `site81605` after stdout identified a missing required secret. The same
 procedure is available through the manual protected CD workflow with
 `confirm=RECOVER-PRODUCTION-STARTUP`. It selects an existing GitHub Environment publish profile,
 requires the exact Monster site id, captures the existing production configuration and web.config
-for rollback, injects protected OTP/JWT/password-reset secrets, forces one recycle, restores the
+for rollback, injects protected JWT/password-reset secrets, forces one recycle, restores the
 original web.config, and requires health after both recycles. It changes neither the database nor
 the application binary.
 
@@ -163,12 +175,40 @@ operator flow. Never disable startup migration merely to bypass a pending schema
 6. اختبر الدخول، لوحة المتابعة، خطط المنصة، تنبيهات، Jobs، ونسخة احتياطية من حساب
    Platform Owner محدود للاختبار.
 
+### Redis cache and distributed request controls (Issue #197)
+
+The tenant-access gate uses `IDistributedCache`. In non-production environments without Redis it
+falls back to the in-memory provider. Production requires Redis by default and fails before the
+host starts when the connection is missing. Configure either a complete secret-backed
+`ConnectionStrings__Redis` value, or keep the endpoint separate from the credential:
+
+```text
+Redis__Endpoint=<redis-host-and-port-or-redis-url>
+Redis__PasswordFile=<server-only-secret-file>
+Redis__InstanceName=LogicFit
+Redis__Required=true
+```
+
+`Redis__PasswordFile` is read only during startup and its contents are never written to logs,
+Git, or documentation. The local credential file supplied for development can be used through
+this setting once the Redis provider's endpoint is supplied separately; the credential alone is
+not a Redis connection string. A direct `Redis__Password` is supported for a secret manager but
+must never be committed.
+
+When the application owns rate limiting, the global and named fixed-window policies use the same
+Redis namespace and an atomic Lua counter, so all API instances share the limits. If an upstream
+gateway owns those policies, set `RateLimiting__ManagedByGateway=true`; the API then skips its
+local limiter instead of enforcing a second, instance-local limit. A production deployment must
+choose Redis-backed application limiting or an explicitly configured gateway. Redis remains a
+coordination/cache layer only: SQL Server is still the source of truth for wallet, stock, and
+other business data.
+
 ## CI/CD
 
 CI يعمل على الفروع وPull Requests ويتحقق من البناء والاختبارات ومراجعة migrations
 وبناء الصور. إنتاجياً لا يحق للنشر أن يبدأ قبل CI أخضر وبيئة محمية وخطة Rollback.
 يستخدم preflight الخاص بالنشر SQL Server مؤقتًا و`LOGICFIT_TEST_CONNECTION_STRING` مثل CI؛
-لا يسمح باختبارات OTP التي تسقط إلى LocalDB غير المدعوم على Linux.
+لا يسمح باختبارات قواعد البيانات التي تسقط إلى LocalDB غير المدعوم على Linux.
 الـCD يظل يدوياً ومحميًا. لا يبدأ إلا من شجرة مطابقة لـ`origin/master` وبعد CI ناجح،
 ونسخة BACPAC متحقق منها، ومراجعة SQL، وخطة Rollback، وتخزين أسرار WebDeploy وقاعدة
 البيانات وhealth URL في GitHub Environment `production` فقط.

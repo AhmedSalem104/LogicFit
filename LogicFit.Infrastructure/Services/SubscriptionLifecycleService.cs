@@ -1,3 +1,4 @@
+using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Enums;
 using LogicFit.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -9,14 +10,21 @@ namespace LogicFit.Infrastructure.Services;
 
 public class SubscriptionLifecycleService : BackgroundService
 {
+    private const string LockResource = "LogicFit:Background:TenantSubscriptionLifecycle";
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SubscriptionLifecycleService> _logger;
+    private readonly IDistributedLockProvider _distributedLockProvider;
     private readonly TimeSpan _period = TimeSpan.FromHours(24);
 
-    public SubscriptionLifecycleService(IServiceScopeFactory scopeFactory, ILogger<SubscriptionLifecycleService> logger)
+    public SubscriptionLifecycleService(
+        IServiceScopeFactory scopeFactory,
+        ILogger<SubscriptionLifecycleService> logger,
+        IDistributedLockProvider distributedLockProvider)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _distributedLockProvider = distributedLockProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -41,6 +49,21 @@ public class SubscriptionLifecycleService : BackgroundService
     }
 
     private async Task ProcessSubscriptions(CancellationToken cancellationToken)
+    {
+        var lease = await _distributedLockProvider.TryAcquireAsync(LockResource, cancellationToken);
+        if (lease is null)
+        {
+            _logger.LogDebug("Skipping tenant subscription lifecycle pass because another instance owns the lock.");
+            return;
+        }
+
+        await using (lease)
+        {
+            await ProcessSubscriptionsUnderLock(cancellationToken);
+        }
+    }
+
+    private async Task ProcessSubscriptionsUnderLock(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

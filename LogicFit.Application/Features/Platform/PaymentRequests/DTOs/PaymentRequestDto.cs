@@ -10,6 +10,11 @@ public class PaymentRequestDto
     public Guid PlanId { get; set; }
     public string? PlanName { get; set; }
     public Guid? TenantSubscriptionId { get; set; }
+    public Guid? ApplicationRequestId { get; set; }
+    public Guid? IdentityAccountId { get; set; }
+    public BillingCycle BillingCycle { get; set; }
+    public string? PlanSnapshotJson { get; set; }
+    public int ProofVersion { get; set; }
     public PaymentRequestOperation Operation { get; set; }
     public decimal Amount { get; set; }
     public string Currency { get; set; } = "EGP";

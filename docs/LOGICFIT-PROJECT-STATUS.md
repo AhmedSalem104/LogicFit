@@ -1,14 +1,94 @@
 # LogicFit Project Status
 
+> **Issue #161 — merged to `develop`:** authentication controllers now use Email + Password
+> only. Platform login validates the linked active identity and platform RBAC assignment before
+> issuing a Platform session; the former Platform OTP verification route and identity phone/OTP
+> routes are no longer exposed. No database migration or Production data change was performed.
+> The generated API catalog and authentication flow document describe the active contract. The
+> compatibility cleanup migration `20260803090742_RemoveLegacyOtpArtifacts` drops only the
+> obsolete OTP table when it exists; it has not been applied to Production.
+
 > **Issue #156 — task branch:** a fresh PlatformOwner/PlatformAdmin login now reconciles the
 > account's trusted legacy role with its required RBAC system-role assignment before signing the
 > JWT. Startup reconciliation also repairs missing mapped roles even when another assignment exists,
 > preserves unrelated roles, increments `PermissionsVersion`, and is idempotent. This fixes
 > `403 ManageTenants` responses caused by a Platform UI role and signed JWT role mismatch.
 
-> **Issue #152 — released to `master`:** OTP is restricted to authentication flows. Post-login Platform and Tenant operations use their existing JWT, permission, workspace, subscription, ownership, and concurrency gates without OTP step-up.
+> **Issue #152 historical note:** post-login OTP step-up was removed before the final Email +
+> Password-only contract. Platform and Tenant operations use their existing JWT, permission,
+> workspace, subscription, ownership, and concurrency gates.
 
-Last reviewed: 2026-08-02
+Last reviewed: 2026-08-03
+
+> **Issue #162 implementation:** Platform dashboard contracts now expose permission-filtered
+> operational summaries for application/payment review, database-pool capacity, provisioning,
+> backup and restore state. Read-only resource and provisioning lists are server-paged and omit
+> database names, connection material and storage paths. `/api/platform/diagnostics/version`
+> reports API contract/build compatibility metadata without secrets. No migration or Production
+> change was required.
+
+> **Issue #167 implementation:** Tenant backup export now uses the existing central BACPAC
+> orchestration with a server-resolved tenant mapping. Owner/explicit-permission access requires
+> password reauthentication and a five-minute single-use SensitiveActionGrant; download grants are
+> separately reauthenticated, hashed, tenant-bound, and consumed atomically. Export status,
+> idempotency, daily/concurrent limits, and audit events are persisted in the Platform DB. The
+> additive migration is review-only and has not been applied to Production. Native restore remains
+> Platform-only and capability-gated.
+
+> **Issue #165 implementation:** Conditional restore is now represented by a persistent
+> `RestoreJob` and provider contract. `ManualMonster` remains `ManualOnly`; only an explicitly
+> enabled Development `LocalSql` provider can import a BACPAC into a pre-created pool resource,
+> run a health check, and switch the mapping. PlatformOwner password reauthentication and a
+> single-use grant are required. No restore, mapping switch, or Production data change was run.
+
+> **Issue #172 planning gate:** Monster Free capability assessment is documented in
+> [MONSTER-CAPABILITY-ASSESSMENT.md](MONSTER-CAPABILITY-ASSESSMENT.md). The current SQL account
+> can connect and run `BACKUP DATABASE` for the Platform database, but cannot create databases or
+> run `RESTORE VERIFYONLY`; Always-On is unavailable. Database-per-Workspace remains the target
+> architecture. Native restore/download and final activation stay capability-gated until an
+> upgraded/prepared Monster environment proves the required permissions and file-transfer path.
+
+> **Issue #169 planning gate:** [SCHEMA-OWNERSHIP-INVENTORY.md](SCHEMA-OWNERSHIP-INVENTORY.md)
+> classifies the current shared `ApplicationDbContext` model into Platform DB, Tenant DB, and
+> shared-contract concerns. The current 52 source migrations are legacy shared-schema history;
+> the target must use separate Platform/Tenant migration assemblies and a clean Tenant baseline.
+
+> **Issue #170 implementation:** `PlatformDbContext` and `TenantDbContext` now have explicit
+> ownership contracts, independent migration assemblies/history tables, and model-isolation tests.
+> The Tenant context requires a server-supplied TenantId and rejects cross-scope writes. The
+> existing `ApplicationDbContext` remains the compatibility context until #174/#175/#166 complete
+> resolver and provisioning cutover; no Production database was migrated by this change. The
+> final auth decision (Email + Password only, with no OTP/Phone Login/Passkey/WebAuthn) remains the
+> scope of #161 and is not silently changed by this schema PR.
+
+> **Issue #174 implementation:** Platform now has an operator-managed `DatabaseResource` pool and
+> encrypted `TenantDatabaseMapping` contract. Reservation is serializable and fail-closed when
+> Monster Free has no Available capacity; `ManualMonsterProvisioningProvider` does not create or
+> delete Monster databases. Additive migrations are local/review-only and no Production schema or
+> data was changed.
+
+> **Issue #175 implementation:** Tenant database resolution is now a server-only boundary. The
+> resolver reads active mappings from Platform DB, requires an `Assigned` resource reserved for
+> the same tenant, decrypts connection material in memory, and fails closed for stale,
+> cross-tenant, or undecryptable mappings. No database name or connection string is accepted from
+> frontend contracts, and no Production mapping or schema was changed.
+
+> **Issue #168 implementation:** Workspace onboarding now persists an immutable plan snapshot,
+> private versioned payment-proof metadata, payment/application idempotency, and the explicit
+> `PendingActivation` subscription gate. Application payment approval no longer starts the paid
+> term or activates the placeholder; provisioning (#166) must complete first. The additive Platform
+> and compatibility migrations are review-only and have not been applied to Production.
+
+> **Issue #166 implementation:** Approved applications now enter a persistent provisioning saga
+> backed by `ProvisioningJobs` and a unique idempotency key. The saga reserves an operator-managed
+> database resource, applies the isolated Tenant migration assembly, creates the local owner,
+> validates connectivity, records the encrypted mapping, and only then activates the workspace,
+> membership, and subscription dates. Capacity shortages remain `AwaitingDatabaseCapacity` and
+> provider errors remain `ProvisioningFailed` for an explicit retry through the Platform API.
+> `ManualMonsterProvisioningProvider` never creates/deletes Monster databases; `LocalSql` is a
+> Development/CI provider over pre-created local resources. The two additive migrations are
+> review-only and no Production schema or data was changed. See
+> [PROVISIONING-SAGA.md](PROVISIONING-SAGA.md).
 
 > **Issue #143, task branch:** Production diagnosis found that the reviewed fixed OTP was being
 > consumed correctly, but legacy identity phones were stored as local Egyptian `01...` values and
@@ -32,14 +112,10 @@ Last reviewed: 2026-08-02
 
 LogicFit is a multi-tenant gym-management SaaS. The platform operator manages gyms, plans, features, payment methods, and manual payment approvals. Each gym receives an isolated tenant workspace for staff and clients. Billing is intentionally manual: no gateway, webhook, or automatic card charge is enabled.
 
-> **Released to `master` in Issue #118; production binary deployment remains to be verified:** centralized E.164 OTP, Phone + OTP identity login/recovery,
-> mandatory Platform Admin login OTP, Meta WhatsApp provider integration, and
-> HttpOnly refresh cookies are merged across the Backend, Tenant UI, and Platform UI. Passkey/WebAuthn is removed.
-> Migration `20260730164313_ReplaceIdentityPasskeysWithCentralizedOtp` and every preceding canonical
-> migration were applied to production `db60976` after a structurally verified BACPAC on 2026-08-01;
-> schema/history verification succeeded. Production OTP and Meta secrets are server-only. Issue #127 adds an
-> explicitly enabled, time-bounded `TemporaryFixed` provider for hosted pre-provider testing with code
-> `1234`; it preserves real OTP challenges and must be removed when Meta WhatsApp is enabled.
+> **Historical superseded release note (Issue #118):** an earlier release contained centralized
+> Phone/OTP authentication. It is no longer part of the active contract. The current source removes
+> the runtime providers and uses Email + Password only; any old OTP table is cleaned by the guarded
+> `20260803090742_RemoveLegacyOtpArtifacts` migration. Do not configure OTP or Meta secrets.
 
 ## Product map
 
@@ -97,7 +173,7 @@ sequenceDiagram
 ## Freelance workspace foundation (production migrations verified)
 
 - `WorkspaceType.FreelanceCoach` keeps an independent coach in the existing tenant isolation boundary; legacy tenants default to `Gym`.
-- A global `IdentityAccount` is linked to tenant-local `DomainUsers` and `WorkspaceMemberships`. Existing `/api/auth/login` remains supported and creates this link lazily after a successful legacy login; it never fails an existing login because of an identity collision.
+- A global `IdentityAccount` is linked to tenant-local `DomainUsers` and `WorkspaceMemberships`. The retired `/api/auth/login` compatibility route is no longer active; authenticated access uses the Identity-first Email + Password flow.
 - New `/api/identity/login` performs identity-first sign-in and returns active workspaces and pending applications together. `/api/identity/select-workspace` exchanges its short-lived opaque selection token for the existing tenant JWT/refresh-token contract.
 - Public freelance onboarding uses `ApplicationRequests`, immutable submission revisions, and short-lived opaque tracking sessions. Applicants may edit only the field names requested by Platform Admin, then resubmit; rejected requests remain terminal evidence.
 - Platform Admin reviews a minimal, non-health/non-training application view through `/api/platform/workspace-applications`. Review, information-request, approval, and rejection use row-version concurrency; rejection revokes tracking sessions and review decisions enqueue an Outbox event.
@@ -108,7 +184,8 @@ sequenceDiagram
 - Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed. The third migration adds the tenant row-version used to serialize final membership-capacity approval. `20260729133325_SeedFreelanceSystemRoles` is an idempotent corrective data migration that creates or restores the three freelance system roles and their permission maps. All four canonical migrations are present in production; the legacy server-only history row `20260729141315_SeedFreelanceSystemRoles` is preserved rather than edited manually.
 - Team membership now uses `/api/freelance/team/invites` and `/api/workspace-invites/{preview,accept}`. The invitation is tied to normalized email, workspace, and role; acceptance requires a verified identity session and a live quota check.
 - Client acquisition supports owner-generated `/api/workspace/client-join-codes` plus preview/join endpoints. Raw codes are returned only once, stored as hashes, expire/revoke, and either activate the client or create a pending owner approval according to workspace settings.
-- OTP challenges are purpose-bound, five-minute, one-use, HMAC-hashed with per-challenge salt, and concurrency protected. Platform login requires password then OTP; no post-login Platform or Tenant mutation requires another OTP challenge.
+- Authentication is Email + Password only. Phone is contact data; no OTP challenge, Passkey, or
+  WebAuthn provider is registered. Email verification and password reset use single-use links.
 - Refresh tokens are no longer serialized to either Angular app or stored in localStorage. The API transports them only in secure `__Host-` HttpOnly cookies, rotates them on refresh, detects reuse, and revokes all linked sessions on password reset/change.
 
 ## API contracts
@@ -148,12 +225,12 @@ flowchart LR
 - `develop` is protected integration; `master` is protected release history.
 - Direct pushes, force pushes, and branch deletion are prohibited.
 - Every non-trivial task requires a GitHub Issue, task branch, tests, documentation impact, and PR.
-- GitHub CI is active on every push and pull request. It restores, builds, tests, validates EF migrations, and builds the unified API Docker image. Database-backed OTP and refresh-token concurrency tests use an ephemeral SQL Server service in the Linux `verify` job; local Windows runs continue to use LocalDB unless `LOGICFIT_TEST_CONNECTION_STRING` is supplied.
+- GitHub CI is active on every push and pull request. It restores, builds, tests, validates EF migrations, and builds the unified API Docker image. Database-backed auth and refresh-token concurrency tests use an ephemeral SQL Server service in the Linux `verify` job; local Windows runs continue to use LocalDB unless `LOGICFIT_TEST_CONNECTION_STRING` is supplied.
 - Monster ASP CD remains a manual protected workflow. Issue #134 adds the missing migration-apply stage to that workflow; it does not enable unattended deployment.
 
 ## Current deployment position
 
-- Issue #137 confirmed that `logicfit-saas-model.runasp.net` (`site81605`) failed with IIS `500.30` after publish replaced the server-only configuration and removed `Otp:HmacSecret`. A rollback-safe configuration recovery restored repeated `200 Healthy` responses and DB-backed API smoke checks on 2026-08-02; stdout was disabled again.
+- Issue #137 confirmed that `logicfit-saas-model.runasp.net` (`site81605`) failed with IIS `500.30` after publish replaced the server-only configuration and removed a required secret. A rollback-safe configuration recovery restored repeated `200 Healthy` responses and DB-backed API smoke checks on 2026-08-02; stdout was disabled again.
 - `logicfit-saas.runasp.net` is a separate current Platform host associated with the active `site81260` publish target. It remained on `500.30` pending execution of the new protected recovery job with the current GitHub Environment profile; stale local encrypted profiles cannot be used as credentials.
 - `logicfit.runasp.net/health` remained `200 Healthy` throughout the incident. The production frontend routes Platform requests to the recovered `logicfit-saas-model.runasp.net` host.
 - Retired `site78301` profiles are not valid recovery credentials. The current documented targets are `site81260` for `logicfit-saas`, `site45954` for `logicfit.runasp.net`, and `site81605` for the hosted model site; protected GitHub Environment profiles remain authoritative.
@@ -169,6 +246,7 @@ flowchart LR
 - The platform backup flow uses portable, unencrypted `.bacpac` exports containing the live SQL schema and data. This avoids the unsupported assumption that a shared SQL Server can write a `.bak` file to the web-host disk.
 - `GET /api/platform/backups/status` is permission-protected and returns only safe readiness data: enabled/ready state, `BACPAC` format, retention, UTC schedule, count, and an Arabic configuration reason when unavailable. It never returns paths, connection strings, or secrets.
 - `GET /api/platform/backups` lists completed private exports. `POST /api/platform/backups` serializes export work, creates one BACPAC, removes incomplete temporary files, and keeps the last seven days. A second concurrent request receives `503` rather than creating a conflicting export.
+- Issue #173 adds `POST /api/platform/backups/batch` and `GET /api/platform/backups/batches`. The batch service resolves platform and assigned tenant databases only from server-side mappings, writes one private BACPAC per target, stores SHA-256 and status metadata in `BackupBatches`/`DatabaseBackups`, and emits a safe manifest for `FullSystem` operations. Idempotency keys and a SQL application lock prevent duplicate or overlapping batches; `Backup:MaxConcurrent` bounds target exports.
 - `GET /api/platform/backups/{fileName}/download` streams an attachment only after the same platform-backup permission check. The filename must match the BACPAC naming contract and cannot contain a path; missing/invalid names return `404`. The backup directory remains under `App_Data` and is never a public static-files path.
 - After publishing the Issue #34 code, add the following non-secret section to the server-only `appsettings.Production.json`, retain the existing JWT/password-reset secrets, then recycle the application: `Backup:Enabled=true`, `Backup:StorageDirectory=App_Data/PrivateBackups`, `Backup:RetentionDays=7`, and `Backup:RunAtUtc=02:00:00`. Do not use the retired `Backup:Directory` setting and never place the export folder under `wwwroot`.
 - A BACPAC restore remains an explicit operator procedure using DacFx/SqlPackage against a reviewed target database; the application never performs automatic restore or database replacement.
@@ -301,7 +379,8 @@ Tenant requests resolve a tenant before authorization. Tenant query filters, ten
 - Duplicate subscription refunds are rejected.
 - Audit logs redact password and token properties.
 - Upload deletion is constrained to the uploads root; upload subfolders and MIME types are validated.
-- Global API rate limiting is enabled with configurable defaults.
+- Global and sensitive-endpoint API rate limiting is configurable for Redis-backed multi-instance
+  operation or explicit upstream-gateway ownership; non-production local fallback remains available.
 - Wallet and stock entities use SQL Server rowversion concurrency tokens.
 - Coupon uses use a rowversion concurrency token.
 - Manual wallet transactions validate balance and update the user wallet balance.
@@ -321,8 +400,8 @@ fails startup if apply or post-apply verification fails.
 
 ## Verification status
 
-- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 119 passing tests on 2026-08-01 after the Issue #134 deployment and EF operator changes.
-- `dotnet build LogicFit.sln -c Release --no-restore`: successful; four pre-existing nullable warnings remain in coach-client, gate-access, and client-subscription query projections.
+- `dotnet test LogicFit.sln -c Release --no-build --verbosity minimal`: 160 passing tests on 2026-08-03 after the Issue #193, #195, and #197 changes.
+- `dotnet build LogicFit.sln -c Release --no-restore`: successful on 2026-08-03; five pre-existing nullable warnings remain in Application query projections.
 - `npm run build` in `LogiFit_Platform_Admin_Dashboard`: successful.
 
 ## CI/CD policy
@@ -342,17 +421,50 @@ fails startup if apply or post-apply verification fails.
 
 ## Known remaining work
 
-- Replace in-process rate limiting and memory cache with gateway/Redis-backed distributed controls for multi-instance production.
-- Use atomic SQL updates/transactions for wallet and stock hot paths, and add concurrency integration tests.
+- Provide the protected production Redis endpoint/credential and complete a multi-instance rollout
+  verification for Issue #197; no Production deployment is implied by the source change.
 - Add coupon usage idempotency and payment request idempotency keys.
 - Move private uploads to object storage with signed URLs and malware scanning.
-- Add distributed locks/idempotency for background lifecycle jobs.
 - Add integration, end-to-end, load, concurrency, and tenant-isolation tests.
 - Define the Monster ASP deployment target, application directory, service manager, backup command, and health URL before enabling automatic production deployment.
 - Stale local WebDeploy profiles are diagnostic metadata only. Production actions select the current protected GitHub Environment profile and require an exact expected Monster site id before any remote write.
 - `Scripts/deploy-webdeploy.ps1` performs credential-safe migration and MSDeploy orchestration and explicitly skips the server-only production configuration. With `-ApplyMigrations`, it requires a verified BACPAC reference, reviewed SQL, the protected database connection, and a health URL. `Scripts/recover-webdeploy-startup.ps1` is configuration-only incident recovery with rollback and health gates.
 
 ## Change log
+
+### 2026-08-03 — distributed Redis controls (Issue #197)
+
+- Added secret-safe Redis connection resolution for the tenant-access distributed cache, including
+  production startup validation and a development-only in-memory fallback.
+- Replaced per-process fixed-window counters with atomic Redis-backed counters when application
+  rate limiting is enabled; `RateLimiting__ManagedByGateway=true` explicitly delegates the boundary
+  to an upstream gateway.
+- No API route, frontend, business-data, or EF migration change was required. Redis is not the
+  source of truth for wallet or stock.
+### 2026-08-03 — wallet and stock concurrency hardening (Issue #195, task branch)
+
+- Wallet balance mutations now use guarded SQL arithmetic inside the same database transaction
+  as the wallet ledger row. Subscription wallet payments and manual transactions no longer
+  derive the balance from the latest ledger row, so concurrent debits cannot lose updates or
+  create a negative balance.
+- Stock adjustments, transfers, and POS checkout use guarded SQL quantity updates. Stock
+  movements and business records commit with the quantity change; stock creation paths use a
+  serializable transaction to protect the unique tenant/product/branch boundary.
+- Added SQL Server concurrency integration coverage for competing wallet debits and stock
+  decrements. No new API route, frontend contract, or database migration was introduced; the
+  change is merged to `develop` and has not been deployed to Production.
+### 2026-08-03 — background job coordination (Issue #193, task branch)
+
+- Added SQL Server session-owned application locks for tenant subscription lifecycle,
+  platform subscription lifecycle, and Outbox processing. When another API instance owns
+  the lock, the current pass skips safely instead of duplicating work.
+- Added a bounded unique `OutboxMessages.IdempotencyKey`, a processing-order index, and
+  migrations for the legacy, Platform, and Tenant database contexts. The migration stops
+  with an operator-review error when existing duplicate keys are found; it never deletes
+  historical messages automatically.
+- Added contract coverage for lock acquisition, lock release, distinct job resources, and
+  the database idempotency model. This is not deployed to Production and has no API route
+  or frontend contract change.
 
 ### 2026-08-02 — startup migration safety net (Issue #147)
 
@@ -366,17 +478,18 @@ fails startup if apply or post-apply verification fails.
 
 - Excluded `appsettings.Production.json` from publish artifacts and added an MSDeploy skip rule so server-only secrets cannot be overwritten by a developer-local file.
 - Allowed the protected deployment workflow to consume either Base64 or validated direct publish-settings XML, fixing the pre-deploy decode failure without exposing the profile.
-- Added a protected, site-bound startup-recovery operation with configuration/web.config rollback, OTP/JWT/password-reset secret injection, controlled recycle, and repeated health verification.
+- Added a protected, site-bound startup-recovery operation with configuration/web.config rollback,
+  JWT/password-reset secret injection, controlled recycle, and repeated health verification.
 - Added regression coverage preventing authentication request payload logging and production configuration publication.
 
 ### 2026-08-01 — protected migration-aware publishing (Issue #134, task branch)
 
 - Added a reviewed migration stage before WebDeploy; the stage requires a verified backup reference and a protected database connection and verifies no EF migration remains pending.
-- Added release-tree, migration-review, destructive-SQL, and post-publish health gates to the manual production workflow. The preflight now provisions the same ephemeral SQL Server and test connection as CI, preventing Linux from falling back to unsupported LocalDB during OTP tests. This workflow behavior is not released until the Issue #134 PR is reviewed, merged to `develop`, released to `master`, and production-verified.
+- Added release-tree, migration-review, destructive-SQL, and post-publish health gates to the manual production workflow. The preflight now provisions the same ephemeral SQL Server and test connection as CI, preventing Linux from falling back to unsupported LocalDB during database tests. This workflow behavior is not released until the Issue #134 PR is reviewed, merged to `develop`, released to `master`, and production-verified.
 
 ### 2026-07-30 — identity-first access foundation
 
-- Added one identity/membership/local-user gate to legacy login, refresh rotation, workspace selection, and every authenticated tenant request. Linked accounts now lose access immediately when their identity, membership, or tenant-local user becomes inactive; unlinked legacy accounts remain behind an explicit temporary compatibility setting.
+- Added one identity/membership/local-user gate to refresh rotation, workspace selection, and every authenticated tenant request. Linked accounts now lose access immediately when their identity, membership, or tenant-local user becomes inactive; unlinked legacy sessions fail closed.
 - Normalized subscription access for cancellation: a cancelled subscription remains operational strictly before `EndDate`, then resolves to `Expired` and read-only without waiting for a background lifecycle update.
 - Deferred verified-email legacy linking, invitations, QR/join code, and workspace-owned client approval to issue #113 so no incomplete public-registration or approval flow is introduced.
 

@@ -3,7 +3,6 @@ param(
     [Parameter(Mandatory = $true)] [string] $PublishSettingsPath,
     [Parameter(Mandatory = $true)] [string] $ExpectedSite,
     [Parameter(Mandatory = $true)] [string] $HealthCheckUrl,
-    [Parameter(Mandatory = $true)] [string] $TemporaryFixedExpiryUtc,
     [string] $ManagementHostOverride,
     [switch] $AllowUntrustedManagementCertificate,
     [string] $MsDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
@@ -18,21 +17,8 @@ if ($ExpectedSite -notmatch '^site[0-9]+$') { throw "Expected site must use the 
 $healthUri = [Uri] $HealthCheckUrl
 if ($healthUri.Scheme -ne "https") { throw "Recovery health URL must use HTTPS." }
 
-$expiry = [DateTimeOffset]::Parse(
-    $TemporaryFixedExpiryUtc,
-    [Globalization.CultureInfo]::InvariantCulture,
-    [Globalization.DateTimeStyles]::AssumeUniversal)
-$now = [DateTimeOffset]::UtcNow
-if ($expiry -le $now -or $expiry -gt $now.AddDays(31)) {
-    throw "Temporary fixed OTP expiry must be in the future and no more than 31 days away."
-}
-
-$otpHmacSecret = $env:LOGICFIT_OTP_HMAC_SECRET
 $jwtSecret = $env:LOGICFIT_JWT_SECRET
 $passwordResetSecret = $env:LOGICFIT_PASSWORD_RESET_SECRET
-if ([string]::IsNullOrWhiteSpace($otpHmacSecret) -or $otpHmacSecret.Length -lt 32) {
-    throw "LOGICFIT_OTP_HMAC_SECRET must be supplied by the protected environment."
-}
 if ([string]::IsNullOrWhiteSpace($jwtSecret) -or $jwtSecret.Length -lt 32) {
     throw "LOGICFIT_JWT_SECRET must be supplied by the protected environment."
 }
@@ -125,15 +111,6 @@ try {
         $configuration | Add-Member -NotePropertyName PasswordReset -NotePropertyValue ([pscustomobject]@{})
     }
     $configuration.PasswordReset | Add-Member -NotePropertyName Secret -NotePropertyValue $passwordResetSecret -Force
-
-    if ($null -eq $configuration.Otp) {
-        $configuration | Add-Member -NotePropertyName Otp -NotePropertyValue ([pscustomobject]@{})
-    }
-    $configuration.Otp | Add-Member -NotePropertyName Provider -NotePropertyValue "TemporaryFixed" -Force
-    $configuration.Otp | Add-Member -NotePropertyName AllowTemporaryFixedCode -NotePropertyValue $true -Force
-    $configuration.Otp | Add-Member -NotePropertyName TemporaryFixedCode -NotePropertyValue "1234" -Force
-    $configuration.Otp | Add-Member -NotePropertyName TemporaryFixedCodeExpiresAtUtc -NotePropertyValue $expiry.UtcDateTime.ToString("O") -Force
-    $configuration.Otp | Add-Member -NotePropertyName HmacSecret -NotePropertyValue $otpHmacSecret -Force
 
     if ($null -eq $configuration.Serilog) {
         $configuration | Add-Member -NotePropertyName Serilog -NotePropertyValue ([pscustomobject]@{})

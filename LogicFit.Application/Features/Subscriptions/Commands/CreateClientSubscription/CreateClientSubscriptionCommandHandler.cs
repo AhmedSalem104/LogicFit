@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
@@ -42,6 +43,7 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
 
         // Validate client exists
         var client = await _context.Users
+            .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == request.ClientId && u.TenantId == tenantId && u.Role == UserRole.Client, cancellationToken);
 
         if (client == null)
@@ -64,15 +66,19 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
         var amountPaid = request.AmountPaid ?? 0;
         var paymentMethod = request.PaymentMethod;
 
+        await using var dbTransaction = await _context.BeginTransactionAsync(cancellationToken);
+
         // Handle wallet payment
         if (request.PayFromWallet)
         {
             var walletPayAmount = amountPaid > 0 ? amountPaid : totalAmount;
-
-            if (client.WalletBalance < walletPayAmount)
-                throw new ValidationException("PayFromWallet", "Insufficient wallet balance");
-
-            client.WalletBalance -= walletPayAmount;
+            var balanceAfter = await WalletBalanceOperations.ApplyAsync(
+                _context,
+                tenantId,
+                request.ClientId,
+                -walletPayAmount,
+                cancellationToken,
+                validationKey: "PayFromWallet");
             amountPaid = walletPayAmount;
             paymentMethod = Domain.Enums.PaymentMethod.Wallet;
 
@@ -83,7 +89,7 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
                 UserId = request.ClientId,
                 Type = TransactionType.Payment,
                 Amount = walletPayAmount,
-                BalanceAfter = client.WalletBalance,
+                BalanceAfter = balanceAfter,
                 Description = $"Subscription payment - {plan.Name}",
                 ReferenceType = "Subscription"
             };
@@ -116,6 +122,7 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
             DateTime.UtcNow, $"Commission for subscription {subscription.Id}", cancellationToken);
 
         await _context.SaveChangesAsync(cancellationToken);
+        await dbTransaction.CommitAsync(cancellationToken);
 
         return subscription.Id;
     }

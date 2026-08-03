@@ -39,5 +39,11 @@ public sealed class ApplicationTrackingStatusDto
     public IReadOnlyList<string> RequestedFields { get; init; } = Array.Empty<string>();
     public DateTime? SubmittedAt { get; init; }
     public DateTime? ReviewedAt { get; init; }
+    public Guid? PlanId { get; init; }
+    public BillingCycle? BillingCycle { get; init; }
+    public string? PlanSnapshotJson { get; init; }
+    public Guid? PaymentRequestId { get; init; }
+    public PaymentRequestStatus? PaymentStatus { get; init; }
+    public int PaymentProofVersion { get; init; }
     public IReadOnlyDictionary<string, JsonElement> EditableValues { get; init; } = new Dictionary<string, JsonElement>();
 }

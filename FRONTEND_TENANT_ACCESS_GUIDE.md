@@ -1,3 +1,7 @@
+> **Archived compatibility reference (superseded 2026-08-03).** Legacy phone-login examples
+> below are historical and are not active. Use the canonical flow and generated API catalog
+> under `docs/`; authentication is Email + Password only.
+
 <div align="center">
 
 # LogicFit — دليل الفرونت: بوابات حالة الجيم/الاشتراك

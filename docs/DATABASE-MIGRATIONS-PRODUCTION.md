@@ -34,15 +34,15 @@ Never update `dbo.__EFMigrationsHistory` manually to hide a migration mismatch.
 
 Migration `20260801214750_NormalizeLegacyIdentityPhonesToE164` converts unambiguous Egyptian
 identity phone values from the legacy 11-digit `01...` representation to `+20...` E.164 and keeps
-linked `DomainUsers.PhoneNumber` aligned. It does not mark a phone verified; only successful OTP
-verification sets `PhoneVerifiedAt`.
+linked `DomainUsers.PhoneNumber` aligned. Phone remains contact data and is not an authentication
+credential.
 
 The migration fails with `LEGACY_PHONE_E164_CONFLICT` if a legacy value would collide with an
 existing E.164 identity, so the operator can resolve ownership instead of silently merging two
 identities. Its `Down` intentionally does not reverse user data normalization. Review it and take a
 verified backup before publishing the Issue #143 binary. The protected deployment step may
 pre-apply it; otherwise the startup migrator applies it before seeding. Then verify that no legacy identity phone
-remains and smoke-test Phone + OTP against a real identity. This migration does not repair
+remains. This migration does not repair
 Platform Owner/Admin rows that lack an `IdentityAccount`; those require the one-run, secret-backed
 `PlatformBootstrap` procedure.
 
