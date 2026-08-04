@@ -430,6 +430,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             || propertyName.Equals("ReplacedByToken", StringComparison.OrdinalIgnoreCase)
             || propertyName.Equals("CodeHash", StringComparison.OrdinalIgnoreCase)
             || propertyName.Equals("CodeSalt", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Equals("EncryptedConnectionString", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Equals("ConnectionString", StringComparison.OrdinalIgnoreCase)
             || propertyName.Equals("SessionBinding", StringComparison.OrdinalIgnoreCase);
     }
 

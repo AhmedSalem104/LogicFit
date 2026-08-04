@@ -83,6 +83,12 @@ public static class DependencyInjection
         services.AddScoped<DatabaseResourceSeeder>();
         services.AddScoped<TenantDatabaseSeeder>();
         services.AddScoped<TenantReferenceCatalogSeeder>();
+        services.AddScoped<LocalSqlTenantDatabasePurgeProvider>();
+        services.AddScoped<ManualMonsterTenantDatabasePurgeProvider>();
+        services.AddScoped<ITenantDatabasePurgeProvider>(provider =>
+            configuration["DatabaseResourcePool:ProvisioningProvider"]?.Equals("LocalSql", StringComparison.OrdinalIgnoreCase) == true
+                ? provider.GetRequiredService<LocalSqlTenantDatabasePurgeProvider>()
+                : provider.GetRequiredService<ManualMonsterTenantDatabasePurgeProvider>());
         services.AddScoped<ManualMonsterProvisioningProvider>();
         services.AddScoped<LocalSqlProvisioningProvider>();
         services.AddScoped<IDatabaseProvisioningProvider>(provider =>
