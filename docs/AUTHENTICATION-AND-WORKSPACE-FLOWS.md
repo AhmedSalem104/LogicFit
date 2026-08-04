@@ -95,6 +95,13 @@ Capacity shortages remain `AwaitingDatabaseCapacity`; provider failures remain
 `ProvisioningFailed`. Neither starts a subscription term or issues a tenant session. The saga is
 retryable and idempotent; Platform DB Outbox records coordinate work across databases.
 
+For a Gym, Platform approval/activation is also the authorization hand-off for the owner:
+`Tenant.Active` activates any non-deleted owner `WorkspaceMembership` still in
+`PendingPlatformApproval`, records `ApprovedAt`/`ApprovedBy`, and makes the workspace appear in
+the next identity context. This is idempotent and also repairs an already-Active gym when an
+operator repeats the protected `activate` action. Client memberships in
+`PendingWorkspaceApproval` remain subject to the gym's own approval flow.
+
 ## Invitations and clients
 
 Workspace invitations are single-use email-bound links. The recipient must sign in with the
