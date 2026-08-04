@@ -47,6 +47,13 @@ The identity context does not contain tenant permissions or a tenant JWT. A user
 workspace can continue automatically; a user with multiple workspaces chooses one. Pending
 applications remain visible and do not block access to another active workspace.
 
+For an already-Active Gym whose owner membership was left in
+`PendingPlatformApproval` by an older release, the issuer performs a narrow, idempotent repair
+during identity login: only that Gym owner's membership is promoted to `Active`. Pending client
+or other workspace memberships are never promoted by this repair. This guarantees the single
+active Gym owner path reaches `/api/identity/select-workspace` automatically instead of showing
+an empty context screen.
+
 ## Platform login
 
 ```text
@@ -126,8 +133,9 @@ retryable and idempotent; Platform DB Outbox records coordinate work across data
 For a Gym, Platform approval/activation is also the authorization hand-off for the owner:
 `Tenant.Active` activates any non-deleted owner `WorkspaceMembership` still in
 `PendingPlatformApproval`, records `ApprovedAt`/`ApprovedBy`, and makes the workspace appear in
-the next identity context. This is idempotent and also repairs an already-Active gym when an
-operator repeats the protected `activate` action. Client memberships in
+the next identity context. This is idempotent. The identity issuer also repairs an already-Active
+Gym at the next owner login, so an operator does not need a second manual activation action after
+an older release left the membership pending. Client memberships in
 `PendingWorkspaceApproval` remain subject to the gym's own approval flow.
 
 ## Invitations and clients

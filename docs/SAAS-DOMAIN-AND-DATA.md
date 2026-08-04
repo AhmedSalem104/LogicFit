@@ -25,6 +25,12 @@ Migration `20260730143000_AddIdentityEmailSecurity` is additive and guards for e
 
 Production schema state is advanced only by the explicit deployment migration stage. The stage compares the released migration plan with the target database, requires a verified BACPAC reference, applies the EF lineage before publishing the API, and verifies that no migration remains pending. Application startup never mutates the schema.
 
+Identity login is also a data-consistency boundary for Gym ownership: when a Gym is already
+`Active` but its owner `WorkspaceMembership` still has `PendingPlatformApproval` from an older
+release, the session issuer promotes only that owner membership to `Active` and records the
+reconciliation timestamp/actor. This is an idempotent data repair with no schema migration; client
+memberships in `PendingWorkspaceApproval` remain unchanged.
+
 لا ينبغي للـController أن ينفذ قرار Domain معقداً. يحول الطلب إلى Command/Query؛
 المعاملات والـConcurrency والتحقق من الملكية تكون في الطبقات المناسبة.
 
