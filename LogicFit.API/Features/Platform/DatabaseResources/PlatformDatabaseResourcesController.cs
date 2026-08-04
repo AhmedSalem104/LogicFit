@@ -238,11 +238,16 @@ public sealed class PlatformDatabaseResourcesController(
             .IgnoreQueryFilters()
             .Where(x => x.DatabaseResourceId == id && x.IsActive)
             .ToListAsync(cancellationToken);
-        if (resource.Status != DatabaseResourceStatus.Assigned || mappings.Count == 0)
+        var isAllocatedRepair = resource.Status == DatabaseResourceStatus.Assigned && mappings.Count > 0;
+        var isPoolResourceRepair = mappings.Count == 0 && resource.Status is
+            DatabaseResourceStatus.Available or
+            DatabaseResourceStatus.Faulted or
+            DatabaseResourceStatus.Maintenance;
+        if (!isAllocatedRepair && !isPoolResourceRepair)
             return Conflict(new
             {
-                errorCode = "DATABASE_RESOURCE_NOT_ALLOCATED",
-                message = "Only an assigned resource with an active workspace mapping can be repaired."
+                errorCode = "DATABASE_RESOURCE_REPAIR_NOT_ALLOWED",
+                message = "An allocated resource must have an active workspace mapping, while an unallocated resource must be Available, Failed, or Disabled before repair."
             });
 
         if (!TryNormalizeConnection(request.ConnectionString, resource.DatabaseName, out var normalized, out var validationError))
@@ -265,6 +270,13 @@ public sealed class PlatformDatabaseResourcesController(
         resource.ServerKey ??= test.ServerKey;
         resource.LastHealthCheckAtUtc = timeProvider.GetUtcNow().UtcDateTime;
         resource.LastError = null;
+        if (isPoolResourceRepair)
+        {
+            resource.Status = DatabaseResourceStatus.Available;
+            resource.ReservedForTenantId = null;
+            resource.ReservedAtUtc = null;
+            resource.AssignedAtUtc = null;
+        }
         foreach (var mapping in mappings)
         {
             mapping.EncryptedConnectionString = protectedConnection;
@@ -281,6 +293,8 @@ public sealed class PlatformDatabaseResourcesController(
                 Event = "DatabaseResourceConnectionRepaired",
                 resource.DatabaseName,
                 ActiveMappingCount = mappings.Count,
+                ReleasedToPool = isPoolResourceRepair,
+                NewStatus = resource.Status.ToString(),
                 test.ServerKey
             }),
             AffectedColumns = "EncryptedConnectionString,LastValidatedAtUtc,LastHealthCheckAtUtc",
@@ -294,13 +308,16 @@ public sealed class PlatformDatabaseResourcesController(
         await transaction.CommitAsync(cancellationToken);
 
         logger.LogInformation(
-            "An allocated database connection was repaired for resource {ResourceId} and {MappingCount} active mapping(s).",
+            "A database connection was repaired for resource {ResourceId}; status is {Status} and {MappingCount} active mapping(s) remain.",
             id,
+            resource.Status,
             mappings.Count);
 
         return Ok(new DatabaseResourceOperationDto(
             true,
-            "The connection was tested and protected mapping values were repaired successfully.",
+            isPoolResourceRepair
+                ? "The connection was tested, protected, and the resource is now Available for a new workspace."
+                : "The connection was tested and protected mapping values were repaired successfully.",
             null,
             resource.SchemaVersion));
     }
