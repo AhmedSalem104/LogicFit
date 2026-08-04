@@ -280,8 +280,10 @@ CI يعمل على الفروع وPull Requests ويتحقق من البناء �
 
 Before enabling mapped-workspace routing in Production:
 
-1. Set `DataProtection:KeyDirectory` (or `DataProtection__KeyDirectory`) to durable storage
-   shared by all IIS workers; do not use a disposable publish directory.
+1. Apply the `PersistDataProtectionKeys` Platform migration. The central Platform database is
+   the authoritative Data Protection key store; keep `DataProtection:KeyDirectory` (or
+   `DataProtection__KeyDirectory`) on the durable `App_Data/DataProtection-Keys` mirror and never
+   deploy it as a disposable directory.
 2. Register and test every prepared database through `DatabaseResources`; only the protected
    value is stored in `DatabaseResources`/`TenantDatabaseMappings`.
 3. Run the reviewed Tenant migration and the explicit existing-workspace transfer. Reconcile

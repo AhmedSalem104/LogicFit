@@ -4,6 +4,7 @@ using LogicFit.API.RateLimiting;
 using LogicFit.API.Security;
 using LogicFit.Application;
 using LogicFit.Infrastructure;
+using LogicFit.Infrastructure.HealthChecks;
 using LogicFit.Infrastructure.Persistence;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -144,7 +145,8 @@ builder.Services.AddSingleton<
 
 // Health checks (readiness includes a DB connectivity probe).
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<PlatformDbContext>("platform-database");
+    .AddDbContextCheck<PlatformDbContext>("platform-database")
+    .AddCheck<TenantDatabaseMappingHealthCheck>("tenant-database-mappings");
 
 // Swagger configuration
 builder.Services.AddEndpointsApiExplorer();
@@ -217,6 +219,11 @@ using (var scope = app.Services.CreateScope())
 {
     var migrator = scope.ServiceProvider.GetRequiredService<StartupDatabaseMigrator>();
     await migrator.ApplyPendingMigrationsAsync(app.Lifetime.ApplicationStopping);
+
+    // Import any legacy App_Data keys before the Data Protection provider is first used. The
+    // central Platform database is authoritative from this point forward.
+    var keyRingBootstrapper = scope.ServiceProvider.GetRequiredService<DataProtectionKeyRingBootstrapper>();
+    await keyRingBootstrapper.SynchronizeAsync(app.Lifetime.ApplicationStopping);
 
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
 

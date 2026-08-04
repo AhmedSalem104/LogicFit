@@ -39,7 +39,27 @@ public class ProductionDeploymentContractTests
         Assert.Contains("VerifiedBackupReference", script);
         Assert.Contains("-ApplyMigrations requires -MigrationScriptPath", script);
         Assert.Contains("ApproveDestructiveMigrationReview", script);
+        Assert.Contains("App_Data\\\\DataProtection-Keys", script);
+        Assert.Contains("objectName=dirPath", script);
         Assert.DoesNotContain("Database__ApplyMigrationsOnStartup", script);
+    }
+
+    [Fact]
+    public void Data_protection_keys_use_the_central_database_with_a_file_recovery_mirror()
+    {
+        var dependencyInjection = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "LogicFit.Infrastructure",
+            "DependencyInjection.cs"));
+        var bootstrapper = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "LogicFit.Infrastructure",
+            "Persistence",
+            "DataProtectionKeyRingBootstrapper.cs"));
+
+        Assert.Contains("PersistKeysToDbContext<ApplicationDbContext>", dependencyInjection);
+        Assert.Contains("DataProtectionKeyRingBootstrapper", bootstrapper);
+        Assert.Contains("FileSystemXmlRepository", bootstrapper);
     }
 
     [Fact]
