@@ -24,6 +24,11 @@ never replaces authorization: `WorkspaceMembership.Active`, local `User.Active`,
 workspace/subscription gates, permissions, and ownership checks still decide access. Password
 reset/change revokes linked refresh and workspace-selection sessions.
 
+For a Gym, the Platform tenant approval/activation command promotes only the owner's
+`PendingPlatformApproval` membership to `Active` and records the decision actor/time. A client
+membership in `PendingWorkspaceApproval` is a separate gym-operator decision and is not promoted
+by Platform activation.
+
 ## مستخدمو المنصة المركزية
 
 | الدور | الاستخدام | النطاق |

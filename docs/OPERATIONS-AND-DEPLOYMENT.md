@@ -7,6 +7,14 @@ Backend and Platform Dashboard together because `/api/platform/auth/login` retur
 directly and no OTP verification call is valid. Do not add OTP, Phone Login, Passkey, or WebAuthn
 secrets to the server. No Production deployment or migration was performed by this change.
 
+## Tenant approval and existing owner memberships (Issue #210)
+
+When a Gym is approved or activated through `/api/platform/tenants/{id}/activate`, the Backend
+also promotes its non-deleted owner membership from `PendingPlatformApproval` to `Active`. The
+operation is idempotent and requires no schema migration. After releasing this behavior, an
+already-`Active` Gym with a pending owner membership should be repaired by repeating that
+protected Platform `activate` action; do not update `WorkspaceMemberships` directly in Production.
+
 ## بيئات ومكونات النشر
 
 - `LogicFit.API` هو المضيف الموحد؛ يحتوي Platform وTenant modules ويستخدم إعدادات

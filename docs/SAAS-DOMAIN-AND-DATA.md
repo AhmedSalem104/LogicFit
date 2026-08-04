@@ -33,6 +33,7 @@ Production schema state is advanced only by the explicit deployment migration st
 | الكيان | المسؤولية | قاعدة الحماية |
 |---|---|---|
 | `Tenant` | الصالة/العميل التجاري، النطاق والحالة. | لا حذف عند وجود تاريخ؛ حالة دورة حياة. |
+| `WorkspaceMembership` | ربط الهوية العالمية بالمستخدم والمساحة وحالة الوصول. | لا يصدر اختيار مساحة أو JWT إلا للعضوية `Active`؛ تفعيل الجيم يفعّل عضوية المالك المنتظرة فقط. |
 | `User`, `Role`, `Permission`, `UserRoleAssignment` | هوية وصلاحيات المستخدمين. | JWT + Policy؛ لا ثقة بدور الواجهة. |
 | `Plan`, `PlanFeature` | قالب الخطة التجاري وميزاتها. | التعديل مستقبلي؛ لا يعيد كتابة Snapshot. |
 | `Feature`, `FeatureDependency` | كتالوج المزايا والاعتماديات. | `FeatureKey` فريد وثابت؛ Archive بدل الحذف التاريخي. |

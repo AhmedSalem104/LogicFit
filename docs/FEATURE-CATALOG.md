@@ -46,7 +46,7 @@
 |---|---|---|---|
 | دخول إدارة المنصة | بريد وكلمة مرور، refresh cookie وتدوير/إلغاء الجلسات | `Features/Platform/Auth`، `/api/platform/auth/*` | `PlatformOwner`، `PlatformAdmin` |
 | لوحة المتابعة | مؤشرات المنصة وقائمة المساحات | `Features/Platform/Dashboard`، `/api/platform/dashboard/*` | صلاحيات Platform المناسبة |
-| إدارة المساحات | إنشاء، قائمة، اعتماد، تعليق، تفعيل وأرشفة الجيم/المساحة | `Features/Platform/Tenants`، `/api/platform/tenants/*` | `ManageTenants` |
+| إدارة المساحات | إنشاء، قائمة، اعتماد، تعليق، تفعيل وأرشفة الجيم/المساحة؛ تفعيل عضوية مالك الجيم المنتظرة مع اعتماد المساحة | `Features/Platform/Tenants`، `/api/platform/tenants/*` | `ManageTenants` |
 | طلبات مساحة المدرب الحر | قائمة، بدء مراجعة، طلب معلومات، اعتماد مساحة، اعتماد عضوية ورفض مع `RowVersion` | `LogicFit.API/Features/Platform/WorkspaceApplications`، `/api/platform/workspace-applications/*` | `ManageTenants` |
 | الخطط والميزات | الخطط، feature catalog، overrides، quotas، dependencies | `Features/Platform/Plans` و`FeatureCatalog`، `/api/platform/plans/*` و`/api/platform/features/*` | `ManagePlans` / `ManageFeatures` |
 | اشتراكات الـSaaS | العرض، الاستهلاك، lifecycle، التمديد ومعاينة الترقية | `Features/Platform/Subscriptions`، `/api/platform/subscriptions/*` | `ManageSubscriptions` |
