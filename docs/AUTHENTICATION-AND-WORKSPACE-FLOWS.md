@@ -63,6 +63,13 @@ POST /api/identity/select-workspace { workspaceSelectionToken, workspaceId }
 The browser cannot submit a database name, connection string, or arbitrary TenantId. Tenant data
 is resolved server-side through the active TenantDatabaseMapping.
 
+After `TenantMiddleware` sets `TenantId`, `TenantDatabaseRoutingMiddleware` resolves the mapping
+before the workspace access gate and authorization handlers run. Platform-owned reads use
+`PlatformDbContext`; operational reads/writes (users, clients, workouts, attendance, inventory,
+finance and HR) use one request-scoped `TenantDbContext` for the selected workspace. If the mapping
+is missing, stale, or cannot be decrypted, the API returns `503 TENANT_DATABASE_UNAVAILABLE` and
+does not fall back to the old shared database.
+
 ## Creating a Gym or Freelance workspace
 
 1. The authenticated identity chooses Gym or FreelanceCoach; it never submits an owner role.

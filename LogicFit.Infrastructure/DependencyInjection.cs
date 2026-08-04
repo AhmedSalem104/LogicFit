@@ -8,6 +8,7 @@ using LogicFit.Infrastructure.Persistence;
 using LogicFit.Infrastructure.Security;
 using LogicFit.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -23,15 +24,55 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton(TimeProvider.System);
-        services.AddDataProtection();
 
-        // Database
+        // DatabaseResource connection strings are protected with ASP.NET Data Protection.  A
+        // process-local key ring would make every encrypted mapping unreadable after an IIS
+        // recycle, so use a persistent operator-configurable directory and a stable application
+        // discriminator.  The default App_Data location is suitable for hosts that persist the
+        // application directory; production deployments should set DataProtection:KeyDirectory
+        // to their durable storage path.
+        var dataProtectionKeyDirectory = configuration["DataProtection:KeyDirectory"];
+        if (string.IsNullOrWhiteSpace(dataProtectionKeyDirectory))
+        {
+            dataProtectionKeyDirectory = Path.Combine(
+                AppContext.BaseDirectory,
+                "App_Data",
+                "DataProtection-Keys");
+        }
+
+        Directory.CreateDirectory(dataProtectionKeyDirectory);
+        services.AddDataProtection()
+            .SetApplicationName("LogicFit")
+            .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeyDirectory));
+
+        // Platform DB is the runtime source for identity, workspace metadata, billing and
+        // database-resource mappings.  ApplicationDbContext remains registered only as a
+        // compatibility/migration host until the legacy shared rows are transferred.
+        services.AddDbContext<PlatformDbContext>(options =>
+            DbContextSqlServerOptions.UsePlatformDatabase(
+                options,
+                configuration.GetConnectionString("DefaultConnection")
+                    ?? throw new InvalidOperationException("DefaultConnection is not configured.")));
+
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(
                 configuration.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
-        services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        services.AddScoped<TenantDatabaseRequestScope>();
+        services.AddScoped<TenantDatabaseContextAccessor>();
+        services.AddOptions<TenantDatabaseRoutingOptions>()
+            .Bind(configuration.GetSection(TenantDatabaseRoutingOptions.SectionName))
+            .Validate(
+                TenantDatabaseRoutingOptions.IsValid,
+                "Tenant database routing configuration is invalid.");
+        services.AddScoped<IApplicationDbContext>(provider =>
+            TenantAwareApplicationDbContextProxy.Create(
+                provider.GetRequiredService<PlatformDbContext>(),
+                provider.GetRequiredService<ApplicationDbContext>(),
+                provider.GetRequiredService<TenantDatabaseRequestScope>(),
+                provider.GetRequiredService<TenantDatabaseContextAccessor>(),
+                provider.GetRequiredService<ITenantService>()));
         services.AddSingleton<IDistributedLockProvider, SqlServerDistributedLockProvider>();
         services.AddScoped<IDatabaseResourcePool, DatabaseResourcePoolService>();
         services.AddOptions<DatabaseResourcePoolOptions>()
@@ -40,6 +81,8 @@ public static class DependencyInjection
                 DatabaseResourcePoolOptions.IsValid,
                 "Database resource pool configuration is invalid.");
         services.AddScoped<DatabaseResourceSeeder>();
+        services.AddScoped<TenantDatabaseSeeder>();
+        services.AddScoped<TenantReferenceCatalogSeeder>();
         services.AddScoped<ManualMonsterProvisioningProvider>();
         services.AddScoped<LocalSqlProvisioningProvider>();
         services.AddScoped<IDatabaseProvisioningProvider>(provider =>
@@ -76,7 +119,7 @@ public static class DependencyInjection
             options.Password.RequiredLength = 8;
             options.User.RequireUniqueEmail = false; // We handle uniqueness per tenant
         })
-        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddEntityFrameworkStores<PlatformDbContext>()
         .AddDefaultTokenProviders();
 
         // JWT Authentication
@@ -185,6 +228,7 @@ public static class DependencyInjection
             services.AddHostedService<SubscriptionLifecycleService>();
             services.AddHostedService<PlatformSubscriptionLifecycleService>();
             services.AddHostedService<OutboxProcessorService>();
+            services.AddHostedService<TenantOutboxProcessorService>();
         }
 
         return services;

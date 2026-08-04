@@ -23,6 +23,7 @@ public sealed class DbContextOwnershipTests
         Assert.Contains("Tenants", tables);
         Assert.Contains("IdentityAccounts", tables);
         Assert.DoesNotContain("DomainUsers", tables);
+        Assert.DoesNotContain("UserRoles", tables);
         Assert.DoesNotContain("WorkoutPrograms", tables);
         Assert.DoesNotContain("Appointments", tables);
     }

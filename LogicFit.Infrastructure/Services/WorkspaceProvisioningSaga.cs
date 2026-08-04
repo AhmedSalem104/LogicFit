@@ -13,7 +13,8 @@ namespace LogicFit.Infrastructure.Services;
 /// no distributed transaction: the persistent job and idempotency key make retries safe.
 /// </summary>
 public sealed class WorkspaceProvisioningSaga(
-    ApplicationDbContext db,
+    PlatformDbContext db,
+    ApplicationDbContext legacyDb,
     IDatabaseProvisioningProvider provider,
     IDateTimeService clock,
     ILogger<WorkspaceProvisioningSaga> logger) : IWorkspaceProvisioningSaga
@@ -98,7 +99,7 @@ public sealed class WorkspaceProvisioningSaga(
         // a scalar bridge row with the same id as the tenant-local owner so existing membership
         // foreign keys remain valid; the tenant database remains the operational source of truth.
         var localUserId = result.LocalUserId ?? throw new InvalidOperationException("Provider did not return the local owner id.");
-        var compatibilityUser = await db.Set<User>().IgnoreQueryFilters()
+        var compatibilityUser = await legacyDb.Set<User>().IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.Id == localUserId, cancellationToken);
         if (compatibilityUser is null)
         {
@@ -113,8 +114,8 @@ public sealed class WorkspaceProvisioningSaga(
                 Role = application.RequestedRole ?? UserRole.Owner,
                 IsActive = true
             };
-            db.Set<User>().Add(compatibilityUser);
-            db.UserProfiles.Add(new UserProfile
+            legacyDb.Set<User>().Add(compatibilityUser);
+            legacyDb.UserProfiles.Add(new UserProfile
             {
                 UserId = localUserId,
                 FullName = application.IdentityAccount.FullName
@@ -146,16 +147,23 @@ public sealed class WorkspaceProvisioningSaga(
             membership.Status = WorkspaceMembershipStatus.PendingPlatformApproval;
         membership.UserId = localUserId;
 
-        var roleName = membership.Role == UserRole.FreelanceOwner ? SystemRoles.FreelanceOwner : SystemRoles.Owner;
-        var role = await db.AppRoles.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(x => x.TenantId == null && x.Name == roleName && !x.IsDeleted, cancellationToken);
-        if (role is not null && !await db.UserRoleAssignments.IgnoreQueryFilters()
-                .AnyAsync(x => x.UserId == membership.UserId && x.RoleId == role.Id && x.TenantId == tenantId, cancellationToken))
+        // Keep the compatibility projection usable during the staged identity-selection
+        // migration. The authoritative assignment is seeded in Tenant DB by the provider;
+        // this legacy copy is removed with the explicit workspace transfer job.
+        var compatibilityRoleName = membership.Role == UserRole.FreelanceOwner
+            ? SystemRoles.FreelanceOwner
+            : SystemRoles.Owner;
+        var compatibilityRole = await legacyDb.AppRoles
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.TenantId == null && x.Name == compatibilityRoleName && !x.IsDeleted, cancellationToken);
+        if (compatibilityRole is not null && !await legacyDb.UserRoleAssignments
+                .IgnoreQueryFilters()
+                .AnyAsync(x => x.UserId == membership.UserId && x.RoleId == compatibilityRole.Id && x.TenantId == tenantId, cancellationToken))
         {
-            db.UserRoleAssignments.Add(new UserRoleAssignment
+            legacyDb.UserRoleAssignments.Add(new UserRoleAssignment
             {
                 UserId = membership.UserId,
-                RoleId = role.Id,
+                RoleId = compatibilityRole.Id,
                 TenantId = tenantId
             });
         }
@@ -197,6 +205,7 @@ public sealed class WorkspaceProvisioningSaga(
             IdempotencyKey = $"workspace-provisioning:{applicationRequestId}:completed"
         });
         await db.SaveChangesAsync(cancellationToken);
+        await legacyDb.SaveChangesAsync(cancellationToken);
         return new WorkspaceProvisioningOutcome(tenantId, applicationRequestId, job.Status, result.ResourceId);
     }
 

@@ -66,19 +66,62 @@ public class SubscriptionLifecycleService : BackgroundService
     private async Task ProcessSubscriptionsUnderLock(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var execution = new LogicFit.Domain.Entities.JobExecutionLog
-        {
-            JobName = nameof(SubscriptionLifecycleService), Status = "Running", StartedAtUtc = DateTime.UtcNow, AttemptCount = 1
-        };
-        context.JobExecutionLogs.Add(execution);
-        await context.SaveChangesAsync(cancellationToken);
+        var platform = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
+        var resolver = scope.ServiceProvider.GetRequiredService<ITenantDatabaseResolver>();
+        var tenantIds = await platform.TenantDatabaseMappings
+            .AsNoTracking()
+            .Where(mapping => mapping.IsActive)
+            .Select(mapping => mapping.TenantId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
 
-        await ExpireSubscriptions(context, cancellationToken);
-        await UnfreezeSubscriptions(context, cancellationToken);
-        execution.Status = "Completed";
-        execution.CompletedAtUtc = DateTime.UtcNow;
-        await context.SaveChangesAsync(cancellationToken);
+        foreach (var tenantId in tenantIds)
+        {
+            var resolution = await resolver.ResolveAsync(tenantId, cancellationToken);
+            if (resolution is null)
+            {
+                _logger.LogWarning(
+                    "Skipping tenant subscription lifecycle for TenantId {TenantId}; no active database mapping is available.",
+                    tenantId);
+                continue;
+            }
+
+            await using var context = TenantRuntimeDbContextFactory.Create(resolution);
+            var execution = new LogicFit.Domain.Entities.JobExecutionLog
+            {
+                JobName = nameof(SubscriptionLifecycleService),
+                Status = "Running",
+                StartedAtUtc = DateTime.UtcNow,
+                AttemptCount = 1
+            };
+            context.JobExecutionLogs.Add(execution);
+
+            try
+            {
+                await context.SaveChangesAsync(cancellationToken);
+                await ExpireSubscriptions(context, cancellationToken);
+                await UnfreezeSubscriptions(context, cancellationToken);
+                execution.Status = "Completed";
+                execution.CompletedAtUtc = DateTime.UtcNow;
+                await context.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                execution.Status = "Failed";
+                execution.CompletedAtUtc = DateTime.UtcNow;
+                execution.Error = exception.Message;
+                try
+                {
+                    await context.SaveChangesAsync(CancellationToken.None);
+                }
+                catch (Exception logException)
+                {
+                    _logger.LogError(logException, "Unable to record tenant subscription job failure for TenantId {TenantId}.", tenantId);
+                }
+
+                _logger.LogError(exception, "Tenant subscription lifecycle failed for TenantId {TenantId}.", tenantId);
+            }
+        }
     }
 
     private async Task RecordAsync(string status, string? error, CancellationToken cancellationToken)
@@ -86,7 +129,7 @@ public class SubscriptionLifecycleService : BackgroundService
         try
         {
             using var scope = _scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
             context.JobExecutionLogs.Add(new LogicFit.Domain.Entities.JobExecutionLog
             {
                 JobName = nameof(SubscriptionLifecycleService), Status = status, StartedAtUtc = DateTime.UtcNow,
@@ -97,7 +140,7 @@ public class SubscriptionLifecycleService : BackgroundService
         catch (Exception logEx) { _logger.LogError(logEx, "Unable to record subscription job execution"); }
     }
 
-    private async Task ExpireSubscriptions(ApplicationDbContext context, CancellationToken cancellationToken)
+    private async Task ExpireSubscriptions(TenantDbContext context, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
 
@@ -120,7 +163,7 @@ public class SubscriptionLifecycleService : BackgroundService
         }
     }
 
-    private async Task UnfreezeSubscriptions(ApplicationDbContext context, CancellationToken cancellationToken)
+    private async Task UnfreezeSubscriptions(TenantDbContext context, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
 

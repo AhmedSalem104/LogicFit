@@ -46,14 +46,19 @@ public sealed class SelectIdentityWorkspaceCommandHandler
         var selectionSession = await IdentityWorkspaceSessionResolver.GetActiveAsync(
             _context, _dateTimeService, request.WorkspaceSelectionToken, cancellationToken);
         var membership = await _context.WorkspaceMemberships.IgnoreQueryFilters()
-            .Include(x => x.User)
-                .ThenInclude(x => x.Profile)
             .FirstOrDefaultAsync(x => x.IdentityAccountId == selectionSession.IdentityAccountId &&
                                       x.TenantId == request.WorkspaceId &&
                                       x.Status == WorkspaceMembershipStatus.Active && !x.IsDeleted,
                 cancellationToken)
             ?? throw new ForbiddenException("This identity does not have an active membership in the selected workspace.");
-        if (!membership.User.IsActive || membership.User.IsDeleted)
+        var user = await _context.Users
+            .IgnoreQueryFilters()
+            .Include(x => x.Profile)
+            .FirstOrDefaultAsync(x => x.Id == membership.UserId &&
+                                      x.TenantId == membership.TenantId &&
+                                      x.IsActive && !x.IsDeleted,
+                cancellationToken);
+        if (user is null)
             throw new ForbiddenException("The workspace account is not active.");
 
         var identityAccess = await _identityWorkspaceAccessGuard.EvaluateAsync(membership.UserId, request.WorkspaceId, cancellationToken);
@@ -66,13 +71,13 @@ public sealed class SelectIdentityWorkspaceCommandHandler
         var auth = await _rbacService.GetUserAuthorizationAsync(membership.UserId, cancellationToken);
         var accessToken = _jwtService.GenerateAccessToken(
             membership.UserId,
-            membership.User.Email,
+            user.Email,
             membership.TenantId,
             auth.Roles,
             auth.Permissions,
-            membership.User.PermissionsVersion);
+            user.PermissionsVersion);
         var refreshToken = _refreshTokenService.Issue(
-            membership.User,
+            user,
             _currentUserService.IpAddress,
             RefreshTokenService.SurfaceTenant);
         await _context.SaveChangesAsync(cancellationToken);
@@ -80,9 +85,9 @@ public sealed class SelectIdentityWorkspaceCommandHandler
         return new AuthResponseDto
         {
             UserId = membership.UserId,
-            Email = membership.User.Email,
-            PhoneNumber = membership.User.PhoneNumber,
-            FullName = membership.User.Profile?.FullName,
+            Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            FullName = user.Profile?.FullName,
             Role = membership.Role.ToString(),
             Roles = auth.Roles,
             Permissions = auth.Permissions,

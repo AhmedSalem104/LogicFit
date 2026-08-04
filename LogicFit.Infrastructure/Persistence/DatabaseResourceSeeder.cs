@@ -14,7 +14,7 @@ namespace LogicFit.Infrastructure.Persistence;
 /// protected at rest and is never included in logs or API DTOs.
 /// </summary>
 public sealed class DatabaseResourceSeeder(
-    ApplicationDbContext db,
+    PlatformDbContext db,
     IConnectionStringProtector protector,
     IOptions<DatabaseResourcePoolOptions> options,
     ILogger<DatabaseResourceSeeder> logger)

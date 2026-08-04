@@ -144,7 +144,7 @@ builder.Services.AddSingleton<
 
 // Health checks (readiness includes a DB connectivity probe).
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<ApplicationDbContext>("database");
+    .AddDbContextCheck<PlatformDbContext>("platform-database");
 
 // Swagger configuration
 builder.Services.AddEndpointsApiExplorer();
@@ -266,6 +266,11 @@ app.UseAuthentication();
 // Tenant must be resolved BEFORE authorization so permission checks and query filters
 // see the current tenant.
 app.UseTenant();
+
+// Resolve the assigned workspace database before identity gates, authorization, or handlers can
+// access tenant-owned data. Missing mappings fail closed instead of falling back to the legacy
+// shared database.
+app.UseTenantDatabaseRouting();
 
 // Identity and membership are a separate boundary from subscription and permissions. Linked
 // accounts are enforced immediately and unlinked legacy sessions fail closed.

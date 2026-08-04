@@ -110,3 +110,20 @@ Migration التنسيق يوقف التطبيق إذا كانت هناك مفا
 أضف Logs وMetrics وAlerts لفشل المدفوعات، Jobs، Outbox وانتقالات حالات الاشتراك.
 قبل نشر Migration كبير: Dry Run، Backup، تقرير مخالفات، Rollback Test وFeature Flag
 للتفعيل التدريجي.
+# Runtime database ownership (Issue #208 task branch)
+
+The target storage boundary is now enforced at request time for mapped workspaces:
+
+- Platform DB owns identity, workspace lifecycle, memberships, subscriptions, payments,
+  provisioning, resource-pool rows, mappings, backups and platform RBAC.
+- One Tenant DB owns all operational rows for a Gym or Freelance Workspace. Coach, Assistant,
+  Owner and Client rows in that workspace share the same database.
+- `TenantDatabaseRoutingMiddleware` resolves the authenticated TenantId through Platform DB before
+  authorization. A missing or stale mapping returns `TENANT_DATABASE_UNAVAILABLE`; it must not
+  read the legacy shared store.
+- The connection string is decrypted only in memory, and Data Protection keys are persisted at a
+  durable operator-configured path.
+
+Existing shared tenant rows still need the explicit backed-up transfer and reconciliation job
+described in [TENANT-DATABASE-RUNTIME-CUTOVER.md](TENANT-DATABASE-RUNTIME-CUTOVER.md) before the
+cutover is declared Production-complete.

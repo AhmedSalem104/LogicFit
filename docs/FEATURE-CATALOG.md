@@ -54,6 +54,7 @@
 | مسؤولو المنصة وRBAC | إنشاء/تعطيل مسؤول، أدوار المنصة وخريطة صلاحياتها | `Administrators` و`Authorization`، `/api/platform/administrators/*` و`/api/platform/roles/*` | `PlatformOwner` |
 | المراقبة والتدقيق | alerts، audit logs، Outbox/jobs مع تنسيق متعدد النسخ، النسخ الاحتياطي والتقارير | `Alerts`، `Audit`، `Operations`، `Backups`، `Reports` | أدوار تشغيل المنصة |
 | عقد تشغيل لوحة المنصة | ملخصات مراجعة الطلبات والدفع، سعة Pool، Provisioning، النسخ والاستعادة، وتشخيص إصدار الـAPI | `Features/Platform/Dashboard`، `DatabaseResources`، `Diagnostics`، `Operations`؛ `/api/platform/dashboard/*`، `/api/platform/database-resources`، `/api/platform/diagnostics/version`، `/api/platform/operations/provisioning` | `ManagePlatformReports` / `ManagePlatformBackups` |
+| توجيه Platform/Tenant وقت التشغيل | تحديد TenantId ثم اختيار قاعدة المساحة وفصل العمليات اليومية عن Platform DB | `TenantDatabaseRoutingMiddleware`, `TenantAwareApplicationDbContextProxy`, `PlatformDbContext`, `TenantDbContext`; `TENANT-DATABASE-RUNTIME-CUTOVER.md` | Tenant access + server-side mapping |
 | الإشعارات المركزية | عرض الإشعارات وتعليمها كمقروءة | `Features/Platform/Notifications` | مسؤول المنصة المستهدف |
 
 ## الهوية والوصول ومساحات العمل

@@ -18,7 +18,9 @@ namespace LogicFit.Infrastructure.Services;
 public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningProvider
 {
     private readonly IDatabaseResourcePool resourcePool;
-    private readonly ApplicationDbContext? platformDb;
+    private readonly PlatformDbContext? platformDb;
+    private readonly ApplicationDbContext? legacyDb;
+    private readonly TenantDatabaseSeeder? tenantDatabaseSeeder;
     private readonly IConnectionStringProtector? connectionStringProtector;
     private readonly IDateTimeService? dateTime;
     private readonly ILogger<ManualMonsterProvisioningProvider>? logger;
@@ -30,13 +32,17 @@ public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningPro
     [ActivatorUtilitiesConstructor]
     public ManualMonsterProvisioningProvider(
         IDatabaseResourcePool resourcePool,
-        ApplicationDbContext platformDb,
+        PlatformDbContext platformDb,
+        ApplicationDbContext legacyDb,
+        TenantDatabaseSeeder tenantDatabaseSeeder,
         IConnectionStringProtector connectionStringProtector,
         IDateTimeService dateTime,
         ILogger<ManualMonsterProvisioningProvider> logger)
     {
         this.resourcePool = resourcePool;
         this.platformDb = platformDb;
+        this.legacyDb = legacyDb;
+        this.tenantDatabaseSeeder = tenantDatabaseSeeder;
         this.connectionStringProtector = connectionStringProtector;
         this.dateTime = dateTime;
         this.logger = logger;
@@ -51,7 +57,7 @@ public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningPro
         // The one-argument constructor is intentionally usable by capacity-only contract tests,
         // but a real provisioning run must have all platform services available.  Check this
         // after reserving so a no-capacity environment still reports its actionable state.
-        if (platformDb is null || connectionStringProtector is null || dateTime is null)
+        if (platformDb is null || legacyDb is null || tenantDatabaseSeeder is null || connectionStringProtector is null || dateTime is null)
         {
             var unconfiguredReservation = await resourcePool.ReserveAvailableAsync(tenantId, cancellationToken);
             if (unconfiguredReservation is null)
@@ -143,6 +149,8 @@ public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningPro
             if (!await tenantDb.Database.CanConnectAsync(cancellationToken))
                 return await FailResourceAsync(resource, tenantId, reservation.ResourceId, "TENANT_DATABASE_HEALTH_CHECK_FAILED", cancellationToken);
 
+            await tenantDatabaseSeeder.SeedAsync(tenantDb, cancellationToken);
+
             var application = await platformDb.ApplicationRequests
                 .Include(x => x.IdentityAccount)
                 .FirstOrDefaultAsync(x => x.ProvisionedWorkspaceId == tenantId, cancellationToken);
@@ -155,7 +163,7 @@ public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningPro
             // Platform-created gyms already have a compatibility owner row. Reusing that id in
             // the tenant database keeps the membership foreign key stable across the split. A
             // freelance workspace has no central owner yet, so it receives a new local id.
-            var existingPlatformOwnerId = await platformDb.Set<User>()
+            var existingPlatformOwnerId = await legacyDb.Set<User>()
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenantId && x.IdentityAccountId == application.IdentityAccountId && !x.IsDeleted)
                 .Select(x => (Guid?)x.Id)
@@ -217,6 +225,13 @@ public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningPro
                     UserId = localOwner.Id,
                     FullName = application.IdentityAccount.FullName,
                 });
+            }
+
+            await tenantDb.SaveChangesAsync(cancellationToken);
+            if (!await tenantDb.UserRoleAssignments
+                    .IgnoreQueryFilters()
+                    .AnyAsync(x => x.UserId == localOwner.Id && x.RoleId == ownerRole.Id && x.TenantId == tenantId, cancellationToken))
+            {
                 tenantDb.UserRoleAssignments.Add(new UserRoleAssignment
                 {
                     UserId = localOwner.Id,
@@ -224,9 +239,9 @@ public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningPro
                     RoleId = ownerRole.Id,
                     TenantId = tenantId
                 });
+                await tenantDb.SaveChangesAsync(cancellationToken);
             }
 
-            await tenantDb.SaveChangesAsync(cancellationToken);
             var mappedPermissionIds = await tenantDb.RolePermissions
                 .Where(x => x.RoleId == ownerRole.Id)
                 .Select(x => x.PermissionId)

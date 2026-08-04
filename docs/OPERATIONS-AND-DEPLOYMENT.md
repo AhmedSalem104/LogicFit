@@ -250,6 +250,24 @@ CI يعمل على الفروع وPull Requests ويتحقق من البناء �
 - Treat a spike in `IDENTITY_MIGRATION_REQUIRED`, `WORKSPACE_MEMBERSHIP_INACTIVE`, `IDENTITY_ACCOUNT_INACTIVE`, or `WORKSPACE_ACCOUNT_INACTIVE` as an operator-review signal. Do not work around it by re-enabling users or memberships without an audited decision.
 - Cancellation access is evaluated against `EndDate` at request time. Test a cancelled workspace before and at the end date during rollout; it must be full before the end date and read-only at/after it.
 
+## Issue #208 Platform/Tenant runtime cutover (task branch)
+
+Before enabling mapped-workspace routing in Production:
+
+1. Set `DataProtection:KeyDirectory` (or `DataProtection__KeyDirectory`) to durable storage
+   shared by all IIS workers; do not use a disposable publish directory.
+2. Register and test every prepared database through `DatabaseResources`; only the protected
+   value is stored in `DatabaseResources`/`TenantDatabaseMappings`.
+3. Run the reviewed Tenant migration and the explicit existing-workspace transfer. Reconcile
+   counts and foreign-key IDs before enabling a tenant mapping.
+4. Set `Database:TenantRouting:Enabled=true` and keep
+   `Database:TenantRouting:FailClosedWithoutMapping=true`.
+5. Verify `/health`, one Gym request, one Freelance request, and a negative isolation request.
+
+The routing layer returns `503 TENANT_DATABASE_UNAVAILABLE` for an authenticated workspace with
+no valid mapping. This is intentional and is safer than allowing old shared rows to be read. The
+task branch has no Production deployment or data change claim.
+
 ## Rollback
 
 Rollback قرار تشغيلي موثق: أوقف rollout عند health check فاشل، أعد binary السابق

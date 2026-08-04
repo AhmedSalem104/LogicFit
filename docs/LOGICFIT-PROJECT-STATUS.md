@@ -25,6 +25,16 @@
 
 Last reviewed: 2026-08-03
 
+> **Issue #208 — task branch, not deployed:** runtime database routing is implemented behind the
+> Platform/Tenant context boundary. `PlatformDbContext` now serves platform sets and Identity;
+> `TenantDatabaseRoutingMiddleware` resolves the active protected mapping before authorization;
+> tenant operational sets are created from a request-scoped `TenantDbContext`; missing mappings
+> fail with `TENANT_DATABASE_UNAVAILABLE`. Data Protection keys use a durable configurable key
+> directory, and background tenant subscription lifecycle runs per mapped Tenant DB. Existing
+> shared tenant rows still require the explicit backed-up transfer/reconciliation gate before
+> enabling this behavior for those workspaces. No Production database, mapping, or secret was
+> changed. See [TENANT-DATABASE-RUNTIME-CUTOVER.md](TENANT-DATABASE-RUNTIME-CUTOVER.md).
+
 > **Issue #162 implementation:** Platform dashboard contracts now expose permission-filtered
 > operational summaries for application/payment review, database-pool capacity, provisioning,
 > backup and restore state. Read-only resource and provisioning lists are server-paged and omit

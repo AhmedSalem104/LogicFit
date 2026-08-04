@@ -69,7 +69,7 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
         await using (lease)
         {
             using var scope = _scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
             var usageCalculator = scope.ServiceProvider.GetRequiredService<ITenantUsageCalculator>();
             var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
             var execution = new JobExecutionLog
@@ -98,7 +98,7 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
         try
         {
             using var failureScope = _scopeFactory.CreateScope();
-            var failureContext = failureScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var failureContext = failureScope.ServiceProvider.GetRequiredService<PlatformDbContext>();
             failureContext.JobExecutionLogs.Add(new JobExecutionLog
             {
                 JobName = nameof(PlatformSubscriptionLifecycleService),
@@ -117,7 +117,7 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
     }
 
     private async Task TransitionSubscriptionsAsync(
-        ApplicationDbContext context,
+        PlatformDbContext context,
         INotificationService notificationService,
         CancellationToken cancellationToken)
     {
@@ -226,7 +226,7 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
     }
 
     private static async Task AddOutboxIfMissingAsync(
-        ApplicationDbContext context,
+        PlatformDbContext context,
         OutboxMessage message,
         CancellationToken cancellationToken)
     {
@@ -242,7 +242,7 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
     }
 
     private async Task SendExpiryRemindersAsync(
-        ApplicationDbContext context,
+        PlatformDbContext context,
         INotificationService notificationService,
         CancellationToken cancellationToken)
     {
@@ -275,7 +275,7 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
         }
     }
 
-    private async Task ExpireStalePaymentRequestsAsync(ApplicationDbContext context, CancellationToken cancellationToken)
+    private async Task ExpireStalePaymentRequestsAsync(PlatformDbContext context, CancellationToken cancellationToken)
     {
         var cutoff = DateTime.UtcNow.AddDays(-PaymentRequestExpiryDays);
 
@@ -297,7 +297,7 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
     }
 
     private async Task RecalculateUsageAsync(
-        ApplicationDbContext context,
+        PlatformDbContext context,
         ITenantUsageCalculator usageCalculator,
         CancellationToken cancellationToken)
     {

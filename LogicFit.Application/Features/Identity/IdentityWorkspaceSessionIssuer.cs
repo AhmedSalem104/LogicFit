@@ -23,10 +23,21 @@ public sealed class IdentityWorkspaceSessionIssuer : IIdentityWorkspaceSessionIs
         var identity = await _context.IdentityAccounts.SingleOrDefaultAsync(x => x.Id == identityAccountId, cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials");
         var memberships = await _context.WorkspaceMemberships.IgnoreQueryFilters()
-            .Include(x => x.User).Include(x => x.Tenant)
+            .Include(x => x.Tenant)
             .Where(x => x.IdentityAccountId == identity.Id && x.Status == WorkspaceMembershipStatus.Active && !x.IsDeleted &&
-                x.User.IsActive && !x.User.IsDeleted && !x.Tenant.IsDeleted)
-            .OrderBy(x => x.Tenant.Name).ToListAsync(cancellationToken);
+                !x.Tenant.IsDeleted)
+            .OrderBy(x => x.Tenant.Name)
+            .ToListAsync(cancellationToken);
+        var membershipUserIds = memberships.Select(x => x.UserId).Distinct().ToArray();
+        var activeUserIds = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(x => membershipUserIds.Contains(x.Id) && x.IsActive && !x.IsDeleted)
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken);
+        var activeUserIdSet = activeUserIds.ToHashSet();
+        memberships = memberships
+            .Where(x => activeUserIdSet.Contains(x.UserId))
+            .ToList();
         var pendingApplications = await _context.ApplicationRequests
             .Where(x => x.IdentityAccountId == identity.Id && (x.Status == ApplicationRequestStatus.Draft ||
                 x.Status == ApplicationRequestStatus.Submitted || x.Status == ApplicationRequestStatus.UnderReview ||

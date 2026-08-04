@@ -9,9 +9,17 @@ The repository now has two explicit EF Core context contracts:
 - `TenantDbContext` owns operational users, fitness, scheduling, finance, inventory, HR and
   tenant-local RBAC projections for exactly one `TenantId`.
 
-The contexts are not a runtime shared-database fallback. The existing `ApplicationDbContext`
-remains temporarily wired for the pre-cutover API so existing handlers and the current deployed
-schema are not broken. Resolver/provisioning cutover is tracked by #174/#175/#166.
+The contexts are now wired into the staged runtime cutover in Issue #208. `PlatformDbContext` is
+the runtime source for platform-owned sets and Identity stores. A request-scoped
+`TenantDbContext` is selected from the protected `TenantDatabaseMapping` before authorization;
+tenant-owned sets cannot fall back to the shared context once a TenantId is present. Existing
+handlers are bridged through a routing implementation of `IApplicationDbContext` until their
+constructors are gradually split into platform/tenant contracts.
+
+`ApplicationDbContext` remains temporarily registered only for immutable legacy startup
+migrations, compatibility-only platform projections and the explicit existing-workspace data
+transfer. It is not the source for mapped tenant requests. Issue #208 is a task-branch change;
+the transfer and Production activation still require an operator backup and verification.
 
 ## Safety boundaries
 
