@@ -2,6 +2,7 @@ using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.Platform.Tenants.DTOs;
 using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
+using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -49,16 +50,19 @@ public class SetTenantStatusCommandHandler : IRequestHandler<SetTenantStatusComm
         {
             var now = _dateTimeService.UtcNow;
             var approvedBy = _currentUserService.UserId ?? "platform-admin";
-            var pendingMemberships = await _context.WorkspaceMemberships
+            var pendingOwnerMemberships = await _context.WorkspaceMemberships
+                // This is a platform-scoped repair/approval action. It must not be hidden when
+                // the request happens to carry a tenant context from a previous operation.
                 .IgnoreQueryFilters()
                 .Where(x => x.TenantId == tenant.Id &&
-                            x.Status == Domain.Enums.WorkspaceMembershipStatus.PendingPlatformApproval &&
+                            x.Role == UserRole.Owner &&
+                            x.Status == WorkspaceMembershipStatus.PendingPlatformApproval &&
                             !x.IsDeleted)
                 .ToListAsync(cancellationToken);
 
-            foreach (var membership in pendingMemberships)
+            foreach (var membership in pendingOwnerMemberships)
             {
-                membership.Status = Domain.Enums.WorkspaceMembershipStatus.Active;
+                membership.Status = WorkspaceMembershipStatus.Active;
                 membership.ApprovedAt = now;
                 membership.ApprovedBy = approvedBy;
             }
