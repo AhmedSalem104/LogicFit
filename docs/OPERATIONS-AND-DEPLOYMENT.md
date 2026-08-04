@@ -1,5 +1,22 @@
 # التشغيل والنشر والاستعادة
 
+## Gym deletion runbook (Issue #214)
+
+Use the Platform `/tenants` lifecycle buttons rather than direct database edits. Credentials view
+is metadata-only and reset is delivered through the configured identity email provider. Soft delete
+revokes sessions and keeps the assigned resource. Permanent delete must show a completed BACPAC
+artifact before purge; it then purges through the provider boundary, deactivates the mapping,
+releases the resource to `Available`, and records audit events such as
+`PlatformTenantPermanentDeleteBackupCompleted`, `PlatformTenantPermanentDeletePurgeCompleted`,
+and `PlatformTenantPermanentDeleteCompleted`.
+
+In Production/Monster Free, `TENANT_DATABASE_PURGE_MANUAL_ONLY` is an intentional safety response.
+Do not enable a destructive provider by changing a runtime flag casually and do not execute ad-hoc
+SQL. Use the separately reviewed operator workflow, verify the backup and health state, and retain
+the deleted tenant tombstone so the backup remains linked. The owner Global Identity must remain
+available for another workspace unless a separate explicit identity-deletion review proves there
+are no active workspace memberships or active application requests.
+
 ## Issue #161 authentication deployment note
 
 The active login contract is Email + Password for Identity and Platform surfaces. Deploy the

@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Features.Identity;
 using LogicFit.Application.Features.Platform.Tenants.DTOs;
 using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
@@ -14,11 +15,16 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
 {
     private readonly IApplicationDbContext _context;
     private readonly IRbacService _rbacService;
+    private readonly IDateTimeService _dateTimeService;
 
-    public CreateTenantWithOwnerCommandHandler(IApplicationDbContext context, IRbacService rbacService)
+    public CreateTenantWithOwnerCommandHandler(
+        IApplicationDbContext context,
+        IRbacService rbacService,
+        IDateTimeService dateTimeService)
     {
         _context = context;
         _rbacService = rbacService;
+        _dateTimeService = dateTimeService;
     }
 
     public async Task<PlatformTenantDto> Handle(CreateTenantWithOwnerCommand request, CancellationToken cancellationToken)
@@ -50,12 +56,36 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
         };
         _context.Tenants.Add(tenant);
 
+        var ownerIdentity = await _context.IdentityAccounts
+            .SingleOrDefaultAsync(x => x.NormalizedEmail == IdentityEmailAddress.Normalize(request.OwnerEmail), cancellationToken);
+        if (ownerIdentity is not null && !ownerIdentity.IsActive)
+            throw new ConflictException("The owner Global Identity is inactive.");
+
+        if (ownerIdentity is null)
+        {
+            ownerIdentity = new IdentityAccount
+            {
+                FullName = request.OwnerFullName,
+                Email = request.OwnerEmail.Trim(),
+                NormalizedEmail = IdentityEmailAddress.Normalize(request.OwnerEmail),
+                PhoneNumber = request.OwnerPhoneNumber,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.OwnerPassword),
+                IsActive = true,
+                // This is an explicit Platform-admin provisioned account. The owner can use the
+                // normal identity-first login immediately after the gym is approved; later resets
+                // still use the one-time email-link flow.
+                EmailVerifiedAt = _dateTimeService.UtcNow
+            };
+            _context.IdentityAccounts.Add(ownerIdentity);
+        }
+
         var owner = new User
         {
             TenantId = tenant.Id,
+            IdentityAccountId = ownerIdentity.Id,
             Email = request.OwnerEmail,
             PhoneNumber = request.OwnerPhoneNumber,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.OwnerPassword),
+            PasswordHash = ownerIdentity.PasswordHash,
             Role = UserRole.Owner,
             IsActive = true
         };
@@ -67,6 +97,15 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
         }
 
         await _rbacService.EnsureUserInRoleAsync(owner.Id, tenant.Id, SystemRoles.Owner, cancellationToken);
+
+        _context.WorkspaceMemberships.Add(new WorkspaceMembership
+        {
+            TenantId = tenant.Id,
+            IdentityAccountId = ownerIdentity.Id,
+            UserId = owner.Id,
+            Role = UserRole.Owner,
+            Status = WorkspaceMembershipStatus.PendingPlatformApproval
+        });
 
         await _context.SaveChangesAsync(cancellationToken);
 

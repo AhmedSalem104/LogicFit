@@ -1,5 +1,15 @@
 # كتالوج ميزات LogicFit
 
+## Platform gym lifecycle safety (Issue #214)
+
+Platform tenant management now has explicit credential and deletion actions. Credential viewing
+returns owner email and account/membership status only; password reset sends a short-lived email
+link and never exposes the existing password. Soft delete blocks workspace access while preserving
+the tenant and its mapping for restore. Permanent delete is `PlatformOwner`-only, requires exact
+name confirmation, a successful tenant backup, a provider-backed database purge, resource release,
+and audit events for every stage. Global Identity is preserved; only the deleted workspace
+membership and other workspace associations are revoked.
+
 > **Current auth contract (Issue #161, merged to `develop`):** Identity and Platform authentication
 > are Email + Password only. Phone Login, OTP, Passkey, and WebAuthn are not active routes,
 > providers, or UI flows. Email verification and password reset use single-use email links.
