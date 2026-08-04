@@ -21,11 +21,20 @@ public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenants
     {
         // Platform reads across all tenants (CurrentTenantId is null), excluding the sentinel tenant.
         var query = _context.Tenants
+            .IgnoreQueryFilters()
             .Where(t => t.Id != PlatformConstants.PlatformTenantId);
 
-        if (request.Status.HasValue)
+        if (request.Status == TenantStatus.Deleted)
         {
-            query = query.Where(t => t.Status == request.Status.Value);
+            query = query.Where(t => t.IsDeleted || t.Status == TenantStatus.Deleted);
+        }
+        else if (request.Status.HasValue)
+        {
+            query = query.Where(t => !t.IsDeleted && t.Status == request.Status.Value);
+        }
+        else
+        {
+            query = query.Where(t => !t.IsDeleted);
         }
 
         var (page, pageSize) = PageRequest.Normalize(request.Page, request.PageSize);
@@ -40,6 +49,8 @@ public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenants
                 Status = t.Status,
                 Email = t.Email,
                 PhoneNumber = t.PhoneNumber,
+                IsDeleted = t.IsDeleted,
+                DeletedAt = t.DeletedAt,
                 // Platform queries run with CurrentTenantId == null, so the tenant query filter is
                 // already bypassed; an explicit IgnoreQueryFilters here would not translate in a subquery.
                 MembersCount = _context.Users

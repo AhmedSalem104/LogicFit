@@ -1,5 +1,14 @@
 # Database Resource Pool
 
+## Release after permanent gym deletion (Issue #214)
+
+An assigned resource is eligible for `ReleaseAsync` only after the permanent-delete service has
+verified a completed tenant backup and the selected purge provider has succeeded. The mapping is
+then marked inactive and its connection material is tombstoned; the pool resource itself retains
+its operator-managed connection material for future provisioning and returns to `Available`.
+Monster Free intentionally exposes `ManualOnly` purge capability, so the API cannot empty or drop a
+production database directly.
+
 Issue: #174
 
 The Platform database now records pre-created customer databases independently from Workspace

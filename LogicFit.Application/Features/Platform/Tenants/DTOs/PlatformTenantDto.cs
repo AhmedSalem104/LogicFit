@@ -12,4 +12,6 @@ public class PlatformTenantDto
     public string? PhoneNumber { get; set; }
     public int MembersCount { get; set; }
     public DateTime CreatedAt { get; set; }
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedAt { get; set; }
 }

@@ -258,7 +258,11 @@ public sealed class DatabaseBackupService(
             .Join(db.DatabaseResources.AsNoTracking().Where(x => x.Status == DatabaseResourceStatus.Assigned),
                 mapping => mapping.DatabaseResourceId, resource => resource.Id,
                 (mapping, resource) => new { mapping, resource })
-            .Join(db.Tenants.AsNoTracking().Where(x => !x.IsDeleted),
+            // A SelectedTenants request is an explicit platform operation and may be used for a
+            // final-delete safety backup of a previously soft-deleted tenant. Broad scheduled
+            // scopes continue to exclude deleted tenants.
+            .Join(db.Tenants.AsNoTracking().IgnoreQueryFilters()
+                    .Where(x => request.Scope == BackupScope.SelectedTenants || !x.IsDeleted),
                 pair => pair.mapping.TenantId, tenant => tenant.Id,
                 (pair, tenant) => new { pair.mapping, pair.resource, tenant })
             .ToListAsync(cancellationToken);

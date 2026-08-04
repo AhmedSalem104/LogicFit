@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-03 09:08 UTC`  |  Total endpoints: **379**
+Generated: `2026-08-04 11:35 UTC`  |  Total endpoints: **384**
 
 ## Contract rules
 
@@ -456,6 +456,36 @@ Generated: `2026-08-03 09:08 UTC`  |  Total endpoints: **379**
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
 
 #### `POST /api/platform/tenants/{id:guid}/archive` - `Archive`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
+
+#### `GET /api/platform/tenants/{id:guid}/credentials` - `Credentials`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** typeof(PlatformTenantCredentialsDto), StatusCodes.Status200OK
+
+#### `POST /api/platform/tenants/{id:guid}/credentials/reset` - `ResetCredentials`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** typeof(PlatformTenantPasswordResetDto), StatusCodes.Status202Accepted
+
+#### `POST /api/platform/tenants/{id:guid}/permanent-delete` - `PermanentDelete`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Body `request`: `PlatformTenantDeleteRequest`<br>Handler signature: `Guid id, [FromBody] PlatformTenantDeleteRequest request`
+- **Declared response:** typeof(PlatformTenantPermanentDeleteDto), StatusCodes.Status200OK
+
+#### `POST /api/platform/tenants/{id:guid}/restore` - `Restore`
+
+- **Access:** JWT + Policy: `Permissions.ManageTenants`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
+
+#### `POST /api/platform/tenants/{id:guid}/soft-delete` - `SoftDelete`
 
 - **Access:** JWT + Policy: `Permissions.ManageTenants`
 - **Inputs:** Handler signature: `Guid id`

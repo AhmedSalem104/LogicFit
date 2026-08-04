@@ -34,6 +34,12 @@ public static class DependencyInjection
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
         services.AddSingleton<IDistributedLockProvider, SqlServerDistributedLockProvider>();
         services.AddScoped<IDatabaseResourcePool, DatabaseResourcePoolService>();
+        services.AddScoped<LocalSqlTenantDatabasePurgeProvider>();
+        services.AddScoped<ManualMonsterTenantDatabasePurgeProvider>();
+        services.AddScoped<ITenantDatabasePurgeProvider>(provider =>
+            configuration["DatabaseResourcePool:ProvisioningProvider"]?.Equals("LocalSql", StringComparison.OrdinalIgnoreCase) == true
+                ? provider.GetRequiredService<LocalSqlTenantDatabasePurgeProvider>()
+                : provider.GetRequiredService<ManualMonsterTenantDatabasePurgeProvider>());
         services.AddScoped<ManualMonsterProvisioningProvider>();
         services.AddScoped<LocalSqlProvisioningProvider>();
         services.AddScoped<IDatabaseProvisioningProvider>(provider =>
