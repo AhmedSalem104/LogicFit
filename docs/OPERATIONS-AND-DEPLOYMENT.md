@@ -32,6 +32,15 @@ operation is idempotent and requires no schema migration. After releasing this b
 already-`Active` Gym with a pending owner membership should be repaired by repeating that
 protected Platform `activate` action; do not update `WorkspaceMemberships` directly in Production.
 
+## Identity login reconciliation (Issue #217)
+
+The identity login path contains a fail-safe compatibility repair for an already-`Active` Gym
+whose non-deleted owner membership remained `PendingPlatformApproval` from an earlier release. On
+the first successful login it promotes only that owner membership, records
+`ApprovedBy=identity-login-reconciliation` and the current UTC time, then continues through the
+normal active-user and workspace checks. Client or non-owner pending memberships are not changed.
+This is a data repair with no EF migration; deploy the Backend before validating the login response.
+
 ## بيئات ومكونات النشر
 
 - `LogicFit.API` هو المضيف الموحد؛ يحتوي Platform وTenant modules ويستخدم إعدادات

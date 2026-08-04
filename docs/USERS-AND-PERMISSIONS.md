@@ -37,6 +37,10 @@ For a Gym, the Platform tenant approval/activation command promotes only the own
 membership in `PendingWorkspaceApproval` is a separate gym-operator decision and is not promoted
 by Platform activation.
 
+As a compatibility repair, identity login performs the same narrow reconciliation for an already
+`Active` Gym whose non-deleted owner membership is still `PendingPlatformApproval`. It records
+`identity-login-reconciliation`; client and non-owner pending memberships remain unchanged.
+
 ## مستخدمو المنصة المركزية
 
 | الدور | الاستخدام | النطاق |

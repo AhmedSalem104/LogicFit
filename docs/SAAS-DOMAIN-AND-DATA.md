@@ -46,6 +46,11 @@ Production schema state is advanced only by the explicit deployment migration st
 | `OutboxMessage`, `JobExecutionLog` | موثوقية الأحداث والأعمال الخلفية. | لا حذف يدوي؛ معالجة/أرشفة فقط. |
 | `AuditLog`/سجلات تدقيق التطبيق | أثر كل تغيير حساس. | append-only؛ لا تعديل/حذف. |
 
+When an already-active Gym has a legacy pending owner membership, the identity session issuer may
+promote only that Gym owner membership to `Active` as a narrow, idempotent compatibility repair.
+The repair records `ApprovedAt` and `ApprovedBy=identity-login-reconciliation`; it does not promote
+client memberships or delete/recreate the Global Identity.
+
 كيانات الصالة ترث في الغالب من `TenantAuditableEntity`: العملاء، الفروع، الحضور،
 البرامج، التغذية، المدفوعات، المخزون، الموظفون وغيرها. هذا يجعل `TenantId` وحد
 العزل جزءاً من البيانات لا اتفاقاً بين الواجهات.
