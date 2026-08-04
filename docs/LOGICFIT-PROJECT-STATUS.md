@@ -5,6 +5,10 @@
 > repair path for already-Active tenants. This release is pending protected deployment; no
 > migration or direct Production data change is included.
 
+> **Issue #217 — master release candidate:** identity login now applies the same narrow repair when
+> an already-Active Gym still has a pending owner membership. The repair is limited to the Gym
+> owner, records its actor/time, leaves client memberships unchanged, and requires no migration.
+
 > **Issue #161 — merged to `develop`:** authentication controllers now use Email + Password
 > only. Platform login validates the linked active identity and platform RBAC assignment before
 > issuing a Platform session; the former Platform OTP verification route and identity phone/OTP

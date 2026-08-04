@@ -47,6 +47,12 @@ The identity context does not contain tenant permissions or a tenant JWT. A user
 workspace can continue automatically; a user with multiple workspaces chooses one. Pending
 applications remain visible and do not block access to another active workspace.
 
+For compatibility with gyms activated before the owner-activation repair was released, the login
+issuer also reconciles a non-deleted Gym owner membership that is still
+`PendingPlatformApproval` while its tenant is already `Active`. It records the repair actor and
+time, then evaluates the normal active-user and workspace gates. Pending memberships for clients
+or other roles are never promoted by identity login.
+
 ## Platform login
 
 ```text

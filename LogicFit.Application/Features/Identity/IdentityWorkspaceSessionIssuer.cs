@@ -22,12 +22,24 @@ public sealed class IdentityWorkspaceSessionIssuer : IIdentityWorkspaceSessionIs
     {
         var identity = await _context.IdentityAccounts.SingleOrDefaultAsync(x => x.Id == identityAccountId, cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials");
+        var now = _dateTimeService.UtcNow;
         var memberships = await _context.WorkspaceMemberships.IgnoreQueryFilters()
             .Include(x => x.Tenant)
-            .Where(x => x.IdentityAccountId == identity.Id && x.Status == WorkspaceMembershipStatus.Active && !x.IsDeleted &&
+            .Where(x => x.IdentityAccountId == identity.Id && !x.IsDeleted &&
+                (x.Status == WorkspaceMembershipStatus.Active ||
+                 (x.Status == WorkspaceMembershipStatus.PendingPlatformApproval &&
+                  x.Role == UserRole.Owner &&
+                  x.Tenant.WorkspaceType == WorkspaceType.Gym &&
+                  x.Tenant.Status == TenantStatus.Active)) &&
                 !x.Tenant.IsDeleted)
             .OrderBy(x => x.Tenant.Name)
             .ToListAsync(cancellationToken);
+        foreach (var membership in memberships.Where(x => x.Status == WorkspaceMembershipStatus.PendingPlatformApproval))
+        {
+            membership.Status = WorkspaceMembershipStatus.Active;
+            membership.ApprovedAt ??= now;
+            membership.ApprovedBy ??= "identity-login-reconciliation";
+        }
         var membershipUserIds = memberships.Select(x => x.UserId).Distinct().ToArray();
         var activeUserIds = await _context.Users
             .IgnoreQueryFilters()
@@ -43,7 +55,6 @@ public sealed class IdentityWorkspaceSessionIssuer : IIdentityWorkspaceSessionIs
                 x.Status == ApplicationRequestStatus.Submitted || x.Status == ApplicationRequestStatus.UnderReview ||
                 x.Status == ApplicationRequestStatus.NeedsMoreInformation))
             .OrderByDescending(x => x.SubmittedAt).ToListAsync(cancellationToken);
-        var now = _dateTimeService.UtcNow;
         var rawSessionToken = IdentityWorkspaceSessionToken.CreateRaw();
         _context.IdentityWorkspaceSessions.Add(new IdentityWorkspaceSession
         {

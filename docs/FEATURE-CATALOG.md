@@ -23,6 +23,11 @@ membership and other workspace associations are revoked.
 > **Historical note:** earlier releases briefly contained Phone/OTP authentication. That behavior is
 > superseded by the Email + Password-only contract above and must not be enabled again.
 
+> **Issue #217 — identity login repair:** an already-Active Gym with a legacy pending owner
+> membership is reconciled at identity login, so the owner receives the active workspace context
+> instead of an empty context-selection screen. The repair is owner-only, idempotent, audited by
+> actor/time fields, and does not promote pending clients.
+
 > **Issue #147 source implementation; production deployment not yet verified:** the Backend startup
 > checks and applies pending compiled EF migrations before seeding, serialized across SQL Server
 > workers. This is an operational Backend change only; neither Angular repository has a screen,
