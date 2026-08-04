@@ -113,8 +113,15 @@ $destination = "https://$($profile.publishUrl):8172/msdeploy.axd?site=$($profile
 $arguments = @(
     '-verb:sync',
     "-source:contentPath=`"$ContentPath`"",
-    "-dest:auto,ComputerName=$destination,UserName=$($profile.userName),Password=$($profile.userPWD),AuthType=Basic",
-    '-enableLink:AppPoolExtension',
+    # MonsterASP delegates only the site's contentPath to the site account. Using
+    # dest:auto makes Web Deploy probe linked IIS providers that the account cannot access.
+    "-dest:contentPath=$($profile.msdeploySite),ComputerName=$destination,UserName=$($profile.userName),Password=$($profile.userPWD),AuthType=Basic,includeAcls=False",
+    '-disableLink:AppPoolExtension',
+    '-disableLink:ContentExtension',
+    '-disableLink:CertificateExtension',
+    # Release the running ASP.NET Core files while syncing, then remove the
+    # temporary app_offline.htm after the deployment completes.
+    '-enableRule:AppOffline',
     # Keep server-only secrets and production overrides, including appsettings.Production.json.
     '-enableRule:DoNotDeleteRule',
     # DoNotDeleteRule only prevents deletion; this skip also prevents an artifact-local file
