@@ -1,5 +1,10 @@
 # LogicFit Project Status
 
+> **Issue #210 - task branch:** Platform approval/activation now promotes a non-deleted Gym
+> owner's `PendingPlatformApproval` workspace membership to `Active`, including an idempotent
+> repair path for already-Active tenants. This is unreleased until the protected deployment
+> gates pass; no migration or direct Production data change is included.
+
 > **Issue #161 — merged to `develop`:** authentication controllers now use Email + Password
 > only. Platform login validates the linked active identity and platform RBAC assignment before
 > issuing a Platform session; the former Platform OTP verification route and identity phone/OTP
