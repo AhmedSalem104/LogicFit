@@ -1,5 +1,13 @@
 # المستخدمون والصلاحيات والعزل
 
+## Platform gym lifecycle permissions (Issue #214)
+
+Platform `ManageTenants` protects gym credential metadata, reset-link issuance, soft delete, and
+restore. Permanent gym deletion additionally requires the `PlatformOwner` role and an exact-name
+confirmation. The operation never deletes `IdentityAccount`; it revokes only the workspace
+membership and related workspace associations. Passwords, hashes, reset links, and connection
+strings are excluded from API DTOs and audit values.
+
 ## Issue #161 authentication boundary
 
 All users, including PlatformOwner and PlatformAdmin, authenticate with Email + Password. The

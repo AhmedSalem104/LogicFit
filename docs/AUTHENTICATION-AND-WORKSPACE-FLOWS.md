@@ -1,5 +1,33 @@
 # Authentication and workspace flows
 
+## Platform gym credentials and lifecycle deletion (Issue #214)
+
+The Platform tenant screen exposes only the owner's login email and non-secret account state via
+`GET /api/platform/tenants/{id}/credentials`. Passwords and password hashes are never returned,
+stored in the dashboard, or written to audit records. `POST
+/api/platform/tenants/{id}/credentials/reset` issues the existing single-use password-reset email
+flow and records the administrative request.
+
+Platform-admin gym creation now provisions/reuses the owner's `IdentityAccount` and creates a
+pending owner `WorkspaceMembership`; approval promotes that membership to `Active`. A reused
+Global Identity keeps its existing password. A newly provisioned admin account is marked as
+operator-verified for this explicit onboarding path, while subsequent password changes remain on
+the normal single-use reset-link flow.
+
+`POST /api/platform/tenants/{id}/soft-delete` marks the workspace deleted, revokes active identity
+selection sessions/refresh tokens, increments local permission versions, and keeps the tenant data
+and database mapping for recovery. `POST /api/platform/tenants/{id}/restore` reverses that state
+only while the active database mapping still exists.
+
+Permanent deletion requires an exact gym-name confirmation and `PlatformOwner` authorization. The
+server first creates a completed tenant BACPAC artifact, then invokes the configured database-purge
+provider, removes workspace memberships/invites/join codes and active requests, marks the mapping
+inactive, and releases the resource back to `Available`. The owner `IdentityAccount` is never
+deleted; only its workspace membership association is removed. Deleting a Global Identity is not
+part of this endpoint and would require a separate explicit administrative workflow after checking
+for active workspaces and active requests. Monster Free remains `ManualOnly` for purge, so the API
+fails closed until a reviewed operator capability is enabled.
+
 ## Current contract (Issue #161)
 
 The active authentication system is Identity-first and Email + Password only. Phone Login, OTP,

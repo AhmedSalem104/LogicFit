@@ -1,5 +1,18 @@
 # دليل لوحة إدارة المنصة المركزية
 
+## Gym credentials and deletion safety (Issue #214)
+
+On `/tenants`, **بيانات الدخول** shows only the owner's email, Global Identity state, membership
+state, and account activity. It never shows a current password. **إعادة تعيين كلمة المرور** sends
+the normal one-time reset link through the identity email provider.
+
+**حذف مؤقت** disables access and keeps the database mapping for restore. **حذف نهائي** is an
+irreversible PlatformOwner action: type the exact gym name, wait for a successful BACPAC backup,
+then let the approved purge provider empty the tenant database and return its resource to the
+pool. The owner Global Identity is preserved; only the gym membership is removed. If the provider
+is `ManualOnly`, the API must refuse the action and an operator must use the separately reviewed
+workflow.
+
 رابط الواجهة المنشورة يختلف عن رابط API. الواجهة تتصل بقاعدة `environment.apiUrl`
 وتضيف JWT تلقائياً للطلبات المحمية. إذا ظهرت `401` فابدأ بفحص الجلسة/الصلاحية؛ وإذا
 ظهرت `500` أو `503` فافحص API وسجل الخادم، لا الواجهة فقط.

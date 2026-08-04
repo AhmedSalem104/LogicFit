@@ -45,26 +45,29 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
         }
 
         var normalizedOwnerEmail = IdentityEmailAddress.Normalize(request.OwnerEmail);
-        var ownerIdentityExists = await _context.IdentityAccounts
+        var ownerIdentity = await _context.IdentityAccounts
             .IgnoreQueryFilters()
-            .AnyAsync(x => x.NormalizedEmail == normalizedOwnerEmail, cancellationToken);
-        if (ownerIdentityExists)
-        {
-            throw new ConflictException("The owner email is already registered. Use another email or the workspace invitation flow.");
-        }
+            .SingleOrDefaultAsync(x => x.NormalizedEmail == normalizedOwnerEmail, cancellationToken);
+        if (ownerIdentity is not null && !ownerIdentity.IsActive)
+            throw new ConflictException("The owner Global Identity is inactive.");
 
-        var ownerPasswordHash = BCrypt.Net.BCrypt.HashPassword(request.OwnerPassword);
-        var ownerIdentity = new IdentityAccount
+        if (ownerIdentity is null)
         {
-            FullName = request.OwnerFullName.Trim(),
-            Email = request.OwnerEmail.Trim(),
-            NormalizedEmail = normalizedOwnerEmail,
-            PhoneNumber = request.OwnerPhoneNumber,
-            PasswordHash = ownerPasswordHash,
-            // This identity was provisioned by an authenticated platform operator.
-            EmailVerifiedAt = _dateTimeService.UtcNow
-        };
-        _context.IdentityAccounts.Add(ownerIdentity);
+            ownerIdentity = new IdentityAccount
+            {
+                FullName = request.OwnerFullName.Trim(),
+                Email = request.OwnerEmail.Trim(),
+                NormalizedEmail = normalizedOwnerEmail,
+                PhoneNumber = request.OwnerPhoneNumber,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.OwnerPassword),
+                IsActive = true,
+                // This is an explicit Platform-admin provisioned account. The owner can use the
+                // normal identity-first login immediately after the gym is approved; later resets
+                // still use the one-time email-link flow.
+                EmailVerifiedAt = _dateTimeService.UtcNow
+            };
+            _context.IdentityAccounts.Add(ownerIdentity);
+        }
 
         var tenant = new Tenant
         {
@@ -88,7 +91,7 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
             TenantId = tenant.Id,
             Email = request.OwnerEmail,
             PhoneNumber = request.OwnerPhoneNumber,
-            PasswordHash = ownerPasswordHash,
+            PasswordHash = ownerIdentity.PasswordHash,
             Role = UserRole.Owner,
             IsActive = true
         };

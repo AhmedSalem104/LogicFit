@@ -45,7 +45,10 @@ public sealed class DatabaseResourcePoolService(
     {
         var resource = await dbContext.DatabaseResources
             .SingleOrDefaultAsync(x => x.Id == resourceId && x.ReservedForTenantId == tenantId, cancellationToken);
-        if (resource is null || resource.Status is not (DatabaseResourceStatus.Reserved or DatabaseResourceStatus.Provisioning))
+        // Assigned resources are released only after the tenant-database purge provider has
+        // completed successfully. Maintenance is accepted for an operator-recovered resource.
+        if (resource is null || resource.Status is not (DatabaseResourceStatus.Reserved or
+            DatabaseResourceStatus.Provisioning or DatabaseResourceStatus.Assigned or DatabaseResourceStatus.Maintenance))
             return false;
 
         resource.Status = DatabaseResourceStatus.Available;

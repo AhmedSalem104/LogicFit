@@ -21,11 +21,20 @@ public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenants
     {
         // Platform reads across all tenants (CurrentTenantId is null), excluding the sentinel tenant.
         var query = _context.Tenants
+            .IgnoreQueryFilters()
             .Where(t => t.Id != PlatformConstants.PlatformTenantId);
 
-        if (request.Status.HasValue)
+        if (request.Status == TenantStatus.Deleted)
         {
-            query = query.Where(t => t.Status == request.Status.Value);
+            query = query.Where(t => t.IsDeleted || t.Status == TenantStatus.Deleted);
+        }
+        else if (request.Status.HasValue)
+        {
+            query = query.Where(t => !t.IsDeleted && t.Status == request.Status.Value);
+        }
+        else
+        {
+            query = query.Where(t => !t.IsDeleted);
         }
 
         var (page, pageSize) = PageRequest.Normalize(request.Page, request.PageSize);
@@ -37,7 +46,7 @@ public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenants
             .ToListAsync(cancellationToken);
 
         // User rows are still a compatibility projection while existing workspaces are being
-        // transferred.  Do not put this DbSet inside the Platform query: it is served by the
+        // transferred. Do not put this DbSet inside the Platform query: it is served by the
         // legacy compatibility context and EF cannot translate roots from two DbContexts.
         var tenantIds = tenants.Select(t => t.Id).ToArray();
         var memberCounts = await _context.Users
@@ -55,6 +64,8 @@ public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenants
             Status = t.Status,
             Email = t.Email,
             PhoneNumber = t.PhoneNumber,
+            IsDeleted = t.IsDeleted,
+            DeletedAt = t.DeletedAt,
             MembersCount = memberCounts.GetValueOrDefault(t.Id),
             CreatedAt = t.CreatedAt
         }).ToList();

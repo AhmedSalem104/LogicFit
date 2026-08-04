@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IWorkspaceMembershipQuotaService, WorkspaceMembershipQuotaService>();
         services.AddScoped<IIdentityWorkspaceSessionIssuer, IdentityWorkspaceSessionIssuer>();
         services.AddScoped<IPlatformSessionIssuer, PlatformSessionIssuer>();
+        services.AddScoped<IPlatformTenantLifecycleService, PlatformTenantLifecycleService>();
 
         services.AddMediatR(cfg =>
         {

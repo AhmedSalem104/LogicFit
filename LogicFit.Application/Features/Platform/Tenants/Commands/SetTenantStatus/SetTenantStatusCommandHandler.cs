@@ -33,7 +33,8 @@ public class SetTenantStatusCommandHandler : IRequestHandler<SetTenantStatusComm
         }
 
         var tenant = await _context.Tenants
-            .FirstOrDefaultAsync(t => t.Id == request.TenantId, cancellationToken);
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(t => t.Id == request.TenantId && !t.IsDeleted, cancellationToken);
 
         if (tenant == null)
         {
@@ -78,7 +79,9 @@ public class SetTenantStatusCommandHandler : IRequestHandler<SetTenantStatusComm
             Status = tenant.Status,
             Email = tenant.Email,
             PhoneNumber = tenant.PhoneNumber,
-            CreatedAt = tenant.CreatedAt
+            CreatedAt = tenant.CreatedAt,
+            IsDeleted = tenant.IsDeleted,
+            DeletedAt = tenant.DeletedAt
         };
     }
 }
