@@ -133,12 +133,9 @@ the source of truth for resource availability and assignment.
 
 The remaining work is intentionally tracked as separate issues so it can be closed with evidence:
 
-- Production protected-mapping readiness recovery: see the linked issue for the exact `/health`
-  and server-log acceptance checks.
-- Actionable new-gym provisioning failure and retry behavior: see the linked issue for the
-  end-to-end registration contract.
-- Post-deploy smoke checks: see the linked issue for a repeatable release verification covering
-  health, repair, and registration.
+- [#225 — Recover health from legacy protected workspace mappings](https://github.com/AhmedSalem104/LogicFit/issues/225): exact `/health` and server-log acceptance checks.
+- [#226 — Make new gym registration failures actionable and retryable](https://github.com/AhmedSalem104/LogicFit/issues/226): end-to-end registration and retry contract.
+- [#227 — Add protected post-deploy smoke checks](https://github.com/AhmedSalem104/LogicFit/issues/227): repeatable release verification covering health, repair, and registration.
 
 These issues must not contain raw connection strings, passwords, JWTs, publish settings, or full
 request bodies containing secrets.
