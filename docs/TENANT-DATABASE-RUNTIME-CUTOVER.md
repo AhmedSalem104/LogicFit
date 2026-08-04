@@ -86,10 +86,12 @@ must be inspected on the actual server first.
 
 `DatabaseResource.EncryptedConnectionString` and `TenantDatabaseMapping.EncryptedConnectionString`
 are protected with ASP.NET Data Protection. They are not returned by API DTOs or written to logs.
-The key ring is persisted under `DataProtection:KeyDirectory`; the example uses
-`App_Data/DataProtection-Keys`. Production must point this setting at durable storage shared by
-all IIS workers. Losing or rotating that key ring without a planned re-protection operation makes
-existing mappings unreadable and intentionally stops tenant traffic.
+The authoritative key ring is persisted in the central Platform database. The configured
+`DataProtection:KeyDirectory` (the example uses `App_Data/DataProtection-Keys`) is retained as a
+file-system recovery mirror and is protected from Web Deploy deletion. Startup imports legacy
+files before the provider is used and mirrors central keys back to the directory. Losing the
+database key ring still requires an explicit restore/re-protection operation; the application
+does not silently generate a replacement ring and route traffic with unreadable mappings.
 
 ## Verification
 

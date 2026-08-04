@@ -7,12 +7,13 @@ using LogicFit.Domain.Enums;
 using LogicFit.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 namespace LogicFit.Infrastructure.Persistence;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IApplicationDbContext
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IApplicationDbContext, IDataProtectionKeyContext
 {
     public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
         => Database.BeginTransactionAsync(cancellationToken);
@@ -154,10 +155,20 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<SubscriptionPayment> SubscriptionPayments => Set<SubscriptionPayment>();
     public DbSet<SubscriptionInvoice> SubscriptionInvoices => Set<SubscriptionInvoice>();
     public DbSet<TenantUsage> TenantUsages => Set<TenantUsage>();
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        // Data Protection keys belong to the central Platform database. Keeping the key ring in
+        // the same durable store as the encrypted tenant mappings makes deployments and IIS
+        // recycles independent from the web application's publish directory.
+        builder.Entity<DataProtectionKey>(entity =>
+        {
+            entity.ToTable("DataProtectionKeys");
+            entity.Property(key => key.Xml).IsRequired();
+        });
 
         // Apply all configurations from assembly
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
@@ -315,7 +326,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog || entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
+            if (entry.Entity is AuditLog or DataProtectionKey ||
+                entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
                 continue;
 
             // Handle Auditable Entities
@@ -432,6 +444,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             || propertyName.Equals("CodeSalt", StringComparison.OrdinalIgnoreCase)
             || propertyName.Equals("EncryptedConnectionString", StringComparison.OrdinalIgnoreCase)
             || propertyName.Equals("ConnectionString", StringComparison.OrdinalIgnoreCase)
+            || propertyName.Equals("Xml", StringComparison.OrdinalIgnoreCase)
             || propertyName.Equals("SessionBinding", StringComparison.OrdinalIgnoreCase);
     }
 

@@ -127,6 +127,10 @@ $arguments = @(
     # DoNotDeleteRule only prevents deletion; this skip also prevents an artifact-local file
     # from overwriting the protected server configuration when a developer has one locally.
     '-skip:objectName=filePath,absolutePath=appsettings\.Production\.json$',
+    # The database is authoritative for Data Protection keys, but preserve the App_Data mirror
+    # so rollback/recovery never removes a key ring from the deployed site.
+    '-skip:objectName=dirPath,absolutePath=App_Data\\DataProtection-Keys$',
+    '-skip:objectName=filePath,absolutePath=App_Data\\DataProtection-Keys\\.*$',
     '-retryAttempts:3',
     '-retryInterval:5000'
 )

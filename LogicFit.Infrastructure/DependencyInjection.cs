@@ -9,6 +9,7 @@ using LogicFit.Infrastructure.Security;
 using LogicFit.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -25,25 +26,15 @@ public static class DependencyInjection
     {
         services.AddSingleton(TimeProvider.System);
 
-        // DatabaseResource connection strings are protected with ASP.NET Data Protection.  A
-        // process-local key ring would make every encrypted mapping unreadable after an IIS
-        // recycle, so use a persistent operator-configurable directory and a stable application
-        // discriminator.  The default App_Data location is suitable for hosts that persist the
-        // application directory; production deployments should set DataProtection:KeyDirectory
-        // to their durable storage path.
-        var dataProtectionKeyDirectory = configuration["DataProtection:KeyDirectory"];
-        if (string.IsNullOrWhiteSpace(dataProtectionKeyDirectory))
-        {
-            dataProtectionKeyDirectory = Path.Combine(
-                AppContext.BaseDirectory,
-                "App_Data",
-                "DataProtection-Keys");
-        }
-
+        // DatabaseResource connection strings are protected with ASP.NET Data Protection. The
+        // central Platform database is authoritative for the key ring so deployments and IIS
+        // recycles cannot orphan encrypted tenant mappings. App_Data remains a mirrored recovery
+        // copy and is explicitly excluded from Web Deploy synchronization.
+        var dataProtectionKeyDirectory = DataProtectionKeyDirectory.Resolve(configuration);
         Directory.CreateDirectory(dataProtectionKeyDirectory);
         services.AddDataProtection()
             .SetApplicationName("LogicFit")
-            .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeyDirectory));
+            .PersistKeysToDbContext<ApplicationDbContext>();
 
         // Platform DB is the runtime source for identity, workspace metadata, billing and
         // database-resource mappings.  ApplicationDbContext remains registered only as a
@@ -61,6 +52,7 @@ public static class DependencyInjection
 
         services.AddScoped<TenantDatabaseRequestScope>();
         services.AddScoped<TenantDatabaseContextAccessor>();
+        services.AddScoped<DataProtectionKeyRingBootstrapper>();
         services.AddOptions<TenantDatabaseRoutingOptions>()
             .Bind(configuration.GetSection(TenantDatabaseRoutingOptions.SectionName))
             .Validate(

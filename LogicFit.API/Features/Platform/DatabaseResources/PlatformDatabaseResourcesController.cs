@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LogicFit.API.Features.Platform.Common;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Authorization;
@@ -21,9 +22,12 @@ namespace LogicFit.API.Features.Platform.DatabaseResources;
 [Authorize(Policy = Permissions.ManagePlatformBackups)]
 public sealed class PlatformDatabaseResourcesController(
     IApplicationDbContext context,
+    ApplicationDbContext applicationDb,
     IConnectionStringProtector connectionStringProtector,
     IBackupService backupService,
     TimeProvider timeProvider,
+    ICurrentUserService currentUserService,
+    IDateTimeService dateTimeService,
     ILogger<PlatformDatabaseResourcesController> logger) : ControllerBase
 {
     [HttpGet]
@@ -206,6 +210,99 @@ public sealed class PlatformDatabaseResourcesController(
 
         await context.SaveChangesAsync(cancellationToken);
         return Ok(await BuildDtoAsync(id, cancellationToken));
+    }
+
+    [HttpPost("{id:guid}/repair-connection")]
+    public async Task<ActionResult<DatabaseResourceOperationDto>> RepairConnection(
+        Guid id,
+        [FromBody] RepairDatabaseResourceConnectionRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!request.Confirm)
+            return BadRequest(new
+            {
+                errorCode = "DATABASE_CONNECTION_REPAIR_CONFIRMATION_REQUIRED",
+                message = "Explicit confirmation is required before replacing an allocated database connection."
+            });
+
+        if (currentUserService.TenantId.HasValue)
+            return Forbid();
+
+        var resource = await applicationDb.DatabaseResources
+            .IgnoreQueryFilters()
+            .SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (resource is null)
+            return NotFound();
+
+        var mappings = await applicationDb.TenantDatabaseMappings
+            .IgnoreQueryFilters()
+            .Where(x => x.DatabaseResourceId == id && x.IsActive)
+            .ToListAsync(cancellationToken);
+        if (resource.Status != DatabaseResourceStatus.Assigned || mappings.Count == 0)
+            return Conflict(new
+            {
+                errorCode = "DATABASE_RESOURCE_NOT_ALLOCATED",
+                message = "Only an assigned resource with an active workspace mapping can be repaired."
+            });
+
+        if (!TryNormalizeConnection(request.ConnectionString, resource.DatabaseName, out var normalized, out var validationError))
+        {
+            await TryAuditRepairAsync(id, resource.DatabaseName, false, "DATABASE_CONNECTION_INVALID", cancellationToken);
+            return BadRequest(new { errorCode = "DATABASE_CONNECTION_INVALID", message = validationError });
+        }
+
+        var test = await TestSqlConnectionAsync(normalized!, resource.DatabaseName, cancellationToken);
+        if (!test.Succeeded)
+        {
+            await TryAuditRepairAsync(id, resource.DatabaseName, false, test.ErrorCode ?? "DATABASE_CONNECTION_TEST_FAILED", cancellationToken);
+            return UnprocessableEntity(test);
+        }
+
+        var protectedConnection = connectionStringProtector.Protect(normalized!);
+        await using var transaction = await applicationDb.Database.BeginTransactionAsync(cancellationToken);
+
+        resource.EncryptedConnectionString = protectedConnection;
+        resource.ServerKey ??= test.ServerKey;
+        resource.LastHealthCheckAtUtc = timeProvider.GetUtcNow().UtcDateTime;
+        resource.LastError = null;
+        foreach (var mapping in mappings)
+        {
+            mapping.EncryptedConnectionString = protectedConnection;
+            mapping.LastValidatedAtUtc = dateTimeService.UtcNow;
+        }
+
+        applicationDb.AuditLogs.Add(new AuditLog
+        {
+            Action = AuditAction.Update,
+            EntityName = "DatabaseResource",
+            EntityId = id.ToString(),
+            NewValues = JsonSerializer.Serialize(new
+            {
+                Event = "DatabaseResourceConnectionRepaired",
+                resource.DatabaseName,
+                ActiveMappingCount = mappings.Count,
+                test.ServerKey
+            }),
+            AffectedColumns = "EncryptedConnectionString,LastValidatedAtUtc,LastHealthCheckAtUtc",
+            Timestamp = dateTimeService.UtcNow,
+            UserId = currentUserService.UserId,
+            IpAddress = currentUserService.IpAddress,
+            UserAgent = currentUserService.UserAgent
+        });
+
+        await applicationDb.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        logger.LogInformation(
+            "An allocated database connection was repaired for resource {ResourceId} and {MappingCount} active mapping(s).",
+            id,
+            mappings.Count);
+
+        return Ok(new DatabaseResourceOperationDto(
+            true,
+            "The connection was tested and protected mapping values were repaired successfully.",
+            null,
+            resource.SchemaVersion));
     }
 
     [HttpPost("{id:guid}/status")]
@@ -475,6 +572,41 @@ public sealed class PlatformDatabaseResourcesController(
         DatabaseResourceStatus.RestorePending => "RestorePending",
         _ => status.ToString()
     };
+
+    private async Task TryAuditRepairAsync(
+        Guid resourceId,
+        string databaseName,
+        bool succeeded,
+        string errorCode,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            applicationDb.AuditLogs.Add(new AuditLog
+            {
+                Action = AuditAction.Update,
+                EntityName = "DatabaseResource",
+                EntityId = resourceId.ToString(),
+                NewValues = JsonSerializer.Serialize(new
+                {
+                    Event = "DatabaseResourceConnectionRepairAttempt",
+                    databaseName,
+                    Success = succeeded,
+                    ErrorCode = errorCode
+                }),
+                AffectedColumns = "EncryptedConnectionString",
+                Timestamp = dateTimeService.UtcNow,
+                UserId = currentUserService.UserId,
+                IpAddress = currentUserService.IpAddress,
+                UserAgent = currentUserService.UserAgent
+            });
+            await applicationDb.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogWarning(exception, "Could not write the database connection repair audit entry for {ResourceId}.", resourceId);
+        }
+    }
 }
 
 public sealed class PlatformDatabaseResourceDto
@@ -507,6 +639,7 @@ public sealed class PlatformDatabaseResourceDto
 public sealed record DatabaseConnectionTestRequest(string? DatabaseName, string? ConnectionString);
 public sealed record CreateDatabaseResourceRequest(string? Provider, string? DatabaseName, string? ServerKey, string? ConnectionString);
 public sealed record UpdateDatabaseResourceRequest(string? Provider, string? DatabaseName, string? ServerKey, string? ConnectionString);
+public sealed record RepairDatabaseResourceConnectionRequest(string? ConnectionString, bool Confirm);
 public sealed record SetDatabaseResourceStatusRequest(string? Status);
 public sealed record DatabaseConnectionTestDto(bool Succeeded, string DatabaseName, string? ServerKey, string? ErrorCode, string Message);
 public sealed record DatabaseResourceOperationDto(bool Succeeded, string Message, string? ErrorCode, string? SchemaVersion);
