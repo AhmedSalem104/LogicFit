@@ -35,7 +35,9 @@ reset/change revokes linked refresh and workspace-selection sessions.
 For a Gym, the Platform tenant approval/activation command promotes only the owner's
 `PendingPlatformApproval` membership to `Active` and records the decision actor/time. A client
 membership in `PendingWorkspaceApproval` is a separate gym-operator decision and is not promoted
-by Platform activation.
+by Platform activation. As a compatibility repair for gyms already marked `Active`, the identity
+session issuer applies the same owner-only promotion at login; it never promotes a client or
+other pending workspace membership.
 
 ## مستخدمو المنصة المركزية
 

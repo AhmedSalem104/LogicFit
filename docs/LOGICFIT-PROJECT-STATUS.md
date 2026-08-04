@@ -1,9 +1,10 @@
 # LogicFit Project Status
 
-> **Issue #210 - task branch:** Platform approval/activation now promotes a non-deleted Gym
-> owner's `PendingPlatformApproval` workspace membership to `Active`, including an idempotent
-> repair path for already-Active tenants. This is unreleased until the protected deployment
-> gates pass; no migration or direct Production data change is included.
+> **Issues #210 and #217 - task branch:** Platform approval/activation promotes a non-deleted Gym
+> owner's `PendingPlatformApproval` workspace membership to `Active`. Identity login also performs
+> the same narrow owner-only repair for gyms already marked `Active`, preventing an empty context
+> screen for data created by older releases. This is unreleased until protected deployment gates
+> pass; no migration or direct Production data change is included.
 
 > **Issue #161 — merged to `develop`:** authentication controllers now use Email + Password
 > only. Platform login validates the linked active identity and platform RBAC assignment before
@@ -186,6 +187,7 @@ sequenceDiagram
 - `WorkspaceType.FreelanceCoach` keeps an independent coach in the existing tenant isolation boundary; legacy tenants default to `Gym`.
 - A global `IdentityAccount` is linked to tenant-local `DomainUsers` and `WorkspaceMemberships`. The retired `/api/auth/login` compatibility route is no longer active; authenticated access uses the Identity-first Email + Password flow.
 - New `/api/identity/login` performs identity-first sign-in and returns active workspaces and pending applications together. `/api/identity/select-workspace` exchanges its short-lived opaque selection token for the existing tenant JWT/refresh-token contract.
+- During identity login, an already-Active Gym with a pending platform owner membership is repaired idempotently; pending client/workspace memberships remain unchanged. A single active Gym owner is then auto-routed by the frontend to `/api/identity/select-workspace`.
 - Public freelance onboarding uses `ApplicationRequests`, immutable submission revisions, and short-lived opaque tracking sessions. Applicants may edit only the field names requested by Platform Admin, then resubmit; rejected requests remain terminal evidence.
 - Platform Admin reviews a minimal, non-health/non-training application view through `/api/platform/workspace-applications`. Review, information-request, approval, and rejection use row-version concurrency; rejection revokes tracking sessions and review decisions enqueue an Outbox event.
 - Approval reserves one `Provisioning` workspace before creating the Freelance Owner, its active workspace membership, role assignment, branding profile, and final `Active` workspace. A retry reuses the reserved workspace; a provisioning database failure records `ProvisioningFailed` for operator retry.

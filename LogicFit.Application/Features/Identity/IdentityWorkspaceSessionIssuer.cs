@@ -22,17 +22,33 @@ public sealed class IdentityWorkspaceSessionIssuer : IIdentityWorkspaceSessionIs
     {
         var identity = await _context.IdentityAccounts.SingleOrDefaultAsync(x => x.Id == identityAccountId, cancellationToken)
             ?? throw new UnauthorizedException("Invalid credentials");
+        var now = _dateTimeService.UtcNow;
         var memberships = await _context.WorkspaceMemberships.IgnoreQueryFilters()
             .Include(x => x.User).Include(x => x.Tenant)
-            .Where(x => x.IdentityAccountId == identity.Id && x.Status == WorkspaceMembershipStatus.Active && !x.IsDeleted &&
+            .Where(x => x.IdentityAccountId == identity.Id && !x.IsDeleted &&
+                (x.Status == WorkspaceMembershipStatus.Active ||
+                    (x.Status == WorkspaceMembershipStatus.PendingPlatformApproval &&
+                     x.Role == UserRole.Owner &&
+                     x.Tenant.WorkspaceType == WorkspaceType.Gym &&
+                     x.Tenant.Status == TenantStatus.Active)) &&
                 x.User.IsActive && !x.User.IsDeleted && !x.Tenant.IsDeleted)
             .OrderBy(x => x.Tenant.Name).ToListAsync(cancellationToken);
+
+        // Older gyms could be activated before the approval handler also repaired the owner's
+        // membership. An Active gym is the platform's approval decision, so reconcile only this
+        // narrow, owner-only state here. Pending client/workspace approvals must remain blocked.
+        foreach (var membership in memberships.Where(x => x.Status == WorkspaceMembershipStatus.PendingPlatformApproval))
+        {
+            membership.Status = WorkspaceMembershipStatus.Active;
+            membership.ApprovedAt ??= now;
+            membership.ApprovedBy ??= "identity-login-reconciliation";
+        }
+
         var pendingApplications = await _context.ApplicationRequests
             .Where(x => x.IdentityAccountId == identity.Id && (x.Status == ApplicationRequestStatus.Draft ||
                 x.Status == ApplicationRequestStatus.Submitted || x.Status == ApplicationRequestStatus.UnderReview ||
                 x.Status == ApplicationRequestStatus.NeedsMoreInformation))
             .OrderByDescending(x => x.SubmittedAt).ToListAsync(cancellationToken);
-        var now = _dateTimeService.UtcNow;
         var rawSessionToken = IdentityWorkspaceSessionToken.CreateRaw();
         _context.IdentityWorkspaceSessions.Add(new IdentityWorkspaceSession
         {

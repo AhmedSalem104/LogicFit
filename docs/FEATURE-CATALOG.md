@@ -16,6 +16,10 @@ membership and other workspace associations are revoked.
 > Phone Login, OTP verification, Passkey, and WebAuthn are not active API features. Email
 > verification and password reset continue to use one-time links.
 
+> **Gym owner login repair (Issue #217):** an already-Active Gym with a legacy pending owner
+> membership is reconciled to `Active` during identity login. The repair is owner-only and never
+> promotes pending client/workspace memberships.
+
 > حالة المرجع: مبني على نسخة الإصدار `master` عند `8ddc5db`، مع اعتماد معلّق على PR #109 الذي يُبقي Controller مراجعة الطلبات ضمن الـAPI الموحد (2026-07-30). الشفرة هي مصدر الحقيقة؛ لا تعني أي بطاقة أدناه أن واجهة مستقبلية أو فرعًا غير مدمج أصبح متاحًا في الإنتاج.
 
 هذا هو الفهرس المركزي لكل مجال وظيفي موجود في نظام LogicFit. لا يكرر قائمة الـendpoints؛ المرجع التفصيلي المولّد لها هو [كتالوج API](API-ENDPOINT-CATALOG.md). الغرض من هذا الملف أن يعرف مالك المنتج، الدعم، QA، والفرق الثلاثة أين توجد كل ميزة وما هو التدفق الذي يجب تحديثه عندما تتغير.
