@@ -89,6 +89,21 @@ try {
         if ($healthUri.Scheme -ne 'https') { throw "Diagnostic health URL must use HTTPS." }
         $profileHostMatchesHealthHost = [StringComparer]::OrdinalIgnoreCase.Equals($managementHost, $healthUri.Host)
         Write-Host "Profile management host equals configured health host: $profileHostMatchesHealthHost."
+        $destinationAppUrl = [string]$profile.destinationAppUrl
+        if ([string]::IsNullOrWhiteSpace($destinationAppUrl)) {
+            Write-Host "Publish profile destination app URL is present: False."
+        }
+        else {
+            try {
+                $destinationUri = [Uri]$destinationAppUrl
+                $destinationHostMatchesHealthHost =
+                    [StringComparer]::OrdinalIgnoreCase.Equals($destinationUri.Host, $healthUri.Host)
+                Write-Host "Publish profile destination app URL matches configured health host: $destinationHostMatchesHealthHost."
+            }
+            catch {
+                Write-Host "Publish profile destination app URL is present but invalid: True."
+            }
+        }
     }
 
     $configuration = Get-Content -LiteralPath $remoteConfig -Raw | ConvertFrom-Json
