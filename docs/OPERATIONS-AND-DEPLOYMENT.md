@@ -315,6 +315,11 @@ messages, and raw payloads must not be copied into UI telemetry. A production va
 performed only after a verified backup and an approved maintenance window, using a disposable
 operator-selected gym/resource and the post-deploy smoke procedure.
 
+The complete repeatable command, gates, evidence fields, and safe failure behavior are documented
+in [POST-DEPLOY-SMOKE.md](POST-DEPLOY-SMOKE.md). The script is protected by a verified backup,
+operator approval, explicit resource IDs, HTTPS, and `-AllowMutations`; it must not be run as an
+unattended deployment step.
+
 ## Rollback
 
 Rollback قرار تشغيلي موثق: أوقف rollout عند health check فاشل، أعد binary السابق
