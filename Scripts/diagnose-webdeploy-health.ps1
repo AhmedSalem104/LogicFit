@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory = $true)] [string] $PublishSettingsPath,
     [Parameter(Mandatory = $true)] [string] $ExpectedSite,
     [Parameter(Mandatory = $true)] [string] $ExpectedConnectionString,
+    [string] $HealthCheckUrl,
     [string] $ManagementHostOverride,
     [switch] $AllowUntrustedManagementCertificate,
     [string] $MsDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
@@ -35,7 +36,9 @@ if ($managementHost -notmatch '^[A-Za-z0-9.-]+$') { throw "Management host is in
 $endpoint = "https://${managementHost}:8172/msdeploy.axd?site=$ExpectedSite"
 $operationRoot = Join-Path ([IO.Path]::GetTempPath()) ("logicfit-diagnosis-{0}" -f [Guid]::NewGuid().ToString("N"))
 $remoteConfig = Join-Path $operationRoot "appsettings.Production.remote.json"
+$remoteWebConfig = Join-Path $operationRoot "web.config.remote"
 $remoteConfigPath = "$ExpectedSite/appsettings.Production.json"
+$remoteWebConfigPath = "$ExpectedSite/web.config"
 
 function Invoke-MsDeploy([string[]] $Arguments) {
     $effectiveArguments = @($Arguments)
@@ -68,6 +71,26 @@ function Get-ConnectionIdentity([string] $ConnectionString) {
 New-Item -ItemType Directory -Path $operationRoot | Out-Null
 try {
     Get-RemoteFile $remoteConfigPath $remoteConfig
+    Get-RemoteFile $remoteWebConfigPath $remoteWebConfig
+
+    [xml]$webConfig = Get-Content -LiteralPath $remoteWebConfig -Raw
+    $aspNetCore = $webConfig.SelectSingleNode('//aspNetCore')
+    if ($null -eq $aspNetCore) {
+        throw "Remote web.config has no aspNetCore entry."
+    }
+    $stdoutSetting = [string]$aspNetCore.GetAttribute('stdoutLogEnabled')
+    $stdoutEnabled = $stdoutSetting.Equals('true', [StringComparison]::OrdinalIgnoreCase)
+    $hostingModelConfigured = -not [string]::IsNullOrWhiteSpace([string]$aspNetCore.GetAttribute('hostingModel'))
+    Write-Host "Remote IIS aspNetCore metadata is present: True."
+    Write-Host "Remote IIS stdout logging enabled: $stdoutEnabled."
+    Write-Host "Remote IIS hosting model is configured: $hostingModelConfigured."
+    if (-not [string]::IsNullOrWhiteSpace($HealthCheckUrl)) {
+        $healthUri = [Uri]$HealthCheckUrl
+        if ($healthUri.Scheme -ne 'https') { throw "Diagnostic health URL must use HTTPS." }
+        $profileHostMatchesHealthHost = [StringComparer]::OrdinalIgnoreCase.Equals($managementHost, $healthUri.Host)
+        Write-Host "Profile management host equals configured health host: $profileHostMatchesHealthHost."
+    }
+
     $configuration = Get-Content -LiteralPath $remoteConfig -Raw | ConvertFrom-Json
     $remoteConnectionString = [string]$configuration.ConnectionStrings.DefaultConnection
     if ([string]::IsNullOrWhiteSpace($remoteConnectionString)) {

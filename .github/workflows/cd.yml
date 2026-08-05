@@ -382,6 +382,7 @@ jobs:
             PublishSettingsPath = $profilePath
             ExpectedSite = $env:EXPECTED_SITE
             ExpectedConnectionString = $env:PRODUCTION_DB_CONNECTION
+            HealthCheckUrl = $env:HEALTH_URL
           }
           if (-not [string]::IsNullOrWhiteSpace($env:MANAGEMENT_HOST_OVERRIDE)) {
             $arguments.ManagementHostOverride = $env:MANAGEMENT_HOST_OVERRIDE
