@@ -26,6 +26,8 @@ public class ProductionDeploymentContractTests
         Assert.Contains("diagnose-production-health:", workflow);
         Assert.Contains("SELECT 1", workflow);
         Assert.Contains("shell: powershell", workflow);
+        Assert.Contains("Microsoft.Data.SqlClient", File.ReadAllText(Path.Combine(RepositoryRoot, "LogicFit.Tests", "ProductionDatabaseConnectivityTests.cs")));
+        Assert.Contains("Probe with the application SQL provider", workflow);
         Assert.Contains("diagnose-webdeploy-health.ps1", workflow);
         Assert.Contains("Compare remote database identity", workflow);
     }

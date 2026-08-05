@@ -323,6 +323,18 @@ jobs:
             $connection.Dispose()
           }
 
+      - name: Probe with the application SQL provider
+        shell: powershell
+        env:
+          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+        run: |
+          dotnet restore LogicFit.Tests/LogicFit.Tests.csproj --nologo
+          dotnet test LogicFit.Tests/LogicFit.Tests.csproj `
+            --configuration Release `
+            --no-restore `
+            --filter "FullyQualifiedName~ProductionDatabaseConnectivityTests" `
+            --verbosity minimal
+
       - name: Compare remote database identity without printing secrets
         shell: powershell
         env:
