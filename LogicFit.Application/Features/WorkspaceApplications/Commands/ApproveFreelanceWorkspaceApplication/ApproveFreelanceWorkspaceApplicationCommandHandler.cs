@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.WorkspaceApplications.DTOs;
 using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
@@ -53,7 +54,7 @@ public sealed class ApproveFreelanceWorkspaceApplicationCommandHandler
             if (application.ProvisionedWorkspaceId.HasValue)
             {
                 var retryOutcome = await _provisioningSaga.RunAsync(application.Id, cancellationToken);
-                ThrowIfDatabaseCapacityIsUnavailable(retryOutcome);
+                ProvisioningOutcomeGuard.EnsureCompleted(retryOutcome);
             }
             return PlatformApplicationMapper.ToDto(application, application.IdentityAccount.Email, application.IdentityAccount.PhoneNumber);
         }
@@ -84,7 +85,7 @@ public sealed class ApproveFreelanceWorkspaceApplicationCommandHandler
         application.ReviewedBy = _currentUserService.UserId;
         await _context.SaveChangesAsync(cancellationToken);
         var provisioning = await _provisioningSaga.RunAsync(application.Id, cancellationToken);
-        ThrowIfDatabaseCapacityIsUnavailable(provisioning);
+        ProvisioningOutcomeGuard.EnsureCompleted(provisioning);
 
         return PlatformApplicationMapper.ToDto(application, application.IdentityAccount.Email, application.IdentityAccount.PhoneNumber);
     }

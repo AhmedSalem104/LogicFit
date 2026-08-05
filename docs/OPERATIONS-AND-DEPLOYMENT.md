@@ -296,6 +296,30 @@ The routing layer returns `503 TENANT_DATABASE_UNAVAILABLE` for an authenticated
 no valid mapping. This is intentional and is safer than allowing old shared rows to be read. The
 task branch has no Production deployment or data change claim.
 
+## Protected gym provisioning verification (Issue #226)
+
+A new gym is a persistent Platform provisioning job, not a request-scoped best-effort operation.
+Before asking an operator to retry, inspect `/api/platform/operations/provisioning` and the
+database-resource lifecycle state. Treat these response codes as operationally distinct:
+
+| Code | HTTP | Action |
+|---|---:|---|
+| `DATABASE_CAPACITY_UNAVAILABLE` | 409 | Add or repair an `Available` resource, then retry the same idempotent request. |
+| `DATABASE_CONNECTION_NOT_CONFIGURED`, `DATABASE_MAPPING_INVALID`, `TENANT_DATABASE_HEALTH_CHECK_FAILED` | 503 | Repair the identified resource/mapping and retry the existing provisioning job. |
+| `TENANT_PROVISIONING_FAILED` | 503 | Review the job/resource identifiers and safe server logs; do not create a second gym. |
+| `IDEMPOTENCY_KEY_REUSED` | 409 | Keep the original request body; a key cannot be reused for another gym. |
+
+The client must send the same `Idempotency-Key` and body after a timeout or retryable response. The
+API returns `requestId` and safe `details`; connection material, passwords, provider exception
+messages, and raw payloads must not be copied into UI telemetry. A production validation must be
+performed only after a verified backup and an approved maintenance window, using a disposable
+operator-selected gym/resource and the post-deploy smoke procedure.
+
+The complete repeatable command, gates, evidence fields, and safe failure behavior are documented
+in [POST-DEPLOY-SMOKE.md](POST-DEPLOY-SMOKE.md). The script is protected by a verified backup,
+operator approval, explicit resource IDs, HTTPS, and `-AllowMutations`; it must not be run as an
+unattended deployment step.
+
 ## Rollback
 
 Rollback قرار تشغيلي موثق: أوقف rollout عند health check فاشل، أعد binary السابق

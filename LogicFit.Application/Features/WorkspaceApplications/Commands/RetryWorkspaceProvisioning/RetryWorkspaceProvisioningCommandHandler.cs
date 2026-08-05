@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.WorkspaceApplications.DTOs;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
@@ -29,7 +30,8 @@ public sealed class RetryWorkspaceProvisioningCommandHandler(
         if (application.Status != ApplicationRequestStatus.Approved || !application.ProvisionedWorkspaceId.HasValue)
             throw new ConflictException("Only an approved workspace with a provisioning placeholder can be retried.");
 
-        await provisioningSaga.RunAsync(application.Id, cancellationToken);
+        var outcome = await provisioningSaga.RunAsync(application.Id, cancellationToken);
+        ProvisioningOutcomeGuard.EnsureCompleted(outcome);
         return PlatformApplicationMapper.ToDto(application, application.IdentityAccount.Email, application.IdentityAccount.PhoneNumber);
     }
 }

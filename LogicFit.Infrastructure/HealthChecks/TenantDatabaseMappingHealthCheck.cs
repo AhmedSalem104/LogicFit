@@ -26,6 +26,10 @@ public sealed class TenantDatabaseMappingHealthCheck(
                 .Where(resource => !string.IsNullOrWhiteSpace(resource.EncryptedConnectionString))
                 .Select(resource => new ProtectedValue(
                     "database resource",
+                    resource.Id,
+                    resource.Id,
+                    null,
+                    resource.DatabaseName,
                     resource.EncryptedConnectionString!))
                 .ToListAsync(cancellationToken);
 
@@ -34,6 +38,10 @@ public sealed class TenantDatabaseMappingHealthCheck(
                 .Where(mapping => mapping.IsActive && !string.IsNullOrWhiteSpace(mapping.EncryptedConnectionString))
                 .Select(mapping => new ProtectedValue(
                     "tenant database mapping",
+                    mapping.Id,
+                    mapping.DatabaseResourceId,
+                    mapping.TenantId,
+                    null,
                     mapping.EncryptedConnectionString))
                 .ToListAsync(cancellationToken);
 
@@ -44,14 +52,26 @@ public sealed class TenantDatabaseMappingHealthCheck(
                 {
                     var connectionString = connectionStringProtector.Unprotect(protectedValue.Value);
                     if (string.IsNullOrWhiteSpace(connectionString))
+                    {
+                        logger.LogError(
+                            "A protected {ProtectedValueType} row {ProtectedValueId} for resource {DatabaseResourceId} and tenant {TenantId} decrypted to an empty connection string.",
+                            protectedValue.Type,
+                            protectedValue.RowId,
+                            protectedValue.DatabaseResourceId,
+                            protectedValue.TenantId);
                         return HealthCheckResult.Unhealthy("A protected tenant database value decrypted to an empty connection string.");
+                    }
                 }
                 catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or System.Security.Cryptography.CryptographicException)
                 {
                     logger.LogError(
                         exception,
-                        "The Data Protection key ring cannot decrypt a protected {ProtectedValueType}.",
-                        protectedValue.Type);
+                        "The Data Protection key ring cannot decrypt a protected {ProtectedValueType} row {ProtectedValueId} for resource {DatabaseResourceId} and tenant {TenantId} (database {DatabaseName}).",
+                        protectedValue.Type,
+                        protectedValue.RowId,
+                        protectedValue.DatabaseResourceId,
+                        protectedValue.TenantId,
+                        protectedValue.DatabaseName);
                     return HealthCheckResult.Unhealthy(
                         "The Data Protection key ring cannot decrypt all protected tenant database values.");
                 }
@@ -70,5 +90,11 @@ public sealed class TenantDatabaseMappingHealthCheck(
         }
     }
 
-    private sealed record ProtectedValue(string Type, string Value);
+    private sealed record ProtectedValue(
+        string Type,
+        Guid RowId,
+        Guid? DatabaseResourceId,
+        Guid? TenantId,
+        string? DatabaseName,
+        string Value);
 }

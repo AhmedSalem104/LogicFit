@@ -1,5 +1,13 @@
 # كتالوج ميزات LogicFit
 
+## Platform gym provisioning contract (Issue #226)
+
+`POST /api/platform/tenants` now has stable retryable provisioning outcomes, a protected
+`Idempotency-Key` request scope, and persistent job/resource identifiers for the Platform UI. The
+UI must preserve the same body and idempotency key across retries and must not display or log
+provider exception text, connection material, or passwords. Capacity is distinct from provider,
+mapping, migration, and tenant-health failures through the documented `code`/`details` contract.
+
 ## Platform gym lifecycle safety (Issue #214)
 
 Platform tenant management now has explicit credential and deletion actions. Credential viewing
