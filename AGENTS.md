@@ -24,6 +24,21 @@ The user-facing canonical Backend workspace is
 implementation-isolation folders for preserving unrelated changes; they are not separate projects
 and must never become the only local location where completed files are visible.
 
+## Canonical workspace handoff — explicit user requirement
+
+For this project, the only authoritative working directory for Backend changes, builds, commits,
+pushes, and Visual Studio publishing is:
+
+`C:\Users\B-SMART\Desktop\Projects\LogicFit Project\LogicFit`
+
+Before editing, building, committing, pushing, or publishing, verify that
+`git rev-parse --show-toplevel` resolves to that exact directory. Do not implement a change only
+inside another clone, temporary worktree, release snapshot, or similarly named Desktop folder.
+If temporary isolation is unavoidable, bring the complete change back into the canonical directory,
+verify the files and tests there, and perform the final commit/push/publish from the canonical
+directory. Visual Studio must open this canonical solution path so a later Publish uses the same
+tree that was tested and pushed.
+
 - Announce the exact path and branch whenever a temporary worktree is created, and state why the
   canonical workspace cannot safely be used for that task.
 - Before creating a branch, compare its start commit with `origin/develop`. A failed fast-forward is
