@@ -58,6 +58,104 @@ tree that was tested and pushed.
 - Remove obsolete temporary worktrees only after confirming they are clean and their commits are
   reachable from Git or a preserved branch. Report which temporary path was removed.
 
+## Continuation checkpoint — 2026-08-05 (gym registration 503)
+
+This section is the hand-off point for resuming the current Production incident after a context
+limit, reconnect, or new session. Read it before starting new diagnosis; do not repeat the already
+completed investigation or declare the issue fixed until the acceptance checks below pass.
+
+### Authoritative local state
+
+- The only Backend workspace is
+  `C:\Users\B-SMART\Desktop\Projects\LogicFit Project\LogicFit`.
+- At the checkpoint, the canonical workspace was clean on `master`, with
+  `HEAD == origin/master == a0b6c71` (`chore: pin canonical backend workspace`). Always verify
+  `git rev-parse --show-toplevel`, `git status --short --branch`, and the remote tip before editing.
+- The production-remediation code for issues #225, #226, and #227 is merged in `90f16b9` through
+  PR #229. The canonical-workspace rule is merged in `a0b6c71` through PR #231. Issue #230 remains
+  the open operational incident: [restore healthy platform provisioning after 503](https://github.com/AhmedSalem104/LogicFit/issues/230).
+- The local release/build baseline passed: Release build, full test suite, idempotent EF migration
+  script generation, and the protected CD preflight all passed. No production gym was successfully
+  created by this work.
+
+### What was verified in Production
+
+- The Platform dashboard Vercel route proxies `/api/*` to the unified host
+  `logicfit-saas-model.runasp.net`; unauthenticated protected API calls correctly return `401`.
+- `GET https://logicfit-saas-model.runasp.net/health` still returns `503 Unhealthy` at this
+  checkpoint. Therefore the new-gym flow is not accepted as fixed.
+- Archived server logs show the running process using an ephemeral/in-memory Data Protection key
+  repository and failing to decrypt active tenant database mappings because an old key is absent.
+  Earlier log entries also showed no available pool resource and a failed database connection
+  test. These are the operational causes to resolve; do not replace encrypted values blindly.
+- The authenticated dashboard repair/smoke test was not completed. The in-app browser runtime was
+  unavailable, and no direct SQL or unapproved production mutation was used to bypass that gate.
+
+### Deployment attempts and exact stopping point
+
+- The protected `production` Environment was inspected without reading or printing secret values.
+  Its unified publish profile was refreshed from the local `site81605` publish-settings file into
+  the protected secret store; the file and its password were not committed.
+- CD run [30997448708](https://github.com/AhmedSalem104/LogicFit/actions/runs/30997448708) passed
+  preflight but stopped while decoding the profile because the stored Base64 payload was rejected.
+- The profile was then stored in the workflow-supported direct XML format. CD run
+  [30997943613](https://github.com/AhmedSalem104/LogicFit/actions/runs/30997943613) passed
+  preflight, profile decoding, and the protected migration stage. The migration stage reported
+  that the target database was already current and applied no migration.
+- Run `30997943613` stopped before any WebDeploy sync. The exact code defect is in
+  `Scripts/deploy-webdeploy.ps1`: the PowerShell argument array embeds literal quotes around
+  `-source:contentPath=...`, so MSDeploy receives an argument beginning with a quote and returns
+  `Unrecognized argument "-source:contentPath=..."`. Production therefore still runs the old
+  binary and remains unhealthy.
+- The EF design-time stage also logged `JWT Secret not configured` while constructing the host;
+  it continued and completed the migration verification. Treat it as a separate configuration
+  hygiene item unless it appears in the actual application startup log.
+
+### Exact remaining work, in order
+
+1. On a task branch tied to Issue #230, fix the WebDeploy argument construction so the values are
+   passed as arguments without literal embedded quote characters. Add a regression/contract test
+   for the generated deploy arguments and preserve the existing server-only file/key-ring skip
+   rules.
+2. Run the canonical Release build, full tests, migration-script validation, and CI; push the
+   branch and merge the reviewed PR into the release branch according to the repository policy.
+3. Rerun the protected production CD only after CI passes, using the verified backup reference,
+   migration review marker, and production confirmation. Confirm that the WebDeploy step actually
+   syncs and that the post-deploy health gate is green.
+4. If `/health` is still `503`, inspect the post-deploy server log and durable `DataProtectionKeys`
+   / `App_Data` state. Restore the missing key ring through the approved backup/configuration path,
+   or use the authenticated dashboard repair action for every affected active mapping with the
+   real operator-supplied connection material. Never log or commit that material and never use the
+   ordinary edit action for an allocated resource.
+5. Confirm at least one database resource is `Available` and passes its connection test. A failed
+   or exhausted pool is a capacity blocker, not a frontend retry problem.
+6. After repeated `GET /health = 200`, create one disposable gym through the real dashboard flow
+   with a fresh idempotency key and verify: tenant/application creation, provisioning job
+   completion, resource transition to `Assigned`, tenant migration/owner seed, protected mapping,
+   owner login, and workspace access. Capture only status, `errorCode`, and request/correlation IDs
+   if a retry fails.
+7. Update Issue #230 and the production status/flow documentation with the evidence. Only then mark
+   the gym-registration incident resolved.
+8. Separately rotate all production credentials that were ever present in the tracked public
+   `appsettings.Production.json`, remove secret material from the repository history/config path,
+   and verify the server-only configuration. Do not copy any secret into this file.
+
+### Resume command sequence
+
+From the canonical workspace, start with:
+
+```powershell
+git rev-parse --show-toplevel
+git status --short --branch
+git log -5 --oneline --decorate
+curl.exe -i --max-time 20 https://logicfit-saas-model.runasp.net/health
+gh run view 30997943613 --repo AhmedSalem104/LogicFit
+```
+
+The next implementation target is the deploy-script quoting defect, not another repeat of the
+already completed health/log diagnosis. Do not report “solved” until the live health check and the
+disposable end-to-end gym registration both succeed.
+
 ## Documentation currency gate
 
 Documentation is part of the definition of done for every project change. The current source code and domain rules are the authority; a planned, branch-only, or unavailable behavior must be labelled as such and must never be documented as released.
