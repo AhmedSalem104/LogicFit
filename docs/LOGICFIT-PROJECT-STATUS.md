@@ -272,6 +272,20 @@ flowchart LR
 
 ## Repository decomposition
 
+### 2026-08-05 — Backup admin screen audit (planning only)
+
+The existing Platform Dashboard `/backups` screen was reviewed against the per-Tenant and full
+Platform backup requirements in Issue #239. The screen currently uses the legacy platform-only
+create/list/download contract; it does not yet expose batch scopes, per-target artifacts,
+checksum/manifest verification, retry state, or restore capabilities. The Backend already has
+server-side batch orchestration and fail-closed restore providers, but this source capability is
+not evidence that the Dashboard flow or Production restore rehearsal is complete. The detailed
+gap matrix and proposed implementation order are in
+[BACKUP-ADMIN-SCREEN-REVIEW-2026-08-05.md](BACKUP-ADMIN-SCREEN-REVIEW-2026-08-05.md).
+
+This is a read-only planning checkpoint. No source code, database, mapping, resource, tenant
+database, or Production deployment was changed.
+
 ```text
 LogicFit.sln
 ├── LogicFit.Domain/          Entities, enums, authorization catalog, domain rules
