@@ -85,6 +85,25 @@ try {
     if (-not $targetMatches -or -not $principalMatches) {
         throw "Remote server configuration does not match the protected production database identity."
     }
+
+    $remoteConnection = [System.Data.SqlClient.SqlConnection]::new($remoteConnectionString)
+    try {
+        $remoteConnection.Open()
+        $command = $remoteConnection.CreateCommand()
+        $command.CommandText = 'SELECT 1'
+        $command.CommandTimeout = 15
+        $result = $command.ExecuteScalar()
+        if ([int]$result -ne 1) {
+            throw "Unexpected read-only probe result."
+        }
+        Write-Host "Remote server-configuration database connectivity probe passed."
+    }
+    catch {
+        throw "Remote server-configuration database connectivity probe failed."
+    }
+    finally {
+        $remoteConnection.Dispose()
+    }
 }
 finally {
     $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())

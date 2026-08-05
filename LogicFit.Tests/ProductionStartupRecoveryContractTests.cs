@@ -62,6 +62,7 @@ public sealed class ProductionStartupRecoveryContractTests
 
         Assert.Contains("Get-RemoteFile", script);
         Assert.DoesNotContain("Set-RemoteFile", script);
+        Assert.Contains("Remote server-configuration database connectivity probe", script);
         Assert.Contains("SELECT 1", File.ReadAllText(Path.Combine(RepositoryRoot, ".github", "workflows", "cd.yml")));
         Assert.Contains("without printing secrets", File.ReadAllText(Path.Combine(RepositoryRoot, ".github", "workflows", "cd.yml")));
     }
