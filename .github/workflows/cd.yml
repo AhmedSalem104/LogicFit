@@ -16,7 +16,7 @@ on:
         required: true
         type: string
       confirm:
-        description: 'Type DEPLOY-PRODUCTION or RECOVER-PRODUCTION-STARTUP'
+        description: 'Type DEPLOY-PRODUCTION, RECOVER-PRODUCTION-STARTUP, or DIAGNOSE-PRODUCTION-HEALTH'
         required: true
         type: string
       recovery_profile:
@@ -283,3 +283,57 @@ jobs:
             $arguments.EnableBackups = $true
           }
           .\Scripts\recover-webdeploy-startup.ps1 @arguments
+
+  diagnose-production-health:
+    if: ${{ inputs.confirm == 'DIAGNOSE-PRODUCTION-HEALTH' }}
+    runs-on: windows-latest
+    environment: production
+    steps:
+      - name: Require protected read-only diagnostic inputs
+        shell: powershell
+        env:
+          PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+          HEALTH_URL: ${{ secrets.RUNASP_UNIFIED_HEALTHCHECK_URL }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PRODUCTION_DB_CONNECTION)) {
+            throw "LOGICFIT_PRODUCTION_DB_CONNECTION is required for the read-only diagnostic."
+          }
+          if ([string]::IsNullOrWhiteSpace($env:HEALTH_URL)) {
+            throw "RUNASP_UNIFIED_HEALTHCHECK_URL is required for the read-only diagnostic."
+          }
+          if (([Uri]$env:HEALTH_URL).Scheme -ne 'https') {
+            throw "The diagnostic health URL must use HTTPS."
+          }
+
+          $connection = [System.Data.SqlClient.SqlConnection]::new($env:PRODUCTION_DB_CONNECTION)
+          try {
+            $connection.Open()
+            $command = $connection.CreateCommand()
+            $command.CommandText = 'SELECT 1'
+            $command.CommandTimeout = 15
+            $result = $command.ExecuteScalar()
+            if ([int]$result -ne 1) {
+              throw "The production database read-only probe returned an unexpected result."
+            }
+            Write-Host "Read-only production database connectivity probe passed."
+          }
+          finally {
+            $connection.Dispose()
+          }
+
+      - name: Verify production readiness endpoint
+        shell: powershell
+        env:
+          HEALTH_URL: ${{ secrets.RUNASP_UNIFIED_HEALTHCHECK_URL }}
+        run: |
+          try {
+            $response = Invoke-WebRequest -Uri $env:HEALTH_URL -UseBasicParsing -TimeoutSec 30
+            $body = $response.Content.Trim()
+          }
+          catch {
+            throw "The production health endpoint could not be reached."
+          }
+          if ($response.StatusCode -ne 200 -or $body -ne 'Healthy') {
+            throw "The production health endpoint is not Healthy (HTTP $($response.StatusCode))."
+          }
+          Write-Host "Production readiness endpoint passed."

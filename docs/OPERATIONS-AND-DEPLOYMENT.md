@@ -200,6 +200,12 @@ Never leave stdout enabled after diagnosis. Never upload captured stdout as an a
 contain authentication payloads. Rotate exposed application credentials and remove or redact the
 affected server logs through an explicitly approved operator action.
 
+Before retrying a backup activation after a failed recovery, use the protected CD dispatch value
+`DIAGNOSE-PRODUCTION-HEALTH`. This read-only job runs `SELECT 1` through the protected production
+database connection and then requires the configured HTTPS `/health` endpoint to return `Healthy`.
+It does not run WebDeploy, migrations, configuration writes, or backup exports. Do not dispatch
+`RECOVER-PRODUCTION-STARTUP` with `enable_backups=true` until both diagnostic checks pass.
+
 The connection is read from `LOGICFIT_PRODUCTION_DB_CONNECTION` in the current protected process and is passed to the EF design-time factory through the short-lived `LOGICFIT_EF_CONNECTION_STRING` operator variable. Without that explicit override, EF remains pinned to LocalDB and cannot reach production accidentally. The GitHub `production` Environment must store the production secret together with `RUNASP_UNIFIED_PUBLISH_SETTINGS_B64` and `RUNASP_UNIFIED_HEALTHCHECK_URL`. The manual workflow also requires `backup_reference`, `migration_review=MIGRATIONS-REVIEWED`, and `confirm=DEPLOY-PRODUCTION`. `-ApproveDestructiveMigrationReview` is used only after reviewing a plan containing intentional `DROP`, `DELETE`, or `TRUNCATE` statements.
 
 The protected WebDeploy secret may contain either the Base64-encoded publish-settings file or the

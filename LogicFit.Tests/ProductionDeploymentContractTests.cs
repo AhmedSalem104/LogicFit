@@ -22,6 +22,10 @@ public class ProductionDeploymentContractTests
         Assert.Contains("logicfit-production-migration-plan", workflow);
         Assert.Contains("tree-equivalent to origin/master", workflow);
         Assert.Contains("needs.preflight.outputs.release_sha", workflow);
+        Assert.Contains("DIAGNOSE-PRODUCTION-HEALTH", workflow);
+        Assert.Contains("diagnose-production-health:", workflow);
+        Assert.Contains("SELECT 1", workflow);
+        Assert.Contains("shell: powershell", workflow);
     }
 
     [Fact]
