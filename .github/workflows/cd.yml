@@ -346,6 +346,7 @@ jobs:
           TENANT_PROFILE_B64: ${{ secrets.RUNASP_TENANT_PUBLISH_SETTINGS_B64 }}
           UNIFIED_PROFILE_B64: ${{ secrets.RUNASP_UNIFIED_PUBLISH_SETTINGS_B64 }}
           PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+          HEALTH_URL: ${{ secrets.RUNASP_UNIFIED_HEALTHCHECK_URL }}
         run: |
           if ($env:EXPECTED_SITE -notmatch '^site[0-9]+$') {
             throw "recovery_expected_site must use the site12345 format."
