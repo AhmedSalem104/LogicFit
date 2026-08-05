@@ -45,6 +45,15 @@ public class ProductionDeploymentContractTests
     }
 
     [Fact]
+    public void Webdeploy_source_argument_does_not_embed_literal_quotes()
+    {
+        var script = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "deploy-webdeploy.ps1"));
+
+        Assert.Contains("\"-source:contentPath=$ContentPath\"", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("contentPath=`\"$ContentPath`\"", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Data_protection_keys_use_the_central_database_with_a_file_recovery_mirror()
     {
         var dependencyInjection = File.ReadAllText(Path.Combine(
