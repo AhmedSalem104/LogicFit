@@ -80,3 +80,35 @@ Provider exceptions are logged with application/tenant/resource identifiers only
 strings, passwords, tokens, payment proofs, and raw payloads are not logged. A failed resource is
 marked `Faulted`, the workspace is `ProvisioningFailed`, the payment remains approved, and the
 subscription remains `PendingActivation` until an operator retry succeeds.
+
+## Platform gym registration contract (Issue #226)
+
+`POST /api/platform/tenants` accepts an optional `Idempotency-Key` header. The server stores only a
+one-way request scope hash; it never stores the header value or owner password. Retrying the same
+body with the same key resumes the existing application and provisioning job. A request without a
+key still receives a deterministic body fingerprint so a client timeout cannot create a second
+gym, owner, or mapping.
+
+Provisioning failures use the shared exception response contract:
+
+```json
+{
+  "code": "DATABASE_CAPACITY_UNAVAILABLE",
+  "message": "safe actionable message",
+  "requestId": "trace-id",
+  "details": {
+    "retryable": true,
+    "tenantId": "...",
+    "applicationRequestId": "...",
+    "databaseResourceId": "...",
+    "retryEndpoint": "/api/platform/workspace-applications/{id}/retry-provisioning"
+  }
+}
+```
+
+Capacity is reported as HTTP `409` with `DATABASE_CAPACITY_UNAVAILABLE`. Provider, migration,
+mapping, and tenant-database health failures preserve their stable safe error code and use HTTP
+`503` when retryable. The response never includes a provider exception, SQL message, connection
+string, database name, or password. The Platform UI should display `code`/`message`, retain the
+`requestId`, and retry the original idempotent request or call the returned retry endpoint only
+after the operator has repaired capacity or the failed resource.

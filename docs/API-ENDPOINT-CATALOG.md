@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-04 13:24 UTC`  |  Total endpoints: **392**
+Generated: `2026-08-05 09:25 UTC`  |  Total endpoints: **393**
 
 ## Contract rules
 
@@ -169,6 +169,12 @@ Generated: `2026-08-04 13:24 UTC`  |  Total endpoints: **392**
 
 - **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
 - **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<DatabaseResourceOperationDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/repair-connection` - `RepairConnection`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `RepairDatabaseResourceConnectionRequest`<br>Handler signature: `Guid id, [FromBody] RepairDatabaseResourceConnectionRequest request`
 - **Declared response:** Task<ActionResult<DatabaseResourceOperationDto>>
 
 #### `POST /api/platform/database-resources/{id:guid}/status` - `SetStatus`
@@ -488,8 +494,8 @@ Generated: `2026-08-04 13:24 UTC`  |  Total endpoints: **392**
 #### `POST /api/platform/tenants` - `CreateTenant`
 
 - **Access:** JWT + Policy: `Permissions.ManageTenants`
-- **Inputs:** Body `command`: `CreateTenantWithOwnerCommand` { `Name`: string; `Subdomain`: string?; `Email`: string?; `PhoneNumber`: string?; `OwnerEmail`: string; `OwnerPhoneNumber`: string?; `OwnerPassword`: string; `OwnerFullName`: string }<br>Handler signature: `[FromBody] CreateTenantWithOwnerCommand command`
-- **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status201Created
+- **Inputs:** Body `command`: `CreateTenantWithOwnerCommand` { `Name`: string; `Subdomain`: string?; `Email`: string?; `PhoneNumber`: string?; `OwnerEmail`: string; `OwnerPhoneNumber`: string?; `OwnerPassword`: string; `OwnerFullName`: string }<br>Handler signature: `[FromHeader(Name = "Idempotency-Key")] string? idempotencyKey, [FromBody] CreateTenantWithOwnerCommand command`
+- **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status201Created<br>StatusCodes.Status400BadRequest<br>StatusCodes.Status409Conflict<br>StatusCodes.Status503ServiceUnavailable
 
 #### `POST /api/platform/tenants/{id:guid}/activate` - `Activate`
 
@@ -686,7 +692,7 @@ Generated: `2026-08-04 13:24 UTC`  |  Total endpoints: **392**
 #### `POST /api/BodyMeasurements` - `CreateBodyMeasurement`
 
 - **Access:** JWT required
-- **Inputs:** Body `command`: `CreateBodyMeasurementCommand` { `ClientId`: Guid; `DateRecorded`: DateTime; `WeightKg`: double; `SkeletalMuscleMass`: double?; `BodyFatMass`: double?; `BodyFatPercent`: double?; `TotalBodyWater`: double?; `Bmr`: double?; `VisceralFatLevel`: int?; `InbodyImage`: IFormFile?; `FrontPhoto`: IFormFile?; `SidePhoto`: IFormFile?; `BackPhoto`: IFormFile? }<br>Handler signature: `[FromBody] CreateBodyMeasurementCommand command`
+- **Inputs:** Body `command`: `CreateBodyMeasurementCommand` { `ClientId`: Guid; `DateRecorded`: DateTime; `WeightKg`: double; `SkeletalMuscleMass`: double?; `BodyFatMass`: double?; `BodyFatPercent`: double?; `TotalBodyWater`: double?; `Bmr`: double?; `VisceralFatLevel`: int? }<br>Handler signature: `[FromBody] CreateBodyMeasurementCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/BodyMeasurements/{id}` - `DeleteBodyMeasurement`

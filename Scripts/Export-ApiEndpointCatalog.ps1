@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$OutputPath = (Join-Path $PSScriptRoot '..\docs\API-ENDPOINT-CATALOG.md')
+    [string]$OutputPath = ''
 )
 
 <##
@@ -14,6 +14,10 @@ Run from the repository root:
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+    $OutputPath = Join-Path $PSScriptRoot '..\docs\API-ENDPOINT-CATALOG.md'
+}
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $controllerFiles = @(
@@ -35,7 +39,10 @@ function Get-TypeProperties {
 
     $source = Get-Content -LiteralPath $candidate.FullName -Raw
     $properties = [System.Collections.Generic.List[string]]::new()
-    foreach ($match in [regex]::Matches($source, '(?m)^\s*public\s+(?:required\s+)?(?<type>[A-Za-z_][A-Za-z0-9_\.<>?,\[\]]*)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\{\s*get;')) {
+    foreach ($match in [regex]::Matches($source, '(?m)^(?<attributes>(?:[ \t]*\[[^\r\n]+\][ \t]*\r?\n)*)[ \t]*public\s+(?:required\s+)?(?<type>[A-Za-z_][A-Za-z0-9_\.<>?,\[\]]*)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\{\s*get;')) {
+        if ($match.Groups['attributes'].Value -match '\[\s*JsonIgnore\s*\]') {
+            continue
+        }
         $properties.Add(('`{0}`: {1}' -f $match.Groups['name'].Value, $match.Groups['type'].Value))
     }
 

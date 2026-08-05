@@ -31,6 +31,8 @@ public class ExceptionHandlingMiddleware
     private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
+        var requestId = context.TraceIdentifier;
+        context.Response.Headers["X-Request-Id"] = requestId;
 
         var (statusCode, message, errors, code) = exception switch
         {
@@ -77,6 +79,12 @@ public class ExceptionHandlingMiddleware
                 (IDictionary<string, string[]>?)null,
                 (string?)planLimitEx.Code
             ),
+            ProvisioningException provisioningEx => (
+                provisioningEx.StatusCode,
+                provisioningEx.Message,
+                (IDictionary<string, string[]>?)null,
+                (string?)provisioningEx.Code
+            ),
             SubscriptionLimitException => (
                 StatusCodes.Status402PaymentRequired,
                 exception.Message,
@@ -112,13 +120,27 @@ public class ExceptionHandlingMiddleware
         };
 
         context.Response.StatusCode = statusCode;
+        object? details = exception is ProvisioningException provisioning
+            ? new
+            {
+                retryable = provisioning.Retryable,
+                tenantId = provisioning.TenantId,
+                applicationRequestId = provisioning.ApplicationRequestId,
+                databaseResourceId = provisioning.DatabaseResourceId,
+                retryEndpoint = provisioning.ApplicationRequestId.HasValue
+                    ? $"/api/platform/workspace-applications/{provisioning.ApplicationRequestId.Value:D}/retry-provisioning"
+                    : null
+            }
+            : null;
 
         var response = new
         {
             statusCode,
             code,
             message,
-            errors
+            errors,
+            requestId,
+            details
         };
 
         var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
