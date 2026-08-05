@@ -34,6 +34,24 @@ the owner receives the workspace context and is routed to workspace selection au
 The repair is restricted to the Gym owner membership; do not update `WorkspaceMemberships`
 directly in Production.
 
+## Backup admin screen and batch evidence (Issue #239)
+
+The existing Platform Admin `/backups` screen is the operator entry point for the server-owned
+backup batches. `FullSystem` resolves the platform database and every active assigned tenant
+mapping; `AllTenants`, `AllGyms`, `AllFreelance`, and `Platform` are explicit alternatives. The
+server returns per-artifact status, size, safe storage key, SHA-256 and manifest reference. Batch
+start/finish events are written to the Platform Audit Log.
+
+Creation and retry require confirmation. Retry is limited to `Failed` or `Partial` batches. The
+screen never renders connection material, credentials, raw exceptions, or absolute storage paths.
+Restore capability is informational; `ManualOnly` must remain a manual operator handoff and does
+not authorize a mapping switch. A failed or missing batch must stop destructive or
+mapping-changing work until a verified backup and rollback plan exist.
+
+This implementation has no schema migration and no Production deployment. Before release, run CI,
+review the generated API catalog, verify the protected backup/migration/health/rollback gates, and
+perform a restore rehearsal only in an isolated target approved for that purpose.
+
 ## بيئات ومكونات النشر
 
 - `LogicFit.API` هو المضيف الموحد؛ يحتوي Platform وTenant modules ويستخدم إعدادات

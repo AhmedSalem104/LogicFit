@@ -26,6 +26,13 @@
 
 Last reviewed: 2026-08-03
 
+> **Issue #239 — local implementation slice:** the existing Platform Admin `/backups` screen now
+> uses the server-owned batch contracts, defaults to `FullSystem` coverage (platform database plus
+> active assigned tenant mappings), and shows per-target status, SHA-256, manifest, retry state,
+> and restore capability. `BackupArtifactDto` exposes the checksum and the service records batch
+> start/finish audit events. This is not a Production backup/restore verification; no database,
+> Tenant mapping, resource, restore, or deployment operation was performed.
+
 > **Issue #202 — task branch:** the protected production migration plan and WebDeploy helper now
 > explicitly target the current compatibility `ApplicationDbContext`; no Platform/Tenant
 > baseline is applied to the shared Production database. This deployment correction is local and
