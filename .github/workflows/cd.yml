@@ -41,6 +41,11 @@ on:
         required: false
         default: false
         type: boolean
+      enable_backups:
+        description: 'Set Backup:Enabled=true during protected startup recovery'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -261,6 +266,7 @@ jobs:
           EXPECTED_SITE: ${{ inputs.recovery_expected_site }}
           MANAGEMENT_HOST_OVERRIDE: ${{ inputs.recovery_management_host_override }}
           ALLOW_UNTRUSTED: ${{ inputs.recovery_allow_untrusted_certificate }}
+          ENABLE_BACKUPS: ${{ inputs.enable_backups }}
         run: |
           $arguments = @{
             PublishSettingsPath = "$env:RUNNER_TEMP/recovery.publishSettings"
@@ -272,5 +278,8 @@ jobs:
           }
           if ($env:ALLOW_UNTRUSTED -eq 'true') {
             $arguments.AllowUntrustedManagementCertificate = $true
+          }
+          if ($env:ENABLE_BACKUPS -eq 'true') {
+            $arguments.EnableBackups = $true
           }
           .\Scripts\recover-webdeploy-startup.ps1 @arguments
