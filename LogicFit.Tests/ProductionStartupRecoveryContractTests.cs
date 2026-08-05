@@ -56,6 +56,17 @@ public sealed class ProductionStartupRecoveryContractTests
     }
 
     [Fact]
+    public void Read_only_webdeploy_diagnostic_never_syncs_to_the_remote_site()
+    {
+        var script = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "diagnose-webdeploy-health.ps1"));
+
+        Assert.Contains("Get-RemoteFile", script);
+        Assert.DoesNotContain("Set-RemoteFile", script);
+        Assert.Contains("SELECT 1", File.ReadAllText(Path.Combine(RepositoryRoot, ".github", "workflows", "cd.yml")));
+        Assert.Contains("without printing secrets", File.ReadAllText(Path.Combine(RepositoryRoot, ".github", "workflows", "cd.yml")));
+    }
+
+    [Fact]
     public void Authentication_request_payloads_are_never_written_by_exception_behavior()
     {
         var behavior = File.ReadAllText(Path.Combine(

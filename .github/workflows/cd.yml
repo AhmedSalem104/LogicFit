@@ -321,6 +321,62 @@ jobs:
             $connection.Dispose()
           }
 
+      - name: Compare remote database identity without printing secrets
+        shell: powershell
+        env:
+          RECOVERY_PROFILE: ${{ inputs.recovery_profile }}
+          EXPECTED_SITE: ${{ inputs.recovery_expected_site }}
+          MANAGEMENT_HOST_OVERRIDE: ${{ inputs.recovery_management_host_override }}
+          ALLOW_UNTRUSTED: ${{ inputs.recovery_allow_untrusted_certificate }}
+          PLATFORM_PROFILE_B64: ${{ secrets.RUNASP_PLATFORM_PUBLISH_SETTINGS_B64 }}
+          TENANT_PROFILE_B64: ${{ secrets.RUNASP_TENANT_PUBLISH_SETTINGS_B64 }}
+          UNIFIED_PROFILE_B64: ${{ secrets.RUNASP_UNIFIED_PUBLISH_SETTINGS_B64 }}
+          PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+        run: |
+          if ($env:EXPECTED_SITE -notmatch '^site[0-9]+$') {
+            throw "recovery_expected_site must use the site12345 format."
+          }
+          $profilePayload = switch ($env:RECOVERY_PROFILE) {
+            'platform' { $env:PLATFORM_PROFILE_B64 }
+            'tenant' { $env:TENANT_PROFILE_B64 }
+            'unified' { $env:UNIFIED_PROFILE_B64 }
+            default { throw "Unsupported protected recovery profile." }
+          }
+          if ([string]::IsNullOrWhiteSpace($profilePayload)) {
+            throw "The selected protected publish profile is missing."
+          }
+          $profilePath = "$env:RUNNER_TEMP/diagnostic.publishSettings"
+          $profilePayload = $profilePayload.Trim()
+          $xmlStart = $profilePayload.IndexOf('<')
+          if ($xmlStart -ge 0) {
+            $profilePayload = $profilePayload.Substring($xmlStart)
+            $profileDocument = [xml]$profilePayload
+            if ($null -eq $profileDocument.publishData.publishProfile) {
+              throw "The selected protected publish profile XML is invalid."
+            }
+            [IO.File]::WriteAllText($profilePath, $profilePayload, [Text.UTF8Encoding]::new($false))
+          }
+          else {
+            try {
+              [IO.File]::WriteAllBytes($profilePath, [Convert]::FromBase64String($profilePayload))
+            }
+            catch [FormatException] {
+              throw "The selected protected publish profile is neither Base64 nor publish-settings XML."
+            }
+          }
+          $arguments = @{
+            PublishSettingsPath = $profilePath
+            ExpectedSite = $env:EXPECTED_SITE
+            ExpectedConnectionString = $env:PRODUCTION_DB_CONNECTION
+          }
+          if (-not [string]::IsNullOrWhiteSpace($env:MANAGEMENT_HOST_OVERRIDE)) {
+            $arguments.ManagementHostOverride = $env:MANAGEMENT_HOST_OVERRIDE
+          }
+          if ($env:ALLOW_UNTRUSTED -eq 'true') {
+            $arguments.AllowUntrustedManagementCertificate = $true
+          }
+          .\Scripts\diagnose-webdeploy-health.ps1 @arguments
+
       - name: Verify production readiness endpoint
         shell: powershell
         env:

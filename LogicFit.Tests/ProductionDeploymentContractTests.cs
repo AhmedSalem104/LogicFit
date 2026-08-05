@@ -26,6 +26,8 @@ public class ProductionDeploymentContractTests
         Assert.Contains("diagnose-production-health:", workflow);
         Assert.Contains("SELECT 1", workflow);
         Assert.Contains("shell: powershell", workflow);
+        Assert.Contains("diagnose-webdeploy-health.ps1", workflow);
+        Assert.Contains("Compare remote database identity", workflow);
     }
 
     [Fact]
