@@ -464,6 +464,21 @@ jobs:
           "MONSTER_LOG_HEALTH_URL=$($selection[1])" >> $env:GITHUB_ENV
           "MONSTER_LOG_PROFILE_PATH=$profilePath" >> $env:GITHUB_ENV
 
+      - name: Inspect compiled migration state without writing
+        shell: powershell
+        env:
+          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:LOGICFIT_PRODUCTION_DB_CONNECTION)) {
+            throw "LOGICFIT_PRODUCTION_DB_CONNECTION is required for the read-only migration-state probe."
+          }
+          dotnet restore LogicFit.Tests/LogicFit.Tests.csproj --nologo
+          dotnet test LogicFit.Tests/LogicFit.Tests.csproj `
+            --configuration Release `
+            --no-restore `
+            --filter "FullyQualifiedName~ProductionDatabaseConnectivityTests" `
+            --verbosity minimal
+
       - name: Capture and classify Monster stdout safely
         shell: powershell
         env:
