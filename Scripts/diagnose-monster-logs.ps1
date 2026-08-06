@@ -40,6 +40,7 @@ $endpoint = "https://${managementHost}:8172/msdeploy.axd?site=$ExpectedSite"
 $operationRoot = Join-Path ([IO.Path]::GetTempPath()) ("logicfit-monster-log-{0}" -f [Guid]::NewGuid().ToString('N'))
 $remoteWebConfig = Join-Path $operationRoot 'web.config.original'
 $diagnosticWebConfig = Join-Path $operationRoot 'web.config.diagnostic'
+$baselineLogRoot = Join-Path $operationRoot 'baseline-logs'
 $logRoot = Join-Path $operationRoot 'captured-logs'
 $remoteWebConfigPath = "$ExpectedSite/web.config"
 
@@ -95,25 +96,73 @@ function Resolve-LogDirectory([string]$StdoutLogFile) {
     return $normalized.Substring(0, $separator).Trim('/')
 }
 
-function Get-LogFiles([string]$RemoteLogPath) {
-    if (Test-Path -LiteralPath $logRoot) { Remove-Item -LiteralPath $logRoot -Recurse -Force }
-    New-Item -ItemType Directory -Path $logRoot | Out-Null
-    try { Get-RemoteFile $RemoteLogPath $logRoot } catch { return @() }
-    return @(Get-ChildItem -LiteralPath $logRoot -File -Recurse -ErrorAction SilentlyContinue)
+function Get-LogFiles([string]$RemoteLogPath, [string]$DestinationRoot) {
+    if (Test-Path -LiteralPath $DestinationRoot) { Remove-Item -LiteralPath $DestinationRoot -Recurse -Force }
+    New-Item -ItemType Directory -Path $DestinationRoot | Out-Null
+    try { Get-RemoteFile $RemoteLogPath $DestinationRoot } catch { return @() }
+    return @(Get-ChildItem -LiteralPath $DestinationRoot -File -Recurse -ErrorAction SilentlyContinue)
 }
 
-function Wait-ForLogFiles([string]$RemoteLogPath) {
+function Get-LogSnapshot([System.IO.FileInfo[]]$Files, [string]$Root) {
+    $snapshot = @{}
+    $rootPrefix = [IO.Path]::GetFullPath($Root).TrimEnd('\') + '\'
+    foreach ($file in $Files) {
+        try {
+            $relativePath = $file.FullName.Substring($rootPrefix.Length)
+            $snapshot[$relativePath] = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+        }
+        catch { }
+    }
+    return ,$snapshot
+}
+
+function Get-ChangedLogFiles([System.IO.FileInfo[]]$Files, [string]$Root, [hashtable]$Baseline) {
+    $changed = [System.Collections.Generic.List[System.IO.FileInfo]]::new()
+    $rootPrefix = [IO.Path]::GetFullPath($Root).TrimEnd('\') + '\'
+    foreach ($file in $Files) {
+        try {
+            $relativePath = $file.FullName.Substring($rootPrefix.Length)
+            $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+            if (-not $Baseline.ContainsKey($relativePath) -or $Baseline[$relativePath] -ne $hash) {
+                $changed.Add($file)
+            }
+        }
+        catch { }
+    }
+    return @($changed)
+}
+
+function Wait-ForLogFiles([string]$RemoteLogPath, [hashtable]$Baseline) {
+    $lastFiles = @()
     for ($attempt = 1; $attempt -le 8; $attempt++) {
         Start-Sleep -Seconds 5
-        $files = Get-LogFiles $RemoteLogPath
-        if ($files.Count -gt 0) { return $files }
+        $lastFiles = @(Get-LogFiles $RemoteLogPath $logRoot)
+        $changedFiles = @(Get-ChangedLogFiles $lastFiles $logRoot $Baseline)
+        if ($changedFiles.Count -gt 0) {
+            return [pscustomobject]@{
+                Files = $changedFiles
+                ChangedCount = $changedFiles.Count
+                TotalCount = $lastFiles.Count
+                UsedFallback = $false
+            }
+        }
     }
-    return @()
+    $fallbackFiles = @($lastFiles | Sort-Object LastWriteTime -Descending | Select-Object -First 3)
+    return [pscustomobject]@{
+        Files = $fallbackFiles
+        ChangedCount = 0
+        TotalCount = $lastFiles.Count
+        UsedFallback = $true
+    }
 }
 
-function Write-SafeLogCategories([System.IO.FileInfo[]]$Files) {
+function Write-SafeLogCategories(
+    [System.IO.FileInfo[]]$Files,
+    [int]$ChangedCount,
+    [int]$TotalCount,
+    [bool]$UsedFallback) {
     if ($Files.Count -eq 0) {
-        Write-Host 'Monster stdout log files captured: 0.'
+        Write-Host "Monster stdout log files captured: $TotalCount; new or changed: $ChangedCount."
         Write-Host 'Safe log categories: NoLogFileCaptured.'
         return
     }
@@ -126,13 +175,27 @@ function Write-SafeLogCategories([System.IO.FileInfo[]]$Files) {
         Storage = '(?i)storage|directory|permission|access denied|R2|S3'
         Hosting = '(?i)500\.30|ANCM|aspnetcore|IIS|startup|Unhandled Exception|fatal'
     }
+    $signaturePatterns = [ordered]@{
+        DatabaseLogin = '(?i)login failed|cannot open database|server was not found|network-related'
+        DatabaseSchema = '(?i)invalid object name|invalid column|does not exist|migrationshistory'
+        DatabaseTimeout = '(?i)timeout|time-out|timed out'
+        DatabasePermission = '(?i)permission|not authorized|access is denied'
+        MigrationState = '(?i)pending migration|migration.*failed|migrateasync'
+        StoragePermission = '(?i)access denied|unauthorized|permission.*directory'
+        StoragePath = '(?i)directory not found|could not find.*path|disk.*space'
+        HostingStartup = '(?i)500\.30|ANCM|failed to start|application startup|unhandled exception|fatal'
+    }
     $text = ($Files | ForEach-Object {
         try { Get-Content -LiteralPath $_.FullName -Tail 2000 -ErrorAction SilentlyContinue } catch { }
     }) -join "`n"
     $categories = @($patterns.Keys | Where-Object { $text -match $patterns[$_] })
     if ($categories.Count -eq 0) { $categories = @('NoKnownRootCategory') }
-    Write-Host "Monster stdout log files captured: $($Files.Count)."
+    $signatures = @($signaturePatterns.Keys | Where-Object { $text -match $signaturePatterns[$_] })
+    if ($signatures.Count -eq 0) { $signatures = @('NoKnownSafeSignature') }
+    Write-Host "Monster stdout log files captured: $TotalCount; new or changed: $ChangedCount."
+    if ($UsedFallback) { Write-Host 'No new log file was detected; analyzed the three newest existing files as a bounded fallback.' }
     Write-Host "Safe log categories: $($categories -join ', ')."
+    Write-Host "Safe log signatures: $($signatures -join ', ')."
 }
 
 New-Item -ItemType Directory -Path $operationRoot | Out-Null
@@ -149,6 +212,8 @@ try {
     $logDirectory = Resolve-LogDirectory ([string]$aspNetCore.GetAttribute('stdoutLogFile'))
     $remoteLogPath = "$ExpectedSite/$logDirectory"
     $diagnosticStdoutPath = ".\$($logDirectory.Replace('/', '\'))\stdout"
+    $baselineFiles = @(Get-LogFiles $remoteLogPath $baselineLogRoot)
+    $baselineSnapshot = Get-LogSnapshot $baselineFiles $baselineLogRoot
     $aspNetCore.SetAttribute('stdoutLogEnabled', 'true')
     $aspNetCore.SetAttribute('stdoutLogFile', $diagnosticStdoutPath)
     [IO.File]::WriteAllText($diagnosticWebConfig, $webConfig.OuterXml, [Text.UTF8Encoding]::new($false))
@@ -157,8 +222,8 @@ try {
     Set-RemoteFile $diagnosticWebConfig $remoteWebConfigPath
     $remoteChanged = $true
     Write-HealthState 'During temporary log capture' (Get-HealthState)
-    $files = Wait-ForLogFiles $remoteLogPath
-    Write-SafeLogCategories $files
+    $logCapture = Wait-ForLogFiles $remoteLogPath $baselineSnapshot
+    Write-SafeLogCategories $logCapture.Files $logCapture.ChangedCount $logCapture.TotalCount $logCapture.UsedFallback
 }
 catch {
     $diagnosticFailure = $true
