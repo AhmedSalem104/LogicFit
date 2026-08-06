@@ -100,6 +100,16 @@ membership and other workspace associations are revoked.
 | التفاعل | تحديات، chat، إشعارات | `Challenges`، `Chat`، `Notifications` | حسب عضوية وملكية كل مساحة |
 | التقارير | تقارير تشغيل ومالية ورياضية | `Reports` | الأدوار صاحبة صلاحية التقرير |
 
+## حسابات الفريق والوصول (Issues #246 and #65)
+
+The owner-managed team surface is separate from the legacy HR profile form. `WorkspaceMembersController`
+and the `WorkspaceMembers` application feature provide a single operation for identity, tenant-local
+user, membership, role assignment, one-time credentials, password reset, and access lifecycle. The
+surface is protected by `ManageEmployees`, is tenant-scoped, rejects duplicate active memberships,
+supports identity reuse across workspaces, and records security audit events without credentials.
+The Tenant UI route is `/owner/workspace-access` with explicit loading, empty, error, credential,
+and state-action screens.
+
 ## المالية، التجارة والمخزون داخل المساحة
 
 | المجال | ما هو مسجل حاليًا | مصدر التنفيذ / عائلة API | المستخدمون الرئيسيون |

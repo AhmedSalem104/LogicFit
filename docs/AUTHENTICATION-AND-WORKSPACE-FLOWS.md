@@ -165,6 +165,21 @@ Gym at the next owner login, so an operator does not need a second manual activa
 an older release left the membership pending. Client memberships in
 `PendingWorkspaceApproval` remain subject to the gym's own approval flow.
 
+## Owner-managed workspace members (Issues #246 and #65)
+
+`/api/workspace-members` is the unified owner flow for Gym team access. `POST` creates or reuses a
+global `IdentityAccount`, creates the tenant-local `User` and `WorkspaceMembership`, replaces the
+workspace role assignments, and writes one security audit event before saving. A duplicate active
+membership in the same workspace is rejected; the same identity may receive a membership in a
+different workspace.
+
+The create response contains a one-time temporary password only when a new identity was created.
+The password is BCrypt-hashed immediately, `MustChangePassword` is set on the local user, and the
+value is not persisted, logged, or returned by list endpoints. `POST /{membershipId}/reset-password`
+generates a new one-time password and clears lockout counters. Suspend, activate, and remove keep
+the global identity intact while changing only workspace access. The stable access states are
+`PendingSetup`, `PasswordChangeRequired`, `Active`, `Suspended`, `Locked`, and `Removed`.
+
 ## Invitations and clients
 
 Workspace invitations are single-use email-bound links. The recipient must sign in with the
