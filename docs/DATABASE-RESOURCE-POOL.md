@@ -14,7 +14,8 @@ Issue: #174
 The Platform database now records pre-created customer databases independently from Workspace
 ids. `DatabaseResource` is the operator-managed pool row and `TenantDatabaseMapping` is the
 server-side assignment. The database name is never derived from `TenantId`, accepted from a
-frontend, or returned with an encrypted connection string.
+frontend, or returned with an encrypted connection string. Platform DTOs may expose only the
+safe `HasProtectedConnection` Boolean; the protected value itself remains server-side.
 
 ## Lifecycle
 
