@@ -320,6 +320,21 @@ in [POST-DEPLOY-SMOKE.md](POST-DEPLOY-SMOKE.md). The script is protected by a ve
 operator approval, explicit resource IDs, HTTPS, and `-AllowMutations`; it must not be run as an
 unattended deployment step.
 
+## 2026-08-05 Backup admin-screen audit checkpoint
+
+The existing Platform Dashboard `/backups` screen is a partial platform-only BACPAC workflow. It
+does not yet provide the per-Tenant/full-Platform batch selection, per-artifact checksum/manifest
+verification, batch retry history, or restore-capability view required by Issue #239. The Backend
+batch and restore contracts remain server-side capabilities; they must not be described as a
+completed operator workflow until the Dashboard contract is wired, tested, and separately verified.
+
+The implementation must begin with the Backend contract and tests, then extend the existing screen.
+It must preserve the rules in this document: no connection material in client/API evidence, no
+automatic restore on a `ManualOnly` provider, no mapping/resource mutation during UI work, and no
+Production deployment without a verified backup, reviewed migration state, CI, health checks, and
+rollback approval. See
+[BACKUP-ADMIN-SCREEN-REVIEW-2026-08-05.md](BACKUP-ADMIN-SCREEN-REVIEW-2026-08-05.md).
+
 ## Rollback
 
 Rollback قرار تشغيلي موثق: أوقف rollout عند health check فاشل، أعد binary السابق

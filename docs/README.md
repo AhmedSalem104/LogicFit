@@ -74,6 +74,7 @@ Keep those references synchronized with the source in the same Pull Request. `AP
 - [Application, Plan and Payment Activation](APPLICATION-PLAN-PAYMENT-ACTIVATION.md)
 - [Workspace Provisioning Saga](PROVISIONING-SAGA.md)
 - [Central Backup Orchestration](CENTRAL-BACKUP-ORCHESTRATION.md)
+- [Backup Admin Screen Review — 2026-08-05](BACKUP-ADMIN-SCREEN-REVIEW-2026-08-05.md)
 - [Tenant Backup Export](TENANT-BACKUP-EXPORT.md)
 - [Conditional Restore](CONDITIONAL-RESTORE.md)
 - [Platform Dashboard Contract](PLATFORM-DASHBOARD-CONTRACT.md)

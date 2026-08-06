@@ -111,6 +111,18 @@ completed investigation or declare the issue fixed until the acceptance checks b
   it continued and completed the migration verification. Treat it as a separate configuration
   hygiene item unless it appears in the actual application startup log.
 
+### Update after manual Visual Studio publish — 2026-08-05
+
+- The canonical Visual Studio publish profile history shows a `site81605` publish attempt at about
+  `10:53 UTC` from the canonical project. The live host was checked again at `10:54 UTC`.
+- After that publish, `GET https://logicfit-saas-model.runasp.net/health` still returned
+  `503 Unhealthy`, while the dashboard proxy still reached the API and returned the expected
+  unauthenticated `401` for the protected tenants route. This confirms that the manual publish
+  restarted/reached the expected host but did not repair the Production data/key-ring condition.
+- Do not repeat a binary publish as the next diagnostic. The next evidence must be the JSON body of
+  the failed `POST /api/platform/tenants` (especially `code`, `details`, and `requestId`) plus the
+  server log entry for that request, with credentials and connection material removed.
+
 ### Exact remaining work, in order
 
 1. On a task branch tied to Issue #230, fix the WebDeploy argument construction so the values are

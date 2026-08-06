@@ -112,7 +112,7 @@ if ($ApplyMigrations) {
 $destination = "https://$($profile.publishUrl):8172/msdeploy.axd?site=$($profile.msdeploySite)"
 $arguments = @(
     '-verb:sync',
-    "-source:contentPath=`"$ContentPath`"",
+    "-source:contentPath=$ContentPath",
     # MonsterASP delegates only the site's contentPath to the site account. Using
     # dest:auto makes Web Deploy probe linked IIS providers that the account cannot access.
     "-dest:contentPath=$($profile.msdeploySite),ComputerName=$destination,UserName=$($profile.userName),Password=$($profile.userPWD),AuthType=Basic,includeAcls=False",
