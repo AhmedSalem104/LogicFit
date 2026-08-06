@@ -89,7 +89,8 @@ public sealed class SelectIdentityWorkspaceCommandHandler
             TenantId = membership.TenantId,
             AccessToken = accessToken.Token,
             RefreshToken = refreshToken.Token,
-            ExpiresAt = accessToken.ExpiresAt
+            ExpiresAt = accessToken.ExpiresAt,
+            MustChangePassword = membership.User.MustChangePassword
         };
     }
 }

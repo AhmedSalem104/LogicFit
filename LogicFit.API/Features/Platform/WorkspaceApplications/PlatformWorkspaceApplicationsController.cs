@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Models;
 using LogicFit.Application.Features.WorkspaceApplications.Commands.ApproveFreelanceWorkspaceApplication;
+using LogicFit.Application.Features.WorkspaceApplications.Commands.CreatePlatformWorkspaceApplication;
 using LogicFit.Application.Features.WorkspaceApplications.Commands.ApproveMembershipApplication;
 using LogicFit.Application.Features.WorkspaceApplications.Commands.RejectApplication;
 using LogicFit.Application.Features.WorkspaceApplications.Commands.RequestApplicationInformation;
@@ -34,6 +35,10 @@ public sealed class PlatformWorkspaceApplicationsController : ControllerBase
     public async Task<ActionResult<PagedResult<PlatformApplicationDto>?>> List(
         [FromQuery] ApplicationType? applicationType,
         [FromQuery] ApplicationRequestStatus? status,
+        [FromQuery] PaymentRequestStatus? paymentStatus,
+        [FromQuery] TenantStatus? workspaceStatus,
+        [FromQuery] TenantSubscriptionStatus? subscriptionStatus,
+        [FromQuery] ProvisioningJobStatus? provisioningStatus,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
@@ -41,9 +46,20 @@ public sealed class PlatformWorkspaceApplicationsController : ControllerBase
         {
             ApplicationType = applicationType,
             Status = status,
+            PaymentStatus = paymentStatus,
+            WorkspaceStatus = workspaceStatus,
+            SubscriptionStatus = subscriptionStatus,
+            ProvisioningStatus = provisioningStatus,
             Page = page,
             PageSize = pageSize
         }, cancellationToken));
+
+    [HttpPost]
+    [ProducesResponseType(typeof(PlatformWorkspaceApplicationCreatedDto), StatusCodes.Status201Created)]
+    public async Task<ActionResult<PlatformWorkspaceApplicationCreatedDto>> Create(
+        [FromBody] CreatePlatformWorkspaceApplicationCommand command,
+        CancellationToken cancellationToken)
+        => StatusCode(StatusCodes.Status201Created, await _mediator.Send(command, cancellationToken));
 
     [HttpPost("{id:guid}/start-review")]
     public async Task<ActionResult<PlatformApplicationDto>> StartReview(
@@ -65,12 +81,20 @@ public sealed class PlatformWorkspaceApplicationsController : ControllerBase
             RequestedFields = request.RequestedFields
         }, cancellationToken));
 
-    [HttpPost("{id:guid}/approve-freelance")]
-    public async Task<ActionResult<PlatformApplicationDto>> ApproveFreelance(
+    [HttpPost("{id:guid}/approve-workspace")]
+    public async Task<ActionResult<PlatformApplicationDto>> ApproveWorkspace(
         Guid id,
         [FromBody] ConcurrencyRequest request,
         CancellationToken cancellationToken)
         => Ok(await _mediator.Send(new ApproveFreelanceWorkspaceApplicationCommand(id, request.RowVersion), cancellationToken));
+
+    [HttpPost("{id:guid}/approve-freelance")]
+    [Obsolete("Use approve-workspace for both Gym and FreelanceCoach applications.")]
+    public Task<ActionResult<PlatformApplicationDto>> ApproveFreelance(
+        Guid id,
+        [FromBody] ConcurrencyRequest request,
+        CancellationToken cancellationToken)
+        => ApproveWorkspace(id, request, cancellationToken);
 
     [HttpPost("{id:guid}/approve-membership")]
     public async Task<ActionResult<PlatformApplicationDto>> ApproveMembership(

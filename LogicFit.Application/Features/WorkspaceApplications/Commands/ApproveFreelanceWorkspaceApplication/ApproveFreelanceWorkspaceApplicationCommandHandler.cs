@@ -45,8 +45,8 @@ public sealed class ApproveFreelanceWorkspaceApplicationCommandHandler
             .FirstOrDefaultAsync(x => x.Id == request.ApplicationId, cancellationToken)
             ?? throw new NotFoundException(nameof(ApplicationRequest), request.ApplicationId);
 
-        if (application.ApplicationType != ApplicationType.FreelanceWorkspaceCreation)
-            throw new ConflictException("This approval endpoint only provisions freelance workspaces.");
+        if (application.ApplicationType is not (ApplicationType.FreelanceWorkspaceCreation or ApplicationType.GymWorkspaceCreation))
+            throw new ConflictException("This endpoint only provisions Gym or FreelanceCoach workspaces.");
 
         if (application.Status == ApplicationRequestStatus.Approved)
         {
@@ -58,8 +58,11 @@ public sealed class ApproveFreelanceWorkspaceApplicationCommandHandler
         if (!ApplicationRequestStateMachine.CanTransition(application.Status, ApplicationRequestStatus.Approved))
             throw new ConflictException("This application cannot be approved.");
 
+        var ownerRole = application.ApplicationType == ApplicationType.FreelanceWorkspaceCreation
+            ? SystemRoles.FreelanceOwner
+            : SystemRoles.Owner;
         if (!await _context.AppRoles.IgnoreQueryFilters().AnyAsync(
-                x => x.TenantId == null && x.Name == SystemRoles.FreelanceOwner && !x.IsDeleted,
+                x => x.TenantId == null && x.Name == ownerRole && !x.IsDeleted,
                 cancellationToken))
         {
             throw new ConflictException("Freelance roles are not seeded yet.");
@@ -106,7 +109,9 @@ public sealed class ApproveFreelanceWorkspaceApplicationCommandHandler
         {
             Name = string.IsNullOrWhiteSpace(payload.BrandName) ? payload.WorkspaceName : payload.BrandName,
             Subdomain = payload.WorkspaceIdentifier,
-            WorkspaceType = WorkspaceType.FreelanceCoach,
+            WorkspaceType = application.ApplicationType == ApplicationType.FreelanceWorkspaceCreation
+                ? WorkspaceType.FreelanceCoach
+                : WorkspaceType.Gym,
             Status = TenantStatus.Provisioning,
             Email = application.IdentityAccount.Email,
             PhoneNumber = application.IdentityAccount.PhoneNumber,

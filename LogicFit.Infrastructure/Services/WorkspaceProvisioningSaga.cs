@@ -92,6 +92,7 @@ public sealed class WorkspaceProvisioningSaga(
         // a scalar bridge row with the same id as the tenant-local owner so existing membership
         // foreign keys remain valid; the tenant database remains the operational source of truth.
         var localUserId = result.LocalUserId ?? throw new InvalidOperationException("Provider did not return the local owner id.");
+        var mustChangePassword = application.PayloadJson.Contains("\"mustChangePassword\":true", StringComparison.OrdinalIgnoreCase);
         var compatibilityUser = await db.Set<User>().IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.Id == localUserId, cancellationToken);
         if (compatibilityUser is null)
@@ -105,7 +106,8 @@ public sealed class WorkspaceProvisioningSaga(
                 PhoneNumber = application.IdentityAccount.PhoneNumber,
                 PasswordHash = application.IdentityAccount.PasswordHash,
                 Role = application.RequestedRole ?? UserRole.Owner,
-                IsActive = true
+                IsActive = true,
+                MustChangePassword = mustChangePassword
             };
             db.Set<User>().Add(compatibilityUser);
             db.UserProfiles.Add(new UserProfile
@@ -113,6 +115,10 @@ public sealed class WorkspaceProvisioningSaga(
                 UserId = localUserId,
                 FullName = application.IdentityAccount.FullName
             });
+        }
+        else if (mustChangePassword)
+        {
+            compatibilityUser.MustChangePassword = true;
         }
 
         var membership = await db.WorkspaceMemberships.IgnoreQueryFilters()

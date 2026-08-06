@@ -200,6 +200,24 @@ sequenceDiagram
 - Approval reserves one `Provisioning` workspace before creating the Freelance Owner, its active workspace membership, role assignment, branding profile, and final `Active` workspace. A retry reuses the reserved workspace; a provisioning database failure records `ProvisioningFailed` for operator retry.
 - A Freelance Owner can sponsor an existing global identity as `FreelanceCoach`, `FreelanceAssistant`, or `Client`; that creates a separate membership application and never grants access directly. Platform approval repeats the live plan-capacity check and only then creates the tenant-local user, role assignment, and active membership. Capacity errors use `PLAN_MEMBER_LIMIT_REACHED` or `PLAN_CLIENT_LIMIT_REACHED`.
 - Freelance workspace branding reuses tenant branding for colors, logos, cover/background, and report identity, and adds a structured profile for bio, specialties, certifications, social links, welcome content, and booking settings.
+
+## Unified workspace lifecycle — local task branches, not merged or deployed
+
+- Issues `#244` and `#245` add a shared Platform Admin creation/review contract for `Gym` and
+  `FreelanceCoach`. The response separates application, payment, workspace, subscription,
+  database, provisioning, membership, and final dashboard-access decisions; `Active` alone never
+  grants access.
+- `POST /api/platform/workspace-applications` creates the application, pending subscription and
+  payment records, reuses an existing global identity when possible, and returns a one-time
+  temporary password only for a newly created owner identity. `FreelanceCoach` is an independent
+  tenant with its own database lifecycle and `FreelanceOwner` membership.
+- `GET /api/workspace-applications/tracking` now exposes the same safe status facts for the owner’s
+  Timeline without connection material or a tenant token. The Tenant UI blocks protected routes
+  until the server-side gate confirms database, subscription, workspace, and membership readiness.
+- This work is verified locally on isolated branches with backend build/tests and both frontend
+  builds/tests. It has not been merged, released, or deployed; production state is unchanged.
+- Owner-created staff/coach identity, membership, one-time credentials, and lifecycle management
+  remain a separate follow-up in `#246` (Backend) and `#65` (Tenant UI).
 - Subscription policy is now explicit in the access gate: `Trial`, `Active`, and `PastDue` operate normally; `Expired` is read-only while billing/renewal remains available; suspended/archived/provisioning workspaces hard-block operational access. Legacy gyms without a SaaS subscription record preserve their existing operational access during the migration rollout; a new freelance workspace without a subscription is billing-only.
 - Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed. The third migration adds the tenant row-version used to serialize final membership-capacity approval. `20260729133325_SeedFreelanceSystemRoles` is an idempotent corrective data migration that creates or restores the three freelance system roles and their permission maps. All four canonical migrations are present in production; the legacy server-only history row `20260729141315_SeedFreelanceSystemRoles` is preserved rather than edited manually.
 - Team membership now uses `/api/freelance/team/invites` and `/api/workspace-invites/{preview,accept}`. The invitation is tied to normalized email, workspace, and role; acceptance requires a verified identity session and a live quota check.

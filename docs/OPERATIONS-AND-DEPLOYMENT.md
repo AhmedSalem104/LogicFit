@@ -239,6 +239,15 @@ operator flow. Never disable startup migration merely to bypass a pending schema
 6. اختبر الدخول، لوحة المتابعة، خطط المنصة، تنبيهات، Jobs، ونسخة احتياطية من حساب
    Platform Owner محدود للاختبار.
 
+### Workspace onboarding release gate (Issues #244/#245)
+
+تغيير عقد `workspace-applications` يحتاج نشر الـBackend والـDashboard كإصدار متوافق. قبل
+التفعيل التشغيلي راجع أن قائمة الطلبات تستخدم `approve-workspace` لمساحات Gym/FreelanceCoach
+ولا تستخدم `approve-membership`، ثم نفّذ smoke checks للحالات التالية: pending payment، under
+review، more information، provisioning، provisioning failed/retry، active access، suspended،
+expired، وقاعدة بيانات غير متاحة. يجب أن تكون `/health` HTTP 200 و`Healthy` بعد كل تعديل/نشر؛
+لا تُختبر هذه الرحلة بإنشاء Tenant أو Mapping في Production دون backup ونافذة تشغيل معتمدة.
+
 ### Redis cache and distributed request controls (Issue #197)
 
 The tenant-access gate uses `IDistributedCache`. In non-production environments without Redis it
