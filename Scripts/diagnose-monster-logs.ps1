@@ -179,11 +179,20 @@ function Write-SafeLogCategories(
         DatabaseLogin = '(?i)login failed|cannot open database|server was not found|network-related'
         DatabaseSchema = '(?i)invalid object name|invalid column|does not exist|migrationshistory'
         DatabaseTimeout = '(?i)timeout|time-out|timed out'
-        DatabasePermission = '(?i)permission|not authorized|access is denied'
+        DatabasePermission = '(?i)(sql|database|object|table|schema|select|insert|update|create|alter|execute).{0,100}(permission was denied|not authorized|access is denied)|(permission was denied|not authorized|access is denied).{0,100}(sql|database|object|table|schema|select|insert|update|create|alter|execute)'
         MigrationState = '(?i)pending migration|migration.*failed|migrateasync'
-        StoragePermission = '(?i)access denied|unauthorized|permission.*directory'
+        StoragePermission = '(?i)(directory|folder|file|path|disk).{0,100}(access denied|unauthorized|permission)|(access denied|unauthorized|permission).{0,100}(directory|folder|file|path|disk)'
         StoragePath = '(?i)directory not found|could not find.*path|disk.*space'
         HostingStartup = '(?i)500\.30|ANCM|failed to start|application startup|unhandled exception|fatal'
+    }
+    $exceptionPatterns = [ordered]@{
+        SqlException = '(?i)\bSqlException\b|Microsoft\.Data\.SqlClient'
+        DbUpdateException = '(?i)\bDbUpdateException\b'
+        UnauthorizedAccessException = '(?i)\bUnauthorizedAccessException\b'
+        DirectoryNotFoundException = '(?i)\bDirectoryNotFoundException\b'
+        FileNotFoundException = '(?i)\bFileNotFoundException\b'
+        TimeoutException = '(?i)\bTimeoutException\b|timed out|timeout'
+        InvalidOperationException = '(?i)\bInvalidOperationException\b'
     }
     $text = ($Files | ForEach-Object {
         try { Get-Content -LiteralPath $_.FullName -Tail 2000 -ErrorAction SilentlyContinue } catch { }
@@ -192,10 +201,13 @@ function Write-SafeLogCategories(
     if ($categories.Count -eq 0) { $categories = @('NoKnownRootCategory') }
     $signatures = @($signaturePatterns.Keys | Where-Object { $text -match $signaturePatterns[$_] })
     if ($signatures.Count -eq 0) { $signatures = @('NoKnownSafeSignature') }
+    $exceptionTypes = @($exceptionPatterns.Keys | Where-Object { $text -match $exceptionPatterns[$_] })
+    if ($exceptionTypes.Count -eq 0) { $exceptionTypes = @('NoKnownExceptionType') }
     Write-Host "Monster stdout log files captured: $TotalCount; new or changed: $ChangedCount."
     if ($UsedFallback) { Write-Host 'No new log file was detected; analyzed the three newest existing files as a bounded fallback.' }
     Write-Host "Safe log categories: $($categories -join ', ')."
     Write-Host "Safe log signatures: $($signatures -join ', ')."
+    Write-Host "Safe exception types: $($exceptionTypes -join ', ')."
 }
 
 New-Item -ItemType Directory -Path $operationRoot | Out-Null

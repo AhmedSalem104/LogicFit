@@ -81,6 +81,7 @@ public sealed class ProductionStartupRecoveryContractTests
         Assert.Contains("stdoutLogEnabled", script);
         Assert.Contains("Safe log categories", script);
         Assert.Contains("Safe log signatures", script);
+        Assert.Contains("Safe exception types", script);
         Assert.Contains("Get-ChangedLogFiles", script);
         Assert.Contains("Original Monster web.config restored.", script);
         Assert.DoesNotContain("upload-artifact", script, StringComparison.OrdinalIgnoreCase);
