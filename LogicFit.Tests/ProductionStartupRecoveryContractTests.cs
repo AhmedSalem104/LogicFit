@@ -71,6 +71,21 @@ public sealed class ProductionStartupRecoveryContractTests
     }
 
     [Fact]
+    public void Monster_log_diagnostic_temporarily_rolls_back_stdout_and_never_uploads_logs()
+    {
+        var script = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "diagnose-monster-logs.ps1"));
+        var workflow = File.ReadAllText(Path.Combine(RepositoryRoot, ".github", "workflows", "cd.yml"));
+
+        Assert.Contains("DIAGNOSE-MONSTER-LOGS", workflow);
+        Assert.Contains("diagnose-monster-logs:", workflow);
+        Assert.Contains("stdoutLogEnabled", script);
+        Assert.Contains("Safe log categories", script);
+        Assert.Contains("Original Monster web.config restored.", script);
+        Assert.DoesNotContain("upload-artifact", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Get-Content -Raw", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Authentication_request_payloads_are_never_written_by_exception_behavior()
     {
         var behavior = File.ReadAllText(Path.Combine(
