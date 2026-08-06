@@ -22,6 +22,14 @@ public class ProductionDeploymentContractTests
         Assert.Contains("logicfit-production-migration-plan", workflow);
         Assert.Contains("tree-equivalent to origin/master", workflow);
         Assert.Contains("needs.preflight.outputs.release_sha", workflow);
+        Assert.Contains("DIAGNOSE-PRODUCTION-HEALTH", workflow);
+        Assert.Contains("diagnose-production-health:", workflow);
+        Assert.Contains("SELECT 1", workflow);
+        Assert.Contains("shell: powershell", workflow);
+        Assert.Contains("Microsoft.Data.SqlClient", File.ReadAllText(Path.Combine(RepositoryRoot, "LogicFit.Tests", "ProductionDatabaseConnectivityTests.cs")));
+        Assert.Contains("Probe with the application SQL provider", workflow);
+        Assert.Contains("diagnose-webdeploy-health.ps1", workflow);
+        Assert.Contains("Compare remote database identity", workflow);
     }
 
     [Fact]
@@ -60,5 +68,17 @@ public class ProductionDeploymentContractTests
         {
             Environment.SetEnvironmentVariable(variable, previous);
         }
+    }
+
+    [Fact]
+    public void Protected_startup_recovery_can_explicitly_enable_private_backups()
+    {
+        var script = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "recover-webdeploy-startup.ps1"));
+        var workflow = File.ReadAllText(Path.Combine(RepositoryRoot, ".github", "workflows", "cd.yml"));
+
+        Assert.Contains("[switch] $EnableBackups", script, StringComparison.Ordinal);
+        Assert.Contains("App_Data/PrivateBackups", script, StringComparison.Ordinal);
+        Assert.Contains("enable_backups", workflow, StringComparison.Ordinal);
+        Assert.Contains("$arguments.EnableBackups = $true", workflow, StringComparison.Ordinal);
     }
 }

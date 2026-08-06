@@ -37,6 +37,8 @@ public sealed class PlatformDatabaseResourcesController(IApplicationDbContext co
             {
                 Id = resource.Id,
                 Provider = resource.Provider,
+                HasProtectedConnection = resource.EncryptedConnectionString != null &&
+                    resource.EncryptedConnectionString != string.Empty,
                 Status = resource.Status,
                 TenantId = resource.ReservedForTenantId,
                 TenantName = resource.ReservedForTenantId.HasValue
@@ -57,6 +59,7 @@ public sealed class PlatformDatabaseResourceDto
 {
     public Guid Id { get; init; }
     public string Provider { get; init; } = string.Empty;
+    public bool HasProtectedConnection { get; init; }
     public DatabaseResourceStatus Status { get; init; }
     public Guid? TenantId { get; init; }
     public string? TenantName { get; init; }

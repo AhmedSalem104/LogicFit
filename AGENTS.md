@@ -76,6 +76,11 @@ Do not record secrets, passwords, refresh tokens, connection strings, publish pr
   reviewed pending migrations at startup before seeding; the protected deployment pre-apply step
   remains preferred and a verified backup plus rollback plan are still mandatory.
 - A failed health check must stop the rollout and trigger rollback or operator review.
+- After every modification, verify the affected server health before continuing: call the
+  applicable `/health` endpoint and require HTTP 200 with the expected healthy response, never
+  HTTP 500/503 or `Unhealthy`. For local-only changes, run the local health check when the service
+  can be started and record the exact verification or environment blocker in the GitHub Issue.
+  A build or test pass alone never proves server health.
 - Monster ASP deployment details must be recorded before enabling automatic deployment: host, user, app directory, service/container command, backup command, migration command, health URL, and rollback command.
 - The supplied `logicfit-platform.runasp.net-WebDeploy.publishSettings` is a Platform API MSDeploy profile only. Its password must be stored as a protected GitHub Environment secret and must never be committed or printed.
 - Tenant API deployment requires a separate WebDeploy profile or equivalent target before production CD can deploy the complete application.
@@ -223,3 +228,10 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
   and services are removed from the runtime. Email verification and reset use single-use links.
 - Migration `20260803090742_RemoveLegacyOtpArtifacts` is guarded and removes only the obsolete
   `OtpChallenges` table when present. It has not been applied to Production.
+
+### 2026-08-05 - health verification after every modification
+
+- After any code, workflow, configuration, documentation, or deployment modification, verify the
+  applicable server health endpoint and record the result in the related GitHub Issue. HTTP 500,
+  HTTP 503, or `Unhealthy` is a blocking result; do not continue with activation or report the
+  server as healthy until the check returns HTTP 200 with the expected healthy response.

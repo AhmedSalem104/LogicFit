@@ -5,6 +5,7 @@ param(
     [Parameter(Mandatory = $true)] [string] $HealthCheckUrl,
     [string] $ManagementHostOverride,
     [switch] $AllowUntrustedManagementCertificate,
+    [switch] $EnableBackups,
     [string] $MsDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
 )
 
@@ -111,6 +112,36 @@ try {
         $configuration | Add-Member -NotePropertyName PasswordReset -NotePropertyValue ([pscustomobject]@{})
     }
     $configuration.PasswordReset | Add-Member -NotePropertyName Secret -NotePropertyValue $passwordResetSecret -Force
+
+    if ($EnableBackups) {
+        if ($null -eq $configuration.Backup) {
+            $configuration | Add-Member -NotePropertyName Backup -NotePropertyValue ([pscustomobject]@{})
+        }
+
+        $backupStorage = [string]$configuration.Backup.StorageDirectory
+        if ([string]::IsNullOrWhiteSpace($backupStorage) -or
+            [IO.Path]::IsPathRooted($backupStorage) -or
+            $backupStorage -notmatch '^App_Data[\\/][^\\/].*$') {
+            $backupStorage = 'App_Data/PrivateBackups'
+        }
+        $configuration.Backup | Add-Member -NotePropertyName Enabled -NotePropertyValue $true -Force
+        $configuration.Backup | Add-Member -NotePropertyName StorageDirectory -NotePropertyValue $backupStorage -Force
+
+        $retentionDays = 0
+        if (-not [int]::TryParse([string]$configuration.Backup.RetentionDays, [ref]$retentionDays) -or
+            $retentionDays -lt 1 -or $retentionDays -gt 3650) {
+            $retentionDays = 7
+        }
+        $configuration.Backup | Add-Member -NotePropertyName RetentionDays -NotePropertyValue $retentionDays -Force
+
+        $runAtUtc = [string]$configuration.Backup.RunAtUtc
+        $runAt = [TimeSpan]::Zero
+        if (-not [TimeSpan]::TryParse($runAtUtc, [ref]$runAt)) {
+            $runAtUtc = '02:00:00'
+        }
+        $configuration.Backup | Add-Member -NotePropertyName RunAtUtc -NotePropertyValue $runAtUtc -Force
+        Write-Host "Backup activation requested with private App_Data storage and validated retention/schedule."
+    }
 
     if ($null -eq $configuration.Serilog) {
         $configuration | Add-Member -NotePropertyName Serilog -NotePropertyValue ([pscustomobject]@{})

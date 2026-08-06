@@ -26,6 +26,13 @@
 
 Last reviewed: 2026-08-03
 
+> **Issue #239 — local implementation slice:** the existing Platform Admin `/backups` screen now
+> uses the server-owned batch contracts, defaults to `FullSystem` coverage (platform database plus
+> active assigned tenant mappings), and shows per-target status, SHA-256, manifest, retry state,
+> and restore capability. `BackupArtifactDto` exposes the checksum and the service records batch
+> start/finish audit events. This is not a Production backup/restore verification; no database,
+> Tenant mapping, resource, restore, or deployment operation was performed.
+
 > **Issue #202 — task branch:** the protected production migration plan and WebDeploy helper now
 > explicitly target the current compatibility `ApplicationDbContext`; no Platform/Tenant
 > baseline is applied to the shared Production database. This deployment correction is local and
@@ -244,6 +251,8 @@ flowchart LR
 ## Current deployment position
 
 - Issue #137 confirmed that `logicfit-saas-model.runasp.net` (`site81605`) failed with IIS `500.30` after publish replaced the server-only configuration and removed a required secret. A rollback-safe configuration recovery restored repeated `200 Healthy` responses and DB-backed API smoke checks on 2026-08-02; stdout was disabled again.
+- On 2026-08-05, Issue #239's protected backup-activation recovery temporarily applied the server-only configuration to the verified `site81605` target, but the configured `/health` endpoint returned `Unhealthy`/HTTP 503. The recovery script restored both `appsettings.Production.json` and `web.config`; no backup configuration or artifact remains enabled. A read-only production database/readiness diagnostic is now required before another activation attempt.
+- On 2026-08-06, the protected Monster log diagnostic read 60 compiled application migrations with zero pending, 63 applied history rows including three server-only rows, and no IIS connection-string/Redis environment overrides. A controlled stdout-enable recycle followed by restoration of the original `web.config` returned `site81605` to `HTTP 200 Healthy`; stdout was disabled again and no database, backup, or binary change was made. This supports an IIS/ANCM worker-state recovery as the operational cause of the 503, rather than migration drift.
 - `logicfit-saas.runasp.net` is a separate current Platform host associated with the active `site81260` publish target. It remained on `500.30` pending execution of the new protected recovery job with the current GitHub Environment profile; stale local encrypted profiles cannot be used as credentials.
 - `logicfit.runasp.net/health` remained `200 Healthy` throughout the incident. The production frontend routes Platform requests to the recovered `logicfit-saas-model.runasp.net` host.
 - Retired `site78301` profiles are not valid recovery credentials. The current documented targets are `site81260` for `logicfit-saas`, `site45954` for `logicfit.runasp.net`, and `site81605` for the hosted model site; protected GitHub Environment profiles remain authoritative.

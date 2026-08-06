@@ -23,4 +23,35 @@ public sealed class CentralBackupContractTests
         Assert.Equal([tenantId], request.TenantIds);
         Assert.DoesNotContain("Connection", string.Join(',', request.TenantIds!));
     }
+
+    [Fact]
+    public void Backup_artifact_contract_exposes_checksum_without_connection_material()
+    {
+        var artifact = new BackupArtifactDto(
+            Guid.NewGuid(), null, "Completed", 42, null, DateTimeOffset.UtcNow,
+            "platform-20260805-010203.bacpac", "ABC123", null);
+
+        Assert.Equal("ABC123", artifact.Sha256);
+        Assert.DoesNotContain("Connection", string.Join(',', artifact.GetType().GetProperties().Select(x => x.Name)));
+    }
+
+    [Fact]
+    public void Full_system_requests_include_platform_by_default()
+    {
+        var request = new BackupBatchRequest(BackupScope.FullSystem);
+
+        Assert.True(request.IncludePlatform);
+    }
+
+    [Fact]
+    public void Backup_service_records_start_and_finish_audit_events()
+    {
+        var repositoryRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var source = File.ReadAllText(Path.Combine(repositoryRoot, "LogicFit.Infrastructure", "Services", "DatabaseBackupService.cs"));
+
+        Assert.Contains("PlatformBackupBatchStarted", source, StringComparison.Ordinal);
+        Assert.Contains("PlatformBackupBatchFinished", source, StringComparison.Ordinal);
+        Assert.Contains("failedArtifacts", source, StringComparison.Ordinal);
+        Assert.Contains("IncludePlatform", source, StringComparison.Ordinal);
+    }
 }

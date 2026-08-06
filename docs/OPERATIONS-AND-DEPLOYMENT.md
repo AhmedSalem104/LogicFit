@@ -34,6 +34,24 @@ the owner receives the workspace context and is routed to workspace selection au
 The repair is restricted to the Gym owner membership; do not update `WorkspaceMemberships`
 directly in Production.
 
+## Backup admin screen and batch evidence (Issue #239)
+
+The existing Platform Admin `/backups` screen is the operator entry point for the server-owned
+backup batches. `FullSystem` resolves the platform database and every active assigned tenant
+mapping; `AllTenants`, `AllGyms`, `AllFreelance`, and `Platform` are explicit alternatives. The
+server returns per-artifact status, size, safe storage key, SHA-256 and manifest reference. Batch
+start/finish events are written to the Platform Audit Log.
+
+Creation and retry require confirmation. Retry is limited to `Failed` or `Partial` batches. The
+screen never renders connection material, credentials, raw exceptions, or absolute storage paths.
+Restore capability is informational; `ManualOnly` must remain a manual operator handoff and does
+not authorize a mapping switch. A failed or missing batch must stop destructive or
+mapping-changing work until a verified backup and rollback plan exist.
+
+This implementation has no schema migration and no Production deployment. Before release, run CI,
+review the generated API catalog, verify the protected backup/migration/health/rollback gates, and
+perform a restore rehearsal only in an isolated target approved for that purpose.
+
 ## بيئات ومكونات النشر
 
 - `LogicFit.API` هو المضيف الموحد؛ يحتوي Platform وTenant modules ويستخدم إعدادات
@@ -181,6 +199,25 @@ the application binary.
 Never leave stdout enabled after diagnosis. Never upload captured stdout as an artifact when it can
 contain authentication payloads. Rotate exposed application credentials and remove or redact the
 affected server logs through an explicitly approved operator action.
+
+Before retrying a backup activation after a failed recovery, use the protected CD dispatch value
+`DIAGNOSE-PRODUCTION-HEALTH`. This read-only job runs `SELECT 1` through the protected production
+database connection and then requires the configured HTTPS `/health` endpoint to return `Healthy`.
+It does not run WebDeploy, migrations, configuration writes, or backup exports. Do not dispatch
+`RECOVER-PRODUCTION-STARTUP` with `enable_backups=true` until both diagnostic checks pass.
+
+When the exact Monster site still returns `503 Unhealthy` while the protected database and IIS
+metadata probes pass, use `DIAGNOSE-MONSTER-LOGS` on the verified site. This operation temporarily
+enables ASP.NET Core stdout logging in the existing `web.config`, recycles the site through the
+normal WebDeploy sync, reads only safe root-cause categories from the resulting files, and restores
+the original `web.config` in a `finally` block. It never uploads raw stdout, prints log contents,
+changes application configuration or database data, or enables backups. The operation is still
+subject to the post-rollback `/health` gate; a remaining `503` is recorded as an incident blocker.
+The protected job also runs an EF pending-migration probe in read-only mode; it reports only the
+count/ids or the exception type, never applies a migration. A database permission failure must be
+handled through the approved database operator procedure and a verified backup/migration review.
+The same diagnostic reports only whether IIS `web.config` contains connection-string or Redis
+environment-variable overrides; it never prints their values.
 
 The connection is read from `LOGICFIT_PRODUCTION_DB_CONNECTION` in the current protected process and is passed to the EF design-time factory through the short-lived `LOGICFIT_EF_CONNECTION_STRING` operator variable. Without that explicit override, EF remains pinned to LocalDB and cannot reach production accidentally. The GitHub `production` Environment must store the production secret together with `RUNASP_UNIFIED_PUBLISH_SETTINGS_B64` and `RUNASP_UNIFIED_HEALTHCHECK_URL`. The manual workflow also requires `backup_reference`, `migration_review=MIGRATIONS-REVIEWED`, and `confirm=DEPLOY-PRODUCTION`. `-ApproveDestructiveMigrationReview` is used only after reviewing a plan containing intentional `DROP`, `DELETE`, or `TRUNCATE` statements.
 
