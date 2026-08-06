@@ -216,6 +216,8 @@ subject to the post-rollback `/health` gate; a remaining `503` is recorded as an
 The protected job also runs an EF pending-migration probe in read-only mode; it reports only the
 count/ids or the exception type, never applies a migration. A database permission failure must be
 handled through the approved database operator procedure and a verified backup/migration review.
+The same diagnostic reports only whether IIS `web.config` contains connection-string or Redis
+environment-variable overrides; it never prints their values.
 
 The connection is read from `LOGICFIT_PRODUCTION_DB_CONNECTION` in the current protected process and is passed to the EF design-time factory through the short-lived `LOGICFIT_EF_CONNECTION_STRING` operator variable. Without that explicit override, EF remains pinned to LocalDB and cannot reach production accidentally. The GitHub `production` Environment must store the production secret together with `RUNASP_UNIFIED_PUBLISH_SETTINGS_B64` and `RUNASP_UNIFIED_HEALTHCHECK_URL`. The manual workflow also requires `backup_reference`, `migration_review=MIGRATIONS-REVIEWED`, and `confirm=DEPLOY-PRODUCTION`. `-ApproveDestructiveMigrationReview` is used only after reviewing a plan containing intentional `DROP`, `DELETE`, or `TRUNCATE` statements.
 

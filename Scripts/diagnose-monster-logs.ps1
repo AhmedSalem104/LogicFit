@@ -221,6 +221,19 @@ try {
     $aspNetCore = $webConfig.SelectSingleNode('//aspNetCore')
     if ($null -eq $aspNetCore) { throw 'Remote web.config has no aspNetCore entry.' }
 
+    $environmentVariables = @($aspNetCore.SelectNodes('./environmentVariables/environmentVariable'))
+    $hasConnectionOverride = @($environmentVariables | Where-Object {
+        [string]::Equals([string]$_.GetAttribute('name'), 'ConnectionStrings__DefaultConnection', [StringComparison]::OrdinalIgnoreCase)
+    }).Count -gt 0
+    $hasRedisOverride = @($environmentVariables | Where-Object {
+        [string]$_.GetAttribute('name') -match '^Redis(__|:)?'
+    }).Count -gt 0
+    $hasProcessTarget = -not [string]::IsNullOrWhiteSpace([string]$aspNetCore.GetAttribute('processPath')) -and
+        -not [string]::IsNullOrWhiteSpace([string]$aspNetCore.GetAttribute('arguments'))
+    Write-Host "Remote IIS connection-string environment override present: $hasConnectionOverride."
+    Write-Host "Remote IIS Redis environment override present: $hasRedisOverride."
+    Write-Host "Remote IIS process target metadata present: $hasProcessTarget."
+
     $logDirectory = Resolve-LogDirectory ([string]$aspNetCore.GetAttribute('stdoutLogFile'))
     $remoteLogPath = "$ExpectedSite/$logDirectory"
     $diagnosticStdoutPath = ".\$($logDirectory.Replace('/', '\'))\stdout"
