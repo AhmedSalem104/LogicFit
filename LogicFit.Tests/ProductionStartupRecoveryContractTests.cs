@@ -89,6 +89,21 @@ public sealed class ProductionStartupRecoveryContractTests
     }
 
     [Fact]
+    public void Production_migration_state_probe_is_read_only()
+    {
+        var script = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "probe-production-migration-state.ps1"));
+
+        Assert.Contains("__EFMigrationsHistory", script);
+        Assert.Contains("Pending compiled application migrations", script);
+        Assert.DoesNotContain("Migrate", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("INSERT INTO", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("UPDATE ", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("DELETE FROM", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ALTER TABLE", script, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CREATE TABLE", script, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Authentication_request_payloads_are_never_written_by_exception_behavior()
     {
         var behavior = File.ReadAllText(Path.Combine(

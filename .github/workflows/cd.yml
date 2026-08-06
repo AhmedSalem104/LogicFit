@@ -479,6 +479,12 @@ jobs:
             --filter "FullyQualifiedName~ProductionDatabaseConnectivityTests" `
             --verbosity minimal
 
+      - name: Compare applied migration history without writing
+        shell: powershell
+        env:
+          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+        run: .\Scripts\probe-production-migration-state.ps1
+
       - name: Capture and classify Monster stdout safely
         shell: powershell
         env:
