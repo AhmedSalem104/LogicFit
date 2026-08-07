@@ -196,7 +196,7 @@ function Write-SafeLogCategories(
         InvalidOperationException = '(?i)\bInvalidOperationException\b'
     }
     $text = ($Files | ForEach-Object {
-        try { Get-Content -LiteralPath $_.FullName -Tail 2000 -ErrorAction SilentlyContinue } catch { }
+        try { Get-Content -LiteralPath $_.FullName -Tail 10000 -ErrorAction SilentlyContinue } catch { }
     }) -join "`n"
     $categories = @($patterns.Keys | Where-Object { $text -match $patterns[$_] })
     if ($categories.Count -eq 0) { $categories = @('NoKnownRootCategory') }
@@ -219,6 +219,15 @@ function Write-SafeLogCategories(
         }
         elseif ($trimmed -match '(?i)(?:unique key|duplicate key).*?constraint\s+[''\"](?<name>[^''\"]+)[''\"]') {
             [void]$safeSqlDetails.Add("UniqueConstraint:$($Matches['name'])")
+        }
+        elseif ($trimmed -match '(?i)duplicate key row in object\s+[''\"](?<name>[^''\"]+)[''\"]') {
+            [void]$safeSqlDetails.Add("DuplicateObject:$($Matches['name'])")
+        }
+        elseif ($trimmed -match '(?i)cannot insert duplicate key') {
+            [void]$safeSqlDetails.Add('DuplicateKey')
+        }
+        elseif ($trimmed -match '(?i)conversion failed when converting|arithmetic overflow|out-of-range value') {
+            [void]$safeSqlDetails.Add('SqlValueConversion')
         }
         elseif ($trimmed -match '(?i)null into column\s+[''\"](?<name>[^''\"]+)[''\"]') {
             [void]$safeSqlDetails.Add("NullColumn:$($Matches['name'])")
