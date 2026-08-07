@@ -21,6 +21,7 @@ public sealed class FreelanceWorkspaceApplicationPayload
     public IReadOnlyDictionary<string, string> SocialLinks { get; init; } = new Dictionary<string, string>();
     public string? WelcomeMessage { get; init; }
     public JsonElement? BookingSettings { get; init; }
+    public bool MustChangePassword { get; init; }
 }
 
 public sealed record ApplicationTrackingSessionDto(
@@ -45,5 +46,32 @@ public sealed class ApplicationTrackingStatusDto
     public Guid? PaymentRequestId { get; init; }
     public PaymentRequestStatus? PaymentStatus { get; init; }
     public int PaymentProofVersion { get; init; }
+    public WorkspaceType? WorkspaceType { get; init; }
+    public TenantStatus? WorkspaceStatus { get; init; }
+    public TenantSubscriptionStatus? SubscriptionStatus { get; init; }
+    public DatabaseResourceStatus? DatabaseStatus { get; init; }
+    public string? DatabaseStatusCode { get; init; }
+    public ProvisioningJobStatus? ProvisioningStatus { get; init; }
+    public bool CanAccessDashboard { get; init; }
+    public string? RequiredAction { get; init; }
+    public string? NextStep { get; init; }
+    public string? UserMessage { get; init; }
+    public DateTime? LastUpdatedAtUtc { get; init; }
+    public string? ProvisioningErrorCode { get; init; }
     public IReadOnlyDictionary<string, JsonElement> EditableValues { get; init; } = new Dictionary<string, JsonElement>();
+}
+
+/// <summary>One-time owner credential handoff returned only by an explicit platform create call.</summary>
+public sealed class OneTimeOwnerCredentialsDto
+{
+    public string Email { get; init; } = string.Empty;
+    public string TemporaryPassword { get; init; } = string.Empty;
+    public bool MustChangePassword { get; init; } = true;
+}
+
+public sealed class PlatformWorkspaceApplicationCreatedDto
+{
+    public PlatformApplicationDto Application { get; init; } = new();
+    public bool NewIdentity { get; init; }
+    public OneTimeOwnerCredentialsDto? OneTimeCredentials { get; init; }
 }

@@ -113,6 +113,22 @@ Application transitions are concurrency-safe and audited: Draft -> Submitted -> 
 NeedsMoreInformation -> Submitted, or UnderReview -> Approved/Rejected. Repeated submissions use
 revision history and idempotency keys.
 
+### Platform-admin unified creation (Issues #244 and #245)
+
+`POST /api/platform/workspace-applications` is the admin entry point for both `Gym` and
+`FreelanceCoach`. It creates the same central application, plan snapshot, pending subscription,
+and pending payment records; only the type-specific payload fields differ. A FreelanceCoach is a
+standalone tenant with `WorkspaceType=FreelanceCoach`, its own database resource and subscription,
+and an `FreelanceOwner` membership. It is never created as a gym employee.
+
+The review queue uses `POST /api/platform/workspace-applications/{id}/approve-workspace` for both
+workspace types. `approve-membership` remains reserved for Coach/Assistant/Client membership
+applications. The response exposes separate payment, workspace, subscription, database, and
+provisioning states plus `canAccessDashboard`, `requiredAction`, `nextStep`, and a safe user
+message. A newly created identity may receive a one-time temporary password in the explicit create
+response only; the password is hashed immediately, the resulting local owner is marked
+`MustChangePassword`, and the value is never returned by list/detail endpoints or written to logs.
+
 ## Provisioning and activation
 
 ```text
@@ -130,6 +146,17 @@ Capacity shortages remain `AwaitingDatabaseCapacity`; provider failures remain
 `ProvisioningFailed`. Neither starts a subscription term or issues a tenant session. The saga is
 retryable and idempotent; Platform DB Outbox records coordinate work across databases.
 
+The review list can filter the same application by `applicationType`, application `status`,
+`paymentStatus`, `workspaceStatus`, `subscriptionStatus`, and `provisioningStatus`. Operators must
+read the next action from the lifecycle response rather than interpreting `Active` as proof that
+payment, database readiness, membership, and access are all complete.
+
+The public tracking response `GET /api/workspace-applications/tracking` now carries the same safe
+lifecycle facts for the applicant: `workspaceType`, payment/workspace/subscription/database and
+provisioning states, `canAccessDashboard`, `requiredAction`, `nextStep`, `userMessage`, and the
+last update time. It never returns connection material or a tenant token, and it keeps the dashboard
+blocked until the server-side access gate is satisfied.
+
 For a Gym, Platform approval/activation is also the authorization hand-off for the owner:
 `Tenant.Active` activates any non-deleted owner `WorkspaceMembership` still in
 `PendingPlatformApproval`, records `ApprovedAt`/`ApprovedBy`, and makes the workspace appear in
@@ -137,6 +164,21 @@ the next identity context. This is idempotent. The identity issuer also repairs 
 Gym at the next owner login, so an operator does not need a second manual activation action after
 an older release left the membership pending. Client memberships in
 `PendingWorkspaceApproval` remain subject to the gym's own approval flow.
+
+## Owner-managed workspace members (Issues #246 and #65)
+
+`/api/workspace-members` is the unified owner flow for Gym team access. `POST` creates or reuses a
+global `IdentityAccount`, creates the tenant-local `User` and `WorkspaceMembership`, replaces the
+workspace role assignments, and writes one security audit event before saving. A duplicate active
+membership in the same workspace is rejected; the same identity may receive a membership in a
+different workspace.
+
+The create response contains a one-time temporary password only when a new identity was created.
+The password is BCrypt-hashed immediately, `MustChangePassword` is set on the local user, and the
+value is not persisted, logged, or returned by list endpoints. `POST /{membershipId}/reset-password`
+generates a new one-time password and clears lockout counters. Suspend, activate, and remove keep
+the global identity intact while changing only workspace access. The stable access states are
+`PendingSetup`, `PasswordChangeRequired`, `Active`, `Suspended`, `Locked`, and `Removed`.
 
 ## Invitations and clients
 

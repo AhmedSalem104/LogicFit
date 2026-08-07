@@ -148,6 +148,7 @@ public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningPro
                 .FirstOrDefaultAsync(x => x.ProvisionedWorkspaceId == tenantId, cancellationToken);
             if (application?.IdentityAccount is null)
                 return await FailResourceAsync(resource, tenantId, reservation.ResourceId, "APPLICATION_OWNER_NOT_FOUND", cancellationToken);
+            var mustChangePassword = application.PayloadJson.Contains("\"mustChangePassword\":true", StringComparison.OrdinalIgnoreCase);
 
             var localOwner = await tenantDb.Users
                 .IgnoreQueryFilters()
@@ -200,7 +201,8 @@ public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningPro
                     PhoneNumber = application.IdentityAccount.PhoneNumber,
                     PasswordHash = application.IdentityAccount.PasswordHash,
                     Role = application.RequestedRole ?? UserRole.Owner,
-                    IsActive = true
+                    IsActive = true,
+                    MustChangePassword = mustChangePassword
                 };
                 tenantDb.Users.Add(localOwner);
                 tenantDb.UserProfiles.Add(new UserProfile
@@ -215,6 +217,10 @@ public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningPro
                     RoleId = ownerRole.Id,
                     TenantId = tenantId
                 });
+            }
+            else if (mustChangePassword)
+            {
+                localOwner.MustChangePassword = true;
             }
 
             await tenantDb.SaveChangesAsync(cancellationToken);

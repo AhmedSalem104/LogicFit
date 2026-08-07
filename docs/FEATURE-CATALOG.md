@@ -61,7 +61,7 @@ membership and other workspace associations are revoked.
 | دخول إدارة المنصة | بريد وكلمة مرور، refresh cookie وتدوير/إلغاء الجلسات | `Features/Platform/Auth`، `/api/platform/auth/*` | `PlatformOwner`، `PlatformAdmin` |
 | لوحة المتابعة | مؤشرات المنصة وقائمة المساحات | `Features/Platform/Dashboard`، `/api/platform/dashboard/*` | صلاحيات Platform المناسبة |
 | إدارة المساحات | إنشاء، قائمة، اعتماد، تعليق، تفعيل وأرشفة الجيم/المساحة؛ تفعيل عضوية مالك الجيم المنتظرة مع اعتماد المساحة | `Features/Platform/Tenants`، `/api/platform/tenants/*` | `ManageTenants` |
-| طلبات مساحة المدرب الحر | قائمة، بدء مراجعة، طلب معلومات، اعتماد مساحة، اعتماد عضوية ورفض مع `RowVersion` | `LogicFit.API/Features/Platform/WorkspaceApplications`، `/api/platform/workspace-applications/*` | `ManageTenants` |
+| طلبات مساحات العمل | إنشاء ومراجعة وطلب معلومات ورفض واعتماد/تجهيز وإعادة محاولة لكل من `Gym` و`FreelanceCoach` مع حالات الدفع والمساحة وقاعدة البيانات والاشتراك والوصول | `LogicFit.API/Features/Platform/WorkspaceApplications`، `/api/platform/workspace-applications/*` | `ManageTenants` |
 | الخطط والميزات | الخطط، feature catalog، overrides، quotas، dependencies | `Features/Platform/Plans` و`FeatureCatalog`، `/api/platform/plans/*` و`/api/platform/features/*` | `ManagePlans` / `ManageFeatures` |
 | اشتراكات الـSaaS | العرض، الاستهلاك، lifecycle، التمديد ومعاينة الترقية | `Features/Platform/Subscriptions`، `/api/platform/subscriptions/*` | `ManageSubscriptions` |
 | الفوترة اليدوية | طرق الدفع، طلبات إثبات الدفع، الاعتماد/الرفض، فواتير المنصة | `PaymentMethods` و`PaymentRequests` و`Invoices`، `/api/platform/payment-*` و`/api/platform/invoices` | صلاحيات الفوترة المركزية |
@@ -78,7 +78,7 @@ membership and other workspace associations are revoked.
 | الهوية المستقلة | هوية عالمية، Email + Password، اختيار مساحة، تأكيد البريد وemail-link recovery | `Features/Identity`، `/api/identity/*` | `IdentityAccount` لا يمنح دخول مساحة وحده؛ الهاتف للتواصل فقط |
 | اختيار مساحة العمل | استبدال token اختيار قصير العمر بـJWT/refresh tenant الموجودين | `IdentityWorkspaceSession` و`WorkspaceMembership` | عضوية `Active` فقط؛ يطبق حارس المساحة قبل إصدار الجلسة |
 | حارس الهوية والعضوية | فحص موحد للحساب المحلي والهوية المرتبطة والعضوية عند login وrefresh واختيار المساحة وكل طلب tenant مصادق عليه | `IIdentityWorkspaceAccessGuard` و`IdentityWorkspaceAccessMiddleware` | الحسابات القديمة غير المرتبطة تعمل مؤقتًا بوضع توافق صريح قابل للإيقاف بعد ترحيل الربط المثبت بالبريد |
-| طلب مساحة مدرب حر | تقديم إنشاء مساحة وهوية وهوية بصرية مستقلة، جلسة متابعة محدودة، تعديل الحقول المطلوبة وإعادة التقديم | `Features/WorkspaceApplications`، `/api/workspace-applications/*` | public قبل الاعتماد؛ token المتابعة ليس JWT |
+| طلب مساحة مدرب حر | تقديم إنشاء مساحة وهوية وهوية بصرية مستقلة، جلسة متابعة محدودة، تعديل الحقول المطلوبة وإعادة التقديم؛ ويمكن لمسؤول المنصة بدء نفس المسار الموحد | `Features/WorkspaceApplications`، `/api/workspace-applications/*` و`/api/platform/workspace-applications/*` | public قبل الاعتماد؛ token المتابعة ليس JWT؛ لوحة المنصة تتطلب `ManageTenants` |
 | فريق المدرب الحر | ترشيح Coach/Assistant/Client لمساحة مستقلة ثم اعتماد Platform | `FreelanceTeamApplicationsController`، `/api/freelance/team/applications` | Freelance Owner مع `ManageCoaches`؛ لا توجد صلاحية مباشرة قبل الاعتماد |
 | المستخدمون والأدوار | مستخدمون، profiles، الأدوار، permissions وإصدارات الصلاحيات | `Features/Users`، `Profile`، `Authorization` | TenantId وملكية المورد حد أمني |
 | هوية وهوية بصرية المساحة | gym profile، branding، media وبيانات العلامة | `GymProfile`، `Branding`، `Media` | هوية مساحة المدرب الحر تسري على كل أعضائها |
@@ -99,6 +99,16 @@ membership and other workspace associations are revoked.
 | التغذية | أطعمة، خطط غذائية وسجل الوجبات | `Foods`، `DietPlans`، `MealLogs` | Coach / Client |
 | التفاعل | تحديات، chat، إشعارات | `Challenges`، `Chat`، `Notifications` | حسب عضوية وملكية كل مساحة |
 | التقارير | تقارير تشغيل ومالية ورياضية | `Reports` | الأدوار صاحبة صلاحية التقرير |
+
+## حسابات الفريق والوصول (Issues #246 and #65)
+
+The owner-managed team surface is separate from the legacy HR profile form. `WorkspaceMembersController`
+and the `WorkspaceMembers` application feature provide a single operation for identity, tenant-local
+user, membership, role assignment, one-time credentials, password reset, and access lifecycle. The
+surface is protected by `ManageEmployees`, is tenant-scoped, rejects duplicate active memberships,
+supports identity reuse across workspaces, and records security audit events without credentials.
+The Tenant UI route is `/owner/workspace-access` with explicit loading, empty, error, credential,
+and state-action screens.
 
 ## المالية، التجارة والمخزون داخل المساحة
 

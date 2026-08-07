@@ -52,6 +52,25 @@ memberships in `PendingWorkspaceApproval` remain unchanged.
 | `OutboxMessage`, `JobExecutionLog` | موثوقية الأحداث والأعمال الخلفية. | لا حذف يدوي؛ معالجة/أرشفة فقط. |
 | `AuditLog`/سجلات تدقيق التطبيق | أثر كل تغيير حساس. | append-only؛ لا تعديل/حذف. |
 
+## عقد حالة التفعيل في طابور المنصة (Issues #244/#245)
+
+طلبات إنشاء المساحات لا تستخدم `Active` كاختصار لكل المراحل. إسقاط الحالة المعروض في
+`PlatformApplicationDto` يفصل القيم التالية:
+
+| الحقل | مصدره | المعنى التشغيلي |
+|---|---|---|
+| `applicationStatus` | `ApplicationRequest` | مسودة، مقدم، مراجعة، استكمال، مقبول أو مرفوض |
+| `paymentStatus` | `PaymentRequest` | حالة إثبات/قرار الدفع؛ الاعتماد لا يساوي التفعيل |
+| `workspaceStatus` | `Tenant` | دورة مساحة الجيم أو المدرب الحر |
+| `subscriptionStatus` | `TenantSubscription` | دورة اشتراك SaaS المستقلة |
+| `databaseStatus` / `databaseStatusCode` | `DatabaseResource`/mapping/provisioning job | السعة والتجهيز والتخصيص دون كشف بيانات الاتصال؛ الرمز التشغيلي يميز `Unassigned`, `Provisioning`, `Ready`, `Unavailable`, `Failed`, و`Released` |
+| `provisioningStatus` | `ProvisioningJob` | نتيجة التجهيز وإمكانية إعادة المحاولة |
+| `canAccessDashboard` | تقاطع الاشتراك والقاعدة والعضوية والمساحة | قرار الوصول النهائي فقط، وليس قيمة `Tenant.Status` منفردة |
+
+إعادة المحاولة تعيد استخدام `ApplicationRequestId` و`ProvisioningJob.IdempotencyKey` ولا تنشئ
+Tenant أو Subscription أو Identity أو Mapping جديدة. `FreelanceCoach` يستخدم نفس الكيانات مع
+`WorkspaceType=FreelanceCoach` وعضوية `FreelanceOwner` مستقلة عن أي Gym.
+
 كيانات الصالة ترث في الغالب من `TenantAuditableEntity`: العملاء، الفروع، الحضور،
 البرامج، التغذية، المدفوعات، المخزون، الموظفون وغيرها. هذا يجعل `TenantId` وحد
 العزل جزءاً من البيانات لا اتفاقاً بين الواجهات.

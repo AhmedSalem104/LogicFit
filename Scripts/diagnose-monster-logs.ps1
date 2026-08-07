@@ -5,6 +5,7 @@ param(
     [Parameter(Mandatory = $true)] [string] $HealthCheckUrl,
     [string] $ManagementHostOverride,
     [switch] $AllowUntrustedManagementCertificate,
+    [ValidateRange(8, 60)] [int] $CaptureAttempts = 8,
     [string] $MsDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
 )
 
@@ -132,9 +133,9 @@ function Get-ChangedLogFiles([System.IO.FileInfo[]]$Files, [string]$Root, [hasht
     return @($changed)
 }
 
-function Wait-ForLogFiles([string]$RemoteLogPath, [hashtable]$Baseline) {
+function Wait-ForLogFiles([string]$RemoteLogPath, [hashtable]$Baseline, [int]$MaxAttempts = 8) {
     $lastFiles = @()
-    for ($attempt = 1; $attempt -le 8; $attempt++) {
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
         Start-Sleep -Seconds 5
         $lastFiles = @(Get-LogFiles $RemoteLogPath $logRoot)
         $changedFiles = @(Get-ChangedLogFiles $lastFiles $logRoot $Baseline)
@@ -195,7 +196,7 @@ function Write-SafeLogCategories(
         InvalidOperationException = '(?i)\bInvalidOperationException\b'
     }
     $text = ($Files | ForEach-Object {
-        try { Get-Content -LiteralPath $_.FullName -Tail 2000 -ErrorAction SilentlyContinue } catch { }
+        try { Get-Content -LiteralPath $_.FullName -Tail 10000 -ErrorAction SilentlyContinue } catch { }
     }) -join "`n"
     $categories = @($patterns.Keys | Where-Object { $text -match $patterns[$_] })
     if ($categories.Count -eq 0) { $categories = @('NoKnownRootCategory') }
@@ -203,11 +204,51 @@ function Write-SafeLogCategories(
     if ($signatures.Count -eq 0) { $signatures = @('NoKnownSafeSignature') }
     $exceptionTypes = @($exceptionPatterns.Keys | Where-Object { $text -match $exceptionPatterns[$_] })
     if ($exceptionTypes.Count -eq 0) { $exceptionTypes = @('NoKnownExceptionType') }
+    $safeSqlDetails = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($line in ($text -split "`r?`n")) {
+        $trimmed = $line.Trim()
+        if ([string]::IsNullOrWhiteSpace($trimmed)) { continue }
+        if ($trimmed -match '(?i)invalid object name\s+[''\"](?<name>[^''\"]+)[''\"]') {
+            [void]$safeSqlDetails.Add("InvalidObject:$($Matches['name'])")
+        }
+        elseif ($trimmed -match '(?i)invalid column name\s+[''\"](?<name>[^''\"]+)[''\"]') {
+            [void]$safeSqlDetails.Add("InvalidColumn:$($Matches['name'])")
+        }
+        elseif ($trimmed -match '(?i)foreign key constraint\s+[''\"](?<name>[^''\"]+)[''\"]') {
+            [void]$safeSqlDetails.Add("ForeignKey:$($Matches['name'])")
+        }
+        elseif ($trimmed -match '(?i)(?:unique key|duplicate key).*?constraint\s+[''\"](?<name>[^''\"]+)[''\"]') {
+            [void]$safeSqlDetails.Add("UniqueConstraint:$($Matches['name'])")
+        }
+        elseif ($trimmed -match '(?i)duplicate key row in object\s+[''\"](?<name>[^''\"]+)[''\"]') {
+            [void]$safeSqlDetails.Add("DuplicateObject:$($Matches['name'])")
+        }
+        elseif ($trimmed -match '(?i)cannot insert duplicate key') {
+            [void]$safeSqlDetails.Add('DuplicateKey')
+        }
+        elseif ($trimmed -match '(?i)conversion failed when converting|arithmetic overflow|out-of-range value') {
+            [void]$safeSqlDetails.Add('SqlValueConversion')
+        }
+        elseif ($trimmed -match '(?i)null into column\s+[''\"](?<name>[^''\"]+)[''\"]') {
+            [void]$safeSqlDetails.Add("NullColumn:$($Matches['name'])")
+        }
+        elseif ($trimmed -match "(?i)string or binary data would be truncated") {
+            [void]$safeSqlDetails.Add('StringTruncation')
+        }
+        elseif ($trimmed -match '(?i)(?:SqlException|SqlError).*?(?:Number|ErrorNumber)\s*[:=]?\s*(?<number>-?\d+)') {
+            [void]$safeSqlDetails.Add("SqlErrorNumber:$($Matches['number'])")
+        }
+        if ($trimmed -match '(?i)CreatePlatformWorkspaceApplication') {
+            [void]$safeSqlDetails.Add('WorkspaceApplicationCreateStack')
+        }
+    }
+    if ($safeSqlDetails.Count -eq 0) { [void]$safeSqlDetails.Add('NoKnownSafeSqlDetail') }
     Write-Host "Monster stdout log files captured: $TotalCount; new or changed: $ChangedCount."
     if ($UsedFallback) { Write-Host 'No new log file was detected; analyzed the three newest existing files as a bounded fallback.' }
     Write-Host "Safe log categories: $($categories -join ', ')."
     Write-Host "Safe log signatures: $($signatures -join ', ')."
     Write-Host "Safe exception types: $($exceptionTypes -join ', ')."
+    Write-Host "Safe SQL details: $($safeSqlDetails -join ', ')."
 }
 
 New-Item -ItemType Directory -Path $operationRoot | Out-Null
@@ -247,7 +288,7 @@ try {
     Set-RemoteFile $diagnosticWebConfig $remoteWebConfigPath
     $remoteChanged = $true
     Write-HealthState 'During temporary log capture' (Get-HealthState)
-    $logCapture = Wait-ForLogFiles $remoteLogPath $baselineSnapshot
+    $logCapture = Wait-ForLogFiles $remoteLogPath $baselineSnapshot $CaptureAttempts
     Write-SafeLogCategories $logCapture.Files $logCapture.ChangedCount $logCapture.TotalCount $logCapture.UsedFallback
 }
 catch {

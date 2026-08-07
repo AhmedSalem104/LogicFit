@@ -9,6 +9,10 @@ public sealed class GetPlatformApplicationsQuery : IRequest<PagedResult<Platform
 {
     public ApplicationType? ApplicationType { get; init; }
     public ApplicationRequestStatus? Status { get; init; }
+    public PaymentRequestStatus? PaymentStatus { get; init; }
+    public TenantStatus? WorkspaceStatus { get; init; }
+    public TenantSubscriptionStatus? SubscriptionStatus { get; init; }
+    public ProvisioningJobStatus? ProvisioningStatus { get; init; }
     public int Page { get; init; } = PageRequest.DefaultPageSize;
     public int PageSize { get; init; } = PageRequest.DefaultPageSize;
 }

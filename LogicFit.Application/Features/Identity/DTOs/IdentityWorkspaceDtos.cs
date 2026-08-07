@@ -18,6 +18,18 @@ public sealed class PendingApplicationDto
     public ApplicationType ApplicationType { get; init; }
     public ApplicationRequestStatus Status { get; init; }
     public DateTime? SubmittedAt { get; init; }
+    public string? WorkspaceIdentifier { get; init; }
+    public WorkspaceType WorkspaceType { get; init; }
+    public PaymentRequestStatus? PaymentStatus { get; init; }
+    public TenantStatus? WorkspaceStatus { get; init; }
+    public TenantSubscriptionStatus? SubscriptionStatus { get; init; }
+    public string? DatabaseStatusCode { get; init; }
+    public ProvisioningJobStatus? ProvisioningStatus { get; init; }
+    public bool CanAccessDashboard { get; init; }
+    public string? RequiredAction { get; init; }
+    public string? NextStep { get; init; }
+    public string? UserMessage { get; init; }
+    public DateTime? LastUpdatedAtUtc { get; init; }
 }
 
 public sealed class IdentitySignInDto
