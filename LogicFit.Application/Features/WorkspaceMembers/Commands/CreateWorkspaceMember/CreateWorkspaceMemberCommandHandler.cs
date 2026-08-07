@@ -41,7 +41,15 @@ public sealed class CreateWorkspaceMemberCommandHandler : IRequestHandler<Create
             ?? throw new ForbiddenException("A workspace context is required.");
 
         var normalizedEmail = IdentityEmailAddress.Normalize(request.Email);
-        var normalizedPhone = PhoneNumberNormalizer.NormalizeOptional(request.PhoneNumber);
+        string? normalizedPhone;
+        try
+        {
+            normalizedPhone = PhoneNumberNormalizer.NormalizeOptionalAdminInput(request.PhoneNumber);
+        }
+        catch (FormatException exception)
+        {
+            throw new ValidationException(nameof(request.PhoneNumber), exception.Message);
+        }
         var identity = await _context.IdentityAccounts
             .IgnoreQueryFilters()
             .SingleOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail, cancellationToken);
@@ -63,7 +71,7 @@ public sealed class CreateWorkspaceMemberCommandHandler : IRequestHandler<Create
                 if (phoneUsedByAnotherIdentity)
                     throw new ConflictException("WORKSPACE_MEMBER_PHONE_DUPLICATE", "An identity already uses this phone number.");
 
-                identity.PhoneNumber = request.PhoneNumber?.Trim();
+                identity.PhoneNumber = normalizedPhone;
                 identity.NormalizedPhoneNumber = normalizedPhone;
             }
         }
@@ -78,7 +86,7 @@ public sealed class CreateWorkspaceMemberCommandHandler : IRequestHandler<Create
                 FullName = request.FullName.Trim(),
                 Email = request.Email.Trim(),
                 NormalizedEmail = normalizedEmail,
-                PhoneNumber = request.PhoneNumber?.Trim(),
+                PhoneNumber = normalizedPhone,
                 NormalizedPhoneNumber = normalizedPhone,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(temporaryPassword),
                 EmailVerifiedAt = _clock.UtcNow,
@@ -105,7 +113,7 @@ public sealed class CreateWorkspaceMemberCommandHandler : IRequestHandler<Create
                 TenantId = tenantId,
                 IdentityAccountId = identity.Id,
                 Email = identity.Email,
-                PhoneNumber = request.PhoneNumber?.Trim() ?? identity.PhoneNumber,
+                PhoneNumber = normalizedPhone ?? identity.PhoneNumber,
                 PasswordHash = identity.PasswordHash,
                 Role = request.Role,
                 IsActive = true,
@@ -116,7 +124,7 @@ public sealed class CreateWorkspaceMemberCommandHandler : IRequestHandler<Create
         else
         {
             user.Email = identity.Email;
-            user.PhoneNumber = request.PhoneNumber?.Trim() ?? identity.PhoneNumber;
+            user.PhoneNumber = normalizedPhone ?? identity.PhoneNumber;
             user.PasswordHash = identity.PasswordHash;
             user.Role = request.Role;
             user.IsActive = true;

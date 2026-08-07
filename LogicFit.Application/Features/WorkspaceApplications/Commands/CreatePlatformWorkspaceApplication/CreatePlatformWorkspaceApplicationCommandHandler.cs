@@ -41,7 +41,15 @@ public sealed class CreatePlatformWorkspaceApplicationCommandHandler
     {
         Validate(request);
         var normalizedEmail = IdentityEmailAddress.Normalize(request.OwnerEmail);
-        var normalizedPhone = PhoneNumberNormalizer.NormalizeOptional(request.OwnerPhoneNumber);
+        string? normalizedPhone;
+        try
+        {
+            normalizedPhone = PhoneNumberNormalizer.NormalizeOptionalAdminInput(request.OwnerPhoneNumber);
+        }
+        catch (FormatException exception)
+        {
+            throw new ValidationException(nameof(request.OwnerPhoneNumber), exception.Message);
+        }
         var identifier = request.WorkspaceIdentifier.Trim().ToLowerInvariant();
 
         var plan = await _context.Plans
@@ -79,7 +87,7 @@ public sealed class CreatePlatformWorkspaceApplicationCommandHandler
                 FullName = request.OwnerFullName.Trim(),
                 Email = request.OwnerEmail.Trim(),
                 NormalizedEmail = normalizedEmail,
-                PhoneNumber = request.OwnerPhoneNumber?.Trim(),
+                PhoneNumber = normalizedPhone,
                 NormalizedPhoneNumber = normalizedPhone,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(temporaryPassword),
                 IsActive = true,
