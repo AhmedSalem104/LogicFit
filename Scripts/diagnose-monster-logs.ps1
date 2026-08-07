@@ -5,6 +5,7 @@ param(
     [Parameter(Mandatory = $true)] [string] $HealthCheckUrl,
     [string] $ManagementHostOverride,
     [switch] $AllowUntrustedManagementCertificate,
+    [ValidateRange(8, 60)] [int] $CaptureAttempts = 8,
     [string] $MsDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
 )
 
@@ -132,9 +133,9 @@ function Get-ChangedLogFiles([System.IO.FileInfo[]]$Files, [string]$Root, [hasht
     return @($changed)
 }
 
-function Wait-ForLogFiles([string]$RemoteLogPath, [hashtable]$Baseline) {
+function Wait-ForLogFiles([string]$RemoteLogPath, [hashtable]$Baseline, [int]$MaxAttempts = 8) {
     $lastFiles = @()
-    for ($attempt = 1; $attempt -le 8; $attempt++) {
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
         Start-Sleep -Seconds 5
         $lastFiles = @(Get-LogFiles $RemoteLogPath $logRoot)
         $changedFiles = @(Get-ChangedLogFiles $lastFiles $logRoot $Baseline)
@@ -278,7 +279,7 @@ try {
     Set-RemoteFile $diagnosticWebConfig $remoteWebConfigPath
     $remoteChanged = $true
     Write-HealthState 'During temporary log capture' (Get-HealthState)
-    $logCapture = Wait-ForLogFiles $remoteLogPath $baselineSnapshot
+    $logCapture = Wait-ForLogFiles $remoteLogPath $baselineSnapshot $CaptureAttempts
     Write-SafeLogCategories $logCapture.Files $logCapture.ChangedCount $logCapture.TotalCount $logCapture.UsedFallback
 }
 catch {

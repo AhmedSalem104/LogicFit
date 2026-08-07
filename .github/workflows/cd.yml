@@ -496,6 +496,7 @@ jobs:
             PublishSettingsPath = $env:MONSTER_LOG_PROFILE_PATH
             ExpectedSite = $env:EXPECTED_SITE
             HealthCheckUrl = $env:MONSTER_LOG_HEALTH_URL
+            CaptureAttempts = 36
           }
           if (-not [string]::IsNullOrWhiteSpace($env:MANAGEMENT_HOST_OVERRIDE)) {
             $arguments.ManagementHostOverride = $env:MANAGEMENT_HOST_OVERRIDE
