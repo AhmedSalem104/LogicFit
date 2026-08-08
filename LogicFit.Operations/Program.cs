@@ -130,6 +130,14 @@ try
         .CountAsync(pair => pair.tenant.IsDeleted);
     Console.WriteLine(
         $"Application context inventory: assigned mappings={applicationAssignedMappingCount}; non-deleted={applicationAssignedNonDeletedMappingCount}; deleted={applicationAssignedDeletedMappingCount}.");
+    foreach (var pair in await applicationAssignedMappings.Select(pair => new
+    {
+        pair.mapping.Id,
+        pair.mapping.TenantId,
+        pair.tenant.IsDeleted
+    }).ToListAsync())
+        Console.WriteLine(
+            $"Application assigned mapping {pair.Id}; tenant={pair.TenantId}; tenantDeleted={pair.IsDeleted}.");
 
     var backupService = scope.ServiceProvider.GetRequiredService<IBackupService>();
     var status = backupService.GetStatus();
