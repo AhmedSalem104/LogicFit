@@ -85,6 +85,15 @@ membership and other workspace associations are revoked.
 
 الشرح التفصيلي لهذه التدفقات، الجلسات، الحالات والـendpoints موجود في [AUTHENTICATION-AND-WORKSPACE-FLOWS.md](AUTHENTICATION-AND-WORKSPACE-FLOWS.md).
 
+## دورة الاشتراك الموحدة (Issue #248)
+
+`Gym` و`FreelanceCoach` يمران بنفس رحلة الاشتراك: نوع المساحة، الباقة، البيانات الأساسية، إثبات
+الدفع، ثم المراجعة والتجهيز والتفعيل. يعيد الخادم snapshot آمنًا يفصل بين حالة الطلب والدفع
+والـTenant والاشتراك وقاعدة البيانات والـprovisioning والعضوية، ولا يسمح بالـDashboard قبل اكتمال
+كل بوابات الوصول. حجز الـDatabaseResource يتم ذريًا من الـPool، وتبقى connection material داخل
+الخادم، مع migrations و`CanConnect` وhealth check قبل إنشاء الـmapping. الطلبات التي تحتاج سعة أو
+إعادة محاولة لا تنشئ كيانات مكررة.
+
 ## تشغيل مساحة الجيم أو المدرب الحر
 
 | المجال | ما هو مسجل حاليًا | مصدر التنفيذ / عائلة API | المستخدمون الرئيسيون |

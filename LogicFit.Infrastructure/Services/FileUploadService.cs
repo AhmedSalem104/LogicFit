@@ -11,6 +11,7 @@ public class FileUploadService : IFileUploadService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<FileUploadService> _logger;
     private readonly string[] _allowedImageExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+    private readonly string[] _allowedDocumentExtensions = { ".jpg", ".jpeg", ".png", ".pdf" };
     private readonly string[] _allowedVideoExtensions = { ".mp4", ".webm", ".mov", ".avi" };
     private const long MaxImageSize = 5 * 1024 * 1024; // 5MB
     private const long MaxVideoSize = 100 * 1024 * 1024; // 100MB
@@ -29,6 +30,12 @@ public class FileUploadService : IFileUploadService
     {
         ValidateImage(file);
         return await SaveFileAsync(file, "images", subfolder);
+    }
+
+    public async Task<string> UploadDocumentAsync(IFormFile file, string? subfolder = null)
+    {
+        ValidateDocument(file);
+        return await SaveFileAsync(file, "documents", subfolder);
     }
 
     public async Task<string> UploadVideoAsync(IFormFile file, string? subfolder = null)
@@ -191,5 +198,23 @@ public class FileUploadService : IFileUploadService
         if (!string.IsNullOrWhiteSpace(file.ContentType)
             && !allowedContentTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
             throw new ArgumentException("Video content type is not allowed");
+    }
+
+    private void ValidateDocument(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            throw new ArgumentException("No file provided");
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!_allowedDocumentExtensions.Contains(extension))
+            throw new ArgumentException("Invalid document format. Allowed formats: JPG, PNG, or PDF");
+
+        if (file.Length > 10 * 1024 * 1024)
+            throw new ArgumentException("Document size exceeds maximum allowed size of 10MB");
+
+        var allowedContentTypes = new[] { "image/jpeg", "image/png", "application/pdf" };
+        if (!string.IsNullOrWhiteSpace(file.ContentType)
+            && !allowedContentTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
+            throw new ArgumentException("Document content type is not allowed");
     }
 }

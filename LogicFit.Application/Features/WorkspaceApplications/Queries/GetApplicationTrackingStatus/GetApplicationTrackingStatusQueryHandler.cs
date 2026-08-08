@@ -76,6 +76,7 @@ public sealed class GetApplicationTrackingStatusQueryHandler
             && databaseStatus == DatabaseResourceStatus.Assigned
             && membershipReady;
         var (action, next, message) = ResolveLifecycle(application.Status, payment?.Status, tenant?.Status, subscription?.Status, provisioning?.Status, canAccess);
+        var userJourneyStage = ResolveUserJourneyStage(application.Status, payment?.Status, tenant?.Status, provisioning?.Status, canAccess);
         var dates = new[]
         {
             application.SubmittedAt,
@@ -91,8 +92,6 @@ public sealed class GetApplicationTrackingStatusQueryHandler
             mapping?.UpdatedAt,
             mapping?.CreatedAt
         };
-
-        await _context.SaveChangesAsync(cancellationToken);
 
         return new ApplicationTrackingStatusDto
         {
@@ -116,6 +115,7 @@ public sealed class GetApplicationTrackingStatusQueryHandler
             DatabaseStatus = databaseStatus,
             DatabaseStatusCode = databaseStatusCode,
             ProvisioningStatus = provisioning?.Status,
+            UserJourneyStage = userJourneyStage,
             CanAccessDashboard = canAccess,
             RequiredAction = action,
             NextStep = next,
@@ -170,6 +170,8 @@ public sealed class GetApplicationTrackingStatusQueryHandler
     {
         if (applicationStatus == ApplicationRequestStatus.Rejected)
             return ("لا يوجد إجراء", "التواصل مع الدعم عند الحاجة", "تم رفض الطلب. راجع سبب الرفض أو تواصل مع الدعم.");
+        if (paymentStatus is PaymentRequestStatus.Rejected or PaymentRequestStatus.Cancelled or PaymentRequestStatus.Expired)
+            return ("مراجعة الدفع", "تواصل مع الدعم أو أرسل وسيلة دفع صحيحة", "لم يتم اعتماد الدفع. راجع بيانات الدفع أو تواصل مع الدعم.");
         if (applicationStatus == ApplicationRequestStatus.NeedsMoreInformation)
             return ("استكمال البيانات", "حدّث الحقول المطلوبة ثم أعد الإرسال", "مطلوب استكمال بعض البيانات قبل متابعة الطلب.");
         if (provisioningStatus == ProvisioningJobStatus.Failed)
@@ -187,6 +189,29 @@ public sealed class GetApplicationTrackingStatusQueryHandler
         if (canAccess)
             return ("لا يوجد", "يمكن فتح لوحة الإدارة", "تم تفعيل مساحة العمل ويمكن الدخول بأمان.");
         return ("التحقق من الجاهزية", "مراجعة حالة مساحة العمل وقاعدة البيانات", "لم تكتمل جاهزية مساحة العمل بعد.");
+    }
+
+    private static string ResolveUserJourneyStage(
+        ApplicationRequestStatus applicationStatus,
+        PaymentRequestStatus? paymentStatus,
+        TenantStatus? workspaceStatus,
+        ProvisioningJobStatus? provisioningStatus,
+        bool canAccess)
+    {
+        if (canAccess)
+            return "Ready";
+        if (applicationStatus == ApplicationRequestStatus.Rejected)
+            return "Rejected";
+        if (paymentStatus is PaymentRequestStatus.Rejected or PaymentRequestStatus.Cancelled or PaymentRequestStatus.Expired)
+            return "PaymentRejected";
+        if (applicationStatus == ApplicationRequestStatus.NeedsMoreInformation)
+            return "MoreInformation";
+        if (provisioningStatus is ProvisioningJobStatus.Provisioning or ProvisioningJobStatus.AwaitingDatabaseCapacity ||
+            workspaceStatus is TenantStatus.Provisioning or TenantStatus.AwaitingDatabaseCapacity or TenantStatus.ProvisioningFailed)
+            return "Preparing";
+        if (applicationStatus is ApplicationRequestStatus.UnderReview or ApplicationRequestStatus.Approved)
+            return "UnderReview";
+        return "Submitted";
     }
 
     internal static IReadOnlyList<string> ReadStringList(string? json) => string.IsNullOrWhiteSpace(json)

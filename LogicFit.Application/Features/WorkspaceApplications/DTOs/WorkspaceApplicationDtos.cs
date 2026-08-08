@@ -5,6 +5,7 @@ namespace LogicFit.Application.Features.WorkspaceApplications.DTOs;
 
 public sealed class FreelanceWorkspaceApplicationPayload
 {
+    public WorkspaceType WorkspaceType { get; init; } = WorkspaceType.FreelanceCoach;
     public string WorkspaceName { get; init; } = string.Empty;
     public string WorkspaceIdentifier { get; init; } = string.Empty;
     public string OwnerFullName { get; init; } = string.Empty;
@@ -16,6 +17,7 @@ public sealed class FreelanceWorkspaceApplicationPayload
     public string? PrimaryColor { get; init; }
     public string? SecondaryColor { get; init; }
     public string? Bio { get; init; }
+    public string? DeliveryMode { get; init; }
     public IReadOnlyList<string> Specialties { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> Certifications { get; init; } = Array.Empty<string>();
     public IReadOnlyDictionary<string, string> SocialLinks { get; init; } = new Dictionary<string, string>();
@@ -52,6 +54,8 @@ public sealed class ApplicationTrackingStatusDto
     public DatabaseResourceStatus? DatabaseStatus { get; init; }
     public string? DatabaseStatusCode { get; init; }
     public ProvisioningJobStatus? ProvisioningStatus { get; init; }
+    /// <summary>Small user-facing journey state; technical lifecycle states remain server-side.</summary>
+    public string UserJourneyStage { get; init; } = "Submitted";
     public bool CanAccessDashboard { get; init; }
     public string? RequiredAction { get; init; }
     public string? NextStep { get; init; }
