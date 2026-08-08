@@ -77,6 +77,38 @@ try
     Console.WriteLine(
         $"Protected platform inventory: assigned resources={assignedResourceCount}; active mappings={activeMappingCount}; active assigned mappings={activeAssignedMappingCount}.");
 
+    var connectionProtector = scope.ServiceProvider.GetRequiredService<IConnectionStringProtector>();
+    var protectedResources = await platformDb.DatabaseResources.AsNoTracking()
+        .Where(resource =>
+            resource.Status == DatabaseResourceStatus.Reserved ||
+            resource.Status == DatabaseResourceStatus.Provisioning ||
+            resource.Status == DatabaseResourceStatus.Assigned)
+        .Where(resource => !string.IsNullOrWhiteSpace(resource.EncryptedConnectionString))
+        .Select(resource => new
+        {
+            resource.Id,
+            resource.Status,
+            ProtectedValue = resource.EncryptedConnectionString!
+        })
+        .ToListAsync();
+    foreach (var resource in protectedResources)
+        Console.WriteLine(
+            $"Protected resource {resource.Id}; status={resource.Status}; decrypt={GetDecryptionStatus(connectionProtector, resource.ProtectedValue)}.");
+
+    var protectedMappings = await platformDb.TenantDatabaseMappings.AsNoTracking()
+        .Where(mapping => mapping.IsActive && !string.IsNullOrWhiteSpace(mapping.EncryptedConnectionString))
+        .Select(mapping => new
+        {
+            mapping.Id,
+            mapping.TenantId,
+            mapping.DatabaseResourceId,
+            ProtectedValue = mapping.EncryptedConnectionString
+        })
+        .ToListAsync();
+    foreach (var mapping in protectedMappings)
+        Console.WriteLine(
+            $"Protected mapping {mapping.Id}; tenant={mapping.TenantId}; resource={mapping.DatabaseResourceId}; decrypt={GetDecryptionStatus(connectionProtector, mapping.ProtectedValue)}.");
+
     var backupService = scope.ServiceProvider.GetRequiredService<IBackupService>();
     var status = backupService.GetStatus();
     if (!status.IsEnabled || !status.IsReady)
@@ -170,6 +202,21 @@ static string RequiredEnvironment(string name)
     if (string.IsNullOrWhiteSpace(value))
         throw new InvalidOperationException($"Required protected operator variable {name} is missing.");
     return value.Trim();
+}
+
+static string GetDecryptionStatus(IConnectionStringProtector protector, string protectedValue)
+{
+    try
+    {
+        return string.IsNullOrWhiteSpace(protector.Unprotect(protectedValue))
+            ? "empty"
+            : "ok";
+    }
+    catch (Exception exception) when (
+        exception is ArgumentException or InvalidOperationException or System.Security.Cryptography.CryptographicException)
+    {
+        return exception.GetType().Name;
+    }
 }
 
 file sealed class ProtectedOperatorUserService : ICurrentUserService
