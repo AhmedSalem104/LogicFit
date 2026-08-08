@@ -72,4 +72,19 @@ public sealed class ProductionRemediationContractTests
         Assert.Contains("false complete coverage", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Repair the mapping before retrying", source, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Central_backup_lock_declares_and_reads_the_sql_application_lock_result()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "LogicFit.Infrastructure",
+            "Services",
+            "DatabaseBackupService.cs"));
+
+        Assert.Contains("DECLARE @result int", source, StringComparison.Ordinal);
+        Assert.Contains("sys.sp_getapplock", source, StringComparison.Ordinal);
+        Assert.Contains("SELECT @result", source, StringComparison.Ordinal);
+        Assert.Contains("ExecuteScalarAsync", source, StringComparison.Ordinal);
+    }
 }

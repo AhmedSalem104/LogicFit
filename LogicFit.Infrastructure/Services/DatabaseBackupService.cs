@@ -1,3 +1,4 @@
+using System.Data;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -367,12 +368,23 @@ public sealed class DatabaseBackupService(
         {
             await connection.OpenAsync(cancellationToken);
             await using var command = connection.CreateCommand();
-            command.CommandText = "EXEC @result = sp_getapplock @Resource = @resource, @LockMode = 'Exclusive', @LockOwner = 'Session', @LockTimeout = 0;";
-            var result = command.Parameters.Add("@result", System.Data.SqlDbType.Int);
-            result.Direction = System.Data.ParameterDirection.ReturnValue;
-            command.Parameters.AddWithValue("@resource", "LogicFit:CentralDatabaseBackup");
-            await command.ExecuteNonQueryAsync(cancellationToken);
-            if (result.Value is int value && value < 0)
+            command.CommandText = """
+                DECLARE @result int;
+                EXEC @result = sys.sp_getapplock
+                    @Resource = @resource,
+                    @LockMode = 'Exclusive',
+                    @LockOwner = 'Session',
+                    @LockTimeout = 0;
+                SELECT @result;
+                """;
+            command.CommandTimeout = Math.Clamp(
+                configuration.GetValue("Backup:DistributedLockCommandTimeoutSeconds", 5),
+                1,
+                30);
+            var resource = command.Parameters.Add("@resource", SqlDbType.NVarChar, 255);
+            resource.Value = "LogicFit:CentralDatabaseBackup";
+            var value = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+            if (value < 0)
                 throw new InvalidOperationException("A backup batch is already running on another instance.");
             return connection;
         }
