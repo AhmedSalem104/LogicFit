@@ -109,6 +109,28 @@ try
         Console.WriteLine(
             $"Protected mapping {mapping.Id}; tenant={mapping.TenantId}; resource={mapping.DatabaseResourceId}; decrypt={GetDecryptionStatus(connectionProtector, mapping.ProtectedValue)}.");
 
+    var applicationDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var applicationAssignedMappings = applicationDb.TenantDatabaseMappings.AsNoTracking()
+        .Where(mapping => mapping.IsActive && !string.IsNullOrWhiteSpace(mapping.EncryptedConnectionString))
+        .Join(
+            applicationDb.DatabaseResources.AsNoTracking()
+                .Where(resource => resource.Status == DatabaseResourceStatus.Assigned),
+            mapping => mapping.DatabaseResourceId,
+            resource => resource.Id,
+            (mapping, resource) => mapping)
+        .Join(
+            applicationDb.Tenants.AsNoTracking().IgnoreQueryFilters(),
+            mapping => mapping.TenantId,
+            tenant => tenant.Id,
+            (mapping, tenant) => new { mapping, tenant });
+    var applicationAssignedMappingCount = await applicationAssignedMappings.CountAsync();
+    var applicationAssignedNonDeletedMappingCount = await applicationAssignedMappings
+        .CountAsync(pair => !pair.tenant.IsDeleted);
+    var applicationAssignedDeletedMappingCount = await applicationAssignedMappings
+        .CountAsync(pair => pair.tenant.IsDeleted);
+    Console.WriteLine(
+        $"Application context inventory: assigned mappings={applicationAssignedMappingCount}; non-deleted={applicationAssignedNonDeletedMappingCount}; deleted={applicationAssignedDeletedMappingCount}.");
+
     var backupService = scope.ServiceProvider.GetRequiredService<IBackupService>();
     var status = backupService.GetStatus();
     if (!status.IsEnabled || !status.IsReady)
