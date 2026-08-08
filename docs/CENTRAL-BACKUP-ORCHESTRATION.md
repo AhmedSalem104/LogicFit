@@ -30,6 +30,16 @@ Backup target resolution is fail-closed: if an active tenant mapping cannot be d
 batch does not silently omit that tenant and report complete coverage. The API returns a safe
 service-unavailable result instructing the operator to repair the mapping before retrying.
 
+## Protected pre-deployment gate
+
+When production has no verified backup yet, use the manual GitHub Environment workflow
+`.github/workflows/protected-backup.yml` with `confirm=CREATE-PROTECTED-BACKUP` and the released
+`master` SHA. The workflow runs the same `IBackupService` FullSystem orchestration in a protected
+operator process, verifies every artifact's size and SHA-256, and uploads only
+`App_Data/PrivateBackups` through the protected WebDeploy profile. BACPAC files are never stored in
+the repository, workflow logs, or a GitHub artifact. Use the reported
+`protected-webdeploy:<run-id>:<batch-id>` reference for the protected production deployment.
+
 The existing `POST /api/platform/backups` remains a compatibility shortcut for a platform-only
 batch.  `GET /api/platform/backups/batches` lists recent batch metadata and
 `POST /api/platform/backups/batches/{batchId}/retry` creates a new idempotent attempt for a

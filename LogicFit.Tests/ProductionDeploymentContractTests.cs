@@ -81,4 +81,24 @@ public class ProductionDeploymentContractTests
         Assert.Contains("enable_backups", workflow, StringComparison.Ordinal);
         Assert.Contains("$arguments.EnableBackups = $true", workflow, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Protected_predeployment_backup_runs_in_process_and_uploads_only_private_files()
+    {
+        var workflow = File.ReadAllText(Path.Combine(RepositoryRoot, ".github", "workflows", "protected-backup.yml"));
+        var operatorProject = File.ReadAllText(Path.Combine(RepositoryRoot, "LogicFit.Operations", "LogicFit.Operations.csproj"));
+        var uploadScript = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "upload-private-backups.ps1"));
+
+        Assert.Contains("CREATE-PROTECTED-BACKUP", workflow, StringComparison.Ordinal);
+        Assert.Contains("environment: production", workflow, StringComparison.Ordinal);
+        Assert.Contains("LOGICFIT_PRODUCTION_DB_CONNECTION", workflow, StringComparison.Ordinal);
+        Assert.Contains("BackupScope.FullSystem", File.ReadAllText(Path.Combine(
+            RepositoryRoot, "LogicFit.Operations", "Program.cs")), StringComparison.Ordinal);
+        Assert.Contains("SHA256.HashDataAsync", File.ReadAllText(Path.Combine(
+            RepositoryRoot, "LogicFit.Operations", "Program.cs")), StringComparison.Ordinal);
+        Assert.Contains("App_Data\\PrivateBackups", uploadScript, StringComparison.Ordinal);
+        Assert.Contains("DoNotDeleteRule", uploadScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("upload-artifact", workflow, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("LogicFit.Infrastructure.csproj", operatorProject, StringComparison.Ordinal);
+    }
 }

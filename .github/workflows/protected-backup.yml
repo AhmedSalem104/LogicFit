@@ -1,0 +1,115 @@
+name: Ops - Protected Production Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Released master SHA used to build the protected operator'
+        required: true
+        type: string
+      confirm:
+        description: 'Type CREATE-PROTECTED-BACKUP to export and upload a FullSystem backup'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  protected-backup:
+    if: ${{ inputs.confirm == 'CREATE-PROTECTED-BACKUP' }}
+    runs-on: windows-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.image_tag }}
+          fetch-depth: 0
+
+      - name: Require the released master tree
+        shell: pwsh
+        run: |
+          git fetch origin master
+          if ((git rev-parse 'HEAD^{tree}') -ne (git rev-parse 'origin/master^{tree}')) {
+            throw "The protected backup operator must be built from tree-equivalent origin/master."
+          }
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore and build the protected operator
+        shell: pwsh
+        run: |
+          dotnet restore LogicFit.Operations/LogicFit.Operations.csproj
+          dotnet build LogicFit.Operations/LogicFit.Operations.csproj -c Release --no-restore
+
+      - name: Create and verify FullSystem BACPAC batch
+        id: backup
+        shell: pwsh
+        env:
+          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+          LOGICFIT_BACKUP_OUTPUT_ROOT: ${{ runner.temp }}\logicfit-predeploy-backup
+          LOGICFIT_BACKUP_RESULT_PATH: ${{ runner.temp }}\logicfit-predeploy-backup-result.json
+          LOGICFIT_BACKUP_IDEMPOTENCY_KEY: protected-predeploy:${{ github.run_id }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:LOGICFIT_PRODUCTION_DB_CONNECTION)) {
+            throw "LOGICFIT_PRODUCTION_DB_CONNECTION is required."
+          }
+          dotnet run --project LogicFit.Operations/LogicFit.Operations.csproj -c Release --no-build
+          $result = Get-Content -LiteralPath $env:LOGICFIT_BACKUP_RESULT_PATH -Raw | ConvertFrom-Json
+          if ($result.Status -ne 'Completed' -or [int]$result.ArtifactCount -le 0) {
+            throw "The protected FullSystem backup result is incomplete."
+          }
+          "batch_id=$($result.BatchId)" >> $env:GITHUB_OUTPUT
+          "artifact_count=$($result.ArtifactCount)" >> $env:GITHUB_OUTPUT
+
+      - name: Decode protected unified publish profile
+        shell: pwsh
+        env:
+          UNIFIED_PROFILE_B64: ${{ secrets.RUNASP_UNIFIED_PUBLISH_SETTINGS_B64 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:UNIFIED_PROFILE_B64)) {
+            throw "RUNASP_UNIFIED_PUBLISH_SETTINGS_B64 is required."
+          }
+          $profilePath = "$env:RUNNER_TEMP/unified.publishSettings"
+          $profilePayload = $env:UNIFIED_PROFILE_B64.Trim()
+          $xmlStart = $profilePayload.IndexOf('<')
+          if ($xmlStart -ge 0) {
+            $profilePayload = $profilePayload.Substring($xmlStart)
+            $profileDocument = [xml]$profilePayload
+            if ($null -eq $profileDocument.publishData.publishProfile) {
+              throw "The protected unified publish profile XML is invalid."
+            }
+            [IO.File]::WriteAllText($profilePath, $profilePayload, [Text.UTF8Encoding]::new($false))
+          }
+          else {
+            try { [IO.File]::WriteAllBytes($profilePath, [Convert]::FromBase64String($profilePayload)) }
+            catch [FormatException] { throw "The protected unified publish profile is invalid." }
+          }
+
+      - name: Upload verified backup files to private server storage
+        shell: pwsh
+        env:
+          BACKUP_ROOT: ${{ runner.temp }}\logicfit-predeploy-backup
+        run: |
+          .\Scripts\upload-private-backups.ps1 `
+            -PublishSettingsPath "$env:RUNNER_TEMP/unified.publishSettings" `
+            -ContentPath $env:BACKUP_ROOT
+
+      - name: Publish the protected backup reference
+        shell: pwsh
+        env:
+          BATCH_ID: ${{ steps.backup.outputs.batch_id }}
+          ARTIFACT_COUNT: ${{ steps.backup.outputs.artifact_count }}
+        run: |
+          "Protected FullSystem backup completed. Batch=$env:BATCH_ID; Artifacts=$env:ARTIFACT_COUNT; Reference=protected-webdeploy:$env:GITHUB_RUN_ID:$env:BATCH_ID" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Remove runner-local backup material
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          $backupRoot = Join-Path $env:RUNNER_TEMP 'logicfit-predeploy-backup'
+          if (Test-Path -LiteralPath $backupRoot) {
+            Remove-Item -LiteralPath $backupRoot -Recurse -Force
+          }
