@@ -26,6 +26,10 @@ exports are bounded by `Backup:MaxConcurrent` (clamped to 1-4), and each partial
 on failure.  Batch status is `Completed`, `Partial`, or `Failed` and each artifact records its own
 status, size, checksum, timestamps, and safe error code.
 
+Backup target resolution is fail-closed: if an active tenant mapping cannot be decrypted, the
+batch does not silently omit that tenant and report complete coverage. The API returns a safe
+service-unavailable result instructing the operator to repair the mapping before retrying.
+
 The existing `POST /api/platform/backups` remains a compatibility shortcut for a platform-only
 batch.  `GET /api/platform/backups/batches` lists recent batch metadata and
 `POST /api/platform/backups/batches/{batchId}/retry` creates a new idempotent attempt for a

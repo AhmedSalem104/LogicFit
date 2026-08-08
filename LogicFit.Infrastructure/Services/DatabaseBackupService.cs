@@ -304,9 +304,14 @@ public sealed class DatabaseBackupService(
                     item.resource.DatabaseName,
                     connectionStringProtector.Unprotect(item.mapping.EncryptedConnectionString)));
             }
-            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or CryptographicException)
             {
-                logger.LogWarning("A tenant database mapping could not be resolved for backup.");
+                logger.LogWarning(
+                    "A tenant database mapping could not be resolved for backup ({ExceptionType}); the batch is stopped to avoid false complete coverage.",
+                    ex.GetType().Name);
+                throw new InvalidOperationException(
+                    "A tenant database mapping could not be resolved for backup. Repair the mapping before retrying.",
+                    ex);
             }
         }
         return targets;

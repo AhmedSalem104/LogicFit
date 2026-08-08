@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Domain.Enums;
 using LogicFit.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -23,6 +24,13 @@ public sealed class TenantDatabaseMappingHealthCheck(
         {
             var resourceValues = await platformDb.DatabaseResources
                 .AsNoTracking()
+                // A faulted/retired/unallocated pool row is not used by request routing or a
+                // FullSystem backup. It is surfaced as a pool-operation problem instead of
+                // making the entire API readiness probe fail. Reserved, provisioning, and
+                // assigned resources remain fail-closed because they are runtime dependencies.
+                .Where(resource => resource.Status == DatabaseResourceStatus.Reserved ||
+                    resource.Status == DatabaseResourceStatus.Provisioning ||
+                    resource.Status == DatabaseResourceStatus.Assigned)
                 .Where(resource => !string.IsNullOrWhiteSpace(resource.EncryptedConnectionString))
                 .Select(resource => new ProtectedValue(
                     "database resource",

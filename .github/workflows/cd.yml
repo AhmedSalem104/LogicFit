@@ -485,6 +485,12 @@ jobs:
           LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
         run: .\Scripts\probe-production-migration-state.ps1
 
+      - name: Inspect protected resource state without writing
+        shell: powershell
+        env:
+          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+        run: .\Scripts\probe-protected-resource-state.ps1
+
       - name: Inspect candidate workspace state without writing
         shell: powershell
         env:
