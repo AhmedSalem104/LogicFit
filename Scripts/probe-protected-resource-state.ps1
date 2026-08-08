@@ -24,7 +24,6 @@ SELECT
     SUM(CASE WHEN m.[IsActive] = 1 THEN 1 ELSE 0 END) AS [ActiveMappingCount]
 FROM [dbo].[DatabaseResources] AS r
 LEFT JOIN [dbo].[TenantDatabaseMappings] AS m ON m.[DatabaseResourceId] = r.[Id]
-WHERE r.[IsDeleted] = 0
 GROUP BY r.[Id], r.[DatabaseName], r.[Status], r.[EncryptedConnectionString], r.[CreatedAt]
 ORDER BY r.[CreatedAt], r.[Id];
 
