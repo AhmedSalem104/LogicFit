@@ -66,40 +66,6 @@ public class SubscriptionLifecycleService : BackgroundService
     private async Task ProcessSubscriptionsUnderLock(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var execution = new LogicFit.Domain.Entities.JobExecutionLog
-        {
-            JobName = nameof(SubscriptionLifecycleService), Status = "Running", StartedAtUtc = DateTime.UtcNow, AttemptCount = 1
-        };
-        context.JobExecutionLogs.Add(execution);
-        await context.SaveChangesAsync(cancellationToken);
-
-        await ExpireSubscriptions(context, cancellationToken);
-        await UnfreezeSubscriptions(context, cancellationToken);
-        execution.Status = "Completed";
-        execution.CompletedAtUtc = DateTime.UtcNow;
-        await context.SaveChangesAsync(cancellationToken);
-    }
-
-    private async Task RecordAsync(string status, string? error, CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            context.JobExecutionLogs.Add(new LogicFit.Domain.Entities.JobExecutionLog
-            {
-                JobName = nameof(SubscriptionLifecycleService), Status = status, StartedAtUtc = DateTime.UtcNow,
-                CompletedAtUtc = DateTime.UtcNow, AttemptCount = 1, Error = error
-            });
-            await context.SaveChangesAsync(cancellationToken);
-        }
-        catch (Exception logEx) { _logger.LogError(logEx, "Unable to record subscription job execution"); }
-    }
-
-    private async Task ProcessSubscriptionsUnderLock(CancellationToken cancellationToken)
-    {
-        using var scope = _scopeFactory.CreateScope();
         var platform = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
         var resolver = scope.ServiceProvider.GetRequiredService<ITenantDatabaseResolver>();
         var tenantIds = await platform.TenantDatabaseMappings
