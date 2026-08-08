@@ -292,6 +292,7 @@ flowchart LR
 - `GET /api/platform/backups/{fileName}/download` streams an attachment only after the same platform-backup permission check. The filename must match the BACPAC naming contract and cannot contain a path; missing/invalid names return `404`. The backup directory remains under `App_Data` and is never a public static-files path.
 - After publishing the Issue #34 code, add the following non-secret section to the server-only `appsettings.Production.json`, retain the existing JWT/password-reset secrets, then recycle the application: `Backup:Enabled=true`, `Backup:StorageDirectory=App_Data/PrivateBackups`, `Backup:RetentionDays=7`, and `Backup:RunAtUtc=02:00:00`. Do not use the retired `Backup:Directory` setting and never place the export folder under `wwwroot`.
 - A BACPAC restore remains an explicit operator procedure using DacFx/SqlPackage against a reviewed target database; the application never performs automatic restore or database replacement.
+- Issue #239 follow-up (local task branch, not deployed): readiness now scopes protected-value checks to `Reserved`, `Provisioning`, and `Assigned` database resources, so unused `Faulted` pool rows do not take down the API. Full-system backup resolution fails closed when an active mapping cannot be decrypted instead of silently reporting incomplete coverage. Production still requires the released binary, `/health` HTTP 200, backup activation, and an authenticated FullSystem artifact/checksum/manifest verification before this is marked production-complete.
 
 ## Repository decomposition
 

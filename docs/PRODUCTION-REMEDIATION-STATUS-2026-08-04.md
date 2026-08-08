@@ -129,6 +129,27 @@ The pool is allocated by the server-side provisioning saga. A frontend does not 
 name or write a connection string directly into a tenant mapping. The Platform database remains
 the source of truth for resource availability and assignment.
 
+## Issue #239 readiness correction — 2026-08-08 (local task branch)
+
+The protected read-only production probe found four pool resources: two `Assigned` resources with
+active mappings and two `Faulted` resources with no active mappings. All four rows have protected
+connection material; the Platform database has one Data Protection key, two active mappings, and
+no backup batch or artifact records. Production `/health` remained HTTP 503 after the safe stdout
+diagnostic and rollback.
+
+The task branch corrects the readiness boundary so only `Reserved`, `Provisioning`, and `Assigned`
+resources used by runtime routing are included in the protected-value health check. Faulted,
+retired, maintenance, and other unallocated pool rows remain visible to the resource-operations
+surface and must be repaired before allocation, but they no longer make unrelated active tenants
+unavailable. Backup target resolution now fails closed with a safe `503` when an active mapping
+cannot be decrypted, preventing a false `Completed` full-system result.
+
+Local verification on the task branch: Release build passed, full test suite passed (`212/212`),
+focused remediation/backup tests passed (`14/14`), and both idempotent migration scripts generated
+successfully. The change is not deployed; Production health remains HTTP 503 until the released
+binary is published and recycled. No Production database, mapping, connection, backup, or restore
+was changed by this task branch.
+
 ## Follow-up GitHub issues
 
 The remaining work is intentionally tracked as separate issues so it can be closed with evidence:

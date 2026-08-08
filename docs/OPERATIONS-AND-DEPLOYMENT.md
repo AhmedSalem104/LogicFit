@@ -48,6 +48,12 @@ Restore capability is informational; `ManualOnly` must remain a manual operator 
 not authorize a mapping switch. A failed or missing batch must stop destructive or
 mapping-changing work until a verified backup and rollback plan exist.
 
+The readiness check validates protected values for resources that are currently `Reserved`,
+`Provisioning`, or `Assigned`. Faulted or otherwise unallocated pool rows remain an operator
+repair concern and are not request-routing dependencies. If an active mapping cannot be
+decrypted, backup target resolution fails closed with a safe error; it must never be silently
+omitted from a `FullSystem` batch.
+
 This implementation has no schema migration and no Production deployment. Before release, run CI,
 review the generated API catalog, verify the protected backup/migration/health/rollback gates, and
 perform a restore rehearsal only in an isolated target approved for that purpose.

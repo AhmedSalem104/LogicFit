@@ -43,4 +43,33 @@ public sealed class ProductionRemediationContractTests
         Assert.Contains("AffectedColumns = \"EncryptedConnectionString,LastValidatedAtUtc,LastHealthCheckAtUtc\"", source);
         Assert.Contains("resource.Status = DatabaseResourceStatus.Available", source);
     }
+
+    [Fact]
+    public void Readiness_checks_only_runtime_database_resources()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "LogicFit.Infrastructure",
+            "HealthChecks",
+            "TenantDatabaseMappingHealthCheck.cs"));
+
+        Assert.Contains("DatabaseResourceStatus.Reserved", source);
+        Assert.Contains("DatabaseResourceStatus.Provisioning", source);
+        Assert.Contains("DatabaseResourceStatus.Assigned", source);
+        Assert.Contains("faulted/retired/unallocated", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Backup_resolution_fails_closed_when_a_mapping_cannot_be_decrypted()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "LogicFit.Infrastructure",
+            "Services",
+            "DatabaseBackupService.cs"));
+
+        Assert.Contains("CryptographicException", source);
+        Assert.Contains("false complete coverage", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Repair the mapping before retrying", source, StringComparison.Ordinal);
+    }
 }
