@@ -3,6 +3,7 @@ using System.Text.Json;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Enums;
 using LogicFit.Infrastructure;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -57,12 +58,16 @@ try
     if (!status.IsEnabled || !status.IsReady)
         throw new InvalidOperationException("The protected backup service is not ready.");
 
+    Console.WriteLine("Protected backup service is ready.");
+
     var batch = await backupService.CreateBatchAsync(
         new BackupBatchRequest(
             BackupScope.FullSystem,
             IdempotencyKey: idempotencyKey,
             IncludePlatform: true),
         CancellationToken.None);
+
+    Console.WriteLine($"Protected FullSystem batch returned status {batch.Status} with {batch.Artifacts.Count} artifact(s).");
 
     if (!string.Equals(batch.Status, nameof(BackupBatchStatus.Completed), StringComparison.Ordinal) ||
         batch.Artifacts.Count == 0 ||
@@ -114,7 +119,11 @@ try
 catch (Exception exception)
 {
     // The operator process must never echo a connection string or a provider exception payload.
-    Console.Error.WriteLine($"Protected backup failed: {exception.GetType().Name}.");
+    var sqlException = exception as SqlException ?? exception.GetBaseException() as SqlException;
+    if (sqlException is not null)
+        Console.Error.WriteLine($"Protected backup failed: SqlException number {sqlException.Number}, class {sqlException.Class}, state {sqlException.State}.");
+    else
+        Console.Error.WriteLine($"Protected backup failed: {exception.GetType().Name}.");
     return 1;
 }
 
