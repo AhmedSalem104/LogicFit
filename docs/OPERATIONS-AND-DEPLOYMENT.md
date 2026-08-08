@@ -158,6 +158,15 @@ publish credentials:
   -HealthCheckUrl https://your-host/health
 ```
 
+If production has no existing verified backup, create the release gate first with the protected
+workflow `.github/workflows/protected-backup.yml`. Dispatch it against the exact released
+`origin/master` SHA using `confirm=CREATE-PROTECTED-BACKUP`. It runs the central FullSystem backup
+service, verifies every BACPAC checksum, and transfers the private files to
+`App_Data/PrivateBackups` through the protected unified WebDeploy profile. It does not upload
+BACPAC data to GitHub and never prints connection material. Pass its reported
+`protected-webdeploy:<run-id>:<batch-id>` reference to the deployment workflow, then require HTTP
+200/Healthy after publishing.
+
 ### Wallet and stock concurrency rollout (Issue #195, unreleased)
 
 Wallet debits/credits and their ledger rows commit in one database transaction. Stock

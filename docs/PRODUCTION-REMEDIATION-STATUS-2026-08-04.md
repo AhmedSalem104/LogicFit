@@ -150,6 +150,10 @@ successfully. The change is not deployed; Production health remains HTTP 503 unt
 binary is published and recycled. No Production database, mapping, connection, backup, or restore
 was changed by this task branch.
 
+The release gate now also contains a protected pre-deployment backup operator. It invokes the
+central FullSystem backup service, verifies artifact checksums, and transfers only private backup
+files to the server; no BACPAC is committed or uploaded as a GitHub artifact.
+
 ## Follow-up GitHub issues
 
 The remaining work is intentionally tracked as separate issues so it can be closed with evidence:
