@@ -24,6 +24,11 @@ The user-facing canonical Backend workspace is
 implementation-isolation folders for preserving unrelated changes; they are not separate projects
 and must never become the only local location where completed files are visible.
 
+This exact canonical workspace is the source used by the user to publish the project to Monster
+through Visual Studio. It must be kept synchronized with the approved release/merge target before
+any publish handoff; a change verified only in another worktree, branch checkout, or generated
+publish folder is not publish-ready.
+
 - Announce the exact path and branch whenever a temporary worktree is created, and state why the
   canonical workspace cannot safely be used for that task.
 - Before creating a branch, compare its start commit with `origin/develop`. A failed fast-forward is
