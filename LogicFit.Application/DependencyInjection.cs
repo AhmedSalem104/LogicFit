@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<IRbacService, RbacService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         services.AddScoped<IdentityEmailActionService>();
+        services.AddScoped<LegacyIdentityMigrationService>();
         services.AddScoped<ITenantSubscriptionGuard, TenantSubscriptionGuard>();
         services.AddScoped<ITenantAccessGuard, TenantAccessGuard>();
         services.AddScoped<ICommissionService, CommissionService>();

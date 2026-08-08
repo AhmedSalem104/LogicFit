@@ -12,6 +12,7 @@ namespace LogicFit.Infrastructure.Services;
 public sealed class R2FileUploadService : IFileUploadService
 {
     private static readonly HashSet<string> ImageExtensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"];
+    private static readonly HashSet<string> DocumentExtensions = [".jpg", ".jpeg", ".png", ".pdf"];
     private static readonly HashSet<string> VideoExtensions = [".mp4", ".webm", ".mov", ".avi"];
     private readonly IAmazonS3 _s3;
     private readonly IConfiguration _configuration;
@@ -29,6 +30,7 @@ public sealed class R2FileUploadService : IFileUploadService
     }
 
     public Task<string> UploadImageAsync(IFormFile file, string? subfolder = null) => UploadAsync(file, "images", ImageExtensions, 5 * 1024 * 1024, subfolder);
+    public Task<string> UploadDocumentAsync(IFormFile file, string? subfolder = null) => UploadAsync(file, "documents", DocumentExtensions, 10 * 1024 * 1024, subfolder);
     public Task<string> UploadVideoAsync(IFormFile file, string? subfolder = null) => UploadAsync(file, "videos", VideoExtensions, 100 * 1024 * 1024, subfolder);
 
     public async Task<List<string>> UploadImagesAsync(List<IFormFile> files, string? subfolder = null)
@@ -62,7 +64,14 @@ public sealed class R2FileUploadService : IFileUploadService
         if (file.Length > maxBytes) throw new ArgumentException($"File size exceeds maximum allowed size of {maxBytes / 1024 / 1024}MB");
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (!extensions.Contains(extension)) throw new ArgumentException("File format is not allowed");
-        if (!string.IsNullOrWhiteSpace(file.ContentType) && !file.ContentType.StartsWith(type == "images" ? "image/" : "video/", StringComparison.OrdinalIgnoreCase))
+        var contentTypeAllowed = type switch
+        {
+            "images" => file.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) == true,
+            "videos" => file.ContentType?.StartsWith("video/", StringComparison.OrdinalIgnoreCase) == true,
+            "documents" => file.ContentType is "image/jpeg" or "image/png" or "application/pdf",
+            _ => false
+        };
+        if (!string.IsNullOrWhiteSpace(file.ContentType) && !contentTypeAllowed)
             throw new ArgumentException("File content type is not allowed");
         if (!string.IsNullOrWhiteSpace(subfolder) && subfolder.Split('/', '\\').Any(x => x is "." or "..")) throw new ArgumentException("Invalid upload subfolder");
 

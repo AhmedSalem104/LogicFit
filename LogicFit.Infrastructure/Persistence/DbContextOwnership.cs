@@ -80,60 +80,13 @@ public static class DbContextOwnership
         foreach (var entityType in TenantEntities.Where(t => typeof(ITenantEntity).IsAssignableFrom(t)))
         {
             var method = typeof(DbContextOwnership)
-                .GetMethod(
-                    typeof(ISoftDeletable).IsAssignableFrom(entityType)
-                        ? nameof(ApplyTenantSoftDeleteQueryFilter)
-                        : nameof(ApplyTenantQueryFilter),
-                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!
+                .GetMethod(nameof(ApplyTenantQueryFilter), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!
                 .MakeGenericMethod(entityType);
             method.Invoke(null, new object[] { builder, tenantId });
-        }
-
-        // Some tenant-local reference entities intentionally allow a null TenantId for global
-        // catalog rows copied into each workspace database.  A tenant DB must still see only its
-        // own overrides plus the global rows.
-        ApplyNullableTenantSoftDeleteQueryFilter<Food>(builder, tenantId);
-        ApplyNullableTenantSoftDeleteQueryFilter<Exercise>(builder, tenantId);
-        ApplyNullableTenantSoftDeleteQueryFilter<Role>(builder, tenantId);
-        builder.Entity<UserRoleAssignment>()
-            .HasQueryFilter(entity => entity.TenantId == tenantId);
-
-        // Tenant-local reference tables without a TenantId still need their soft-deleted rows
-        // hidden by default. IgnoreQueryFilters remains available for explicit maintenance jobs.
-        foreach (var entityType in TenantEntities.Where(t =>
-                     !typeof(ITenantEntity).IsAssignableFrom(t) &&
-                     typeof(ISoftDeletable).IsAssignableFrom(t) &&
-                     IsNotNullableTenantEntity(t)))
-        {
-            var method = typeof(DbContextOwnership)
-                .GetMethod(nameof(ApplySoftDeleteQueryFilter), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!
-                .MakeGenericMethod(entityType);
-            method.Invoke(null, new object[] { builder });
         }
     }
 
     private static void ApplyTenantQueryFilter<TEntity>(ModelBuilder builder, Guid tenantId)
         where TEntity : class, ITenantEntity
         => builder.Entity<TEntity>().HasQueryFilter(entity => entity.TenantId == tenantId);
-
-    private static void ApplyTenantSoftDeleteQueryFilter<TEntity>(ModelBuilder builder, Guid tenantId)
-        where TEntity : class, ITenantEntity, ISoftDeletable
-        => builder.Entity<TEntity>().HasQueryFilter(entity =>
-            entity.TenantId == tenantId && !entity.IsDeleted);
-
-    private static void ApplyNullableTenantSoftDeleteQueryFilter<TEntity>(ModelBuilder builder, Guid tenantId)
-        where TEntity : class, ISoftDeletable
-        => builder.Entity<TEntity>().HasQueryFilter(entity =>
-            !entity.IsDeleted &&
-            (EF.Property<Guid?>(entity, "TenantId") == null ||
-             EF.Property<Guid?>(entity, "TenantId") == tenantId));
-
-    private static void ApplySoftDeleteQueryFilter<TEntity>(ModelBuilder builder)
-        where TEntity : class, ISoftDeletable
-        => builder.Entity<TEntity>().HasQueryFilter(entity => !entity.IsDeleted);
-
-    private static bool IsNotNullableTenantEntity(Type entityType)
-        => entityType != typeof(Food) &&
-           entityType != typeof(Exercise) &&
-           entityType != typeof(Role);
 }

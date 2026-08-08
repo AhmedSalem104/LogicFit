@@ -25,6 +25,12 @@ Migration `20260730143000_AddIdentityEmailSecurity` is additive and guards for e
 
 Production schema state is advanced only by the explicit deployment migration stage. The stage compares the released migration plan with the target database, requires a verified BACPAC reference, applies the EF lineage before publishing the API, and verifies that no migration remains pending. Application startup never mutates the schema.
 
+Identity login is also a data-consistency boundary for Gym ownership: when a Gym is already
+`Active` but its owner `WorkspaceMembership` still has `PendingPlatformApproval` from an older
+release, the session issuer promotes only that owner membership to `Active` and records the
+reconciliation timestamp/actor. This is an idempotent data repair with no schema migration; client
+memberships in `PendingWorkspaceApproval` remain unchanged.
+
 لا ينبغي للـController أن ينفذ قرار Domain معقداً. يحول الطلب إلى Command/Query؛
 المعاملات والـConcurrency والتحقق من الملكية تكون في الطبقات المناسبة.
 
@@ -46,10 +52,24 @@ Production schema state is advanced only by the explicit deployment migration st
 | `OutboxMessage`, `JobExecutionLog` | موثوقية الأحداث والأعمال الخلفية. | لا حذف يدوي؛ معالجة/أرشفة فقط. |
 | `AuditLog`/سجلات تدقيق التطبيق | أثر كل تغيير حساس. | append-only؛ لا تعديل/حذف. |
 
-When an already-active Gym has a legacy pending owner membership, the identity session issuer may
-promote only that Gym owner membership to `Active` as a narrow, idempotent compatibility repair.
-The repair records `ApprovedAt` and `ApprovedBy=identity-login-reconciliation`; it does not promote
-client memberships or delete/recreate the Global Identity.
+## عقد حالة التفعيل في طابور المنصة (Issues #244/#245)
+
+طلبات إنشاء المساحات لا تستخدم `Active` كاختصار لكل المراحل. إسقاط الحالة المعروض في
+`PlatformApplicationDto` يفصل القيم التالية:
+
+| الحقل | مصدره | المعنى التشغيلي |
+|---|---|---|
+| `applicationStatus` | `ApplicationRequest` | مسودة، مقدم، مراجعة، استكمال، مقبول أو مرفوض |
+| `paymentStatus` | `PaymentRequest` | حالة إثبات/قرار الدفع؛ الاعتماد لا يساوي التفعيل |
+| `workspaceStatus` | `Tenant` | دورة مساحة الجيم أو المدرب الحر |
+| `subscriptionStatus` | `TenantSubscription` | دورة اشتراك SaaS المستقلة |
+| `databaseStatus` / `databaseStatusCode` | `DatabaseResource`/mapping/provisioning job | السعة والتجهيز والتخصيص دون كشف بيانات الاتصال؛ الرمز التشغيلي يميز `Unassigned`, `Provisioning`, `Ready`, `Unavailable`, `Failed`, و`Released` |
+| `provisioningStatus` | `ProvisioningJob` | نتيجة التجهيز وإمكانية إعادة المحاولة |
+| `canAccessDashboard` | تقاطع الاشتراك والقاعدة والعضوية والمساحة | قرار الوصول النهائي فقط، وليس قيمة `Tenant.Status` منفردة |
+
+إعادة المحاولة تعيد استخدام `ApplicationRequestId` و`ProvisioningJob.IdempotencyKey` ولا تنشئ
+Tenant أو Subscription أو Identity أو Mapping جديدة. `FreelanceCoach` يستخدم نفس الكيانات مع
+`WorkspaceType=FreelanceCoach` وعضوية `FreelanceOwner` مستقلة عن أي Gym.
 
 كيانات الصالة ترث في الغالب من `TenantAuditableEntity`: العملاء، الفروع، الحضور،
 البرامج، التغذية، المدفوعات، المخزون، الموظفون وغيرها. هذا يجعل `TenantId` وحد
@@ -115,20 +135,3 @@ Migration التنسيق يوقف التطبيق إذا كانت هناك مفا
 أضف Logs وMetrics وAlerts لفشل المدفوعات، Jobs، Outbox وانتقالات حالات الاشتراك.
 قبل نشر Migration كبير: Dry Run، Backup، تقرير مخالفات، Rollback Test وFeature Flag
 للتفعيل التدريجي.
-# Runtime database ownership (Issue #208 task branch)
-
-The target storage boundary is now enforced at request time for mapped workspaces:
-
-- Platform DB owns identity, workspace lifecycle, memberships, subscriptions, payments,
-  provisioning, resource-pool rows, mappings, backups and platform RBAC.
-- One Tenant DB owns all operational rows for a Gym or Freelance Workspace. Coach, Assistant,
-  Owner and Client rows in that workspace share the same database.
-- `TenantDatabaseRoutingMiddleware` resolves the authenticated TenantId through Platform DB before
-  authorization. A missing or stale mapping returns `TENANT_DATABASE_UNAVAILABLE`; it must not
-  read the legacy shared store.
-- The connection string is decrypted only in memory, and Data Protection keys are persisted at a
-  durable operator-configured path.
-
-Existing shared tenant rows still need the explicit backed-up transfer and reconciliation job
-described in [TENANT-DATABASE-RUNTIME-CUTOVER.md](TENANT-DATABASE-RUNTIME-CUTOVER.md) before the
-cutover is declared Production-complete.

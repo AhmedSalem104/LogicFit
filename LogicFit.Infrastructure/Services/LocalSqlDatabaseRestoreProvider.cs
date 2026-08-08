@@ -15,7 +15,7 @@ namespace LogicFit.Infrastructure.Services;
 /// creates or deletes a database through an external hosting API.
 /// </summary>
 public sealed class LocalSqlDatabaseRestoreProvider(
-    PlatformDbContext db,
+    ApplicationDbContext db,
     IBackupService backupService,
     IConnectionStringProtector protector,
     IConfiguration configuration,

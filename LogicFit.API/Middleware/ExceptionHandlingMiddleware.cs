@@ -79,23 +79,17 @@ public class ExceptionHandlingMiddleware
                 (IDictionary<string, string[]>?)null,
                 (string?)planLimitEx.Code
             ),
-            ProvisioningException provisioningEx => (
-                provisioningEx.StatusCode,
-                provisioningEx.Message,
-                (IDictionary<string, string[]>?)null,
-                (string?)provisioningEx.Code
-            ),
             SubscriptionLimitException => (
                 StatusCodes.Status402PaymentRequired,
                 exception.Message,
                 (IDictionary<string, string[]>?)null,
                 (string?)null
             ),
-            ConflictException => (
+            ConflictException conflictEx => (
                 StatusCodes.Status409Conflict,
                 exception.Message,
                 (IDictionary<string, string[]>?)null,
-                (string?)null
+                (string?)conflictEx.Code
             ),
             DbUpdateConcurrencyException => (
                 StatusCodes.Status409Conflict,

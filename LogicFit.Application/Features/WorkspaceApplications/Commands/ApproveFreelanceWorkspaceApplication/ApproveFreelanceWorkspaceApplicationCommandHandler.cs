@@ -1,6 +1,5 @@
 using System.Text.Json;
 using LogicFit.Application.Common.Interfaces;
-using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.WorkspaceApplications.DTOs;
 using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
@@ -46,24 +45,24 @@ public sealed class ApproveFreelanceWorkspaceApplicationCommandHandler
             .FirstOrDefaultAsync(x => x.Id == request.ApplicationId, cancellationToken)
             ?? throw new NotFoundException(nameof(ApplicationRequest), request.ApplicationId);
 
-        if (application.ApplicationType != ApplicationType.FreelanceWorkspaceCreation)
-            throw new ConflictException("This approval endpoint only provisions freelance workspaces.");
+        if (application.ApplicationType is not (ApplicationType.FreelanceWorkspaceCreation or ApplicationType.GymWorkspaceCreation))
+            throw new ConflictException("This endpoint only provisions Gym or FreelanceCoach workspaces.");
 
         if (application.Status == ApplicationRequestStatus.Approved)
         {
             if (application.ProvisionedWorkspaceId.HasValue)
-            {
-                var retryOutcome = await _provisioningSaga.RunAsync(application.Id, cancellationToken);
-                ProvisioningOutcomeGuard.EnsureCompleted(retryOutcome);
-            }
+                await _provisioningSaga.RunAsync(application.Id, cancellationToken);
             return PlatformApplicationMapper.ToDto(application, application.IdentityAccount.Email, application.IdentityAccount.PhoneNumber);
         }
 
         if (!ApplicationRequestStateMachine.CanTransition(application.Status, ApplicationRequestStatus.Approved))
             throw new ConflictException("This application cannot be approved.");
 
+        var ownerRole = application.ApplicationType == ApplicationType.FreelanceWorkspaceCreation
+            ? SystemRoles.FreelanceOwner
+            : SystemRoles.Owner;
         if (!await _context.AppRoles.IgnoreQueryFilters().AnyAsync(
-                x => x.TenantId == null && x.Name == SystemRoles.FreelanceOwner && !x.IsDeleted,
+                x => x.TenantId == null && x.Name == ownerRole && !x.IsDeleted,
                 cancellationToken))
         {
             throw new ConflictException("Freelance roles are not seeded yet.");
@@ -84,8 +83,7 @@ public sealed class ApproveFreelanceWorkspaceApplicationCommandHandler
         application.ReviewedAt = _dateTimeService.UtcNow;
         application.ReviewedBy = _currentUserService.UserId;
         await _context.SaveChangesAsync(cancellationToken);
-        var provisioning = await _provisioningSaga.RunAsync(application.Id, cancellationToken);
-        ProvisioningOutcomeGuard.EnsureCompleted(provisioning);
+        await _provisioningSaga.RunAsync(application.Id, cancellationToken);
 
         return PlatformApplicationMapper.ToDto(application, application.IdentityAccount.Email, application.IdentityAccount.PhoneNumber);
     }
@@ -111,7 +109,9 @@ public sealed class ApproveFreelanceWorkspaceApplicationCommandHandler
         {
             Name = string.IsNullOrWhiteSpace(payload.BrandName) ? payload.WorkspaceName : payload.BrandName,
             Subdomain = payload.WorkspaceIdentifier,
-            WorkspaceType = WorkspaceType.FreelanceCoach,
+            WorkspaceType = application.ApplicationType == ApplicationType.FreelanceWorkspaceCreation
+                ? WorkspaceType.FreelanceCoach
+                : WorkspaceType.Gym,
             Status = TenantStatus.Provisioning,
             Email = application.IdentityAccount.Email,
             PhoneNumber = application.IdentityAccount.PhoneNumber,
@@ -149,11 +149,5 @@ public sealed class ApproveFreelanceWorkspaceApplicationCommandHandler
         {
             throw new ValidationException("Payload", "The freelance application payload is invalid.");
         }
-    }
-
-    private static void ThrowIfDatabaseCapacityIsUnavailable(WorkspaceProvisioningOutcome outcome)
-    {
-        if (outcome.Status == ProvisioningJobStatus.AwaitingDatabaseCapacity)
-            throw new ConflictException("لا توجد قاعدة بيانات متاحة أضف Connection جديدا أولا.");
     }
 }

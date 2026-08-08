@@ -24,22 +24,33 @@ Backend and Platform Dashboard together because `/api/platform/auth/login` retur
 directly and no OTP verification call is valid. Do not add OTP, Phone Login, Passkey, or WebAuthn
 secrets to the server. No Production deployment or migration was performed by this change.
 
-## Tenant approval and existing owner memberships (Issue #210)
+## Tenant approval and existing owner memberships (Issues #210 and #217)
 
 When a Gym is approved or activated through `/api/platform/tenants/{id}/activate`, the Backend
 also promotes its non-deleted owner membership from `PendingPlatformApproval` to `Active`. The
-operation is idempotent and requires no schema migration. After releasing this behavior, an
-already-`Active` Gym with a pending owner membership should be repaired by repeating that
-protected Platform `activate` action; do not update `WorkspaceMemberships` directly in Production.
+operation is idempotent and requires no schema migration. The identity login issuer also repairs
+an already-`Active` Gym with a pending owner membership on the next successful owner login, so
+the owner receives the workspace context and is routed to workspace selection automatically.
+The repair is restricted to the Gym owner membership; do not update `WorkspaceMemberships`
+directly in Production.
 
-## Identity login reconciliation (Issue #217)
+## Backup admin screen and batch evidence (Issue #239)
 
-The identity login path contains a fail-safe compatibility repair for an already-`Active` Gym
-whose non-deleted owner membership remained `PendingPlatformApproval` from an earlier release. On
-the first successful login it promotes only that owner membership, records
-`ApprovedBy=identity-login-reconciliation` and the current UTC time, then continues through the
-normal active-user and workspace checks. Client or non-owner pending memberships are not changed.
-This is a data repair with no EF migration; deploy the Backend before validating the login response.
+The existing Platform Admin `/backups` screen is the operator entry point for the server-owned
+backup batches. `FullSystem` resolves the platform database and every active assigned tenant
+mapping; `AllTenants`, `AllGyms`, `AllFreelance`, and `Platform` are explicit alternatives. The
+server returns per-artifact status, size, safe storage key, SHA-256 and manifest reference. Batch
+start/finish events are written to the Platform Audit Log.
+
+Creation and retry require confirmation. Retry is limited to `Failed` or `Partial` batches. The
+screen never renders connection material, credentials, raw exceptions, or absolute storage paths.
+Restore capability is informational; `ManualOnly` must remain a manual operator handoff and does
+not authorize a mapping switch. A failed or missing batch must stop destructive or
+mapping-changing work until a verified backup and rollback plan exist.
+
+This implementation has no schema migration and no Production deployment. Before release, run CI,
+review the generated API catalog, verify the protected backup/migration/health/rollback gates, and
+perform a restore rehearsal only in an isolated target approved for that purpose.
 
 ## بيئات ومكونات النشر
 
@@ -189,6 +200,25 @@ Never leave stdout enabled after diagnosis. Never upload captured stdout as an a
 contain authentication payloads. Rotate exposed application credentials and remove or redact the
 affected server logs through an explicitly approved operator action.
 
+Before retrying a backup activation after a failed recovery, use the protected CD dispatch value
+`DIAGNOSE-PRODUCTION-HEALTH`. This read-only job runs `SELECT 1` through the protected production
+database connection and then requires the configured HTTPS `/health` endpoint to return `Healthy`.
+It does not run WebDeploy, migrations, configuration writes, or backup exports. Do not dispatch
+`RECOVER-PRODUCTION-STARTUP` with `enable_backups=true` until both diagnostic checks pass.
+
+When the exact Monster site still returns `503 Unhealthy` while the protected database and IIS
+metadata probes pass, use `DIAGNOSE-MONSTER-LOGS` on the verified site. This operation temporarily
+enables ASP.NET Core stdout logging in the existing `web.config`, recycles the site through the
+normal WebDeploy sync, reads only safe root-cause categories from the resulting files, and restores
+the original `web.config` in a `finally` block. It never uploads raw stdout, prints log contents,
+changes application configuration or database data, or enables backups. The operation is still
+subject to the post-rollback `/health` gate; a remaining `503` is recorded as an incident blocker.
+The protected job also runs an EF pending-migration probe in read-only mode; it reports only the
+count/ids or the exception type, never applies a migration. A database permission failure must be
+handled through the approved database operator procedure and a verified backup/migration review.
+The same diagnostic reports only whether IIS `web.config` contains connection-string or Redis
+environment-variable overrides; it never prints their values.
+
 The connection is read from `LOGICFIT_PRODUCTION_DB_CONNECTION` in the current protected process and is passed to the EF design-time factory through the short-lived `LOGICFIT_EF_CONNECTION_STRING` operator variable. Without that explicit override, EF remains pinned to LocalDB and cannot reach production accidentally. The GitHub `production` Environment must store the production secret together with `RUNASP_UNIFIED_PUBLISH_SETTINGS_B64` and `RUNASP_UNIFIED_HEALTHCHECK_URL`. The manual workflow also requires `backup_reference`, `migration_review=MIGRATIONS-REVIEWED`, and `confirm=DEPLOY-PRODUCTION`. `-ApproveDestructiveMigrationReview` is used only after reviewing a plan containing intentional `DROP`, `DELETE`, or `TRUNCATE` statements.
 
 The protected WebDeploy secret may contain either the Base64-encoded publish-settings file or the
@@ -208,6 +238,15 @@ operator flow. Never disable startup migration merely to bypass a pending schema
 5. انشر Dashboard المبني من البيئة التي تشير إلى API الصحيح.
 6. اختبر الدخول، لوحة المتابعة، خطط المنصة، تنبيهات، Jobs، ونسخة احتياطية من حساب
    Platform Owner محدود للاختبار.
+
+### Workspace onboarding release gate (Issues #244/#245)
+
+تغيير عقد `workspace-applications` يحتاج نشر الـBackend والـDashboard كإصدار متوافق. قبل
+التفعيل التشغيلي راجع أن قائمة الطلبات تستخدم `approve-workspace` لمساحات Gym/FreelanceCoach
+ولا تستخدم `approve-membership`، ثم نفّذ smoke checks للحالات التالية: pending payment، under
+review، more information، provisioning، provisioning failed/retry، active access، suspended،
+expired، وقاعدة بيانات غير متاحة. يجب أن تكون `/health` HTTP 200 و`Healthy` بعد كل تعديل/نشر؛
+لا تُختبر هذه الرحلة بإنشاء Tenant أو Mapping في Production دون backup ونافذة تشغيل معتمدة.
 
 ### Redis cache and distributed request controls (Issue #197)
 
@@ -275,65 +314,6 @@ CI يعمل على الفروع وPull Requests ويتحقق من البناء �
 - Before switching the value to `false`, deploy the verified-email legacy-linking phase, measure remaining legacy-compatible sessions, verify account-recovery support, and test login, refresh, workspace selection, suspended membership, and inactive identity behavior in the production-like environment.
 - Treat a spike in `IDENTITY_MIGRATION_REQUIRED`, `WORKSPACE_MEMBERSHIP_INACTIVE`, `IDENTITY_ACCOUNT_INACTIVE`, or `WORKSPACE_ACCOUNT_INACTIVE` as an operator-review signal. Do not work around it by re-enabling users or memberships without an audited decision.
 - Cancellation access is evaluated against `EndDate` at request time. Test a cancelled workspace before and at the end date during rollout; it must be full before the end date and read-only at/after it.
-
-## Issue #208 Platform/Tenant runtime cutover (task branch)
-
-Before enabling mapped-workspace routing in Production:
-
-1. Apply the `PersistDataProtectionKeys` Platform migration. The central Platform database is
-   the authoritative Data Protection key store; keep `DataProtection:KeyDirectory` (or
-   `DataProtection__KeyDirectory`) on the durable `App_Data/DataProtection-Keys` mirror and never
-   deploy it as a disposable directory.
-2. Register and test every prepared database through `DatabaseResources`; only the protected
-   value is stored in `DatabaseResources`/`TenantDatabaseMappings`.
-3. Run the reviewed Tenant migration and the explicit existing-workspace transfer. Reconcile
-   counts and foreign-key IDs before enabling a tenant mapping.
-4. Set `Database:TenantRouting:Enabled=true` and keep
-   `Database:TenantRouting:FailClosedWithoutMapping=true`.
-5. Verify `/health`, one Gym request, one Freelance request, and a negative isolation request.
-
-The routing layer returns `503 TENANT_DATABASE_UNAVAILABLE` for an authenticated workspace with
-no valid mapping. This is intentional and is safer than allowing old shared rows to be read. The
-task branch has no Production deployment or data change claim.
-
-## Protected gym provisioning verification (Issue #226)
-
-A new gym is a persistent Platform provisioning job, not a request-scoped best-effort operation.
-Before asking an operator to retry, inspect `/api/platform/operations/provisioning` and the
-database-resource lifecycle state. Treat these response codes as operationally distinct:
-
-| Code | HTTP | Action |
-|---|---:|---|
-| `DATABASE_CAPACITY_UNAVAILABLE` | 409 | Add or repair an `Available` resource, then retry the same idempotent request. |
-| `DATABASE_CONNECTION_NOT_CONFIGURED`, `DATABASE_MAPPING_INVALID`, `TENANT_DATABASE_HEALTH_CHECK_FAILED` | 503 | Repair the identified resource/mapping and retry the existing provisioning job. |
-| `TENANT_PROVISIONING_FAILED` | 503 | Review the job/resource identifiers and safe server logs; do not create a second gym. |
-| `IDEMPOTENCY_KEY_REUSED` | 409 | Keep the original request body; a key cannot be reused for another gym. |
-
-The client must send the same `Idempotency-Key` and body after a timeout or retryable response. The
-API returns `requestId` and safe `details`; connection material, passwords, provider exception
-messages, and raw payloads must not be copied into UI telemetry. A production validation must be
-performed only after a verified backup and an approved maintenance window, using a disposable
-operator-selected gym/resource and the post-deploy smoke procedure.
-
-The complete repeatable command, gates, evidence fields, and safe failure behavior are documented
-in [POST-DEPLOY-SMOKE.md](POST-DEPLOY-SMOKE.md). The script is protected by a verified backup,
-operator approval, explicit resource IDs, HTTPS, and `-AllowMutations`; it must not be run as an
-unattended deployment step.
-
-## 2026-08-05 Backup admin-screen audit checkpoint
-
-The existing Platform Dashboard `/backups` screen is a partial platform-only BACPAC workflow. It
-does not yet provide the per-Tenant/full-Platform batch selection, per-artifact checksum/manifest
-verification, batch retry history, or restore-capability view required by Issue #239. The Backend
-batch and restore contracts remain server-side capabilities; they must not be described as a
-completed operator workflow until the Dashboard contract is wired, tested, and separately verified.
-
-The implementation must begin with the Backend contract and tests, then extend the existing screen.
-It must preserve the rules in this document: no connection material in client/API evidence, no
-automatic restore on a `ManualOnly` provider, no mapping/resource mutation during UI work, and no
-Production deployment without a verified backup, reviewed migration state, CI, health checks, and
-rollback approval. See
-[BACKUP-ADMIN-SCREEN-REVIEW-2026-08-05.md](BACKUP-ADMIN-SCREEN-REVIEW-2026-08-05.md).
 
 ## Rollback
 

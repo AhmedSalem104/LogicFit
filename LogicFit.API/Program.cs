@@ -220,11 +220,6 @@ using (var scope = app.Services.CreateScope())
     var migrator = scope.ServiceProvider.GetRequiredService<StartupDatabaseMigrator>();
     await migrator.ApplyPendingMigrationsAsync(app.Lifetime.ApplicationStopping);
 
-    // Import any legacy App_Data keys before the Data Protection provider is first used. The
-    // central Platform database is authoritative from this point forward.
-    var keyRingBootstrapper = scope.ServiceProvider.GetRequiredService<DataProtectionKeyRingBootstrapper>();
-    await keyRingBootstrapper.SynchronizeAsync(app.Lifetime.ApplicationStopping);
-
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
 
     // Check if force reset of foods is requested (to fix identity issues)
@@ -273,11 +268,6 @@ app.UseAuthentication();
 // Tenant must be resolved BEFORE authorization so permission checks and query filters
 // see the current tenant.
 app.UseTenant();
-
-// Resolve the assigned workspace database before identity gates, authorization, or handlers can
-// access tenant-owned data. Missing mappings fail closed instead of falling back to the legacy
-// shared database.
-app.UseTenantDatabaseRouting();
 
 // Identity and membership are a separate boundary from subscription and permissions. Linked
 // accounts are enforced immediately and unlinked legacy sessions fail closed.

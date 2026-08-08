@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Common.Services;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Infrastructure.Persistence;
@@ -20,10 +21,12 @@ namespace LogicFit.Infrastructure.Services;
 /// database names or connection strings.
 /// </summary>
 public sealed class DatabaseBackupService(
-    PlatformDbContext db,
+    ApplicationDbContext db,
     IConfiguration configuration,
     IHostEnvironment environment,
     IConnectionStringProtector connectionStringProtector,
+    ICurrentUserService currentUser,
+    IDateTimeService clock,
     ILogger<DatabaseBackupService> logger,
     TimeProvider timeProvider) : IBackupService
 {
@@ -119,6 +122,8 @@ public sealed class DatabaseBackupService(
             throw new ArgumentException("Backup scope is invalid.", nameof(request));
         if (request.Scope == BackupScope.SelectedTenants && (request.TenantIds is null || request.TenantIds.Count == 0))
             throw new ArgumentException("SelectedTenants requires at least one tenant.", nameof(request));
+        if (request.TenantIds?.Any(id => id == Guid.Empty) == true)
+            throw new ArgumentException("Tenant identifiers must be non-empty.", nameof(request));
         if (!TryGetSettings(out var settings, out var reason))
             throw new InvalidOperationException(reason);
 
@@ -164,6 +169,7 @@ public sealed class DatabaseBackupService(
                 }).ToList()
             };
             db.BackupBatches.Add(batch);
+            SecurityAuditLog.Add(db, currentUser, clock, "PlatformBackupBatchStarted", true, batch.Id);
             await db.SaveChangesAsync(cancellationToken);
 
             var maxConcurrent = Math.Clamp(configuration.GetValue("Backup:MaxConcurrent", 2), 1, 4);
@@ -197,6 +203,8 @@ public sealed class DatabaseBackupService(
             await WriteManifestAsync(manifestPath, batch, cancellationToken);
             batch.ManifestStorageKey = manifestName;
             PruneExpiredBackups(settings.StorageDirectory, settings.RetentionDays);
+            SecurityAuditLog.Add(db, currentUser, clock, "PlatformBackupBatchFinished",
+                batch.Status == BackupBatchStatus.Completed, batch.Id);
             await db.SaveChangesAsync(cancellationToken);
             return ToDto(batch);
         }
@@ -230,17 +238,23 @@ public sealed class DatabaseBackupService(
         if (batch.Status is not (BackupBatchStatus.Failed or BackupBatchStatus.Partial))
             throw new InvalidOperationException("Only failed or partial backup batches can be retried.");
 
-        var tenantIds = batch.Artifacts.Where(x => x.TenantId.HasValue).Select(x => x.TenantId!.Value).ToArray();
+        var failedArtifacts = batch.Artifacts
+            .Where(x => x.Status != DatabaseBackupStatus.Completed)
+            .ToList();
+        var tenantIds = failedArtifacts.Where(x => x.TenantId.HasValue)
+            .Select(x => x.TenantId!.Value).ToArray();
         return await CreateBatchAsync(
             new BackupBatchRequest(batch.Scope, tenantIds,
-                $"retry:{batch.Id:N}:{timeProvider.GetUtcNow():yyyyMMddHHmmss}"),
+                $"retry:{batch.Id:N}:{timeProvider.GetUtcNow():yyyyMMddHHmmss}",
+                IncludePlatform: failedArtifacts.Any(x => !x.TenantId.HasValue)),
             cancellationToken);
     }
 
     private async Task<IReadOnlyList<BackupTarget>> ResolveTargetsAsync(BackupBatchRequest request, CancellationToken cancellationToken)
     {
         var targets = new List<BackupTarget>();
-        if (request.Scope is BackupScope.Platform or BackupScope.FullSystem)
+        if (request.Scope == BackupScope.Platform ||
+            (request.Scope == BackupScope.FullSystem && request.IncludePlatform))
         {
             var platformConnection = configuration.GetConnectionString("DefaultConnection");
             if (string.IsNullOrWhiteSpace(platformConnection))
@@ -276,6 +290,9 @@ public sealed class DatabaseBackupService(
             filtered = mappings.Where(x => x.tenant.WorkspaceType == WorkspaceType.FreelanceCoach);
         else if (request.Scope is BackupScope.AllTenants or BackupScope.FullSystem)
             filtered = mappings;
+
+        if (request.Scope != BackupScope.SelectedTenants && request.TenantIds is { Count: > 0 })
+            filtered = filtered.Where(x => request.TenantIds!.Contains((Guid)x.mapping.TenantId));
 
         foreach (var item in filtered)
         {
@@ -481,6 +498,7 @@ public sealed class DatabaseBackupService(
             ToOffset(x.StartedAtUtc),
             ToOffset(x.CompletedAtUtc),
             x.StorageKey,
+            x.Sha256,
             x.ErrorMessage)).ToList());
 
     private static DateTimeOffset? ToOffset(DateTime? value) =>

@@ -47,11 +47,12 @@ The identity context does not contain tenant permissions or a tenant JWT. A user
 workspace can continue automatically; a user with multiple workspaces chooses one. Pending
 applications remain visible and do not block access to another active workspace.
 
-For compatibility with gyms activated before the owner-activation repair was released, the login
-issuer also reconciles a non-deleted Gym owner membership that is still
-`PendingPlatformApproval` while its tenant is already `Active`. It records the repair actor and
-time, then evaluates the normal active-user and workspace gates. Pending memberships for clients
-or other roles are never promoted by identity login.
+For an already-Active Gym whose owner membership was left in
+`PendingPlatformApproval` by an older release, the issuer performs a narrow, idempotent repair
+during identity login: only that Gym owner's membership is promoted to `Active`. Pending client
+or other workspace memberships are never promoted by this repair. This guarantees the single
+active Gym owner path reaches `/api/identity/select-workspace` automatically instead of showing
+an empty context screen.
 
 ## Platform login
 
@@ -97,27 +98,42 @@ POST /api/identity/select-workspace { workspaceSelectionToken, workspaceId }
 The browser cannot submit a database name, connection string, or arbitrary TenantId. Tenant data
 is resolved server-side through the active TenantDatabaseMapping.
 
-After `TenantMiddleware` sets `TenantId`, `TenantDatabaseRoutingMiddleware` resolves the mapping
-before the workspace access gate and authorization handlers run. Platform-owned reads use
-`PlatformDbContext`; operational reads/writes (users, clients, workouts, attendance, inventory,
-finance and HR) use one request-scoped `TenantDbContext` for the selected workspace. If the mapping
-is missing, stale, or cannot be decrypted, the API returns `503 TENANT_DATABASE_UNAVAILABLE` and
-does not fall back to the old shared database.
-
 ## Creating a Gym or Freelance workspace
 
-1. The authenticated identity chooses Gym or FreelanceCoach; it never submits an owner role.
-2. The application is saved as Draft and collects the minimal business/contact fields.
-3. The user selects Monthly, SemiAnnual, or Annual billing and receives an immutable Plan Snapshot.
-4. A PaymentRequest is created and a JPG/JPEG/PNG/PDF proof is uploaded to private storage.
-5. Submit changes Application to Submitted, PaymentRequest to PendingReview, Subscription to
-   PendingPayment, Workspace to PendingApproval, and Membership to Pending.
-6. Platform Admin uses explicit `ManageTenants` and `ManagePaymentRequests` permissions to review,
-   request information, approve/reject payment, or reject the application with a reason.
+The public flow is intentionally short: the visitor chooses `Gym` or `FreelanceCoach`, selects an
+active plan, enters the minimum owner/workspace fields, uploads payment proof, and submits once.
+The server creates or reuses the global identity and keeps identity, Tenant, subscription, payment,
+and provisioning steps behind the lifecycle gate. A password is collected only as the initial owner
+credential; the form does not ask the visitor to create a Tenant, database, mapping, or membership.
+
+The unified multipart endpoint is `POST /api/workspace-applications`. It creates an application,
+payment request, plan snapshot, and pending subscription, then returns an opaque tracking session.
+The tracking response exposes only the user journey (`Submitted`, `UnderReview`, `MoreInformation`,
+`Preparing`, `Ready`, or a safe failure state). Requested fields can be updated with
+`PATCH /api/workspace-applications/tracking/fields` and resubmitted without restarting.
+
+Platform Admin uses explicit `ManageTenants` and `ManagePaymentRequests` permissions to review,
+request information, approve/reject payment, approve/reject the application, and retry provisioning.
 
 Application transitions are concurrency-safe and audited: Draft -> Submitted -> UnderReview ->
 NeedsMoreInformation -> Submitted, or UnderReview -> Approved/Rejected. Repeated submissions use
 revision history and idempotency keys.
+
+### Platform-admin unified creation (Issues #244 and #245)
+
+`POST /api/platform/workspace-applications` is the admin entry point for both `Gym` and
+`FreelanceCoach`. It creates the same central application, plan snapshot, pending subscription,
+and pending payment records; only the type-specific payload fields differ. A FreelanceCoach is a
+standalone tenant with `WorkspaceType=FreelanceCoach`, its own database resource and subscription,
+and an `FreelanceOwner` membership. It is never created as a gym employee.
+
+The review queue uses `POST /api/platform/workspace-applications/{id}/approve-workspace` for both
+workspace types. `approve-membership` remains reserved for Coach/Assistant/Client membership
+applications. The response exposes separate payment, workspace, subscription, database, and
+provisioning states plus `canAccessDashboard`, `requiredAction`, `nextStep`, and a safe user
+message. A newly created identity may receive a one-time temporary password in the explicit create
+response only; the password is hashed immediately, the resulting local owner is marked
+`MustChangePassword`, and the value is never returned by list/detail endpoints or written to logs.
 
 ## Provisioning and activation
 
@@ -136,12 +152,52 @@ Capacity shortages remain `AwaitingDatabaseCapacity`; provider failures remain
 `ProvisioningFailed`. Neither starts a subscription term or issues a tenant session. The saga is
 retryable and idempotent; Platform DB Outbox records coordinate work across databases.
 
+The review list can filter the same application by `applicationType`, application `status`,
+`paymentStatus`, `workspaceStatus`, `subscriptionStatus`, and `provisioningStatus`. Operators must
+read the next action from the lifecycle response rather than interpreting `Active` as proof that
+payment, database readiness, membership, and access are all complete.
+
+The public tracking response `GET /api/workspace-applications/tracking` now carries the same safe
+lifecycle facts for the applicant: `workspaceType`, payment/workspace/subscription/database and
+provisioning states, `canAccessDashboard`, `requiredAction`, `nextStep`, `userMessage`, and the
+last update time. It never returns connection material or a tenant token, and it keeps the dashboard
+blocked until the server-side access gate is satisfied.
+
 For a Gym, Platform approval/activation is also the authorization hand-off for the owner:
 `Tenant.Active` activates any non-deleted owner `WorkspaceMembership` still in
 `PendingPlatformApproval`, records `ApprovedAt`/`ApprovedBy`, and makes the workspace appear in
-the next identity context. This is idempotent and also repairs an already-Active gym when an
-operator repeats the protected `activate` action. Client memberships in
+the next identity context. This is idempotent. The identity issuer also repairs an already-Active
+Gym at the next owner login, so an operator does not need a second manual activation action after
+an older release left the membership pending. Client memberships in
 `PendingWorkspaceApproval` remain subject to the gym's own approval flow.
+
+## Issue #248 — unified lifecycle and E2E acceptance
+
+Both workspace types use `WorkspaceType` as the only type discriminator and the same provisioning
+saga. Access is allowed only when application approval, payment approval, an active Tenant and
+subscription, an `Assigned` database resource, a completed provisioning job, an active encrypted
+mapping, and an active Owner membership all exist. Database connection material is accepted and
+decrypted only inside the server.
+
+Capacity shortage is represented as `AwaitingDatabaseCapacity`; connection or migration failure is
+represented as `ProvisioningFailed` with a retryable job. Retry reuses the original application,
+Tenant, subscription, job, and membership identities. The complete local E2E evidence and the
+human-readable user journey are in `C:/Users/B-SMART/Desktop/LogicFit-Subscription-Flow-E2E-Guide.md`.
+
+## Owner-managed workspace members (Issues #246 and #65)
+
+`/api/workspace-members` is the unified owner flow for Gym team access. `POST` creates or reuses a
+global `IdentityAccount`, creates the tenant-local `User` and `WorkspaceMembership`, replaces the
+workspace role assignments, and writes one security audit event before saving. A duplicate active
+membership in the same workspace is rejected; the same identity may receive a membership in a
+different workspace.
+
+The create response contains a one-time temporary password only when a new identity was created.
+The password is BCrypt-hashed immediately, `MustChangePassword` is set on the local user, and the
+value is not persisted, logged, or returned by list endpoints. `POST /{membershipId}/reset-password`
+generates a new one-time password and clears lockout counters. Suspend, activate, and remove keep
+the global identity intact while changing only workspace access. The stable access states are
+`PendingSetup`, `PasswordChangeRequired`, `Active`, `Suspended`, `Locked`, and `Removed`.
 
 ## Invitations and clients
 

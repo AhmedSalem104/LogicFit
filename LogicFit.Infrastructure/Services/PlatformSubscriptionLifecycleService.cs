@@ -69,7 +69,7 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
         await using (lease)
         {
             using var scope = _scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var usageCalculator = scope.ServiceProvider.GetRequiredService<ITenantUsageCalculator>();
             var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
             var execution = new JobExecutionLog
@@ -98,7 +98,7 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
         try
         {
             using var failureScope = _scopeFactory.CreateScope();
-            var failureContext = failureScope.ServiceProvider.GetRequiredService<PlatformDbContext>();
+            var failureContext = failureScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             failureContext.JobExecutionLogs.Add(new JobExecutionLog
             {
                 JobName = nameof(PlatformSubscriptionLifecycleService),
@@ -226,7 +226,7 @@ public class PlatformSubscriptionLifecycleService : BackgroundService
     }
 
     private static async Task AddOutboxIfMissingAsync(
-        PlatformDbContext context,
+        ApplicationDbContext context,
         OutboxMessage message,
         CancellationToken cancellationToken)
     {

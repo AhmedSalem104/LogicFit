@@ -25,56 +25,17 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton(TimeProvider.System);
+        services.AddDataProtection();
 
-        // DatabaseResource connection strings are protected with ASP.NET Data Protection. The
-        // central Platform database is authoritative for the key ring so deployments and IIS
-        // recycles cannot orphan encrypted tenant mappings. App_Data remains a mirrored recovery
-        // copy and is explicitly excluded from Web Deploy synchronization.
-        var dataProtectionKeyDirectory = DataProtectionKeyDirectory.Resolve(configuration);
-        Directory.CreateDirectory(dataProtectionKeyDirectory);
-        services.AddDataProtection()
-            .SetApplicationName("LogicFit")
-            .PersistKeysToDbContext<ApplicationDbContext>();
-
-        // Platform DB is the runtime source for identity, workspace metadata, billing and
-        // database-resource mappings.  ApplicationDbContext remains registered only as a
-        // compatibility/migration host until the legacy shared rows are transferred.
-        services.AddDbContext<PlatformDbContext>(options =>
-            DbContextSqlServerOptions.UsePlatformDatabase(
-                options,
-                configuration.GetConnectionString("DefaultConnection")
-                    ?? throw new InvalidOperationException("DefaultConnection is not configured.")));
-
+        // Database
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(
                 configuration.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
-        services.AddScoped<TenantDatabaseRequestScope>();
-        services.AddScoped<TenantDatabaseContextAccessor>();
-        services.AddScoped<DataProtectionKeyRingBootstrapper>();
-        services.AddOptions<TenantDatabaseRoutingOptions>()
-            .Bind(configuration.GetSection(TenantDatabaseRoutingOptions.SectionName))
-            .Validate(
-                TenantDatabaseRoutingOptions.IsValid,
-                "Tenant database routing configuration is invalid.");
-        services.AddScoped<IApplicationDbContext>(provider =>
-            TenantAwareApplicationDbContextProxy.Create(
-                provider.GetRequiredService<PlatformDbContext>(),
-                provider.GetRequiredService<ApplicationDbContext>(),
-                provider.GetRequiredService<TenantDatabaseRequestScope>(),
-                provider.GetRequiredService<TenantDatabaseContextAccessor>(),
-                provider.GetRequiredService<ITenantService>()));
+        services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
         services.AddSingleton<IDistributedLockProvider, SqlServerDistributedLockProvider>();
         services.AddScoped<IDatabaseResourcePool, DatabaseResourcePoolService>();
-        services.AddOptions<DatabaseResourcePoolOptions>()
-            .Bind(configuration.GetSection(DatabaseResourcePoolOptions.SectionName))
-            .Validate(
-                DatabaseResourcePoolOptions.IsValid,
-                "Database resource pool configuration is invalid.");
-        services.AddScoped<DatabaseResourceSeeder>();
-        services.AddScoped<TenantDatabaseSeeder>();
-        services.AddScoped<TenantReferenceCatalogSeeder>();
         services.AddScoped<LocalSqlTenantDatabasePurgeProvider>();
         services.AddScoped<ManualMonsterTenantDatabasePurgeProvider>();
         services.AddScoped<ITenantDatabasePurgeProvider>(provider =>
@@ -226,7 +187,6 @@ public static class DependencyInjection
             services.AddHostedService<SubscriptionLifecycleService>();
             services.AddHostedService<PlatformSubscriptionLifecycleService>();
             services.AddHostedService<OutboxProcessorService>();
-            services.AddHostedService<TenantOutboxProcessorService>();
         }
 
         return services;

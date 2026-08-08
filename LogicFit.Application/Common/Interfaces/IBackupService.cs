@@ -18,7 +18,8 @@ public sealed record BackupStatus(
 public sealed record BackupBatchRequest(
     BackupScope Scope,
     IReadOnlyCollection<Guid>? TenantIds = null,
-    string? IdempotencyKey = null);
+    string? IdempotencyKey = null,
+    bool IncludePlatform = true);
 
 public sealed record BackupArtifactDto(
     Guid Id,
@@ -28,6 +29,7 @@ public sealed record BackupArtifactDto(
     DateTimeOffset? StartedAtUtc,
     DateTimeOffset? CompletedAtUtc,
     string? StorageKey,
+    string? Sha256,
     string? ErrorCode);
 
 public sealed record BackupBatchDto(

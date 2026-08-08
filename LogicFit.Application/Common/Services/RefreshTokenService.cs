@@ -64,7 +64,9 @@ public class RefreshTokenService : IRefreshTokenService
             throw new UnauthorizedException("REFRESH_TOKEN_REUSE_DETECTED");
         }
 
-        if (!existing.IsActive)
+        // Use the injected clock consistently with Issue(), otherwise a fixed/test clock can
+        // disagree with RefreshToken.IsActive's wall-clock comparison and reject valid tokens.
+        if (existing.RevokedAt.HasValue || existing.ExpiresAt <= _dateTimeService.UtcNow)
             throw new UnauthorizedException("Invalid or expired refresh token");
 
         var user = await _context.Users

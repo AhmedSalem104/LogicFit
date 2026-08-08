@@ -34,6 +34,10 @@ public sealed class PlatformDashboardContractTests
         Assert.DoesNotContain("DatabaseName", propertyNames);
         Assert.DoesNotContain("ConnectionString", propertyNames);
         Assert.DoesNotContain("EncryptedConnectionString", propertyNames);
+
+        var protectedConnectionProperty = typeof(PlatformDatabaseResourceDto).GetProperty("HasProtectedConnection");
+        Assert.NotNull(protectedConnectionProperty);
+        Assert.Equal(typeof(bool), protectedConnectionProperty!.PropertyType);
     }
 
     [Fact]

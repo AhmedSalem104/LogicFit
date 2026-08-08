@@ -16,7 +16,7 @@ on:
         required: true
         type: string
       confirm:
-        description: 'Type DEPLOY-PRODUCTION or RECOVER-PRODUCTION-STARTUP'
+        description: 'Type DEPLOY-PRODUCTION, RECOVER-PRODUCTION-STARTUP, DIAGNOSE-PRODUCTION-HEALTH, or DIAGNOSE-MONSTER-LOGS'
         required: true
         type: string
       recovery_profile:
@@ -38,6 +38,11 @@ on:
         type: string
       recovery_allow_untrusted_certificate:
         description: 'Allow the management endpoint certificate only after operator review'
+        required: false
+        default: false
+        type: boolean
+      enable_backups:
+        description: 'Set Backup:Enabled=true during protected startup recovery'
         required: false
         default: false
         type: boolean
@@ -261,6 +266,7 @@ jobs:
           EXPECTED_SITE: ${{ inputs.recovery_expected_site }}
           MANAGEMENT_HOST_OVERRIDE: ${{ inputs.recovery_management_host_override }}
           ALLOW_UNTRUSTED: ${{ inputs.recovery_allow_untrusted_certificate }}
+          ENABLE_BACKUPS: ${{ inputs.enable_backups }}
         run: |
           $arguments = @{
             PublishSettingsPath = "$env:RUNNER_TEMP/recovery.publishSettings"
@@ -273,4 +279,236 @@ jobs:
           if ($env:ALLOW_UNTRUSTED -eq 'true') {
             $arguments.AllowUntrustedManagementCertificate = $true
           }
+          if ($env:ENABLE_BACKUPS -eq 'true') {
+            $arguments.EnableBackups = $true
+          }
           .\Scripts\recover-webdeploy-startup.ps1 @arguments
+
+  diagnose-production-health:
+    if: ${{ inputs.confirm == 'DIAGNOSE-PRODUCTION-HEALTH' }}
+    runs-on: windows-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require protected read-only diagnostic inputs
+        shell: powershell
+        env:
+          PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+          HEALTH_URL: ${{ secrets.RUNASP_UNIFIED_HEALTHCHECK_URL }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PRODUCTION_DB_CONNECTION)) {
+            throw "LOGICFIT_PRODUCTION_DB_CONNECTION is required for the read-only diagnostic."
+          }
+          if ([string]::IsNullOrWhiteSpace($env:HEALTH_URL)) {
+            throw "RUNASP_UNIFIED_HEALTHCHECK_URL is required for the read-only diagnostic."
+          }
+          if (([Uri]$env:HEALTH_URL).Scheme -ne 'https') {
+            throw "The diagnostic health URL must use HTTPS."
+          }
+
+          $connection = [System.Data.SqlClient.SqlConnection]::new($env:PRODUCTION_DB_CONNECTION)
+          try {
+            $connection.Open()
+            $command = $connection.CreateCommand()
+            $command.CommandText = 'SELECT 1'
+            $command.CommandTimeout = 15
+            $result = $command.ExecuteScalar()
+            if ([int]$result -ne 1) {
+              throw "The production database read-only probe returned an unexpected result."
+            }
+            Write-Host "Read-only production database connectivity probe passed."
+          }
+          finally {
+            $connection.Dispose()
+          }
+
+      - name: Probe with the application SQL provider
+        shell: powershell
+        env:
+          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+        run: |
+          dotnet restore LogicFit.Tests/LogicFit.Tests.csproj --nologo
+          dotnet test LogicFit.Tests/LogicFit.Tests.csproj `
+            --configuration Release `
+            --no-restore `
+            --filter "FullyQualifiedName~ProductionDatabaseConnectivityTests" `
+            --verbosity minimal
+
+      - name: Compare remote database identity without printing secrets
+        shell: powershell
+        env:
+          RECOVERY_PROFILE: ${{ inputs.recovery_profile }}
+          EXPECTED_SITE: ${{ inputs.recovery_expected_site }}
+          MANAGEMENT_HOST_OVERRIDE: ${{ inputs.recovery_management_host_override }}
+          ALLOW_UNTRUSTED: ${{ inputs.recovery_allow_untrusted_certificate }}
+          PLATFORM_PROFILE_B64: ${{ secrets.RUNASP_PLATFORM_PUBLISH_SETTINGS_B64 }}
+          TENANT_PROFILE_B64: ${{ secrets.RUNASP_TENANT_PUBLISH_SETTINGS_B64 }}
+          UNIFIED_PROFILE_B64: ${{ secrets.RUNASP_UNIFIED_PUBLISH_SETTINGS_B64 }}
+          PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+          HEALTH_URL: ${{ secrets.RUNASP_UNIFIED_HEALTHCHECK_URL }}
+        run: |
+          if ($env:EXPECTED_SITE -notmatch '^site[0-9]+$') {
+            throw "recovery_expected_site must use the site12345 format."
+          }
+          $profilePayload = switch ($env:RECOVERY_PROFILE) {
+            'platform' { $env:PLATFORM_PROFILE_B64 }
+            'tenant' { $env:TENANT_PROFILE_B64 }
+            'unified' { $env:UNIFIED_PROFILE_B64 }
+            default { throw "Unsupported protected recovery profile." }
+          }
+          if ([string]::IsNullOrWhiteSpace($profilePayload)) {
+            throw "The selected protected publish profile is missing."
+          }
+          $profilePath = "$env:RUNNER_TEMP/diagnostic.publishSettings"
+          $profilePayload = $profilePayload.Trim()
+          $xmlStart = $profilePayload.IndexOf('<')
+          if ($xmlStart -ge 0) {
+            $profilePayload = $profilePayload.Substring($xmlStart)
+            $profileDocument = [xml]$profilePayload
+            if ($null -eq $profileDocument.publishData.publishProfile) {
+              throw "The selected protected publish profile XML is invalid."
+            }
+            [IO.File]::WriteAllText($profilePath, $profilePayload, [Text.UTF8Encoding]::new($false))
+          }
+          else {
+            try {
+              [IO.File]::WriteAllBytes($profilePath, [Convert]::FromBase64String($profilePayload))
+            }
+            catch [FormatException] {
+              throw "The selected protected publish profile is neither Base64 nor publish-settings XML."
+            }
+          }
+          $arguments = @{
+            PublishSettingsPath = $profilePath
+            ExpectedSite = $env:EXPECTED_SITE
+            ExpectedConnectionString = $env:PRODUCTION_DB_CONNECTION
+            HealthCheckUrl = $env:HEALTH_URL
+          }
+          if (-not [string]::IsNullOrWhiteSpace($env:MANAGEMENT_HOST_OVERRIDE)) {
+            $arguments.ManagementHostOverride = $env:MANAGEMENT_HOST_OVERRIDE
+          }
+          if ($env:ALLOW_UNTRUSTED -eq 'true') {
+            $arguments.AllowUntrustedManagementCertificate = $true
+          }
+          .\Scripts\diagnose-webdeploy-health.ps1 @arguments
+
+      - name: Verify production readiness endpoint
+        shell: powershell
+        env:
+          HEALTH_URL: ${{ secrets.RUNASP_UNIFIED_HEALTHCHECK_URL }}
+        run: |
+          try {
+            $response = Invoke-WebRequest -Uri $env:HEALTH_URL -UseBasicParsing -TimeoutSec 30
+            $body = $response.Content.Trim()
+          }
+          catch {
+            throw "The production health endpoint could not be reached."
+          }
+          if ($response.StatusCode -ne 200 -or $body -ne 'Healthy') {
+            throw "The production health endpoint is not Healthy (HTTP $($response.StatusCode))."
+          }
+          Write-Host "Production readiness endpoint passed."
+
+  diagnose-monster-logs:
+    if: ${{ inputs.confirm == 'DIAGNOSE-MONSTER-LOGS' }}
+    runs-on: windows-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select protected Monster log target
+        shell: powershell
+        env:
+          RECOVERY_PROFILE: ${{ inputs.recovery_profile }}
+          EXPECTED_SITE: ${{ inputs.recovery_expected_site }}
+          PLATFORM_PROFILE_B64: ${{ secrets.RUNASP_PLATFORM_PUBLISH_SETTINGS_B64 }}
+          PLATFORM_HEALTH_URL: ${{ secrets.RUNASP_PLATFORM_HEALTHCHECK_URL }}
+          TENANT_PROFILE_B64: ${{ secrets.RUNASP_TENANT_PUBLISH_SETTINGS_B64 }}
+          TENANT_HEALTH_URL: ${{ secrets.RUNASP_TENANT_HEALTHCHECK_URL }}
+          UNIFIED_PROFILE_B64: ${{ secrets.RUNASP_UNIFIED_PUBLISH_SETTINGS_B64 }}
+          UNIFIED_HEALTH_URL: ${{ secrets.RUNASP_UNIFIED_HEALTHCHECK_URL }}
+        run: |
+          if ($env:EXPECTED_SITE -notmatch '^site[0-9]+$') {
+            throw "recovery_expected_site must use the site12345 format."
+          }
+          $selection = switch ($env:RECOVERY_PROFILE) {
+            'platform' { @($env:PLATFORM_PROFILE_B64, $env:PLATFORM_HEALTH_URL) }
+            'tenant' { @($env:TENANT_PROFILE_B64, $env:TENANT_HEALTH_URL) }
+            'unified' { @($env:UNIFIED_PROFILE_B64, $env:UNIFIED_HEALTH_URL) }
+            default { throw "Unsupported protected recovery profile." }
+          }
+          if ([string]::IsNullOrWhiteSpace($selection[0]) -or
+              [string]::IsNullOrWhiteSpace($selection[1])) {
+            throw "The selected protected publish profile or health URL is missing."
+          }
+          $profilePath = "$env:RUNNER_TEMP/monster-log.publishSettings"
+          $profilePayload = $selection[0].Trim()
+          $xmlStart = $profilePayload.IndexOf('<')
+          if ($xmlStart -ge 0) {
+            $profilePayload = $profilePayload.Substring($xmlStart)
+            $profileDocument = [xml]$profilePayload
+            if ($null -eq $profileDocument.publishData.publishProfile) {
+              throw "The selected protected publish profile XML is invalid."
+            }
+            [IO.File]::WriteAllText($profilePath, $profilePayload, [Text.UTF8Encoding]::new($false))
+          }
+          else {
+            try {
+              [IO.File]::WriteAllBytes($profilePath, [Convert]::FromBase64String($profilePayload))
+            }
+            catch [FormatException] {
+              throw "The selected protected publish profile is neither Base64 nor publish-settings XML."
+            }
+          }
+          "MONSTER_LOG_HEALTH_URL=$($selection[1])" >> $env:GITHUB_ENV
+          "MONSTER_LOG_PROFILE_PATH=$profilePath" >> $env:GITHUB_ENV
+
+      - name: Inspect compiled migration state without writing
+        shell: powershell
+        env:
+          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:LOGICFIT_PRODUCTION_DB_CONNECTION)) {
+            throw "LOGICFIT_PRODUCTION_DB_CONNECTION is required for the read-only migration-state probe."
+          }
+          dotnet restore LogicFit.Tests/LogicFit.Tests.csproj --nologo
+          dotnet test LogicFit.Tests/LogicFit.Tests.csproj `
+            --configuration Release `
+            --no-restore `
+            --filter "FullyQualifiedName~ProductionDatabaseConnectivityTests" `
+            --verbosity minimal
+
+      - name: Compare applied migration history without writing
+        shell: powershell
+        env:
+          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+        run: .\Scripts\probe-production-migration-state.ps1
+
+      - name: Inspect candidate workspace state without writing
+        shell: powershell
+        env:
+          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+          DIAGNOSE_WORKSPACE_IDENTIFIER: topcoaching
+        run: .\Scripts\probe-workspace-application-state.ps1
+
+      - name: Capture and classify Monster stdout safely
+        shell: powershell
+        env:
+          EXPECTED_SITE: ${{ inputs.recovery_expected_site }}
+          MANAGEMENT_HOST_OVERRIDE: ${{ inputs.recovery_management_host_override }}
+          ALLOW_UNTRUSTED: ${{ inputs.recovery_allow_untrusted_certificate }}
+        run: |
+          $arguments = @{
+            PublishSettingsPath = $env:MONSTER_LOG_PROFILE_PATH
+            ExpectedSite = $env:EXPECTED_SITE
+            HealthCheckUrl = $env:MONSTER_LOG_HEALTH_URL
+            CaptureAttempts = 36
+          }
+          if (-not [string]::IsNullOrWhiteSpace($env:MANAGEMENT_HOST_OVERRIDE)) {
+            $arguments.ManagementHostOverride = $env:MANAGEMENT_HOST_OVERRIDE
+          }
+          if ($env:ALLOW_UNTRUSTED -eq 'true') {
+            $arguments.AllowUntrustedManagementCertificate = $true
+          }
+          .\Scripts\diagnose-monster-logs.ps1 @arguments

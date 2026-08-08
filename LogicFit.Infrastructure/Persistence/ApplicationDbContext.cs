@@ -444,7 +444,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             || propertyName.Equals("CodeSalt", StringComparison.OrdinalIgnoreCase)
             || propertyName.Equals("EncryptedConnectionString", StringComparison.OrdinalIgnoreCase)
             || propertyName.Equals("ConnectionString", StringComparison.OrdinalIgnoreCase)
-            || propertyName.Equals("Xml", StringComparison.OrdinalIgnoreCase)
             || propertyName.Equals("SessionBinding", StringComparison.OrdinalIgnoreCase);
     }
 

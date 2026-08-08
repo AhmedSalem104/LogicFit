@@ -61,7 +61,6 @@ publish/
 
 # Runtime uploads (payment proofs, logos, user images)
 LogicFit.API/wwwroot/
-**/App_Data/DataProtection-Keys/
 
 # Stray test artifacts
 test_profile.jpg

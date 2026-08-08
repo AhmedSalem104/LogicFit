@@ -41,26 +41,9 @@ public class PlatformTenantsController : ControllerBase
 
     [HttpPost]
     [ProducesResponseType(typeof(PlatformTenantDto), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
-    public async Task<ActionResult<PlatformTenantDto>> CreateTenant(
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
-        [FromBody] CreateTenantWithOwnerCommand command,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<PlatformTenantDto>> CreateTenant([FromBody] CreateTenantWithOwnerCommand command)
     {
-        if (!string.IsNullOrWhiteSpace(idempotencyKey) &&
-            (idempotencyKey.Length > 128 || idempotencyKey.Any(char.IsControl)))
-        {
-            return BadRequest(new
-            {
-                errorCode = "IDEMPOTENCY_KEY_INVALID",
-                message = "Idempotency-Key must be at most 128 printable characters."
-            });
-        }
-
-        command.IdempotencyKey = idempotencyKey?.Trim();
-        var result = await _mediator.Send(command, cancellationToken);
+        var result = await _mediator.Send(command);
         return CreatedAtAction(nameof(GetTenants), new { id = result.Id }, result);
     }
 

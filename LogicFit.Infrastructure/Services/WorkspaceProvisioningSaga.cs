@@ -13,8 +13,7 @@ namespace LogicFit.Infrastructure.Services;
 /// no distributed transaction: the persistent job and idempotency key make retries safe.
 /// </summary>
 public sealed class WorkspaceProvisioningSaga(
-    PlatformDbContext db,
-    ApplicationDbContext legacyDb,
+    ApplicationDbContext db,
     IDatabaseProvisioningProvider provider,
     IDateTimeService clock,
     ILogger<WorkspaceProvisioningSaga> logger) : IWorkspaceProvisioningSaga
@@ -31,14 +30,9 @@ public sealed class WorkspaceProvisioningSaga(
             throw new InvalidOperationException("The application has no central workspace placeholder.");
 
         var tenantId = application.ProvisionedWorkspaceId.Value;
-        var isGymWorkspace = application.ApplicationType == ApplicationType.GymWorkspaceCreation;
-        var isFreelanceWorkspace = application.ApplicationType == ApplicationType.FreelanceWorkspaceCreation;
-        if (!isGymWorkspace && !isFreelanceWorkspace)
-            throw new InvalidOperationException("Only gym and freelance workspace applications can be provisioned.");
-
         var payment = await db.PaymentRequests
             .FirstOrDefaultAsync(x => x.ApplicationRequestId == applicationRequestId, cancellationToken);
-        if (isFreelanceWorkspace && payment?.Status != PaymentRequestStatus.Approved)
+        if (payment?.Status != PaymentRequestStatus.Approved)
             throw new InvalidOperationException("Payment approval is required before provisioning.");
 
         var job = await db.ProvisioningJobs
@@ -66,7 +60,6 @@ public sealed class WorkspaceProvisioningSaga(
         var tenant = await db.Tenants.IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.Id == tenantId, cancellationToken)
             ?? throw new InvalidOperationException("The workspace placeholder was not found.");
-        var statusBeforeProvisioning = tenant.Status;
         tenant.Status = TenantStatus.Provisioning;
         await db.SaveChangesAsync(cancellationToken);
 
@@ -99,7 +92,8 @@ public sealed class WorkspaceProvisioningSaga(
         // a scalar bridge row with the same id as the tenant-local owner so existing membership
         // foreign keys remain valid; the tenant database remains the operational source of truth.
         var localUserId = result.LocalUserId ?? throw new InvalidOperationException("Provider did not return the local owner id.");
-        var compatibilityUser = await legacyDb.Set<User>().IgnoreQueryFilters()
+        var mustChangePassword = application.PayloadJson.Contains("\"mustChangePassword\":true", StringComparison.OrdinalIgnoreCase);
+        var compatibilityUser = await db.Set<User>().IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.Id == localUserId, cancellationToken);
         if (compatibilityUser is null)
         {
@@ -112,19 +106,21 @@ public sealed class WorkspaceProvisioningSaga(
                 PhoneNumber = application.IdentityAccount.PhoneNumber,
                 PasswordHash = application.IdentityAccount.PasswordHash,
                 Role = application.RequestedRole ?? UserRole.Owner,
-                IsActive = true
+                IsActive = true,
+                MustChangePassword = mustChangePassword
             };
-            legacyDb.Set<User>().Add(compatibilityUser);
-            legacyDb.UserProfiles.Add(new UserProfile
+            db.Set<User>().Add(compatibilityUser);
+            db.UserProfiles.Add(new UserProfile
             {
                 UserId = localUserId,
                 FullName = application.IdentityAccount.FullName
             });
         }
+        else if (mustChangePassword)
+        {
+            compatibilityUser.MustChangePassword = true;
+        }
 
-        var membershipStatus = isGymWorkspace
-            ? WorkspaceMembershipStatus.PendingPlatformApproval
-            : WorkspaceMembershipStatus.Active;
         var membership = await db.WorkspaceMemberships.IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.IdentityAccountId == application.IdentityAccountId, cancellationToken);
         if (membership is null)
@@ -135,66 +131,44 @@ public sealed class WorkspaceProvisioningSaga(
                 IdentityAccountId = application.IdentityAccountId,
                 UserId = localUserId,
                 Role = application.RequestedRole ?? UserRole.Owner,
-                Status = membershipStatus,
-                ApprovedAt = isGymWorkspace ? null : now,
-                ApprovedBy = isGymWorkspace ? null : "provisioning-saga"
+                Status = WorkspaceMembershipStatus.Active,
+                ApprovedAt = now,
+                ApprovedBy = "provisioning-saga"
             };
             db.WorkspaceMemberships.Add(membership);
         }
-        if (isFreelanceWorkspace)
-            membership.Status = WorkspaceMembershipStatus.Active;
-        else if (membership.Status != WorkspaceMembershipStatus.Active)
-            membership.Status = WorkspaceMembershipStatus.PendingPlatformApproval;
+        membership.Status = WorkspaceMembershipStatus.Active;
         membership.UserId = localUserId;
 
-        // Keep the compatibility projection usable during the staged identity-selection
-        // migration. The authoritative assignment is seeded in Tenant DB by the provider;
-        // this legacy copy is removed with the explicit workspace transfer job.
-        var compatibilityRoleName = membership.Role == UserRole.FreelanceOwner
-            ? SystemRoles.FreelanceOwner
-            : SystemRoles.Owner;
-        var compatibilityRole = await legacyDb.AppRoles
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(x => x.TenantId == null && x.Name == compatibilityRoleName && !x.IsDeleted, cancellationToken);
-        if (compatibilityRole is not null && !await legacyDb.UserRoleAssignments
-                .IgnoreQueryFilters()
-                .AnyAsync(x => x.UserId == membership.UserId && x.RoleId == compatibilityRole.Id && x.TenantId == tenantId, cancellationToken))
+        var roleName = membership.Role == UserRole.FreelanceOwner ? SystemRoles.FreelanceOwner : SystemRoles.Owner;
+        var role = await db.AppRoles.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.TenantId == null && x.Name == roleName && !x.IsDeleted, cancellationToken);
+        if (role is not null && !await db.UserRoleAssignments.IgnoreQueryFilters()
+                .AnyAsync(x => x.UserId == membership.UserId && x.RoleId == role.Id && x.TenantId == tenantId, cancellationToken))
         {
-            legacyDb.UserRoleAssignments.Add(new UserRoleAssignment
+            db.UserRoleAssignments.Add(new UserRoleAssignment
             {
                 UserId = membership.UserId,
-                RoleId = compatibilityRole.Id,
+                RoleId = role.Id,
                 TenantId = tenantId
             });
         }
 
-        if (isFreelanceWorkspace)
-        {
-            var subscription = await db.TenantSubscriptions
-                .FirstOrDefaultAsync(x => x.Id == payment!.TenantSubscriptionId, cancellationToken)
-                ?? throw new InvalidOperationException("The pending subscription was not found.");
-            if (subscription.Status != TenantSubscriptionStatus.PendingActivation)
-                throw new InvalidOperationException($"Subscription is {subscription.Status}, not PendingActivation.");
-            var durationDays = subscription.PlanId == Guid.Empty
-                ? 30
-                : await db.Plans.Where(x => x.Id == subscription.PlanId).Select(x => x.DurationInDays).FirstOrDefaultAsync(cancellationToken);
-            durationDays = durationDays <= 0 ? 30 : durationDays;
-            subscription.Status = TenantSubscriptionStatus.Active;
-            subscription.StartDate = now;
-            subscription.EndDate = now.AddDays(durationDays);
-            subscription.RenewDate = subscription.EndDate;
-            subscription.ApprovedAt = now;
-            tenant.Status = TenantStatus.Active;
-        }
-        else
-        {
-            // Platform-created gyms still follow the existing approval gate. Their database is
-            // allocated and migrated now; the owner/membership becomes active when the platform
-            // operator approves the tenant.
-            tenant.Status = statusBeforeProvisioning == TenantStatus.Active
-                ? TenantStatus.Active
-                : TenantStatus.PendingApproval;
-        }
+        var subscription = await db.TenantSubscriptions
+            .FirstOrDefaultAsync(x => x.Id == payment.TenantSubscriptionId, cancellationToken)
+            ?? throw new InvalidOperationException("The pending subscription was not found.");
+        if (subscription.Status != TenantSubscriptionStatus.PendingActivation)
+            throw new InvalidOperationException($"Subscription is {subscription.Status}, not PendingActivation.");
+        var durationDays = subscription.PlanId == Guid.Empty
+            ? 30
+            : await db.Plans.Where(x => x.Id == subscription.PlanId).Select(x => x.DurationInDays).FirstOrDefaultAsync(cancellationToken);
+        durationDays = durationDays <= 0 ? 30 : durationDays;
+        subscription.Status = TenantSubscriptionStatus.Active;
+        subscription.StartDate = now;
+        subscription.EndDate = now.AddDays(durationDays);
+        subscription.RenewDate = subscription.EndDate;
+        subscription.ApprovedAt = now;
+        tenant.Status = TenantStatus.Active;
         job.Status = ProvisioningJobStatus.Completed;
         job.CompletedAtUtc = now;
         db.OutboxMessages.Add(new OutboxMessage
@@ -205,7 +179,6 @@ public sealed class WorkspaceProvisioningSaga(
             IdempotencyKey = $"workspace-provisioning:{applicationRequestId}:completed"
         });
         await db.SaveChangesAsync(cancellationToken);
-        await legacyDb.SaveChangesAsync(cancellationToken);
         return new WorkspaceProvisioningOutcome(tenantId, applicationRequestId, job.Status, result.ResourceId);
     }
 

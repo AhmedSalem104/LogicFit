@@ -112,25 +112,14 @@ if ($ApplyMigrations) {
 $destination = "https://$($profile.publishUrl):8172/msdeploy.axd?site=$($profile.msdeploySite)"
 $arguments = @(
     '-verb:sync',
-    "-source:contentPath=$ContentPath",
-    # MonsterASP delegates only the site's contentPath to the site account. Using
-    # dest:auto makes Web Deploy probe linked IIS providers that the account cannot access.
-    "-dest:contentPath=$($profile.msdeploySite),ComputerName=$destination,UserName=$($profile.userName),Password=$($profile.userPWD),AuthType=Basic,includeAcls=False",
-    '-disableLink:AppPoolExtension',
-    '-disableLink:ContentExtension',
-    '-disableLink:CertificateExtension',
-    # Release the running ASP.NET Core files while syncing, then remove the
-    # temporary app_offline.htm after the deployment completes.
-    '-enableRule:AppOffline',
+    "-source:contentPath=`"$ContentPath`"",
+    "-dest:auto,ComputerName=$destination,UserName=$($profile.userName),Password=$($profile.userPWD),AuthType=Basic",
+    '-enableLink:AppPoolExtension',
     # Keep server-only secrets and production overrides, including appsettings.Production.json.
     '-enableRule:DoNotDeleteRule',
     # DoNotDeleteRule only prevents deletion; this skip also prevents an artifact-local file
     # from overwriting the protected server configuration when a developer has one locally.
     '-skip:objectName=filePath,absolutePath=appsettings\.Production\.json$',
-    # The database is authoritative for Data Protection keys, but preserve the App_Data mirror
-    # so rollback/recovery never removes a key ring from the deployed site.
-    '-skip:objectName=dirPath,absolutePath=App_Data\\DataProtection-Keys$',
-    '-skip:objectName=filePath,absolutePath=App_Data\\DataProtection-Keys\\.*$',
     '-retryAttempts:3',
     '-retryInterval:5000'
 )

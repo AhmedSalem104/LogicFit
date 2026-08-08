@@ -31,18 +31,6 @@ is not serialized, and must not be copied into Platform or Tenant frontend contr
 | `DataProtectionConnectionStringProtector` | Protects connection material at rest and unprotects it in memory. |
 | `TenantDbContext` | Receives the resolved connection and an explicit tenant scope; it is never built from client input. |
 
-## Runtime request cutover (Issue #208)
-
-`TenantDatabaseRoutingMiddleware` runs immediately after `TenantMiddleware` and before identity
-workspace access, tenant access, authorization, or handlers. It calls the resolver using only the
-server-side `CurrentTenantId`, stores the result in a request-scoped boundary, and returns
-`503 TENANT_DATABASE_UNAVAILABLE` when the mapping is missing or invalid.
-
-`TenantDatabaseContextAccessor` creates one `TenantDbContext` for that request. The compatibility
-`IApplicationDbContext` registration is now a routing proxy: Platform-owned sets use the real
-`PlatformDbContext`; tenant-owned sets use that request's TenantDbContext. A resolved tenant can
-never select `ApplicationDbContext`.
-
-The old context is retained only for legacy startup migrations and compatibility-only platform
-reports/provisioning rows while the explicit existing-workspace transfer is staged. No Production
-database, mapping, or tenant data was changed by Issue #208's task branch.
+This is the resolver boundary for the later provisioning saga (#166) and tenant request pipeline.
+The existing `ApplicationDbContext` remains the compatibility context until that cutover is
+completed; this issue does not migrate or modify any Production database.

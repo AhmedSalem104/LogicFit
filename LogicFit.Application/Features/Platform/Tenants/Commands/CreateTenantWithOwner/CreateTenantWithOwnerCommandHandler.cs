@@ -1,5 +1,4 @@
 using LogicFit.Application.Common.Interfaces;
-using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.Identity;
 using LogicFit.Application.Features.Platform.Tenants.DTOs;
 using LogicFit.Domain.Authorization;
@@ -17,21 +16,15 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
     private readonly IApplicationDbContext _context;
     private readonly IRbacService _rbacService;
     private readonly IDateTimeService _dateTimeService;
-    private readonly ICurrentUserService _currentUserService;
-    private readonly IWorkspaceProvisioningSaga _provisioningSaga;
 
     public CreateTenantWithOwnerCommandHandler(
         IApplicationDbContext context,
         IRbacService rbacService,
-        IDateTimeService dateTimeService,
-        ICurrentUserService currentUserService,
-        IWorkspaceProvisioningSaga provisioningSaga)
+        IDateTimeService dateTimeService)
     {
         _context = context;
         _rbacService = rbacService;
         _dateTimeService = dateTimeService;
-        _currentUserService = currentUserService;
-        _provisioningSaga = provisioningSaga;
     }
 
     public async Task<PlatformTenantDto> Handle(CreateTenantWithOwnerCommand request, CancellationToken cancellationToken)
@@ -94,12 +87,36 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
         };
         _context.Tenants.Add(tenant);
 
+        var ownerIdentity = await _context.IdentityAccounts
+            .SingleOrDefaultAsync(x => x.NormalizedEmail == IdentityEmailAddress.Normalize(request.OwnerEmail), cancellationToken);
+        if (ownerIdentity is not null && !ownerIdentity.IsActive)
+            throw new ConflictException("The owner Global Identity is inactive.");
+
+        if (ownerIdentity is null)
+        {
+            ownerIdentity = new IdentityAccount
+            {
+                FullName = request.OwnerFullName,
+                Email = request.OwnerEmail.Trim(),
+                NormalizedEmail = IdentityEmailAddress.Normalize(request.OwnerEmail),
+                PhoneNumber = request.OwnerPhoneNumber,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.OwnerPassword),
+                IsActive = true,
+                // This is an explicit Platform-admin provisioned account. The owner can use the
+                // normal identity-first login immediately after the gym is approved; later resets
+                // still use the one-time email-link flow.
+                EmailVerifiedAt = _dateTimeService.UtcNow
+            };
+            _context.IdentityAccounts.Add(ownerIdentity);
+        }
+
         var owner = new User
         {
             IdentityAccountId = ownerIdentity.Id,
             TenantId = tenant.Id,
-            Email = request.OwnerEmail.Trim(),
-            PhoneNumber = request.OwnerPhoneNumber?.Trim(),
+            IdentityAccountId = ownerIdentity.Id,
+            Email = request.OwnerEmail,
+            PhoneNumber = request.OwnerPhoneNumber,
             PasswordHash = ownerIdentity.PasswordHash,
             Role = UserRole.Owner,
             IsActive = true
@@ -122,32 +139,16 @@ public class CreateTenantWithOwnerCommandHandler : IRequestHandler<CreateTenantW
 
         await _rbacService.EnsureUserInRoleAsync(owner.Id, tenant.Id, SystemRoles.Owner, cancellationToken);
 
-        // A platform-created gym is an already-approved workspace application. Keeping the
-        // provisioning intent in ApplicationRequests lets the same retryable saga allocate one
-        // resource, migrate it, seed the owner and record the mapping.
-        var now = _dateTimeService.UtcNow;
-        var provisioningApplication = new ApplicationRequest
+        _context.WorkspaceMemberships.Add(new WorkspaceMembership
         {
+            TenantId = tenant.Id,
             IdentityAccountId = ownerIdentity.Id,
-            ApplicationType = ApplicationType.GymWorkspaceCreation,
-            Status = ApplicationRequestStatus.Approved,
-            ProvisionedWorkspaceId = tenant.Id,
-            TargetScopeKey = scopeKey,
-            RequestedRole = UserRole.Owner,
-            PayloadJson = "{}",
-            SubmittedAt = now,
-            ReviewedAt = now,
-            ReviewedBy = "platform-create"
-        };
-        _context.ApplicationRequests.Add(provisioningApplication);
-        _context.ApplicationRequestRevisions.Add(new ApplicationRequestRevision
-        {
-            ApplicationRequestId = provisioningApplication.Id,
-            RevisionNumber = 1,
-            PayloadJson = provisioningApplication.PayloadJson,
-            SubmittedAt = now,
-            SubmittedBy = "platform-create"
+            UserId = owner.Id,
+            Role = UserRole.Owner,
+            Status = WorkspaceMembershipStatus.PendingPlatformApproval
         });
+
+        await _context.SaveChangesAsync(cancellationToken);
 
         try
         {

@@ -22,6 +22,14 @@ public class ProductionDeploymentContractTests
         Assert.Contains("logicfit-production-migration-plan", workflow);
         Assert.Contains("tree-equivalent to origin/master", workflow);
         Assert.Contains("needs.preflight.outputs.release_sha", workflow);
+        Assert.Contains("DIAGNOSE-PRODUCTION-HEALTH", workflow);
+        Assert.Contains("diagnose-production-health:", workflow);
+        Assert.Contains("SELECT 1", workflow);
+        Assert.Contains("shell: powershell", workflow);
+        Assert.Contains("Microsoft.Data.SqlClient", File.ReadAllText(Path.Combine(RepositoryRoot, "LogicFit.Tests", "ProductionDatabaseConnectivityTests.cs")));
+        Assert.Contains("Probe with the application SQL provider", workflow);
+        Assert.Contains("diagnose-webdeploy-health.ps1", workflow);
+        Assert.Contains("Compare remote database identity", workflow);
     }
 
     [Fact]
@@ -39,36 +47,7 @@ public class ProductionDeploymentContractTests
         Assert.Contains("VerifiedBackupReference", script);
         Assert.Contains("-ApplyMigrations requires -MigrationScriptPath", script);
         Assert.Contains("ApproveDestructiveMigrationReview", script);
-        Assert.Contains("App_Data\\\\DataProtection-Keys", script);
-        Assert.Contains("objectName=dirPath", script);
         Assert.DoesNotContain("Database__ApplyMigrationsOnStartup", script);
-    }
-
-    [Fact]
-    public void Webdeploy_source_argument_does_not_embed_literal_quotes()
-    {
-        var script = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "deploy-webdeploy.ps1"));
-
-        Assert.Contains("\"-source:contentPath=$ContentPath\"", script, StringComparison.Ordinal);
-        Assert.DoesNotContain("contentPath=`\"$ContentPath`\"", script, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Data_protection_keys_use_the_central_database_with_a_file_recovery_mirror()
-    {
-        var dependencyInjection = File.ReadAllText(Path.Combine(
-            RepositoryRoot,
-            "LogicFit.Infrastructure",
-            "DependencyInjection.cs"));
-        var bootstrapper = File.ReadAllText(Path.Combine(
-            RepositoryRoot,
-            "LogicFit.Infrastructure",
-            "Persistence",
-            "DataProtectionKeyRingBootstrapper.cs"));
-
-        Assert.Contains("PersistKeysToDbContext<ApplicationDbContext>", dependencyInjection);
-        Assert.Contains("DataProtectionKeyRingBootstrapper", bootstrapper);
-        Assert.Contains("FileSystemXmlRepository", bootstrapper);
     }
 
     [Fact]
@@ -89,5 +68,17 @@ public class ProductionDeploymentContractTests
         {
             Environment.SetEnvironmentVariable(variable, previous);
         }
+    }
+
+    [Fact]
+    public void Protected_startup_recovery_can_explicitly_enable_private_backups()
+    {
+        var script = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "recover-webdeploy-startup.ps1"));
+        var workflow = File.ReadAllText(Path.Combine(RepositoryRoot, ".github", "workflows", "cd.yml"));
+
+        Assert.Contains("[switch] $EnableBackups", script, StringComparison.Ordinal);
+        Assert.Contains("App_Data/PrivateBackups", script, StringComparison.Ordinal);
+        Assert.Contains("enable_backups", workflow, StringComparison.Ordinal);
+        Assert.Contains("$arguments.EnableBackups = $true", workflow, StringComparison.Ordinal);
     }
 }

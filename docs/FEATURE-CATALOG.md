@@ -1,13 +1,5 @@
 # كتالوج ميزات LogicFit
 
-## Platform gym provisioning contract (Issue #226)
-
-`POST /api/platform/tenants` now has stable retryable provisioning outcomes, a protected
-`Idempotency-Key` request scope, and persistent job/resource identifiers for the Platform UI. The
-UI must preserve the same body and idempotency key across retries and must not display or log
-provider exception text, connection material, or passwords. Capacity is distinct from provider,
-mapping, migration, and tenant-health failures through the documented `code`/`details` contract.
-
 ## Platform gym lifecycle safety (Issue #214)
 
 Platform tenant management now has explicit credential and deletion actions. Credential viewing
@@ -24,17 +16,16 @@ membership and other workspace associations are revoked.
 > Phone Login, OTP verification, Passkey, and WebAuthn are not active API features. Email
 > verification and password reset continue to use one-time links.
 
+> **Gym owner login repair (Issue #217):** an already-Active Gym with a legacy pending owner
+> membership is reconciled to `Active` during identity login. The repair is owner-only and never
+> promotes pending client/workspace memberships.
+
 > حالة المرجع: مبني على نسخة الإصدار `master` عند `8ddc5db`، مع اعتماد معلّق على PR #109 الذي يُبقي Controller مراجعة الطلبات ضمن الـAPI الموحد (2026-07-30). الشفرة هي مصدر الحقيقة؛ لا تعني أي بطاقة أدناه أن واجهة مستقبلية أو فرعًا غير مدمج أصبح متاحًا في الإنتاج.
 
 هذا هو الفهرس المركزي لكل مجال وظيفي موجود في نظام LogicFit. لا يكرر قائمة الـendpoints؛ المرجع التفصيلي المولّد لها هو [كتالوج API](API-ENDPOINT-CATALOG.md). الغرض من هذا الملف أن يعرف مالك المنتج، الدعم، QA، والفرق الثلاثة أين توجد كل ميزة وما هو التدفق الذي يجب تحديثه عندما تتغير.
 
 > **Historical note:** earlier releases briefly contained Phone/OTP authentication. That behavior is
 > superseded by the Email + Password-only contract above and must not be enabled again.
-
-> **Issue #217 — identity login repair:** an already-Active Gym with a legacy pending owner
-> membership is reconciled at identity login, so the owner receives the active workspace context
-> instead of an empty context-selection screen. The repair is owner-only, idempotent, audited by
-> actor/time fields, and does not promote pending clients.
 
 > **Issue #147 source implementation; production deployment not yet verified:** the Backend startup
 > checks and applies pending compiled EF migrations before seeding, serialized across SQL Server
@@ -70,14 +61,13 @@ membership and other workspace associations are revoked.
 | دخول إدارة المنصة | بريد وكلمة مرور، refresh cookie وتدوير/إلغاء الجلسات | `Features/Platform/Auth`، `/api/platform/auth/*` | `PlatformOwner`، `PlatformAdmin` |
 | لوحة المتابعة | مؤشرات المنصة وقائمة المساحات | `Features/Platform/Dashboard`، `/api/platform/dashboard/*` | صلاحيات Platform المناسبة |
 | إدارة المساحات | إنشاء، قائمة، اعتماد، تعليق، تفعيل وأرشفة الجيم/المساحة؛ تفعيل عضوية مالك الجيم المنتظرة مع اعتماد المساحة | `Features/Platform/Tenants`، `/api/platform/tenants/*` | `ManageTenants` |
-| طلبات مساحة المدرب الحر | قائمة، بدء مراجعة، طلب معلومات، اعتماد مساحة، اعتماد عضوية ورفض مع `RowVersion` | `LogicFit.API/Features/Platform/WorkspaceApplications`، `/api/platform/workspace-applications/*` | `ManageTenants` |
+| طلبات مساحات العمل | إنشاء ومراجعة وطلب معلومات ورفض واعتماد/تجهيز وإعادة محاولة لكل من `Gym` و`FreelanceCoach` مع حالات الدفع والمساحة وقاعدة البيانات والاشتراك والوصول | `LogicFit.API/Features/Platform/WorkspaceApplications`، `/api/platform/workspace-applications/*` | `ManageTenants` |
 | الخطط والميزات | الخطط، feature catalog، overrides، quotas، dependencies | `Features/Platform/Plans` و`FeatureCatalog`، `/api/platform/plans/*` و`/api/platform/features/*` | `ManagePlans` / `ManageFeatures` |
 | اشتراكات الـSaaS | العرض، الاستهلاك، lifecycle، التمديد ومعاينة الترقية | `Features/Platform/Subscriptions`، `/api/platform/subscriptions/*` | `ManageSubscriptions` |
 | الفوترة اليدوية | طرق الدفع، طلبات إثبات الدفع، الاعتماد/الرفض، فواتير المنصة | `PaymentMethods` و`PaymentRequests` و`Invoices`، `/api/platform/payment-*` و`/api/platform/invoices` | صلاحيات الفوترة المركزية |
 | مسؤولو المنصة وRBAC | إنشاء/تعطيل مسؤول، أدوار المنصة وخريطة صلاحياتها | `Administrators` و`Authorization`، `/api/platform/administrators/*` و`/api/platform/roles/*` | `PlatformOwner` |
 | المراقبة والتدقيق | alerts، audit logs، Outbox/jobs مع تنسيق متعدد النسخ، النسخ الاحتياطي والتقارير | `Alerts`، `Audit`، `Operations`، `Backups`، `Reports` | أدوار تشغيل المنصة |
 | عقد تشغيل لوحة المنصة | ملخصات مراجعة الطلبات والدفع، سعة Pool، Provisioning، النسخ والاستعادة، وتشخيص إصدار الـAPI | `Features/Platform/Dashboard`، `DatabaseResources`، `Diagnostics`، `Operations`؛ `/api/platform/dashboard/*`، `/api/platform/database-resources`، `/api/platform/diagnostics/version`، `/api/platform/operations/provisioning` | `ManagePlatformReports` / `ManagePlatformBackups` |
-| توجيه Platform/Tenant وقت التشغيل | تحديد TenantId ثم اختيار قاعدة المساحة وفصل العمليات اليومية عن Platform DB | `TenantDatabaseRoutingMiddleware`, `TenantAwareApplicationDbContextProxy`, `PlatformDbContext`, `TenantDbContext`; `TENANT-DATABASE-RUNTIME-CUTOVER.md` | Tenant access + server-side mapping |
 | الإشعارات المركزية | عرض الإشعارات وتعليمها كمقروءة | `Features/Platform/Notifications` | مسؤول المنصة المستهدف |
 
 ## الهوية والوصول ومساحات العمل
@@ -88,12 +78,21 @@ membership and other workspace associations are revoked.
 | الهوية المستقلة | هوية عالمية، Email + Password، اختيار مساحة، تأكيد البريد وemail-link recovery | `Features/Identity`، `/api/identity/*` | `IdentityAccount` لا يمنح دخول مساحة وحده؛ الهاتف للتواصل فقط |
 | اختيار مساحة العمل | استبدال token اختيار قصير العمر بـJWT/refresh tenant الموجودين | `IdentityWorkspaceSession` و`WorkspaceMembership` | عضوية `Active` فقط؛ يطبق حارس المساحة قبل إصدار الجلسة |
 | حارس الهوية والعضوية | فحص موحد للحساب المحلي والهوية المرتبطة والعضوية عند login وrefresh واختيار المساحة وكل طلب tenant مصادق عليه | `IIdentityWorkspaceAccessGuard` و`IdentityWorkspaceAccessMiddleware` | الحسابات القديمة غير المرتبطة تعمل مؤقتًا بوضع توافق صريح قابل للإيقاف بعد ترحيل الربط المثبت بالبريد |
-| طلب مساحة مدرب حر | تقديم إنشاء مساحة وهوية وهوية بصرية مستقلة، جلسة متابعة محدودة، تعديل الحقول المطلوبة وإعادة التقديم | `Features/WorkspaceApplications`، `/api/workspace-applications/*` | public قبل الاعتماد؛ token المتابعة ليس JWT |
+| طلب مساحة مدرب حر | تقديم إنشاء مساحة وهوية وهوية بصرية مستقلة، جلسة متابعة محدودة، تعديل الحقول المطلوبة وإعادة التقديم؛ ويمكن لمسؤول المنصة بدء نفس المسار الموحد | `Features/WorkspaceApplications`، `/api/workspace-applications/*` و`/api/platform/workspace-applications/*` | public قبل الاعتماد؛ token المتابعة ليس JWT؛ لوحة المنصة تتطلب `ManageTenants` |
 | فريق المدرب الحر | ترشيح Coach/Assistant/Client لمساحة مستقلة ثم اعتماد Platform | `FreelanceTeamApplicationsController`، `/api/freelance/team/applications` | Freelance Owner مع `ManageCoaches`؛ لا توجد صلاحية مباشرة قبل الاعتماد |
 | المستخدمون والأدوار | مستخدمون، profiles، الأدوار، permissions وإصدارات الصلاحيات | `Features/Users`، `Profile`، `Authorization` | TenantId وملكية المورد حد أمني |
 | هوية وهوية بصرية المساحة | gym profile، branding، media وبيانات العلامة | `GymProfile`، `Branding`، `Media` | هوية مساحة المدرب الحر تسري على كل أعضائها |
 
 الشرح التفصيلي لهذه التدفقات، الجلسات، الحالات والـendpoints موجود في [AUTHENTICATION-AND-WORKSPACE-FLOWS.md](AUTHENTICATION-AND-WORKSPACE-FLOWS.md).
+
+## دورة الاشتراك الموحدة (Issue #248)
+
+`Gym` و`FreelanceCoach` يمران بنفس رحلة الاشتراك: نوع المساحة، الباقة، البيانات الأساسية، إثبات
+الدفع، ثم المراجعة والتجهيز والتفعيل. يعيد الخادم snapshot آمنًا يفصل بين حالة الطلب والدفع
+والـTenant والاشتراك وقاعدة البيانات والـprovisioning والعضوية، ولا يسمح بالـDashboard قبل اكتمال
+كل بوابات الوصول. حجز الـDatabaseResource يتم ذريًا من الـPool، وتبقى connection material داخل
+الخادم، مع migrations و`CanConnect` وhealth check قبل إنشاء الـmapping. الطلبات التي تحتاج سعة أو
+إعادة محاولة لا تنشئ كيانات مكررة.
 
 ## تشغيل مساحة الجيم أو المدرب الحر
 
@@ -109,6 +108,16 @@ membership and other workspace associations are revoked.
 | التغذية | أطعمة، خطط غذائية وسجل الوجبات | `Foods`، `DietPlans`، `MealLogs` | Coach / Client |
 | التفاعل | تحديات، chat، إشعارات | `Challenges`، `Chat`، `Notifications` | حسب عضوية وملكية كل مساحة |
 | التقارير | تقارير تشغيل ومالية ورياضية | `Reports` | الأدوار صاحبة صلاحية التقرير |
+
+## حسابات الفريق والوصول (Issues #246 and #65)
+
+The owner-managed team surface is separate from the legacy HR profile form. `WorkspaceMembersController`
+and the `WorkspaceMembers` application feature provide a single operation for identity, tenant-local
+user, membership, role assignment, one-time credentials, password reset, and access lifecycle. The
+surface is protected by `ManageEmployees`, is tenant-scoped, rejects duplicate active memberships,
+supports identity reuse across workspaces, and records security audit events without credentials.
+The Tenant UI route is `/owner/workspace-access` with explicit loading, empty, error, credential,
+and state-action screens.
 
 ## المالية، التجارة والمخزون داخل المساحة
 
