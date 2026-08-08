@@ -3,10 +3,12 @@ using System.Text.Json;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Enums;
 using LogicFit.Infrastructure;
+using LogicFit.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;
 
 const string connectionVariable = "LOGICFIT_PRODUCTION_DB_CONNECTION";
 const string outputVariable = "LOGICFIT_BACKUP_OUTPUT_ROOT";
@@ -53,6 +55,28 @@ var host = new HostBuilder()
 try
 {
     await using var scope = host.Services.CreateAsyncScope();
+    var platformDb = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
+    var assignedResourceCount = await platformDb.DatabaseResources.AsNoTracking()
+        .CountAsync(resource => resource.Status == DatabaseResourceStatus.Assigned);
+    var activeMappingCount = await platformDb.TenantDatabaseMappings.AsNoTracking()
+        .CountAsync(mapping => mapping.IsActive && !string.IsNullOrWhiteSpace(mapping.EncryptedConnectionString));
+    var activeAssignedMappingCount = await platformDb.TenantDatabaseMappings.AsNoTracking()
+        .Where(mapping => mapping.IsActive && !string.IsNullOrWhiteSpace(mapping.EncryptedConnectionString))
+        .Join(
+            platformDb.DatabaseResources.AsNoTracking()
+                .Where(resource => resource.Status == DatabaseResourceStatus.Assigned),
+            mapping => mapping.DatabaseResourceId,
+            resource => resource.Id,
+            (mapping, resource) => new { mapping, resource })
+        .Join(
+            platformDb.Tenants.AsNoTracking().IgnoreQueryFilters().Where(tenant => !tenant.IsDeleted),
+            pair => pair.mapping.TenantId,
+            tenant => tenant.Id,
+            (pair, tenant) => pair)
+        .CountAsync();
+    Console.WriteLine(
+        $"Protected platform inventory: assigned resources={assignedResourceCount}; active mappings={activeMappingCount}; active assigned mappings={activeAssignedMappingCount}.");
+
     var backupService = scope.ServiceProvider.GetRequiredService<IBackupService>();
     var status = backupService.GetStatus();
     if (!status.IsEnabled || !status.IsReady)
@@ -122,6 +146,17 @@ catch (Exception exception)
     var sqlException = exception as SqlException ?? exception.GetBaseException() as SqlException;
     if (sqlException is not null)
         Console.Error.WriteLine($"Protected backup failed: SqlException number {sqlException.Number}, class {sqlException.Class}, state {sqlException.State}.");
+    else if (exception is InvalidOperationException)
+    {
+        var category = exception.Message.Contains("No assigned tenant databases", StringComparison.Ordinal)
+            ? "NoAssignedTenantDatabases"
+            : exception.Message.Contains("mapping could not be resolved", StringComparison.OrdinalIgnoreCase)
+                ? "MappingResolutionFailure"
+                : exception.Message.Contains("backup", StringComparison.OrdinalIgnoreCase)
+                    ? "BackupOperationRejected"
+                    : "OperatorOperationRejected";
+        Console.Error.WriteLine($"Protected backup failed: InvalidOperationException category {category}.");
+    }
     else
         Console.Error.WriteLine($"Protected backup failed: {exception.GetType().Name}.");
     return 1;
