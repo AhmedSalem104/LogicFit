@@ -100,14 +100,20 @@ is resolved server-side through the active TenantDatabaseMapping.
 
 ## Creating a Gym or Freelance workspace
 
-1. The authenticated identity chooses Gym or FreelanceCoach; it never submits an owner role.
-2. The application is saved as Draft and collects the minimal business/contact fields.
-3. The user selects Monthly, SemiAnnual, or Annual billing and receives an immutable Plan Snapshot.
-4. A PaymentRequest is created and a JPG/JPEG/PNG/PDF proof is uploaded to private storage.
-5. Submit changes Application to Submitted, PaymentRequest to PendingReview, Subscription to
-   PendingPayment, Workspace to PendingApproval, and Membership to Pending.
-6. Platform Admin uses explicit `ManageTenants` and `ManagePaymentRequests` permissions to review,
-   request information, approve/reject payment, or reject the application with a reason.
+The public flow is intentionally short: the visitor chooses `Gym` or `FreelanceCoach`, selects an
+active plan, enters the minimum owner/workspace fields, uploads payment proof, and submits once.
+The server creates or reuses the global identity and keeps identity, Tenant, subscription, payment,
+and provisioning steps behind the lifecycle gate. A password is collected only as the initial owner
+credential; the form does not ask the visitor to create a Tenant, database, mapping, or membership.
+
+The unified multipart endpoint is `POST /api/workspace-applications`. It creates an application,
+payment request, plan snapshot, and pending subscription, then returns an opaque tracking session.
+The tracking response exposes only the user journey (`Submitted`, `UnderReview`, `MoreInformation`,
+`Preparing`, `Ready`, or a safe failure state). Requested fields can be updated with
+`PATCH /api/workspace-applications/tracking/fields` and resubmitted without restarting.
+
+Platform Admin uses explicit `ManageTenants` and `ManagePaymentRequests` permissions to review,
+request information, approve/reject payment, approve/reject the application, and retry provisioning.
 
 Application transitions are concurrency-safe and audited: Draft -> Submitted -> UnderReview ->
 NeedsMoreInformation -> Submitted, or UnderReview -> Approved/Rejected. Repeated submissions use
@@ -164,6 +170,19 @@ the next identity context. This is idempotent. The identity issuer also repairs 
 Gym at the next owner login, so an operator does not need a second manual activation action after
 an older release left the membership pending. Client memberships in
 `PendingWorkspaceApproval` remain subject to the gym's own approval flow.
+
+## Issue #248 — unified lifecycle and E2E acceptance
+
+Both workspace types use `WorkspaceType` as the only type discriminator and the same provisioning
+saga. Access is allowed only when application approval, payment approval, an active Tenant and
+subscription, an `Assigned` database resource, a completed provisioning job, an active encrypted
+mapping, and an active Owner membership all exist. Database connection material is accepted and
+decrypted only inside the server.
+
+Capacity shortage is represented as `AwaitingDatabaseCapacity`; connection or migration failure is
+represented as `ProvisioningFailed` with a retryable job. Retry reuses the original application,
+Tenant, subscription, job, and membership identities. The complete local E2E evidence and the
+human-readable user journey are in `C:/Users/B-SMART/Desktop/LogicFit-Subscription-Flow-E2E-Guide.md`.
 
 ## Owner-managed workspace members (Issues #246 and #65)
 

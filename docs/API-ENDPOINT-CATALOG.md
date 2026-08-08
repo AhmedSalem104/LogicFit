@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-06 15:37 UTC`  |  Total endpoints: **392**
+Generated: `2026-08-08 10:59 UTC`  |  Total endpoints: **395**
 
 ## Contract rules
 
@@ -134,6 +134,12 @@ Generated: `2026-08-06 15:37 UTC`  |  Total endpoints: **392**
 - **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
 - **Inputs:** Query `status`: `DatabaseResourceStatus?`<br>Query `tenantId`: `Guid?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] DatabaseResourceStatus? status = null, [FromQuery] Guid? tenantId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize`
 - **Declared response:** Task<ActionResult<PlatformPage<PlatformDatabaseResourceDto>>>
+
+#### `POST /api/platform/database-resources` - `Register`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `RegisterDatabaseResourceRequest`<br>Handler signature: `[FromBody] RegisterDatabaseResourceRequest request, [FromServices] IConnectionStringProtector connectionStringProtector`
+- **Declared response:** typeof(PlatformDatabaseResourceDto), StatusCodes.Status201Created
 
 ### PlatformDiagnostics
 
@@ -2429,11 +2435,23 @@ Generated: `2026-08-06 15:37 UTC`  |  Total endpoints: **392**
 
 ### WorkspaceApplications
 
+#### `POST /api/workspace-applications` - `Submit`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Form `form`: `SubmitWorkspaceApplicationForm`<br>Handler signature: `[FromForm] SubmitWorkspaceApplicationForm form, [FromForm(Name = "proof")] IFormFile? proof`
+- **Declared response:** typeof(ApplicationTrackingSessionDto), StatusCodes.Status201Created
+
 #### `POST /api/workspace-applications/freelance` - `SubmitFreelance`
 
 - **Access:** Server default (not declared explicitly)
-- **Inputs:** Body `command`: `SubmitFreelanceWorkspaceApplicationCommand` { `Email`: string; `PhoneNumber`: string?; `Password`: string; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `Specialties`: IReadOnlyList<string>?; `Certifications`: IReadOnlyList<string>?; `WelcomeMessage`: string?; `BookingSettings`: System.Text.Json.JsonElement?; `PlanId`: Guid; `BillingCycle`: BillingCycle; `PaymentAmount`: decimal; `PaymentTransactionNumber`: string?; `PaymentDate`: DateTime?; `ProofStorageKey`: string }<br>Handler signature: `[FromBody] SubmitFreelanceWorkspaceApplicationCommand command`
+- **Inputs:** Body `command`: `SubmitFreelanceWorkspaceApplicationCommand` { `WorkspaceType`: WorkspaceType; `Email`: string; `PhoneNumber`: string?; `Password`: string; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `DeliveryMode`: string?; `Specialties`: IReadOnlyList<string>?; `Certifications`: IReadOnlyList<string>?; `WelcomeMessage`: string?; `BookingSettings`: System.Text.Json.JsonElement?; `PlanId`: Guid; `BillingCycle`: BillingCycle?; `PaymentAmount`: decimal?; `PaymentTransactionNumber`: string? }<br>Handler signature: `[FromBody] SubmitFreelanceWorkspaceApplicationCommand command`
 - **Declared response:** typeof(ApplicationTrackingSessionDto), StatusCodes.Status201Created
+
+#### `GET /api/workspace-applications/plans` - `GetPlans`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** No request input.
+- **Declared response:** typeof(List<PlanDto>), StatusCodes.Status200OK
 
 #### `GET /api/workspace-applications/tracking` - `GetTrackingStatus`
 

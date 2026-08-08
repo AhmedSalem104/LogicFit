@@ -31,12 +31,14 @@ internal static class PlatformApplicationMapper
         ReviewedBy = application.ReviewedBy,
         ProvisionedWorkspaceId = application.ProvisionedWorkspaceId,
         WorkspaceType = lifecycle?.WorkspaceType,
+        PaymentRequestId = lifecycle?.PaymentRequestId,
         PaymentStatus = lifecycle?.PaymentStatus,
         WorkspaceStatus = lifecycle?.WorkspaceStatus,
         SubscriptionStatus = lifecycle?.SubscriptionStatus,
         DatabaseStatus = lifecycle?.DatabaseStatus,
         DatabaseStatusCode = lifecycle?.DatabaseStatusCode,
         ProvisioningStatus = lifecycle?.ProvisioningStatus,
+        UserJourneyStage = lifecycle?.UserJourneyStage ?? "Submitted",
         CanAccessDashboard = lifecycle?.CanAccessDashboard ?? false,
         RequiredAction = lifecycle?.RequiredAction,
         NextStep = lifecycle?.NextStep,
@@ -50,12 +52,14 @@ internal static class PlatformApplicationMapper
 public sealed class PlatformApplicationLifecycleDto
 {
     public WorkspaceType? WorkspaceType { get; init; }
+    public Guid? PaymentRequestId { get; init; }
     public PaymentRequestStatus? PaymentStatus { get; init; }
     public TenantStatus? WorkspaceStatus { get; init; }
     public TenantSubscriptionStatus? SubscriptionStatus { get; init; }
     public DatabaseResourceStatus? DatabaseStatus { get; init; }
     public string? DatabaseStatusCode { get; init; }
     public ProvisioningJobStatus? ProvisioningStatus { get; init; }
+    public string UserJourneyStage { get; init; } = "Submitted";
     public bool CanAccessDashboard { get; init; }
     public string? RequiredAction { get; init; }
     public string? NextStep { get; init; }

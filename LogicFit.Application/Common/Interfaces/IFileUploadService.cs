@@ -5,6 +5,8 @@ namespace LogicFit.Application.Common.Interfaces;
 public interface IFileUploadService
 {
     Task<string> UploadImageAsync(IFormFile file, string? subfolder = null);
+    /// <summary>Stores an allowed private document (for example a payment proof).</summary>
+    Task<string> UploadDocumentAsync(IFormFile file, string? subfolder = null);
     Task<string> UploadVideoAsync(IFormFile file, string? subfolder = null);
     Task<List<string>> UploadImagesAsync(List<IFormFile> files, string? subfolder = null);
     Task<bool> DeleteFileAsync(string fileUrl);

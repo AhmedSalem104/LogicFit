@@ -22,6 +22,7 @@ public sealed class PlatformApplicationDto
     public string? ReviewedBy { get; init; }
     public Guid? ProvisionedWorkspaceId { get; init; }
     public WorkspaceType? WorkspaceType { get; init; }
+    public Guid? PaymentRequestId { get; init; }
     public PaymentRequestStatus? PaymentStatus { get; init; }
     public TenantStatus? WorkspaceStatus { get; init; }
     public TenantSubscriptionStatus? SubscriptionStatus { get; init; }
@@ -29,6 +30,7 @@ public sealed class PlatformApplicationDto
     /// <summary>Stable operator-facing code that distinguishes an unassigned workspace from an available pool resource.</summary>
     public string? DatabaseStatusCode { get; init; }
     public ProvisioningJobStatus? ProvisioningStatus { get; init; }
+    public string UserJourneyStage { get; init; } = "Submitted";
     public bool CanAccessDashboard { get; init; }
     public string? RequiredAction { get; init; }
     public string? NextStep { get; init; }

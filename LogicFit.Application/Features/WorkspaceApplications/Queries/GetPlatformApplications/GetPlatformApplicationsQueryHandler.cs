@@ -60,6 +60,7 @@ public sealed class GetPlatformApplicationsQueryHandler
         var payments = await _context.PaymentRequests.AsNoTracking()
             .Where(x => x.ApplicationRequestId.HasValue && applicationIds.Contains(x.ApplicationRequestId.Value))
             .Select(x => new PaymentSnapshot(
+                x.Id,
                 x.ApplicationRequestId!.Value,
                 x.TenantId,
                 x.TenantSubscriptionId,
@@ -201,6 +202,7 @@ public sealed class GetPlatformApplicationsQueryHandler
         {
             ApplicationRequestStatus.Rejected => ("لا يوجد إجراء", "التواصل مع الدعم عند الحاجة", "تم رفض الطلب. راجع سبب الرفض أو تواصل مع الدعم."),
             ApplicationRequestStatus.NeedsMoreInformation => ("استكمال البيانات", "تعديل الحقول المطلوبة ثم إعادة الإرسال", "مطلوب استكمال بعض البيانات قبل متابعة الطلب."),
+            _ when payment?.Status is PaymentRequestStatus.Rejected or PaymentRequestStatus.Cancelled or PaymentRequestStatus.Expired => ("مراجعة الدفع", "تصحيح بيانات الدفع ثم إعادة المراجعة", "لم يتم اعتماد الدفع. راجع إثبات الدفع أو بيانات العملية."),
             _ when provisioning?.Status == ProvisioningJobStatus.Failed => ("إعادة محاولة التجهيز", "إصلاح سبب الفشل ثم إعادة المحاولة", "فشل تجهيز مساحة العمل ويمكن إعادة المحاولة بأمان."),
             _ when provisioning?.Status is ProvisioningJobStatus.Provisioning or ProvisioningJobStatus.AwaitingDatabaseCapacity => ("انتظار التجهيز", "انتظار جاهزية قاعدة البيانات", "جاري تجهيز مساحة العمل وقاعدة البيانات."),
             _ when payment?.Status is PaymentRequestStatus.Pending or PaymentRequestStatus.Draft => ("مراجعة الدفع", "اعتماد الدفع قبل بدء التجهيز", "تم تسجيل الطلب وننتظر اعتماد الدفع."),
@@ -210,6 +212,23 @@ public sealed class GetPlatformApplicationsQueryHandler
             _ when canAccess => ("لا يوجد", "يمكن فتح لوحة الإدارة", "تم تفعيل مساحة العمل ويمكن الدخول بأمان."),
             _ => ("التحقق من الجاهزية", "مراجعة حالة مساحة العمل وقاعدة البيانات", "لم تكتمل جاهزية مساحة العمل بعد.")
         };
+
+        var userJourneyStage = canAccess
+            ? "Ready"
+            : application.Status == ApplicationRequestStatus.Rejected
+                ? "Rejected"
+                : payment?.Status is PaymentRequestStatus.Rejected or PaymentRequestStatus.Cancelled or PaymentRequestStatus.Expired
+                    ? "PaymentRejected"
+                    : application.Status == ApplicationRequestStatus.NeedsMoreInformation
+                        ? "MoreInformation"
+                        : provisioning?.Status == ProvisioningJobStatus.Failed
+                            ? "ProvisioningFailed"
+                            : provisioning?.Status is ProvisioningJobStatus.Provisioning or ProvisioningJobStatus.AwaitingDatabaseCapacity ||
+                              workspaceStatus is TenantStatus.Provisioning or TenantStatus.AwaitingDatabaseCapacity
+                                ? "Preparing"
+                                : application.Status is ApplicationRequestStatus.UnderReview or ApplicationRequestStatus.Approved
+                                    ? "UnderReview"
+                                    : "Submitted";
 
         var dates = new[]
         {
@@ -230,12 +249,14 @@ public sealed class GetPlatformApplicationsQueryHandler
         return new PlatformApplicationLifecycleDto
         {
             WorkspaceType = workspaceType,
+            PaymentRequestId = payment?.Id,
             PaymentStatus = payment?.Status,
             WorkspaceStatus = workspaceStatus,
             SubscriptionStatus = subscriptionStatus,
             DatabaseStatus = databaseStatus,
             DatabaseStatusCode = databaseStatusCode,
             ProvisioningStatus = provisioning?.Status,
+            UserJourneyStage = userJourneyStage,
             CanAccessDashboard = canAccess,
             RequiredAction = action,
             NextStep = next,
@@ -246,6 +267,7 @@ public sealed class GetPlatformApplicationsQueryHandler
     }
 
     private sealed record PaymentSnapshot(
+        Guid Id,
         Guid ApplicationId,
         Guid TenantId,
         Guid? TenantSubscriptionId,

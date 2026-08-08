@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore;
 namespace LogicFit.API.Features.Platform.DatabaseResources;
 
 /// <summary>
-/// Read-only resource-pool view for the Platform console. Database names and connection
-/// material are intentionally absent; the resolver remains the only component that can use them.
+/// Safe resource-pool view and registration boundary for the Platform console. Database names and
+/// connection material are intentionally absent; the resolver remains the only component that can use them.
 /// </summary>
 [ApiController]
 [Route("api/platform/database-resources")]
@@ -53,6 +53,66 @@ public sealed class PlatformDatabaseResourcesController(IApplicationDbContext co
 
         return Ok(await PlatformPaging.CreateAsync(projection, page, pageSize, cancellationToken));
     }
+
+    /// <summary>
+    /// Registers an operator-owned database in the pool. The clear connection string is accepted
+    /// only on this server boundary, protected immediately, and is never returned or logged.
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(PlatformDatabaseResourceDto), StatusCodes.Status201Created)]
+    public async Task<ActionResult<PlatformDatabaseResourceDto>> Register(
+        [FromBody] RegisterDatabaseResourceRequest request,
+        [FromServices] IConnectionStringProtector connectionStringProtector,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.DatabaseName) || request.DatabaseName.Trim().Length > 256)
+            return BadRequest(new { message = "DatabaseName is required and must be at most 256 characters." });
+        if (string.IsNullOrWhiteSpace(request.ConnectionString) || request.ConnectionString.Length > 4000)
+            return BadRequest(new { message = "A protected connection string is required." });
+        if (!string.Equals(request.Provider, "ManualMonster", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(request.Provider, "LocalSql", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { message = "Provider must be ManualMonster or LocalSql." });
+
+        var databaseName = request.DatabaseName.Trim();
+        var exists = await context.DatabaseResources.IgnoreQueryFilters()
+            .AnyAsync(x => x.Provider == request.Provider.Trim() && x.DatabaseName == databaseName, cancellationToken);
+        if (exists)
+            return Conflict(new { message = "This provider/database resource is already registered." });
+
+        var resource = new Domain.Entities.DatabaseResource
+        {
+            Provider = request.Provider.Trim(),
+            DatabaseName = databaseName,
+            ServerKey = string.IsNullOrWhiteSpace(request.ServerKey) ? null : request.ServerKey.Trim(),
+            EncryptedConnectionString = connectionStringProtector.Protect(request.ConnectionString.Trim()),
+            Status = DatabaseResourceStatus.Available
+        };
+        context.DatabaseResources.Add(resource);
+        await context.SaveChangesAsync(cancellationToken);
+
+        return StatusCode(StatusCodes.Status201Created, new PlatformDatabaseResourceDto
+        {
+            Id = resource.Id,
+            Provider = resource.Provider,
+            HasProtectedConnection = true,
+            Status = resource.Status,
+            TenantId = null,
+            TenantName = null,
+            ReservedAtUtc = resource.ReservedAtUtc,
+            AssignedAtUtc = resource.AssignedAtUtc,
+            LastHealthCheckAtUtc = resource.LastHealthCheckAtUtc,
+            SizeBytes = resource.SizeBytes,
+            SchemaVersion = resource.SchemaVersion
+        });
+    }
+}
+
+public sealed class RegisterDatabaseResourceRequest
+{
+    public string Provider { get; init; } = "ManualMonster";
+    public string DatabaseName { get; init; } = string.Empty;
+    public string? ServerKey { get; init; }
+    public string ConnectionString { get; init; } = string.Empty;
 }
 
 public sealed class PlatformDatabaseResourceDto
