@@ -1,13 +1,10 @@
 # LogicFit Project Status
 
-> **Issue #210 - release branch:** Platform approval/activation promotes a non-deleted Gym
-> owner's `PendingPlatformApproval` workspace membership to `Active`, including an idempotent
-> repair path for already-Active tenants. This release is pending protected deployment; no
-> migration or direct Production data change is included.
-
-> **Issue #217 — master release candidate:** identity login now applies the same narrow repair when
-> an already-Active Gym still has a pending owner membership. The repair is limited to the Gym
-> owner, records its actor/time, leaves client memberships unchanged, and requires no migration.
+> **Issues #210 and #217 - task branch:** Platform approval/activation promotes a non-deleted Gym
+> owner's `PendingPlatformApproval` workspace membership to `Active`. Identity login also performs
+> the same narrow owner-only repair for gyms already marked `Active`, preventing an empty context
+> screen for data created by older releases. This is unreleased until protected deployment gates
+> pass; no migration or direct Production data change is included.
 
 > **Issue #161 — merged to `develop`:** authentication controllers now use Email + Password
 > only. Platform login validates the linked active identity and platform RBAC assignment before
@@ -29,15 +26,18 @@
 
 Last reviewed: 2026-08-03
 
-> **Issue #208 — task branch, not deployed:** runtime database routing is implemented behind the
-> Platform/Tenant context boundary. `PlatformDbContext` now serves platform sets and Identity;
-> `TenantDatabaseRoutingMiddleware` resolves the active protected mapping before authorization;
-> tenant operational sets are created from a request-scoped `TenantDbContext`; missing mappings
-> fail with `TENANT_DATABASE_UNAVAILABLE`. Data Protection keys use a durable configurable key
-> directory, and background tenant subscription lifecycle runs per mapped Tenant DB. Existing
-> shared tenant rows still require the explicit backed-up transfer/reconciliation gate before
-> enabling this behavior for those workspaces. No Production database, mapping, or secret was
-> changed. See [TENANT-DATABASE-RUNTIME-CUTOVER.md](TENANT-DATABASE-RUNTIME-CUTOVER.md).
+> **Issue #239 — local implementation slice:** the existing Platform Admin `/backups` screen now
+> uses the server-owned batch contracts, defaults to `FullSystem` coverage (platform database plus
+> active assigned tenant mappings), and shows per-target status, SHA-256, manifest, retry state,
+> and restore capability. `BackupArtifactDto` exposes the checksum and the service records batch
+> start/finish audit events. This is not a Production backup/restore verification; no database,
+> Tenant mapping, resource, restore, or deployment operation was performed.
+
+> **Issue #202 — task branch:** the protected production migration plan and WebDeploy helper now
+> explicitly target the current compatibility `ApplicationDbContext`; no Platform/Tenant
+> baseline is applied to the shared Production database. This deployment correction is local and
+> unreleased until the protected CI, backup, migration review, health check, and rollback gates
+> pass.
 
 > **Issue #162 implementation:** Platform dashboard contracts now expose permission-filtered
 > operational summaries for application/payment review, database-pool capacity, provisioning,
@@ -194,11 +194,32 @@ sequenceDiagram
 - `WorkspaceType.FreelanceCoach` keeps an independent coach in the existing tenant isolation boundary; legacy tenants default to `Gym`.
 - A global `IdentityAccount` is linked to tenant-local `DomainUsers` and `WorkspaceMemberships`. The retired `/api/auth/login` compatibility route is no longer active; authenticated access uses the Identity-first Email + Password flow.
 - New `/api/identity/login` performs identity-first sign-in and returns active workspaces and pending applications together. `/api/identity/select-workspace` exchanges its short-lived opaque selection token for the existing tenant JWT/refresh-token contract.
+- During identity login, an already-Active Gym with a pending platform owner membership is repaired idempotently; pending client/workspace memberships remain unchanged. A single active Gym owner is then auto-routed by the frontend to `/api/identity/select-workspace`.
 - Public freelance onboarding uses `ApplicationRequests`, immutable submission revisions, and short-lived opaque tracking sessions. Applicants may edit only the field names requested by Platform Admin, then resubmit; rejected requests remain terminal evidence.
 - Platform Admin reviews a minimal, non-health/non-training application view through `/api/platform/workspace-applications`. Review, information-request, approval, and rejection use row-version concurrency; rejection revokes tracking sessions and review decisions enqueue an Outbox event.
 - Approval reserves one `Provisioning` workspace before creating the Freelance Owner, its active workspace membership, role assignment, branding profile, and final `Active` workspace. A retry reuses the reserved workspace; a provisioning database failure records `ProvisioningFailed` for operator retry.
 - A Freelance Owner can sponsor an existing global identity as `FreelanceCoach`, `FreelanceAssistant`, or `Client`; that creates a separate membership application and never grants access directly. Platform approval repeats the live plan-capacity check and only then creates the tenant-local user, role assignment, and active membership. Capacity errors use `PLAN_MEMBER_LIMIT_REACHED` or `PLAN_CLIENT_LIMIT_REACHED`.
 - Freelance workspace branding reuses tenant branding for colors, logos, cover/background, and report identity, and adds a structured profile for bio, specialties, certifications, social links, welcome content, and booking settings.
+
+## Unified workspace lifecycle — local task branches, not merged or deployed
+
+- Issues `#244` and `#245` add a shared Platform Admin creation/review contract for `Gym` and
+  `FreelanceCoach`. The response separates application, payment, workspace, subscription,
+  database, provisioning, membership, and final dashboard-access decisions; `Active` alone never
+  grants access.
+- `POST /api/platform/workspace-applications` creates the application, pending subscription and
+  payment records, reuses an existing global identity when possible, and returns a one-time
+  temporary password only for a newly created owner identity. `FreelanceCoach` is an independent
+  tenant with its own database lifecycle and `FreelanceOwner` membership.
+- `GET /api/workspace-applications/tracking` now exposes the same safe status facts for the owner’s
+  Timeline without connection material or a tenant token. The Tenant UI blocks protected routes
+  until the server-side gate confirms database, subscription, workspace, and membership readiness.
+- This work is verified locally on isolated branches with backend build/tests and both frontend
+  builds/tests. It has not been merged, released, or deployed; production state is unchanged.
+- Owner-created staff/coach access is now implemented on the task branches for `#246` (Backend)
+  and `#65` (Tenant UI): identity reuse, tenant membership, role assignment, one-time credentials,
+  password reset, suspend/activate/remove actions, stable access states, and audit events. It is
+  verified locally but has not been merged, released, or deployed.
 - Subscription policy is now explicit in the access gate: `Trial`, `Active`, and `PastDue` operate normally; `Expired` is read-only while billing/renewal remains available; suspended/archived/provisioning workspaces hard-block operational access. Legacy gyms without a SaaS subscription record preserve their existing operational access during the migration rollout; a new freelance workspace without a subscription is billing-only.
 - Migrations `20260729100428_AddFreelanceWorkspaceFoundation`, `20260729103016_CompleteFreelanceWorkspaceFoundation`, and `20260729103719_AddTenantApprovalConcurrency` are additive and reviewed. The third migration adds the tenant row-version used to serialize final membership-capacity approval. `20260729133325_SeedFreelanceSystemRoles` is an idempotent corrective data migration that creates or restores the three freelance system roles and their permission maps. All four canonical migrations are present in production; the legacy server-only history row `20260729141315_SeedFreelanceSystemRoles` is preserved rather than edited manually.
 - Team membership now uses `/api/freelance/team/invites` and `/api/workspace-invites/{preview,accept}`. The invitation is tied to normalized email, workspace, and role; acceptance requires a verified identity session and a live quota check.
@@ -250,6 +271,8 @@ flowchart LR
 ## Current deployment position
 
 - Issue #137 confirmed that `logicfit-saas-model.runasp.net` (`site81605`) failed with IIS `500.30` after publish replaced the server-only configuration and removed a required secret. A rollback-safe configuration recovery restored repeated `200 Healthy` responses and DB-backed API smoke checks on 2026-08-02; stdout was disabled again.
+- On 2026-08-05, Issue #239's protected backup-activation recovery temporarily applied the server-only configuration to the verified `site81605` target, but the configured `/health` endpoint returned `Unhealthy`/HTTP 503. The recovery script restored both `appsettings.Production.json` and `web.config`; no backup configuration or artifact remains enabled. A read-only production database/readiness diagnostic is now required before another activation attempt.
+- On 2026-08-06, the protected Monster log diagnostic read 60 compiled application migrations with zero pending, 63 applied history rows including three server-only rows, and no IIS connection-string/Redis environment overrides. A controlled stdout-enable recycle followed by restoration of the original `web.config` returned `site81605` to `HTTP 200 Healthy`; stdout was disabled again and no database, backup, or binary change was made. This supports an IIS/ANCM worker-state recovery as the operational cause of the 503, rather than migration drift.
 - `logicfit-saas.runasp.net` is a separate current Platform host associated with the active `site81260` publish target. It remained on `500.30` pending execution of the new protected recovery job with the current GitHub Environment profile; stale local encrypted profiles cannot be used as credentials.
 - `logicfit.runasp.net/health` remained `200 Healthy` throughout the incident. The production frontend routes Platform requests to the recovered `logicfit-saas-model.runasp.net` host.
 - Retired `site78301` profiles are not valid recovery credentials. The current documented targets are `site81260` for `logicfit-saas`, `site45954` for `logicfit.runasp.net`, and `site81605` for the hosted model site; protected GitHub Environment profiles remain authoritative.
@@ -271,20 +294,6 @@ flowchart LR
 - A BACPAC restore remains an explicit operator procedure using DacFx/SqlPackage against a reviewed target database; the application never performs automatic restore or database replacement.
 
 ## Repository decomposition
-
-### 2026-08-05 — Backup admin screen audit (planning only)
-
-The existing Platform Dashboard `/backups` screen was reviewed against the per-Tenant and full
-Platform backup requirements in Issue #239. The screen currently uses the legacy platform-only
-create/list/download contract; it does not yet expose batch scopes, per-target artifacts,
-checksum/manifest verification, retry state, or restore capabilities. The Backend already has
-server-side batch orchestration and fail-closed restore providers, but this source capability is
-not evidence that the Dashboard flow or Production restore rehearsal is complete. The detailed
-gap matrix and proposed implementation order are in
-[BACKUP-ADMIN-SCREEN-REVIEW-2026-08-05.md](BACKUP-ADMIN-SCREEN-REVIEW-2026-08-05.md).
-
-This is a read-only planning checkpoint. No source code, database, mapping, resource, tenant
-database, or Production deployment was changed.
 
 ```text
 LogicFit.sln

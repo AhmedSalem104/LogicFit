@@ -84,7 +84,7 @@ public sealed class PlatformTenantStatusTests
         await fixture.Db.SaveChangesAsync();
         fixture.Db.ChangeTracker.Clear();
 
-        var handler = new SetTenantStatusCommandHandler(fixture.Db, fixture.Clock, fixture.CurrentUser);
+        var handler = new SetTenantStatusCommandHandler(fixture.Db, fixture.CurrentUser, fixture.Clock);
         var response = await handler.Handle(
             new SetTenantStatusCommand { TenantId = tenant.Id, Status = TenantStatus.Active },
             CancellationToken.None);

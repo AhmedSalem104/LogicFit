@@ -502,7 +502,7 @@ public sealed class PlatformDatabaseResourcesController(
         BackupCount = backupCount,
         LastBackupStatus = lastBackup?.Status.ToString(),
         LastBackupCompletedAtUtc = lastBackup?.CompletedAtUtc,
-        HasConnectionString = !string.IsNullOrWhiteSpace(resource.EncryptedConnectionString)
+            HasProtectedConnection = !string.IsNullOrWhiteSpace(resource.EncryptedConnectionString)
     };
 
     private async Task<DatabaseConnectionTestDto> TestSqlConnectionAsync(string connectionString, string expectedDatabaseName, CancellationToken cancellationToken)
@@ -650,7 +650,7 @@ public sealed class PlatformDatabaseResourceDto
     public int BackupCount { get; init; }
     public string? LastBackupStatus { get; init; }
     public DateTime? LastBackupCompletedAtUtc { get; init; }
-    public bool HasConnectionString { get; init; }
+    public bool HasProtectedConnection { get; init; }
 }
 
 public sealed record DatabaseConnectionTestRequest(string? DatabaseName, string? ConnectionString);

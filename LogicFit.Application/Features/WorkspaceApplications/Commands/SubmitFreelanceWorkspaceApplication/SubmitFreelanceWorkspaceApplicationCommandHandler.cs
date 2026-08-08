@@ -13,7 +13,6 @@ namespace LogicFit.Application.Features.WorkspaceApplications.Commands.SubmitFre
 public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
     : IRequestHandler<SubmitFreelanceWorkspaceApplicationCommand, ApplicationTrackingSessionDto>
 {
-    private const string WorkspaceCreationScope = "freelance-workspace";
     private readonly IApplicationDbContext _context;
     private readonly IDateTimeService _dateTimeService;
     private readonly ICurrentUserService _currentUserService;
@@ -32,9 +31,17 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
         SubmitFreelanceWorkspaceApplicationCommand request,
         CancellationToken cancellationToken)
     {
+        var now = _dateTimeService.UtcNow;
         var normalizedEmail = request.Email.Trim().ToUpperInvariant();
         var normalizedPhone = NormalizePhone(request.PhoneNumber);
         var identifier = request.WorkspaceIdentifier.Trim().ToLowerInvariant();
+        var applicationType = request.WorkspaceType == WorkspaceType.Gym
+            ? ApplicationType.GymWorkspaceCreation
+            : ApplicationType.FreelanceWorkspaceCreation;
+        var requestedRole = request.WorkspaceType == WorkspaceType.Gym
+            ? UserRole.Owner
+            : UserRole.FreelanceOwner;
+        var workspaceScope = $"workspace:{identifier}";
 
         var identity = await _context.IdentityAccounts
             .FirstOrDefaultAsync(x => x.NormalizedEmail == normalizedEmail, cancellationToken);
@@ -49,11 +56,13 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
 
             identity = new IdentityAccount
             {
+                FullName = request.OwnerFullName.Trim(),
                 Email = request.Email.Trim(),
                 NormalizedEmail = normalizedEmail,
                 PhoneNumber = request.PhoneNumber?.Trim(),
                 NormalizedPhoneNumber = normalizedPhone,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                EmailVerifiedAt = now,
                 IsActive = true
             };
             _context.IdentityAccounts.Add(identity);
@@ -61,6 +70,14 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
         else if (!identity.IsActive || !BCrypt.Net.BCrypt.Verify(request.Password, identity.PasswordHash))
         {
             throw new UnauthorizedException("Invalid credentials");
+        }
+
+        if (string.IsNullOrWhiteSpace(identity.FullName))
+            identity.FullName = request.OwnerFullName.Trim();
+        if (identity.PhoneNumber is null && normalizedPhone is not null)
+        {
+            identity.PhoneNumber = request.PhoneNumber?.Trim();
+            identity.NormalizedPhoneNumber = normalizedPhone;
         }
 
         var existingPayment = await _context.PaymentRequests
@@ -75,13 +92,14 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
             .ThenInclude(x => x.Feature)
             .FirstOrDefaultAsync(x => x.Id == request.PlanId && x.IsActive && !x.IsDeleted, cancellationToken)
             ?? throw new NotFoundException(nameof(Plan), request.PlanId);
-        if (request.PaymentAmount != plan.Price)
+        var billingCycle = request.BillingCycle ?? plan.BillingCycle;
+        if (request.PaymentAmount.HasValue && request.PaymentAmount.Value != plan.Price)
             throw new ValidationException("PaymentAmount", "The submitted amount must match the selected plan snapshot.");
 
         var duplicateExists = await _context.ApplicationRequests.AnyAsync(x =>
             x.IdentityAccountId == identity.Id &&
-            x.ApplicationType == ApplicationType.FreelanceWorkspaceCreation &&
-            x.TargetScopeKey == WorkspaceCreationScope &&
+            x.ApplicationType == applicationType &&
+            x.TargetScopeKey == workspaceScope &&
             (x.Status == ApplicationRequestStatus.Draft ||
              x.Status == ApplicationRequestStatus.Submitted ||
              x.Status == ApplicationRequestStatus.UnderReview ||
@@ -101,13 +119,12 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
         if (identifierTaken)
             throw new ConflictException("This workspace identifier is already reserved.");
 
-        var now = _dateTimeService.UtcNow;
-        var planSnapshot = PlanSnapshotFactory.Create(plan, request.BillingCycle, now);
+        var planSnapshot = PlanSnapshotFactory.Create(plan, billingCycle, now);
         var workspace = new Tenant
         {
             Name = string.IsNullOrWhiteSpace(request.BrandName) ? request.WorkspaceName.Trim() : request.BrandName.Trim(),
             Subdomain = identifier,
-            WorkspaceType = WorkspaceType.FreelanceCoach,
+            WorkspaceType = request.WorkspaceType,
             Status = TenantStatus.PendingApproval,
             Email = identity.Email,
             PhoneNumber = identity.PhoneNumber
@@ -116,17 +133,18 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
         var application = new ApplicationRequest
         {
             IdentityAccountId = identity.Id,
-            ApplicationType = ApplicationType.FreelanceWorkspaceCreation,
+            ApplicationType = applicationType,
             Status = ApplicationRequestStatus.Submitted,
-            TargetScopeKey = WorkspaceCreationScope,
+            TargetScopeKey = workspaceScope,
             ReservedWorkspaceIdentifier = identifier,
-            RequestedRole = UserRole.FreelanceOwner,
+            RequestedRole = requestedRole,
             PlanId = plan.Id,
-            BillingCycle = request.BillingCycle,
+            BillingCycle = billingCycle,
             PlanSnapshotJson = planSnapshot,
             PlanSnapshotAtUtc = now,
             PayloadJson = JsonSerializer.Serialize(new FreelanceWorkspaceApplicationPayload
             {
+                WorkspaceType = request.WorkspaceType,
                 WorkspaceName = request.WorkspaceName.Trim(),
                 WorkspaceIdentifier = identifier,
                 OwnerFullName = request.OwnerFullName.Trim(),
@@ -138,6 +156,7 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
                 PrimaryColor = TrimOrNull(request.PrimaryColor),
                 SecondaryColor = TrimOrNull(request.SecondaryColor),
                 Bio = TrimOrNull(request.Bio),
+                DeliveryMode = TrimOrNull(request.DeliveryMode),
                 Specialties = request.Specialties?.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).Distinct().ToArray() ?? Array.Empty<string>(),
                 Certifications = request.Certifications?.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x.Trim()).Distinct().ToArray() ?? Array.Empty<string>(),
                 SocialLinks = request.SocialLinks ?? new Dictionary<string, string>(),
@@ -162,7 +181,7 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
             TenantId = workspace.Id,
             PlanId = plan.Id,
             Status = TenantSubscriptionStatus.PendingPayment,
-            BillingCycle = request.BillingCycle,
+            BillingCycle = billingCycle,
             Amount = plan.Price,
             Currency = plan.Currency
         };
@@ -174,13 +193,14 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommandHandler
             ApplicationRequestId = application.Id,
             IdentityAccountId = identity.Id,
             PlanId = plan.Id,
-            BillingCycle = request.BillingCycle,
+            BillingCycle = billingCycle,
             PlanSnapshotJson = planSnapshot,
             IdempotencyKey = request.IdempotencyKey.Trim(),
             Amount = plan.Price,
             Currency = plan.Currency,
             TransactionNumber = request.PaymentTransactionNumber?.Trim(),
             PaymentDate = request.PaymentDate ?? now,
+            ProofFileUrl = request.ProofStorageKey.Trim(),
             Status = PaymentRequestStatus.PendingReview,
             Operation = PaymentRequestOperation.NewSubscription
         };

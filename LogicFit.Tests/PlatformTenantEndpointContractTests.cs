@@ -9,25 +9,17 @@ namespace LogicFit.Tests;
 public sealed class PlatformTenantEndpointContractTests
 {
     [Fact]
-    public void Admin_tenant_lifecycle_endpoints_are_present_on_the_platform_controller()
+    public void Gym_lifecycle_and_credentials_routes_are_compiled_into_the_unified_api()
     {
         var controllerRoute = typeof(PlatformTenantsController)
-            .GetCustomAttribute<RouteAttribute>()
-            ?.Template;
-
-        Assert.Equal("api/platform/tenants", controllerRoute);
-
+            .GetCustomAttributes<RouteAttribute>()
+            .Single()
+            .Template;
         var routes = typeof(PlatformTenantsController)
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+            .GetMethods()
             .SelectMany(method => method
                 .GetCustomAttributes<HttpMethodAttribute>()
-                .SelectMany(attribute => attribute.HttpMethods.Select(httpMethod =>
-                {
-                    var actionRoute = string.IsNullOrWhiteSpace(attribute.Template)
-                        ? controllerRoute!
-                        : $"{controllerRoute}/{attribute.Template}";
-                    return $"{httpMethod} {actionRoute}";
-                })))
+                .Select(attribute => $"{attribute.HttpMethods.Single()} {controllerRoute}/{attribute.Template}"))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         Assert.Contains("GET api/platform/tenants/{id:guid}/credentials", routes);

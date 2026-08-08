@@ -9,7 +9,7 @@ namespace LogicFit.Infrastructure.Services;
 
 /// <summary>Serializes resource reservations in Platform DB; no frontend-supplied database data is used.</summary>
 public sealed class DatabaseResourcePoolService(
-    PlatformDbContext dbContext,
+    ApplicationDbContext dbContext,
     IDateTimeService dateTime,
     ILogger<DatabaseResourcePoolService> logger) : IDatabaseResourcePool
 {

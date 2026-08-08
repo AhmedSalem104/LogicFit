@@ -12,64 +12,88 @@ namespace LogicFit.Tests;
 public sealed class IdentityWorkspaceSessionIssuerTests
 {
     [Fact]
-    public async Task Identity_login_repairs_an_active_gyms_pending_owner_membership()
+    public async Task Identity_login_repairs_pending_owner_membership_for_an_active_gym_only()
     {
         await using var fixture = await TestFixture.CreateAsync();
-        var tenant = new Tenant
+        var gym = new Tenant
         {
-            Name = "Air Gym",
-            Subdomain = $"air-gym-{Guid.NewGuid():N}",
+            Name = "Active Gym",
+            Subdomain = $"active-gym-{Guid.NewGuid():N}",
             WorkspaceType = WorkspaceType.Gym,
             Status = TenantStatus.Active
         };
-        var identity = new IdentityAccount
+        var ownerIdentity = NewIdentity("owner");
+        var owner = NewUser(gym, ownerIdentity, UserRole.Owner);
+        var ownerMembership = new WorkspaceMembership
         {
-            FullName = "Air Gym Owner",
-            Email = $"air-owner-{Guid.NewGuid():N}@logicfit.test",
-            NormalizedEmail = $"AIR-OWNER-{Guid.NewGuid():N}@LOGICFIT.TEST",
-            PasswordHash = "test-password-hash",
-            EmailVerifiedAt = fixture.Clock.UtcNow
-        };
-        var owner = new User
-        {
-            TenantId = tenant.Id,
-            IdentityAccountId = identity.Id,
-            Email = identity.Email,
-            PasswordHash = identity.PasswordHash,
-            Role = UserRole.Owner,
-            IsActive = true
-        };
-        var membership = new WorkspaceMembership
-        {
-            TenantId = tenant.Id,
-            IdentityAccountId = identity.Id,
+            TenantId = gym.Id,
+            IdentityAccountId = ownerIdentity.Id,
             UserId = owner.Id,
             Role = UserRole.Owner,
             Status = WorkspaceMembershipStatus.PendingPlatformApproval
         };
 
-        fixture.Db.Tenants.Add(tenant);
-        fixture.Db.IdentityAccounts.Add(identity);
-        fixture.Db.Set<User>().Add(owner);
-        fixture.Db.WorkspaceMemberships.Add(membership);
+        var pendingClientIdentity = NewIdentity("client");
+        var pendingClient = NewUser(gym, pendingClientIdentity, UserRole.Client);
+        var pendingClientMembership = new WorkspaceMembership
+        {
+            TenantId = gym.Id,
+            IdentityAccountId = pendingClientIdentity.Id,
+            UserId = pendingClient.Id,
+            Role = UserRole.Client,
+            Status = WorkspaceMembershipStatus.PendingWorkspaceApproval
+        };
+
+        fixture.Db.Tenants.Add(gym);
+        fixture.Db.IdentityAccounts.AddRange(ownerIdentity, pendingClientIdentity);
+        fixture.Db.Set<User>().AddRange(owner, pendingClient);
+        fixture.Db.WorkspaceMemberships.AddRange(ownerMembership, pendingClientMembership);
         await fixture.Db.SaveChangesAsync();
         fixture.Db.ChangeTracker.Clear();
 
         var issuer = new IdentityWorkspaceSessionIssuer(fixture.Db, fixture.Clock, fixture.CurrentUser);
-        var result = await issuer.IssueAsync(identity.Id);
+        var response = await issuer.IssueAsync(ownerIdentity.Id);
 
-        Assert.Single(result.ActiveWorkspaces);
-        Assert.Equal(tenant.Id, result.ActiveWorkspaces[0].WorkspaceId);
-        Assert.False(result.RequiresWorkspaceSelection);
+        Assert.Single(response.ActiveWorkspaces);
+        Assert.Equal(gym.Id, response.ActiveWorkspaces[0].WorkspaceId);
+        Assert.False(response.RequiresWorkspaceSelection);
 
         fixture.Db.ChangeTracker.Clear();
-        var persistedMembership = await fixture.Db.WorkspaceMemberships
+        var persistedOwnerMembership = await fixture.Db.WorkspaceMemberships
             .IgnoreQueryFilters()
-            .SingleAsync(x => x.Id == membership.Id);
-        Assert.Equal(WorkspaceMembershipStatus.Active, persistedMembership.Status);
-        Assert.Equal(fixture.Clock.UtcNow, persistedMembership.ApprovedAt);
-        Assert.Equal("identity-login-reconciliation", persistedMembership.ApprovedBy);
+            .SingleAsync(x => x.Id == ownerMembership.Id);
+        var persistedClientMembership = await fixture.Db.WorkspaceMemberships
+            .IgnoreQueryFilters()
+            .SingleAsync(x => x.Id == pendingClientMembership.Id);
+
+        Assert.Equal(WorkspaceMembershipStatus.Active, persistedOwnerMembership.Status);
+        Assert.Equal(fixture.Clock.UtcNow, persistedOwnerMembership.ApprovedAt);
+        Assert.Equal("identity-login-reconciliation", persistedOwnerMembership.ApprovedBy);
+        Assert.Equal(WorkspaceMembershipStatus.PendingWorkspaceApproval, persistedClientMembership.Status);
     }
+
+    private static IdentityAccount NewIdentity(string prefix)
+    {
+        var suffix = Guid.NewGuid().ToString("N");
+        return new IdentityAccount
+        {
+            FullName = $"{prefix} user",
+            Email = $"{prefix}-{suffix}@logicfit.test",
+            NormalizedEmail = $"{prefix}-{suffix}@LOGICFIT.TEST".ToUpperInvariant(),
+            PasswordHash = "test-password-hash",
+            EmailVerifiedAt = DateTime.UtcNow
+        };
+    }
+
+    private static User NewUser(Tenant tenant, IdentityAccount identity, UserRole role) => new()
+    {
+        TenantId = tenant.Id,
+        IdentityAccountId = identity.Id,
+        Email = identity.Email,
+        PasswordHash = identity.PasswordHash,
+        Role = role,
+        IsActive = true
+    };
 
     private sealed class TestFixture : IAsyncDisposable
     {
@@ -82,7 +106,7 @@ public sealed class IdentityWorkspaceSessionIssuerTests
 
         public static async Task<TestFixture> CreateAsync()
         {
-            var databaseName = $"LogicFitIdentityWorkspaceSessionIssuerTests_{Guid.NewGuid():N}";
+            var databaseName = $"LogicFitIdentityWorkspaceSessionTests_{Guid.NewGuid():N}";
             var baseConnectionString = Environment.GetEnvironmentVariable("LOGICFIT_TEST_CONNECTION_STRING")
                 ?? "Server=(localdb)\\mssqllocaldb;Database=master;Trusted_Connection=True;MultipleActiveResultSets=True;TrustServerCertificate=True";
             var connectionString = new SqlConnectionStringBuilder(baseConnectionString)

@@ -1,7 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Enums;
 using Microsoft.Extensions.Logging;
-using System.Security.Cryptography;
 
 namespace LogicFit.Infrastructure.Services;
 
@@ -44,7 +43,7 @@ public sealed class TenantDatabaseResolver(
         {
             connectionString = connectionStringProtector.Unprotect(mapping.EncryptedConnectionString);
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or CryptographicException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException)
         {
             // Do not surface protected material or cryptographic details to a caller.  A
             // corrupted/rotated key is an unavailable tenant database, not a fallback signal.

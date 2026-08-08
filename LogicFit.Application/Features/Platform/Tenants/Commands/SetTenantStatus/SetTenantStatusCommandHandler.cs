@@ -12,17 +12,17 @@ namespace LogicFit.Application.Features.Platform.Tenants.Commands.SetTenantStatu
 public class SetTenantStatusCommandHandler : IRequestHandler<SetTenantStatusCommand, PlatformTenantDto>
 {
     private readonly IApplicationDbContext _context;
-    private readonly IDateTimeService _dateTimeService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IDateTimeService _dateTimeService;
 
     public SetTenantStatusCommandHandler(
         IApplicationDbContext context,
-        IDateTimeService dateTimeService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IDateTimeService dateTimeService)
     {
         _context = context;
-        _dateTimeService = dateTimeService;
         _currentUserService = currentUserService;
+        _dateTimeService = dateTimeService;
     }
 
     public async Task<PlatformTenantDto> Handle(SetTenantStatusCommand request, CancellationToken cancellationToken)
@@ -47,25 +47,24 @@ public class SetTenantStatusCommandHandler : IRequestHandler<SetTenantStatusComm
             ? Domain.Enums.SuspensionReason.ManualByAdmin
             : Domain.Enums.SuspensionReason.None;
 
-        if (request.Status == Domain.Enums.TenantStatus.Active)
+        if (request.Status == TenantStatus.Active)
         {
             var now = _dateTimeService.UtcNow;
-            var approvedBy = _currentUserService.UserId ?? "platform-admin";
             var pendingOwnerMemberships = await _context.WorkspaceMemberships
                 // This is a platform-scoped repair/approval action. It must not be hidden when
                 // the request happens to carry a tenant context from a previous operation.
                 .IgnoreQueryFilters()
-                .Where(x => x.TenantId == tenant.Id &&
-                            x.Role == UserRole.Owner &&
-                            x.Status == WorkspaceMembershipStatus.PendingPlatformApproval &&
-                            !x.IsDeleted)
+                .Where(x => x.TenantId == tenant.Id
+                    && x.Role == UserRole.Owner
+                    && x.Status == WorkspaceMembershipStatus.PendingPlatformApproval
+                    && !x.IsDeleted)
                 .ToListAsync(cancellationToken);
 
             foreach (var membership in pendingOwnerMemberships)
             {
                 membership.Status = WorkspaceMembershipStatus.Active;
                 membership.ApprovedAt = now;
-                membership.ApprovedBy = approvedBy;
+                membership.ApprovedBy = _currentUserService.UserId;
             }
         }
 

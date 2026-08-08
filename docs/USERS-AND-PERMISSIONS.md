@@ -35,11 +35,9 @@ reset/change revokes linked refresh and workspace-selection sessions.
 For a Gym, the Platform tenant approval/activation command promotes only the owner's
 `PendingPlatformApproval` membership to `Active` and records the decision actor/time. A client
 membership in `PendingWorkspaceApproval` is a separate gym-operator decision and is not promoted
-by Platform activation.
-
-As a compatibility repair, identity login performs the same narrow reconciliation for an already
-`Active` Gym whose non-deleted owner membership is still `PendingPlatformApproval`. It records
-`identity-login-reconciliation`; client and non-owner pending memberships remain unchanged.
+by Platform activation. As a compatibility repair for gyms already marked `Active`, the identity
+session issuer applies the same owner-only promotion at login; it never promotes a client or
+other pending workspace membership.
 
 ## مستخدمو المنصة المركزية
 
@@ -103,6 +101,13 @@ reauthentication and a short-lived single-use grant; the server derives the acti
 3. عطل الحساب بدلاً من حذفه عندما يغادر الموظف، للحفاظ على أثره في السجل.
 4. عند الاشتباه، استخدم `logout-all` لإبطال الجلسات ثم غيّر كلمة المرور وراجع Audit.
 5. أي تجاوز مؤقت لميزة أو اشتراك يسجل السبب والمنفذ وبداية ونهاية القرار.
+
+## Issue #248 — بوابة دخول مالك المساحة
+
+اختيار مساحة العمل لا يصدر JWT لمجرد نجاح كلمة المرور. يجب أن تكون الهوية والعضوية فعالتين،
+والـTenant والاشتراك وقاعدة البيانات في حالات السماح، والـprovisioning مكتملًا. قبل ذلك تعرض
+الواجهة حالة الطلب أو التجهيز بدل صفحة فارغة. `Gym` يصدر دور `Owner` و`FreelanceCoach` يصدر
+`FreelanceOwner`، ولا يمكن استخدام selection token لاختيار Tenant غير مرتبط بالهوية.
 
 ## ما الذي لا يحق لأي مستخدم فعله مباشرة؟
 

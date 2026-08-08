@@ -39,7 +39,7 @@ public sealed class OutboxProcessorService(
         await using (lease)
         {
             using var scope = scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var notifier = scope.ServiceProvider.GetRequiredService<INotificationService>();
             var messages = await context.OutboxMessages
                 .Where(x => x.ProcessedAtUtc == null && x.AttemptCount < 5)

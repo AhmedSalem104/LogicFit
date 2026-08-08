@@ -5,9 +5,13 @@ using MediatR;
 
 namespace LogicFit.Application.Features.WorkspaceApplications.Commands.SubmitFreelanceWorkspaceApplication;
 
-/// <summary>Public request to create an independently branded FreelanceCoach workspace.</summary>
+/// <summary>
+/// Public request to create a Gym or an independently branded FreelanceCoach workspace.
+/// The legacy Freelance endpoint still uses this command and defaults to FreelanceCoach.
+/// </summary>
 public sealed class SubmitFreelanceWorkspaceApplicationCommand : IRequest<ApplicationTrackingSessionDto>
 {
+    public WorkspaceType WorkspaceType { get; init; } = WorkspaceType.FreelanceCoach;
     public string Email { get; init; } = string.Empty;
     public string? PhoneNumber { get; init; }
     public string Password { get; init; } = string.Empty;
@@ -22,14 +26,16 @@ public sealed class SubmitFreelanceWorkspaceApplicationCommand : IRequest<Applic
     public string? PrimaryColor { get; init; }
     public string? SecondaryColor { get; init; }
     public string? Bio { get; init; }
+    public string? DeliveryMode { get; init; }
     public IReadOnlyList<string>? Specialties { get; init; }
     public IReadOnlyList<string>? Certifications { get; init; }
     public IReadOnlyDictionary<string, string>? SocialLinks { get; init; }
     public string? WelcomeMessage { get; init; }
     public System.Text.Json.JsonElement? BookingSettings { get; init; }
     public Guid PlanId { get; init; }
-    public BillingCycle BillingCycle { get; init; } = BillingCycle.Monthly;
-    public decimal PaymentAmount { get; init; }
+    public BillingCycle? BillingCycle { get; init; }
+    /// <summary>Optional client echo. The server always uses the selected plan price as the source of truth.</summary>
+    public decimal? PaymentAmount { get; init; }
     public string? PaymentTransactionNumber { get; init; }
     public DateTime? PaymentDate { get; init; }
     /// <summary>Opaque key returned by the private storage service; public URLs are not accepted.</summary>
@@ -45,6 +51,8 @@ public sealed class SubmitFreelanceWorkspaceApplicationValidator : AbstractValid
 {
     public SubmitFreelanceWorkspaceApplicationValidator()
     {
+        RuleFor(x => x.WorkspaceType).IsInEnum().Must(value => value is WorkspaceType.Gym or WorkspaceType.FreelanceCoach)
+            .WithMessage("WorkspaceType must be Gym or FreelanceCoach.");
         RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
         RuleFor(x => x.Password).MinimumLength(8).MaximumLength(128);
         RuleFor(x => x.WorkspaceName).NotEmpty().MaximumLength(200);
@@ -54,8 +62,8 @@ public sealed class SubmitFreelanceWorkspaceApplicationValidator : AbstractValid
         RuleFor(x => x.Bio).MaximumLength(4000);
         RuleFor(x => x.WelcomeMessage).MaximumLength(1000);
         RuleFor(x => x.PlanId).NotEmpty();
-        RuleFor(x => x.BillingCycle).IsInEnum();
-        RuleFor(x => x.PaymentAmount).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.BillingCycle).IsInEnum().When(x => x.BillingCycle.HasValue);
+        RuleFor(x => x.PaymentAmount).GreaterThanOrEqualTo(0).When(x => x.PaymentAmount.HasValue);
         RuleFor(x => x.ProofStorageKey).NotEmpty().MaximumLength(500)
             .Must(value => !value.Contains("..", StringComparison.Ordinal) &&
                            !value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&

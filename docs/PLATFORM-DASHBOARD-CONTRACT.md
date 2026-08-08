@@ -8,8 +8,10 @@ Issue #162 adds a permission-aware operational contract for the Platform dashboa
   adds `operations` summaries for workspace applications, payment review, the database resource
   pool, provisioning jobs, central backups, and conditional restore capabilities.
 - `GET /api/platform/database-resources` (`ManagePlatformBackups`) returns a bounded, server-paged
-  resource-pool view. It includes status, workspace, health, size and schema metadata only. It
-  never returns `DatabaseName`, connection strings, encrypted connection material or storage paths.
+  resource-pool view. It includes status, workspace, health, size and schema metadata, plus the
+  safe Boolean `HasProtectedConnection` indicating whether the operator-managed resource has a
+  protected connection value. It never returns `DatabaseName`, connection strings, encrypted
+  connection material or storage paths.
 - `GET /api/platform/operations/provisioning` (`ManagePlatformReports`) returns a bounded list of
   retryable provisioning jobs with status, attempts, scheduling, safe error codes and references.
 - `GET /api/platform/diagnostics/version` (`ManagePlatformReports`) returns the API contract

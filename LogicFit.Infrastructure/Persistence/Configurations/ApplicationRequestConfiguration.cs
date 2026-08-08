@@ -22,13 +22,7 @@ public class ApplicationRequestConfiguration : IEntityTypeConfiguration<Applicat
         builder.HasIndex(x => new { x.IdentityAccountId, x.TargetWorkspaceId, x.ApplicationType, x.Status });
         builder.HasIndex(x => new { x.IdentityAccountId, x.TargetScopeKey, x.ApplicationType })
             .IsUnique()
-            .HasFilter("[Status] IN (1, 2, 3, 4, 5)");
-        // A platform-created gym has a request-wide scope, not an identity-wide scope. This
-        // second filtered index closes the concurrent retry race where two requests could create
-        // different owners before either request became visible to the other.
-        builder.HasIndex(x => new { x.TargetScopeKey, x.ApplicationType })
-            .IsUnique()
-            .HasFilter("[ApplicationType] = 1 AND [Status] IN (1, 2, 3, 4, 5)");
+            .HasFilter("[Status] IN (1, 2, 3, 4)");
         builder.HasIndex(x => x.ReservedWorkspaceIdentifier).IsUnique().HasFilter("[ReservedWorkspaceIdentifier] IS NOT NULL AND [Status] IN (1, 2, 3, 4)");
         builder.HasOne(x => x.IdentityAccount).WithMany(x => x.Applications).HasForeignKey(x => x.IdentityAccountId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.TargetWorkspace).WithMany().HasForeignKey(x => x.TargetWorkspaceId).OnDelete(DeleteBehavior.Restrict);

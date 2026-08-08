@@ -133,13 +133,9 @@ namespace LogicFit.Platform.Migrations
 
                     b.HasIndex("TargetWorkspaceId");
 
-                    b.HasIndex("TargetScopeKey", "ApplicationType")
-                        .IsUnique()
-                        .HasFilter("[ApplicationType] = 1 AND [Status] IN (1, 2, 3, 4, 5)");
-
                     b.HasIndex("IdentityAccountId", "TargetScopeKey", "ApplicationType")
                         .IsUnique()
-                        .HasFilter("[Status] IN (1, 2, 3, 4, 5)");
+                        .HasFilter("[Status] IN (1, 2, 3, 4)");
 
                     b.HasIndex("IdentityAccountId", "TargetWorkspaceId", "ApplicationType", "Status");
 
@@ -834,6 +830,93 @@ namespace LogicFit.Platform.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("JobExecutionLogs");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.OtpChallenge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CodeSalt")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ConsumedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DeliveryStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("IdentityAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("LastSentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NormalizedPhoneNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProviderMessageId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Purpose")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ResendCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("SessionBinding")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdentityAccountId");
+
+                    b.ToTable("OtpChallenge");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.OutboxMessage", b =>
@@ -2930,6 +3013,15 @@ namespace LogicFit.Platform.Migrations
                     b.Navigation("IdentityAccount");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.OtpChallenge", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
+                        .WithMany("OtpChallenges")
+                        .HasForeignKey("IdentityAccountId");
+
+                    b.Navigation("IdentityAccount");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.PaymentProof", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.PaymentRequest", "PaymentRequest")
@@ -3226,6 +3318,8 @@ namespace LogicFit.Platform.Migrations
                     b.Navigation("EmailActionTokens");
 
                     b.Navigation("Memberships");
+
+                    b.Navigation("OtpChallenges");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.PaymentRequest", b =>

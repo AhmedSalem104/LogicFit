@@ -133,13 +133,9 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TargetWorkspaceId");
 
-                    b.HasIndex("TargetScopeKey", "ApplicationType")
-                        .IsUnique()
-                        .HasFilter("[ApplicationType] = 1 AND [Status] IN (1, 2, 3, 4, 5)");
-
                     b.HasIndex("IdentityAccountId", "TargetScopeKey", "ApplicationType")
                         .IsUnique()
-                        .HasFilter("[Status] IN (1, 2, 3, 4, 5)");
+                        .HasFilter("[Status] IN (1, 2, 3, 4)");
 
                     b.HasIndex("IdentityAccountId", "TargetWorkspaceId", "ApplicationType", "Status");
 
