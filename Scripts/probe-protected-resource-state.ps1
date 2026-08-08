@@ -40,20 +40,20 @@ SELECT
         $resourceCount = 0
         while ($reader.Read()) {
             $resourceCount++
-            $resourceId = $reader.GetGuid(0)
+            $resourceId = [Guid]$reader.GetValue(0)
             $databaseName = [string]$reader.GetValue(1)
-            $status = $reader.GetInt32(2)
-            $hasProtectedConnection = $reader.GetBoolean(3)
-            $activeMappingCount = $reader.GetInt32(4)
+            $status = [int]$reader.GetValue(2)
+            $hasProtectedConnection = [bool]$reader.GetValue(3)
+            $activeMappingCount = [long]$reader.GetValue(4)
             Write-Host "Resource $resourceId; database=$databaseName; status=$status; protected=$hasProtectedConnection; activeMappings=$activeMappingCount."
         }
 
         if ($reader.NextResult() -and $reader.Read()) {
             Write-Host "Resource rows: $resourceCount."
-            Write-Host "Data Protection keys: $($reader.GetInt64(0))."
-            Write-Host "Active mappings: $($reader.GetInt64(1))."
-            Write-Host "Database backup records: $($reader.GetInt64(2))."
-            Write-Host "Backup batch records: $($reader.GetInt64(3))."
+            Write-Host "Data Protection keys: $([long]$reader.GetValue(0))."
+            Write-Host "Active mappings: $([long]$reader.GetValue(1))."
+            Write-Host "Database backup records: $([long]$reader.GetValue(2))."
+            Write-Host "Backup batch records: $([long]$reader.GetValue(3))."
         }
         else {
             throw 'The resource-state probe returned no summary row.'
