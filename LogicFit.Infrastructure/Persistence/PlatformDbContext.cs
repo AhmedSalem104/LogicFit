@@ -14,7 +14,12 @@ public class PlatformDbContext : IdentityDbContext<ApplicationUser, IdentityRole
     public const string MigrationsAssemblyName = "LogicFit.Platform.Migrations";
     public const string MigrationHistoryTable = "__PlatformEFMigrationsHistory";
 
-    public PlatformDbContext(DbContextOptions options) : base(options) { }
+    // The public constructor is context-specific so DI cannot accidentally pass options
+    // created for another registered DbContext. Migration wrappers derive from this context
+    // and need the non-generic EF options shape, so keep that path protected from DI.
+    public PlatformDbContext(DbContextOptions<PlatformDbContext> options) : base(options) { }
+
+    protected PlatformDbContext(DbContextOptions options) : base(options) { }
 
     public DbSet<Domain.Entities.Tenant> Tenants => Set<Domain.Entities.Tenant>();
     public DbSet<Domain.Entities.DatabaseResource> DatabaseResources => Set<Domain.Entities.DatabaseResource>();

@@ -220,6 +220,11 @@ using (var scope = app.Services.CreateScope())
     var migrator = scope.ServiceProvider.GetRequiredService<StartupDatabaseMigrator>();
     await migrator.ApplyPendingMigrationsAsync(app.Lifetime.ApplicationStopping);
 
+    // Import any legacy App_Data keys before the Data Protection provider is first used. The
+    // central Platform database is authoritative from this point forward.
+    var keyRingBootstrapper = scope.ServiceProvider.GetRequiredService<DataProtectionKeyRingBootstrapper>();
+    await keyRingBootstrapper.SynchronizeAsync(app.Lifetime.ApplicationStopping);
+
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
 
     // Check if force reset of foods is requested (to fix identity issues)
