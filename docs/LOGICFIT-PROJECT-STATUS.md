@@ -573,3 +573,14 @@ fails startup if apply or post-apply verification fails.
 - Added file path/MIME validation and API rate limiting.
 - Added initial CI/CD and project-status documentation.
 - Established the protected `develop` integration-branch workflow and task-branch/PR rules.
+
+### 2026-08-09 — Issue #239 backup hardening
+
+- The protected download policy now accepts the current GUID-suffixed BACPAC and manifest keys as
+  well as legacy timestamp keys, while continuing to reject path traversal and unsupported names.
+- Retry target resolution is precise: only failed tenant artifacts are retried, and a platform-only
+  failure does not expand to every active tenant. The change has regression tests and no schema/data
+  migration.
+- The implementation was verified in the isolated task worktree only. Production still requires the
+  protected release gate, server-only backup configuration, repaired encrypted mappings where needed,
+  and an HTTP 200/Healthy health check after deployment.
