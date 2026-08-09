@@ -2,6 +2,8 @@
 param(
     [Parameter(Mandatory = $true)] [string] $PublishSettingsPath,
     [Parameter(Mandatory = $true)] [string] $ContentPath,
+    [string] $ManagementHostOverride,
+    [switch] $AllowUntrustedManagementCertificate,
     [string] $MsDeployPath = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
 )
 
@@ -29,7 +31,14 @@ if ([string]::IsNullOrWhiteSpace($profile.userName) -or [string]::IsNullOrWhiteS
     throw "MSDeploy credentials are missing."
 }
 
-$destination = "https://$($profile.publishUrl):8172/msdeploy.axd?site=$($profile.msdeploySite)"
+$managementHost = if ([string]::IsNullOrWhiteSpace($ManagementHostOverride)) {
+    [string]$profile.publishUrl
+} else {
+    $ManagementHostOverride.Trim()
+}
+if ($managementHost -notmatch '^[A-Za-z0-9.-]+$') { throw "Management host is invalid." }
+
+$destination = "https://${managementHost}:8172/msdeploy.axd?site=$($profile.msdeploySite)"
 $arguments = @(
     '-verb:sync',
     "-source:contentPath=`"$resolvedContentPath`"",
@@ -38,9 +47,24 @@ $arguments = @(
     '-retryAttempts:3',
     '-retryInterval:5000'
 )
+if ($AllowUntrustedManagementCertificate) { $arguments += '-allowUntrusted' }
 
 # Do not log the argument list: it contains the protected publish password.
-& $MsDeployPath @arguments *> $null
-if ($LASTEXITCODE -ne 0) { throw "Private backup upload failed with exit code $LASTEXITCODE." }
+$toolOutput = @(& $MsDeployPath @arguments 2>&1)
+if ($LASTEXITCODE -ne 0) {
+    $outputText = ($toolOutput | ForEach-Object { [string]$_ }) -join "`n"
+    $category = if ($outputText -match '(?i)certificate|trust|ssl|tls') {
+        'ManagementCertificate'
+    } elseif ($outputText -match '(?i)unauthori|forbidden|access denied|401|403') {
+        'ManagementAuthorization'
+    } elseif ($outputText -match '(?i)not found|cannot resolve|name resolution|network|timeout|unreachable') {
+        'ManagementEndpoint'
+    } elseif ($outputText -match '(?i)permission|locked|read-only|denied|path') {
+        'RemoteStoragePath'
+    } else {
+        'MsDeployOperation'
+    }
+    throw "Private backup upload failed with exit code $LASTEXITCODE (category $category)."
+}
 
 Write-Host "Protected private backup upload completed for $($backupFiles.Count) file(s)."
