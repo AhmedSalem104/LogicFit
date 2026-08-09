@@ -57,8 +57,8 @@ foreach ($backupFile in $backupFiles) {
     $toolOutput = @(& $MsDeployPath @arguments 2>&1)
     if ($LASTEXITCODE -ne 0) {
         $outputText = ($toolOutput | ForEach-Object { [string]$_ }) -join "`n"
-        $errorCodeMatch = [regex]::Match($outputText, '(?i)ERROR_[A-Z0-9_]+')
-        $errorCode = if ($errorCodeMatch.Success) { $errorCodeMatch.Value.ToUpperInvariant() } else { 'UNKNOWN' }
+        $errorCodeMatch = [regex]::Match($outputText, '(?i)(?:Error Code|ERROR[_:])[:\s]+([A-Za-z0-9_.-]+)')
+        $errorCode = if ($errorCodeMatch.Success) { $errorCodeMatch.Groups[1].Value } else { 'UNKNOWN' }
         $category = if ($outputText -match '(?i)certificate|trust|ssl|tls') {
             'ManagementCertificate'
         } elseif ($outputText -match '(?i)unauthori|forbidden|access denied|401|403') {
