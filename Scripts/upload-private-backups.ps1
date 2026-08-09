@@ -39,10 +39,11 @@ $managementHost = if ([string]::IsNullOrWhiteSpace($ManagementHostOverride)) {
 if ($managementHost -notmatch '^[A-Za-z0-9.-]+$') { throw "Management host is invalid." }
 
 $destination = "https://${managementHost}:8172/msdeploy.axd?site=$($profile.msdeploySite)"
+$remoteBackupPath = "$($profile.msdeploySite)/App_Data/PrivateBackups"
 $arguments = @(
     '-verb:sync',
-    "-source:contentPath=`"$resolvedContentPath`"",
-    "-dest:auto,ComputerName=$destination,UserName=$($profile.userName),Password=$($profile.userPWD),AuthType=Basic",
+    "-source:contentPath=`"$privateBackupPath`"",
+    "-dest:contentPath=`"$remoteBackupPath`",ComputerName=$destination,UserName=$($profile.userName),Password=$($profile.userPWD),AuthType=Basic",
     '-enableRule:DoNotDeleteRule',
     '-retryAttempts:3',
     '-retryInterval:5000'
