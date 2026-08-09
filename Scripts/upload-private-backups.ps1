@@ -40,32 +40,38 @@ if ($managementHost -notmatch '^[A-Za-z0-9.-]+$') { throw "Management host is in
 
 $destination = "https://${managementHost}:8172/msdeploy.axd?site=$($profile.msdeploySite)"
 $remoteBackupPath = "$($profile.msdeploySite)/App_Data/PrivateBackups"
-$arguments = @(
-    '-verb:sync',
-    "-source:contentPath=`"$privateBackupPath`"",
-    "-dest:contentPath=`"$remoteBackupPath`",ComputerName=$destination,UserName=$($profile.userName),Password=$($profile.userPWD),AuthType=Basic",
-    '-enableRule:DoNotDeleteRule',
-    '-retryAttempts:3',
-    '-retryInterval:5000'
-)
-if ($AllowUntrustedManagementCertificate) { $arguments += '-allowUntrusted' }
+$destinationArguments = "ComputerName=$destination,UserName=$($profile.userName),Password=$($profile.userPWD),AuthType=Basic"
+foreach ($backupFile in $backupFiles) {
+    $remoteFilePath = "$remoteBackupPath/$($backupFile.Name)"
+    $arguments = @(
+        '-verb:sync',
+        "-source:contentPath=`"$($backupFile.FullName)`"",
+        "-dest:contentPath=`"$remoteFilePath`",$destinationArguments",
+        '-enableRule:DoNotDeleteRule',
+        '-retryAttempts:3',
+        '-retryInterval:5000'
+    )
+    if ($AllowUntrustedManagementCertificate) { $arguments += '-allowUntrusted' }
 
-# Do not log the argument list: it contains the protected publish password.
-$toolOutput = @(& $MsDeployPath @arguments 2>&1)
-if ($LASTEXITCODE -ne 0) {
-    $outputText = ($toolOutput | ForEach-Object { [string]$_ }) -join "`n"
-    $category = if ($outputText -match '(?i)certificate|trust|ssl|tls') {
-        'ManagementCertificate'
-    } elseif ($outputText -match '(?i)unauthori|forbidden|access denied|401|403') {
-        'ManagementAuthorization'
-    } elseif ($outputText -match '(?i)not found|cannot resolve|name resolution|network|timeout|unreachable') {
-        'ManagementEndpoint'
-    } elseif ($outputText -match '(?i)permission|locked|read-only|denied|path') {
-        'RemoteStoragePath'
-    } else {
-        'MsDeployOperation'
+    # Do not log the argument list: it contains the protected publish password.
+    $toolOutput = @(& $MsDeployPath @arguments 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        $outputText = ($toolOutput | ForEach-Object { [string]$_ }) -join "`n"
+        $errorCodeMatch = [regex]::Match($outputText, '(?i)ERROR_[A-Z0-9_]+')
+        $errorCode = if ($errorCodeMatch.Success) { $errorCodeMatch.Value.ToUpperInvariant() } else { 'UNKNOWN' }
+        $category = if ($outputText -match '(?i)certificate|trust|ssl|tls') {
+            'ManagementCertificate'
+        } elseif ($outputText -match '(?i)unauthori|forbidden|access denied|401|403') {
+            'ManagementAuthorization'
+        } elseif ($outputText -match '(?i)not found|cannot resolve|name resolution|network|timeout|unreachable') {
+            'ManagementEndpoint'
+        } elseif ($outputText -match '(?i)permission|locked|read-only|denied|path') {
+            'RemoteStoragePath'
+        } else {
+            'MsDeployOperation'
+        }
+        throw "Private backup upload failed with exit code $LASTEXITCODE (category $category; code $errorCode)."
     }
-    throw "Private backup upload failed with exit code $LASTEXITCODE (category $category)."
 }
 
 Write-Host "Protected private backup upload completed for $($backupFiles.Count) file(s)."
