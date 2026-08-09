@@ -26,6 +26,20 @@ exports are bounded by `Backup:MaxConcurrent` (clamped to 1-4), and each partial
 on failure.  Batch status is `Completed`, `Partial`, or `Failed` and each artifact records its own
 status, size, checksum, timestamps, and safe error code.
 
+## Download and retry correctness
+
+Generated artifact keys include the artifact GUID so two targets exported in the same second
+cannot overwrite one another. Manifest keys use the same allowlisted GUID form. The protected
+download policy accepts both these current keys and the legacy timestamp keys, while rejecting
+paths, unsupported extensions, and incomplete names; this keeps every key returned by a batch
+downloadable without exposing the storage directory.
+
+Retry is target-scoped. A retry request carries the tenant IDs of only failed artifacts. An
+explicit empty tenant set is meaningful: it represents a `FullSystem` batch whose platform
+artifact failed, so the retry includes the platform target and does not expand back to every
+active tenant. The retry creates a new idempotent batch and never duplicates completed artifacts
+from the original batch.
+
 Backup target resolution is fail-closed: if an active tenant mapping cannot be decrypted, the
 batch does not silently omit that tenant and report complete coverage. The API returns a safe
 service-unavailable result instructing the operator to repair the mapping before retrying.

@@ -38,12 +38,18 @@ directly in Production.
 
 The existing Platform Admin `/backups` screen is the operator entry point for the server-owned
 backup batches. `FullSystem` resolves the platform database and every active assigned tenant
-mapping; `AllTenants`, `AllGyms`, `AllFreelance`, and `Platform` are explicit alternatives. The
-server returns per-artifact status, size, safe storage key, SHA-256 and manifest reference. Batch
-start/finish events are written to the Platform Audit Log.
+mapping; `AllTenants`, `AllGyms`, `AllFreelance`, `Platform`, and `SelectedTenants` are explicit
+alternatives. The dashboard loads active tenant labels for `SelectedTenants` and sends only their
+IDs; database names and connection material remain server-side. The server returns per-artifact
+status, size, safe storage key, SHA-256 and manifest reference. Batch start/finish events are
+written to the Platform Audit Log.
 
 Creation and retry require confirmation. Retry is limited to `Failed` or `Partial` batches. The
-screen never renders connection material, credentials, raw exceptions, or absolute storage paths.
+screen locks the action while confirmation or the request is in flight and sends an idempotency
+key for manual creation. It never renders connection material, credentials, raw exceptions, or
+absolute storage paths. Generated artifact and manifest keys are accepted by the protected
+download endpoint; retry re-runs only failed targets, including a platform-only failure without
+expanding the request to every tenant.
 Restore capability is informational; `ManualOnly` must remain a manual operator handoff and does
 not authorize a mapping switch. A failed or missing batch must stop destructive or
 mapping-changing work until a verified backup and rollback plan exist.
@@ -57,6 +63,12 @@ omitted from a `FullSystem` batch.
 This implementation has no schema migration and no Production deployment. Before release, run CI,
 review the generated API catalog, verify the protected backup/migration/health/rollback gates, and
 perform a restore rehearsal only in an isolated target approved for that purpose.
+
+The resource screen treats `Maintenance`/`Retired` rows as disabled operator states and exposes
+the protected `Repair` action for them when the server lifecycle policy allows it. Repair is
+write-only for the connection value: the server tests connectivity, protects the value, updates
+the active mapping transactionally when allocated, and records the audit event. Summary cards are
+explicitly page-scoped; the table total is the authoritative count when pagination is active.
 
 ## بيئات ومكونات النشر
 

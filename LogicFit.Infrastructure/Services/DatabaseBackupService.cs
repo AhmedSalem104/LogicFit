@@ -1,7 +1,6 @@
 using System.Data;
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Common.Services;
 using LogicFit.Domain.Entities;
@@ -33,11 +32,6 @@ public sealed class DatabaseBackupService(
 {
     private const string BackupSearchPattern = "*.bacpac";
     private static readonly SemaphoreSlim ProcessLock = new(1, 1);
-    private static readonly Regex BackupFileNamePattern = new(
-        "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}-(?:\\d{8}-\\d{6}|[0-9a-fA-F]{8})\\.(?:bacpac|json)$",
-        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase,
-        TimeSpan.FromSeconds(1));
-
     public IReadOnlyList<BackupRecord> List()
     {
         if (!TryGetSettings(out var settings, out _)) return [];
@@ -284,7 +278,7 @@ public sealed class DatabaseBackupService(
 
         IEnumerable<dynamic> filtered = mappings;
         if (request.Scope == BackupScope.SelectedTenants)
-            filtered = mappings.Where(x => request.TenantIds!.Contains(x.mapping.TenantId));
+            filtered = mappings.Where(x => IsTenantIncluded(request, x.mapping.TenantId));
         else if (request.Scope == BackupScope.AllGyms)
             filtered = mappings.Where(x => x.tenant.WorkspaceType == WorkspaceType.Gym);
         else if (request.Scope == BackupScope.AllFreelance)
@@ -292,8 +286,8 @@ public sealed class DatabaseBackupService(
         else if (request.Scope is BackupScope.AllTenants or BackupScope.FullSystem)
             filtered = mappings;
 
-        if (request.Scope != BackupScope.SelectedTenants && request.TenantIds is { Count: > 0 })
-            filtered = filtered.Where(x => request.TenantIds!.Contains((Guid)x.mapping.TenantId));
+        if (request.Scope != BackupScope.SelectedTenants && request.TenantIds is not null)
+            filtered = filtered.Where(x => IsTenantIncluded(request, (Guid)x.mapping.TenantId));
 
         foreach (var item in filtered)
         {
@@ -492,13 +486,29 @@ public sealed class DatabaseBackupService(
         try { if (File.Exists(path)) File.Delete(path); } catch { }
     }
 
-    private static string Sanitize(string value) => string.Concat(value.Select(ch =>
-        char.IsLetterOrDigit(ch) || ch is '-' or '_' ? ch : '_'));
+    private static string Sanitize(string value)
+    {
+        var sanitized = string.Concat(value.Select(ch =>
+            IsAsciiAlphaNumeric(ch) || ch is '-' or '_' ? ch : '_'));
+        if (sanitized.Length == 0) return "database";
+        if (!IsAsciiAlphaNumeric(sanitized[0])) sanitized = $"database_{sanitized}";
+        return sanitized.Length <= 80 ? sanitized : sanitized[..80];
+    }
 
-    private static bool IsSafeBackupFileName(string fileName) =>
-        !string.IsNullOrWhiteSpace(fileName) &&
-        string.Equals(fileName, Path.GetFileName(fileName), StringComparison.Ordinal) &&
-        BackupFileNamePattern.IsMatch(fileName);
+    private static bool IsAsciiAlphaNumeric(char value) =>
+        value is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9';
+
+    internal static bool IsTenantIncluded(BackupBatchRequest request, Guid tenantId)
+    {
+        if (request.Scope == BackupScope.SelectedTenants)
+            return request.TenantIds?.Contains(tenantId) == true;
+
+        // A non-null collection is an explicit retry target set. An empty collection means that
+        // only the platform artifact failed in a FullSystem batch; do not expand it to every tenant.
+        return request.TenantIds is null || request.TenantIds.Contains(tenantId);
+    }
+
+    private static bool IsSafeBackupFileName(string fileName) => BackupFileNamePolicy.IsSafe(fileName);
 
     private static BackupBatchDto ToDto(BackupBatch batch) => new(
         batch.Id,
