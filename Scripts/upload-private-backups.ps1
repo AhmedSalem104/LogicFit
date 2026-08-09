@@ -45,7 +45,9 @@ foreach ($backupFile in $backupFiles) {
     $remoteFilePath = "$remoteBackupPath/$($backupFile.Name)"
     $arguments = @(
         '-verb:sync',
-        "-source:contentPath=`"$($backupFile.FullName)`"",
+        # Keep the source/destination provider syntax identical to the tested
+        # Set-RemoteFile helpers used by the protected recovery diagnostics.
+        "-source:contentPath=$($backupFile.FullName)",
         "-dest:contentPath=$remoteFilePath,$destinationArguments",
         '-enableRule:DoNotDeleteRule',
         '-retryAttempts:3',
