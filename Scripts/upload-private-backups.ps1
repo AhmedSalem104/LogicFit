@@ -46,7 +46,7 @@ foreach ($backupFile in $backupFiles) {
     $arguments = @(
         '-verb:sync',
         "-source:contentPath=`"$($backupFile.FullName)`"",
-        "-dest:contentPath=`"$remoteFilePath`",$destinationArguments",
+        "-dest:contentPath=$remoteFilePath,$destinationArguments",
         '-enableRule:DoNotDeleteRule',
         '-retryAttempts:3',
         '-retryInterval:5000'
