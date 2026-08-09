@@ -11,6 +11,16 @@ on:
         description: 'Type CREATE-PROTECTED-BACKUP to export and upload a FullSystem backup'
         required: true
         type: string
+      upload_management_host_override:
+        description: 'Optional current Monster management host when the publish profile host is retired'
+        required: false
+        default: ''
+        type: string
+      upload_allow_untrusted_certificate:
+        description: 'Allow the management certificate only after operator review'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -92,10 +102,20 @@ jobs:
         shell: pwsh
         env:
           BACKUP_ROOT: ${{ runner.temp }}\logicfit-predeploy-backup
+          MANAGEMENT_HOST_OVERRIDE: ${{ inputs.upload_management_host_override }}
+          ALLOW_UNTRUSTED_CERTIFICATE: ${{ inputs.upload_allow_untrusted_certificate }}
         run: |
-          .\Scripts\upload-private-backups.ps1 `
-            -PublishSettingsPath "$env:RUNNER_TEMP/unified.publishSettings" `
-            -ContentPath $env:BACKUP_ROOT
+          $arguments = @{
+            PublishSettingsPath = "$env:RUNNER_TEMP/unified.publishSettings"
+            ContentPath = $env:BACKUP_ROOT
+          }
+          if (-not [string]::IsNullOrWhiteSpace($env:MANAGEMENT_HOST_OVERRIDE)) {
+            $arguments.ManagementHostOverride = $env:MANAGEMENT_HOST_OVERRIDE
+          }
+          if ($env:ALLOW_UNTRUSTED_CERTIFICATE -eq 'true') {
+            $arguments.AllowUntrustedManagementCertificate = $true
+          }
+          .\Scripts\upload-private-backups.ps1 @arguments
 
       - name: Publish the protected backup reference
         shell: pwsh
