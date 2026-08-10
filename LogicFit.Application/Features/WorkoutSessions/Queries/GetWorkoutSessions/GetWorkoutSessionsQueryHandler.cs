@@ -1,5 +1,7 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.WorkoutSessions.DTOs;
+using LogicFit.Domain.Enums;
+using LogicFit.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,22 +11,45 @@ public class GetWorkoutSessionsQueryHandler : IRequestHandler<GetWorkoutSessions
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetWorkoutSessionsQueryHandler(IApplicationDbContext context, ITenantService tenantService)
+    public GetWorkoutSessionsQueryHandler(IApplicationDbContext context, ITenantService tenantService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<List<WorkoutSessionDto>> Handle(GetWorkoutSessionsQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+        if (!Guid.TryParse(_currentUserService.UserId, out var currentUserId))
+            throw new ForbiddenException("An authenticated workspace user is required.");
+        var currentUserRole = await _context.Users
+            .Where(u => u.Id == currentUserId && u.TenantId == tenantId && u.IsActive)
+            .Select(u => (UserRole?)u.Role)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (!currentUserRole.HasValue)
+            throw new ForbiddenException("The authenticated user is not active in this workspace.");
 
         var query = _context.WorkoutSessions
             .Include(s => s.Client).ThenInclude(c => c.Profile)
             .Include(s => s.Routine)
             .Where(s => s.TenantId == tenantId)
             .AsQueryable();
+
+        if (currentUserRole == UserRole.Client)
+        {
+            query = query.Where(s => s.ClientId == currentUserId);
+        }
+        else if (currentUserRole is UserRole.Coach or UserRole.Trainer or UserRole.FreelanceCoach)
+        {
+            query = query.Where(s => _context.CoachClients.Any(cc => cc.TenantId == tenantId
+                && cc.CoachId == currentUserId
+                && cc.ClientId == s.ClientId
+                && cc.IsActive
+                && cc.UnassignedAt == null));
+        }
 
         if (request.ClientId.HasValue)
             query = query.Where(s => s.ClientId == request.ClientId.Value);

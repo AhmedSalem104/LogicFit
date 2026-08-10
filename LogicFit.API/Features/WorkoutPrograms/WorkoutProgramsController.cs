@@ -11,6 +11,7 @@ using LogicFit.Application.Features.WorkoutPrograms.Commands.UpdateWorkoutProgra
 using LogicFit.Application.Features.WorkoutPrograms.DTOs;
 using LogicFit.Application.Features.WorkoutPrograms.Queries.GetWorkoutProgramById;
 using LogicFit.Application.Features.WorkoutPrograms.Queries.GetWorkoutPrograms;
+using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,12 +33,14 @@ public class WorkoutProgramsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<WorkoutProgramDto>>> GetWorkoutPrograms(
         [FromQuery] Guid? coachId,
-        [FromQuery] Guid? clientId)
+        [FromQuery] Guid? clientId,
+        [FromQuery] PlanStatus? status)
     {
         var result = await _mediator.Send(new GetWorkoutProgramsQuery
         {
             CoachId = coachId,
-            ClientId = clientId
+            ClientId = clientId,
+            Status = status
         });
         return Ok(result);
     }

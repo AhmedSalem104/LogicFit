@@ -9,13 +9,16 @@ public class DeleteRoutineExerciseCommandHandler : IRequestHandler<DeleteRoutine
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICoachPlanAccessService _accessService;
 
     public DeleteRoutineExerciseCommandHandler(
         IApplicationDbContext context,
-        ITenantService tenantService)
+        ITenantService tenantService,
+        ICoachPlanAccessService accessService)
     {
         _context = context;
         _tenantService = tenantService;
+        _accessService = accessService;
     }
 
     public async Task<bool> Handle(DeleteRoutineExerciseCommand request, CancellationToken cancellationToken)
@@ -27,6 +30,8 @@ public class DeleteRoutineExerciseCommandHandler : IRequestHandler<DeleteRoutine
 
         if (routineExercise == null)
             throw new NotFoundException("RoutineExercise", request.Id);
+
+        await _accessService.EnsureCanManageRoutineAsync(routineExercise.RoutineId, cancellationToken);
 
         _context.RoutineExercises.Remove(routineExercise);
         await _context.SaveChangesAsync(cancellationToken);

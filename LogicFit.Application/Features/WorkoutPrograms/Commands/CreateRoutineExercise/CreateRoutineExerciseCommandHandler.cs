@@ -10,11 +10,13 @@ public class CreateRoutineExerciseCommandHandler : IRequestHandler<CreateRoutine
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICoachPlanAccessService _accessService;
 
-    public CreateRoutineExerciseCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public CreateRoutineExerciseCommandHandler(IApplicationDbContext context, ITenantService tenantService, ICoachPlanAccessService accessService)
     {
         _context = context;
         _tenantService = tenantService;
+        _accessService = accessService;
     }
 
     public async Task<Guid> Handle(CreateRoutineExerciseCommand request, CancellationToken cancellationToken)
@@ -27,6 +29,12 @@ public class CreateRoutineExerciseCommandHandler : IRequestHandler<CreateRoutine
         if (routine == null)
             throw new NotFoundException("ProgramRoutine", request.RoutineId);
 
+        await _accessService.EnsureCanManageRoutineAsync(request.RoutineId, cancellationToken);
+        var exerciseExists = await _context.Exercises
+            .AnyAsync(e => e.Id == request.ExerciseId && !e.IsDeleted && (e.TenantId == null || e.TenantId == tenantId), cancellationToken);
+        if (!exerciseExists)
+            throw new NotFoundException("Exercise", request.ExerciseId);
+
         var routineExercise = new RoutineExercise
         {
             Id = Guid.NewGuid(),
@@ -37,6 +45,9 @@ public class CreateRoutineExerciseCommandHandler : IRequestHandler<CreateRoutine
             RepsMin = request.RepsMin,
             RepsMax = request.RepsMax,
             RestSec = request.RestSec,
+            TargetWeightKg = request.TargetWeightKg,
+            Notes = request.Notes,
+            Tempo = request.Tempo,
             SupersetGroupId = request.SupersetGroupId
         };
 

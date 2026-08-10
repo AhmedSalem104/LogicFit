@@ -10,11 +10,13 @@ public class CreateMealItemCommandHandler : IRequestHandler<CreateMealItemComman
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICoachPlanAccessService _accessService;
 
-    public CreateMealItemCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public CreateMealItemCommandHandler(IApplicationDbContext context, ITenantService tenantService, ICoachPlanAccessService accessService)
     {
         _context = context;
         _tenantService = tenantService;
+        _accessService = accessService;
     }
 
     public async Task<Guid> Handle(CreateMealItemCommand request, CancellationToken cancellationToken)
@@ -27,8 +29,12 @@ public class CreateMealItemCommandHandler : IRequestHandler<CreateMealItemComman
         if (meal == null)
             throw new NotFoundException("DailyMeal", request.MealId);
 
+        await _accessService.EnsureCanManageMealAsync(request.MealId, cancellationToken);
+
         var food = await _context.Foods
-            .FirstOrDefaultAsync(f => f.Id == request.FoodId, cancellationToken);
+            .FirstOrDefaultAsync(f => f.Id == request.FoodId
+                && !f.IsDeleted
+                && (f.TenantId == null || f.TenantId == tenantId), cancellationToken);
 
         if (food == null)
             throw new NotFoundException("Food", request.FoodId);

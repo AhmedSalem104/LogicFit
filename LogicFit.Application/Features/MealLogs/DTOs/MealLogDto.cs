@@ -5,7 +5,9 @@ public class MealLogDto
 {
     public Guid Id { get; set; }
     public Guid MealItemId { get; set; }
+    public string MealName { get; set; } = string.Empty;
     public string FoodName { get; set; } = string.Empty;
+    public string? Unit { get; set; }
     public bool IsAlternative { get; set; }
     public double ConsumedQuantity { get; set; }
     public DateTime ConsumedAt { get; set; }
