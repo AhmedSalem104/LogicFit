@@ -19,7 +19,9 @@ public static class MealLogMacros
         {
             Id = log.Id,
             MealItemId = log.MealItemId,
+            MealName = log.MealItem.Meal.Name,
             FoodName = food.Name,
+            Unit = food.ServingUnit,
             IsAlternative = log.AlternativeFoodId.HasValue,
             ConsumedQuantity = log.ConsumedQuantity,
             ConsumedAt = log.ConsumedAt,

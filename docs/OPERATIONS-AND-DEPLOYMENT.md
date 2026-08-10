@@ -320,3 +320,13 @@ CI يعمل على الفروع وPull Requests ويتحقق من البناء �
 Rollback قرار تشغيلي موثق: أوقف rollout عند health check فاشل، أعد binary السابق
 المعتمد، لا تعكس Migration بيانات بشكل عشوائي، واستعد من Backup مختبر إذا لزم. استخدم
 Feature Flag للتفعيل التدريجي عند إدخال SaaS policy أو Job جديد عالي التأثير.
+
+## Coach plan release and verification gate (Issues #272/#69)
+
+The coach-plan change requires the tenant migration
+`20260810125711_CoachPlanExecutionFields` and a matching tenant frontend release. Before applying
+the migration, generate and review the idempotent EF SQL, take the approved backup, verify the target
+schema/history, and keep the rollback plan. After deployment, require `/health` HTTP 200 with the
+expected healthy response before enabling the screens. Smoke-test aggregate workout/diet create and
+update, cross-tenant and unassigned access rejection, client session start/set/end, meal logging,
+and the no-partial-write retry behavior. This task branch is not production-verified yet.

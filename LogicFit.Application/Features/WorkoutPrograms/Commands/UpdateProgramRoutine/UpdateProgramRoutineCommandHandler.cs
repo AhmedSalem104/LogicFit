@@ -9,13 +9,16 @@ public class UpdateProgramRoutineCommandHandler : IRequestHandler<UpdateProgramR
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICoachPlanAccessService _accessService;
 
     public UpdateProgramRoutineCommandHandler(
         IApplicationDbContext context,
-        ITenantService tenantService)
+        ITenantService tenantService,
+        ICoachPlanAccessService accessService)
     {
         _context = context;
         _tenantService = tenantService;
+        _accessService = accessService;
     }
 
     public async Task<bool> Handle(UpdateProgramRoutineCommand request, CancellationToken cancellationToken)
@@ -27,6 +30,8 @@ public class UpdateProgramRoutineCommandHandler : IRequestHandler<UpdateProgramR
 
         if (routine == null)
             throw new NotFoundException("ProgramRoutine", request.Id);
+
+        await _accessService.EnsureCanManageRoutineAsync(request.Id, cancellationToken);
 
         routine.Name = request.Name;
         routine.DayOfWeek = request.DayOfWeek;

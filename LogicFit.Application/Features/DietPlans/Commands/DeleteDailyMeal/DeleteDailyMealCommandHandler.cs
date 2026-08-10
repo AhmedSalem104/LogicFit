@@ -9,13 +9,16 @@ public class DeleteDailyMealCommandHandler : IRequestHandler<DeleteDailyMealComm
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICoachPlanAccessService _accessService;
 
     public DeleteDailyMealCommandHandler(
         IApplicationDbContext context,
-        ITenantService tenantService)
+        ITenantService tenantService,
+        ICoachPlanAccessService accessService)
     {
         _context = context;
         _tenantService = tenantService;
+        _accessService = accessService;
     }
 
     public async Task<bool> Handle(DeleteDailyMealCommand request, CancellationToken cancellationToken)
@@ -28,6 +31,8 @@ public class DeleteDailyMealCommandHandler : IRequestHandler<DeleteDailyMealComm
 
         if (meal == null)
             throw new NotFoundException("DailyMeal", request.Id);
+
+        await _accessService.EnsureCanManageMealAsync(request.Id, cancellationToken);
 
         // Delete all items first
         _context.MealItems.RemoveRange(meal.Items);

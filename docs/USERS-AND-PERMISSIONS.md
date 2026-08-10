@@ -115,3 +115,16 @@ reauthentication and a short-lived single-use grant; the server derives the acti
 - تحرير فاتورة أو Payment Request معتمد أو Audit Log أو Outbox Record أو Job history.
 - تجاوز Global Disable أو إيقاف الصالة بواسطة Override.
 - إنشاء Feature وظيفية بمجرد إضافة سجل الكتالوج؛ الحماية البرمجية مطلوبة أولاً.
+
+## Coach plan and execution authorization (Issue #272)
+
+Plan authorization is checked on the server at the client, plan, routine, meal, and session
+boundaries. `Owner`, `Manager`, and `FreelanceOwner` may manage active clients in their current
+tenant. `Coach`, `Trainer`, and `FreelanceCoach` may manage only clients with an active
+`CoachClient` assignment to that coach. A `Client` can read only their own active plans and can
+start, update, or end only their own workout session; meal logs are also restricted to their own
+plan items. Tenant filters are always applied in addition to these role/assignment checks.
+
+The UI may hide an action, but a missing action is never a security control. Unauthorized, inactive,
+cross-tenant, or unassigned identifiers are rejected by the API and must render a clear blocked/error
+state rather than an empty successful screen.

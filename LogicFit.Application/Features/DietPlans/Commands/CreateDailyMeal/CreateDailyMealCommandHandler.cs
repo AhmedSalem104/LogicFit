@@ -10,11 +10,13 @@ public class CreateDailyMealCommandHandler : IRequestHandler<CreateDailyMealComm
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICoachPlanAccessService _accessService;
 
-    public CreateDailyMealCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public CreateDailyMealCommandHandler(IApplicationDbContext context, ITenantService tenantService, ICoachPlanAccessService accessService)
     {
         _context = context;
         _tenantService = tenantService;
+        _accessService = accessService;
     }
 
     public async Task<Guid> Handle(CreateDailyMealCommand request, CancellationToken cancellationToken)
@@ -27,13 +29,16 @@ public class CreateDailyMealCommandHandler : IRequestHandler<CreateDailyMealComm
         if (plan == null)
             throw new NotFoundException("DietPlan", request.PlanId);
 
+        await _accessService.EnsureCanManageDietPlanAsync(request.PlanId, cancellationToken);
+
         var meal = new DailyMeal
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             PlanId = request.PlanId,
             Name = request.Name,
-            OrderIndex = request.OrderIndex
+            OrderIndex = request.OrderIndex,
+            Time = request.Time
         };
 
         _context.DailyMeals.Add(meal);

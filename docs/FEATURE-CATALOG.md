@@ -162,3 +162,14 @@ and state-action screens.
 3. تحديث توثيق الواجهة في مستودعها إذا تغيرت شاشة أو route أو رحلة مستخدم.
 4. تشغيل مولد [كتالوج API](API-ENDPOINT-CATALOG.md) إذا تغير Controller أو route أو policy أو DTO/API contract.
 5. تحديث [حالة المشروع](LOGICFIT-PROJECT-STATUS.md) عند أي أثر سلوكي أو أمني أو تشغيلي أو قاعدة بيانات.
+
+### Coach plan aggregate authoring and client execution (Issues #272/#69, task branches)
+
+- The workout and nutrition builders use the aggregate `POST`/`PUT` contracts for a complete plan,
+  including nested routines/exercises or meals/items, metadata, status, and client assignment.
+- `CoachPlanAccessService` enforces tenant scope plus active coach-client assignment for coach-facing
+  mutations and client ownership for workout sessions and meal logs.
+- Client screens call the session and meal-log APIs and render server-confirmed progress; mock session
+  history and legacy sequential child-save behavior are no longer the active path.
+- Backend migration: `20260810125711_CoachPlanExecutionFields`. Availability remains task-branch only
+  until merge/release/deployment/health verification.
