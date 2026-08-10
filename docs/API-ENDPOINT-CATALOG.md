@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-08 10:59 UTC`  |  Total endpoints: **395**
+Generated: `2026-08-10 13:33 UTC`  |  Total endpoints: **395**
 
 ## Contract rules
 
@@ -2332,7 +2332,7 @@ Generated: `2026-08-08 10:59 UTC`  |  Total endpoints: **395**
 #### `GET /api/WorkoutPrograms` - `GetWorkoutPrograms`
 
 - **Access:** JWT required
-- **Inputs:** Query `coachId`: `Guid?`<br>Query `clientId`: `Guid?`<br>Handler signature: `[FromQuery] Guid? coachId, [FromQuery] Guid? clientId`
+- **Inputs:** Query `coachId`: `Guid?`<br>Query `clientId`: `Guid?`<br>Query `status`: `PlanStatus?`<br>Handler signature: `[FromQuery] Guid? coachId, [FromQuery] Guid? clientId, [FromQuery] PlanStatus? status`
 - **Declared response:** Task<ActionResult<List<WorkoutProgramDto>>>
 
 #### `POST /api/WorkoutPrograms` - `CreateWorkoutProgram`

@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$OutputPath = (Join-Path $PSScriptRoot '..\docs\API-ENDPOINT-CATALOG.md')
+    [string]$OutputPath
 )
 
 <##
@@ -16,6 +16,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+    $OutputPath = Join-Path $PSScriptRoot '..\docs\API-ENDPOINT-CATALOG.md'
+}
 $controllerFiles = @(
     Get-ChildItem -LiteralPath (Join-Path $repositoryRoot 'LogicFit.API') -Recurse -Filter '*Controller.cs' -File
 )

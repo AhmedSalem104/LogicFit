@@ -572,3 +572,19 @@ fails startup if apply or post-apply verification fails.
 - Added file path/MIME validation and API rate limiting.
 - Added initial CI/CD and project-status documentation.
 - Established the protected `develop` integration-branch workflow and task-branch/PR rules.
+
+### 2026-08-10 — coach plan authoring and execution integrity (Issues #272/#69, task branches)
+
+- Coach workout and nutrition plans now use one aggregate request for create/update, including
+  metadata, status, routines/meals, exercises/foods, quantities, and execution instructions.
+- Server authorization is tenant-bound and assignment-bound: owners/managers can manage all active
+  clients in their workspace; coaches/trainers can manage only actively assigned clients; clients
+  can read only their own active plans and can write only their own workout sessions/meal logs.
+- Aggregate writes are transactional and nested entities are reconciled without leaving partial
+  programs or plans. Cross-tenant exercise/food identifiers are rejected.
+- Client execution now starts/resumes a workout session through the API, records sets only after
+  server success, ends sessions idempotently, and marks meals only after meal-log writes succeed.
+- Added tenant migration `20260810125711_CoachPlanExecutionFields` for plan metadata, statuses,
+  planned exercise fields, meal timing, and calorie-plan metadata. This work is local/task-branch
+  only until its Pull Requests are reviewed, merged to `develop`, released, deployed, and health-
+  verified in the target environment.

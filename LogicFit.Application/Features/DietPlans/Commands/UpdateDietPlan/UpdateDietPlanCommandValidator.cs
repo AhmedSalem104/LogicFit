@@ -24,5 +24,25 @@ public class UpdateDietPlanCommandValidator : AbstractValidator<UpdateDietPlanCo
 
         RuleFor(x => x.TargetFats)
             .GreaterThanOrEqualTo(0).WithMessage("Target fats must be non-negative");
+
+        RuleFor(x => x.StartDate).NotEmpty();
+        RuleFor(x => x.EndDate).GreaterThan(x => x.StartDate).When(x => x.EndDate.HasValue);
+        RuleFor(x => x.MealsPerDay).GreaterThan(0).When(x => x.MealsPerDay.HasValue);
+        RuleFor(x => x.Status).IsInEnum().When(x => x.Status.HasValue);
+
+        When(x => x.Meals != null, () =>
+        {
+            RuleForEach(x => x.Meals!).ChildRules(meal =>
+            {
+                meal.RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
+                meal.RuleFor(x => x.OrderIndex).GreaterThanOrEqualTo(0);
+                meal.RuleFor(x => x.Items).NotEmpty();
+                meal.RuleForEach(x => x.Items).ChildRules(item =>
+                {
+                    item.RuleFor(x => x.FoodId).GreaterThan(0);
+                    item.RuleFor(x => x.AssignedQuantity).GreaterThan(0);
+                });
+            });
+        });
     }
 }

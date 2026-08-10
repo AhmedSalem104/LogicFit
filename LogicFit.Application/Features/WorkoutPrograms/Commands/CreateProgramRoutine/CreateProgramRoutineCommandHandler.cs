@@ -10,16 +10,19 @@ public class CreateProgramRoutineCommandHandler : IRequestHandler<CreateProgramR
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICoachPlanAccessService _accessService;
 
-    public CreateProgramRoutineCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public CreateProgramRoutineCommandHandler(IApplicationDbContext context, ITenantService tenantService, ICoachPlanAccessService accessService)
     {
         _context = context;
         _tenantService = tenantService;
+        _accessService = accessService;
     }
 
     public async Task<Guid> Handle(CreateProgramRoutineCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+        await _accessService.EnsureCanManageWorkoutProgramAsync(request.ProgramId, cancellationToken);
 
         var program = await _context.WorkoutPrograms
             .FirstOrDefaultAsync(p => p.Id == request.ProgramId && p.TenantId == tenantId, cancellationToken);

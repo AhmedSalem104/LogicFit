@@ -7,6 +7,7 @@ public class DailyMeal : TenantAuditableEntity
     public Guid PlanId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int OrderIndex { get; set; }
+    public string? Time { get; set; }
 
     // Navigation Properties
     public virtual DietPlan Plan { get; set; } = null!;

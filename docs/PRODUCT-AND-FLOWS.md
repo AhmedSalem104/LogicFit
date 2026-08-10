@@ -110,3 +110,19 @@ Jobs. العمليات الحساسة والـJobs قابلة لإعادة ال�
 حالة الصالة (`Tenant`) وحالة اشتراكها قراران منفصلان. إيقاف الصالة يمنع الوصول حتى
 لو كان الاشتراك صالحاً؛ اشتراك منتهٍ يمنع الميزات المدفوعة حتى لو كانت الصالة نشطة.
 لا تنفذ الواجهة هذا القرار بنفسها، بل تعرض نتيجة قرار الـBackend.
+
+## Coach plan authoring and client execution (Issues #272/#69, task branches)
+
+The coach flow is now an end-to-end aggregate journey:
+
+`select assigned client → build workout or nutrition plan → validate nested items → save atomically → client reads active plan → client records workout sets/meal logs → coach reviews sessions and progress`.
+
+The API, not the browser, decides tenant and assignment access. An owner/manager can manage active
+clients in the workspace; a coach/trainer can manage only active `CoachClient` assignments; a client
+can read only active plans assigned to that client. Create/update sends the complete nested aggregate
+in one request, so a failed child item cannot leave a half-created plan.
+
+The client execution screens show loading, empty, blocked, and error states. Workout actions are
+server-confirmed before the UI marks a set complete, active sessions resume safely, and ending an
+already-ended session is idempotent. Meal-log responses expose the meal item, food, unit, quantity,
+and calculated macros so the daily log and summary use real server data rather than mock values.

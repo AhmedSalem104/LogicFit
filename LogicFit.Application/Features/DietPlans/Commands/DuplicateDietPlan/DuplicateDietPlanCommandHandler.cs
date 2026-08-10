@@ -12,15 +12,18 @@ public class DuplicateDietPlanCommandHandler : IRequestHandler<DuplicateDietPlan
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ICoachPlanAccessService _accessService;
 
     public DuplicateDietPlanCommandHandler(
         IApplicationDbContext context,
         ITenantService tenantService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        ICoachPlanAccessService accessService)
     {
         _context = context;
         _tenantService = tenantService;
         _currentUserService = currentUserService;
+        _accessService = accessService;
     }
 
     public async Task<Guid> Handle(DuplicateDietPlanCommand request, CancellationToken cancellationToken)
@@ -35,6 +38,9 @@ public class DuplicateDietPlanCommandHandler : IRequestHandler<DuplicateDietPlan
         if (originalPlan == null)
             throw new NotFoundException("DietPlan", request.Id);
 
+        await _accessService.EnsureCanManageDietPlanAsync(request.Id, cancellationToken);
+        await _accessService.EnsureCanManageClientAsync(request.NewClientId ?? originalPlan.ClientId, cancellationToken);
+
         // Create new plan
         var newPlan = new DietPlan
         {
@@ -43,6 +49,8 @@ public class DuplicateDietPlanCommandHandler : IRequestHandler<DuplicateDietPlan
             CoachId = Guid.Parse(_currentUserService.UserId!),
             ClientId = request.NewClientId ?? originalPlan.ClientId,
             Name = request.NewName ?? $"{originalPlan.Name} (Copy)",
+            Description = originalPlan.Description,
+            MealsPerDay = originalPlan.MealsPerDay,
             StartDate = DateTime.UtcNow.Date,
             EndDate = originalPlan.EndDate.HasValue
                 ? DateTime.UtcNow.Date.AddDays((originalPlan.EndDate.Value - originalPlan.StartDate).Days)
@@ -63,7 +71,8 @@ public class DuplicateDietPlanCommandHandler : IRequestHandler<DuplicateDietPlan
                 TenantId = tenantId,
                 PlanId = newPlan.Id,
                 Name = originalMeal.Name,
-                OrderIndex = originalMeal.OrderIndex
+                OrderIndex = originalMeal.OrderIndex,
+                Time = originalMeal.Time
             };
 
             // Clone meal items

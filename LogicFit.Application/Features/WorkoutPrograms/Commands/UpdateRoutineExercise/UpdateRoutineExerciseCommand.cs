@@ -10,5 +10,8 @@ public class UpdateRoutineExerciseCommand : IRequest<bool>
     public int RepsMin { get; set; }
     public int RepsMax { get; set; }
     public int RestSec { get; set; }
+    public double? TargetWeightKg { get; set; }
+    public string? Notes { get; set; }
+    public string? Tempo { get; set; }
     public Guid? SupersetGroupId { get; set; }
 }
