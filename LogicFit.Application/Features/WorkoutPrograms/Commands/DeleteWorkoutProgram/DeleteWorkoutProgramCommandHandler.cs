@@ -9,11 +9,13 @@ public class DeleteWorkoutProgramCommandHandler : IRequestHandler<DeleteWorkoutP
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICoachPlanAccessService _accessService;
 
-    public DeleteWorkoutProgramCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public DeleteWorkoutProgramCommandHandler(IApplicationDbContext context, ITenantService tenantService, ICoachPlanAccessService accessService)
     {
         _context = context;
         _tenantService = tenantService;
+        _accessService = accessService;
     }
 
     public async Task<bool> Handle(DeleteWorkoutProgramCommand request, CancellationToken cancellationToken)
@@ -25,6 +27,8 @@ public class DeleteWorkoutProgramCommandHandler : IRequestHandler<DeleteWorkoutP
 
         if (program == null)
             throw new NotFoundException("WorkoutProgram", request.Id);
+
+        await _accessService.EnsureCanManageWorkoutProgramAsync(request.Id, cancellationToken);
 
         _context.WorkoutPrograms.Remove(program);
         await _context.SaveChangesAsync(cancellationToken);

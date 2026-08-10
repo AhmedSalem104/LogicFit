@@ -135,3 +135,18 @@ Migration التنسيق يوقف التطبيق إذا كانت هناك مفا
 أضف Logs وMetrics وAlerts لفشل المدفوعات، Jobs، Outbox وانتقالات حالات الاشتراك.
 قبل نشر Migration كبير: Dry Run، Backup، تقرير مخالفات، Rollback Test وFeature Flag
 للتفعيل التدريجي.
+
+## Coach plans and client execution data (Issue #272)
+
+`WorkoutProgram` and `DietPlan` remain tenant-owned aggregates. Their child rows
+(`ProgramRoutine`/`RoutineExercise` and `DailyMeal`/`MealItem`) carry the same tenant boundary and
+are created or reconciled in one transaction. Plan status is explicit (`Active`, `Archived`,
+`Draft`); existing workout rows are migrated with `Active` as the safe default. The tenant migration
+`20260810125711_CoachPlanExecutionFields` adds plan metadata, planned exercise instructions, meal
+timing, and nutrition-plan metadata.
+
+`WorkoutSession` and `SessionSet` are client execution records. `MealLog` is tied to a tenant meal
+item and client; its response includes the meal name, food/unit, consumed quantity, timestamp, and
+server-calculated macros. Cross-tenant food/exercise references are rejected before an aggregate is
+written. The migration is task-branch only until reviewed, merged, applied with a backup/rollback
+plan, and verified by health and schema checks.

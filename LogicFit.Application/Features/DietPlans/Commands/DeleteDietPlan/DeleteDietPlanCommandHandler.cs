@@ -9,11 +9,13 @@ public class DeleteDietPlanCommandHandler : IRequestHandler<DeleteDietPlanComman
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICoachPlanAccessService _accessService;
 
-    public DeleteDietPlanCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public DeleteDietPlanCommandHandler(IApplicationDbContext context, ITenantService tenantService, ICoachPlanAccessService accessService)
     {
         _context = context;
         _tenantService = tenantService;
+        _accessService = accessService;
     }
 
     public async Task<bool> Handle(DeleteDietPlanCommand request, CancellationToken cancellationToken)
@@ -25,6 +27,8 @@ public class DeleteDietPlanCommandHandler : IRequestHandler<DeleteDietPlanComman
 
         if (plan == null)
             throw new NotFoundException("DietPlan", request.Id);
+
+        await _accessService.EnsureCanManageDietPlanAsync(request.Id, cancellationToken);
 
         _context.DietPlans.Remove(plan);
         await _context.SaveChangesAsync(cancellationToken);

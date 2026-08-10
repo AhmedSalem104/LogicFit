@@ -11,6 +11,8 @@ public class DietPlanDto
     public Guid ClientId { get; set; }
     public string? ClientName { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public int? MealsPerDay { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public PlanStatus Status { get; set; }
@@ -27,6 +29,7 @@ public class DailyMealDto
     public Guid PlanId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int OrderIndex { get; set; }
+    public string? Time { get; set; }
     public List<MealItemDto> Items { get; set; } = new();
 }
 
@@ -53,6 +56,26 @@ public class CreateDietPlanDto
     public double? TargetProtein { get; set; }
     public double? TargetCarbs { get; set; }
     public double? TargetFats { get; set; }
+    public string? Description { get; set; }
+    public int? MealsPerDay { get; set; }
+    public PlanStatus? Status { get; set; }
+    public List<DietMealInputDto> Meals { get; set; } = new();
+}
+
+public class DietMealInputDto
+{
+    public Guid? Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int OrderIndex { get; set; }
+    public string? Time { get; set; }
+    public List<DietMealItemInputDto> Items { get; set; } = new();
+}
+
+public class DietMealItemInputDto
+{
+    public Guid? Id { get; set; }
+    public int FoodId { get; set; }
+    public double AssignedQuantity { get; set; }
 }
 
 public class CreateDailyMealDto
@@ -60,6 +83,7 @@ public class CreateDailyMealDto
     public Guid PlanId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int OrderIndex { get; set; }
+    public string? Time { get; set; }
 }
 
 public class CreateMealItemDto

@@ -9,13 +9,16 @@ public class DeleteProgramRoutineCommandHandler : IRequestHandler<DeleteProgramR
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICoachPlanAccessService _accessService;
 
     public DeleteProgramRoutineCommandHandler(
         IApplicationDbContext context,
-        ITenantService tenantService)
+        ITenantService tenantService,
+        ICoachPlanAccessService accessService)
     {
         _context = context;
         _tenantService = tenantService;
+        _accessService = accessService;
     }
 
     public async Task<bool> Handle(DeleteProgramRoutineCommand request, CancellationToken cancellationToken)
@@ -28,6 +31,8 @@ public class DeleteProgramRoutineCommandHandler : IRequestHandler<DeleteProgramR
 
         if (routine == null)
             throw new NotFoundException("ProgramRoutine", request.Id);
+
+        await _accessService.EnsureCanManageRoutineAsync(request.Id, cancellationToken);
 
         // Delete all exercises first
         _context.RoutineExercises.RemoveRange(routine.Exercises);

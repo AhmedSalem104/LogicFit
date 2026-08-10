@@ -1,6 +1,7 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.DietPlans.DTOs;
 using LogicFit.Domain.Enums;
+using LogicFit.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,14 +30,27 @@ public class GetDietPlansQueryHandler : IRequestHandler<GetDietPlansQuery, List<
             .Where(p => p.TenantId == tenantId)
             .AsQueryable();
 
-        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        if (!Guid.TryParse(_currentUserService.UserId, out var currentUserId))
+            throw new ForbiddenException("An authenticated workspace user is required.");
         var currentUserRole = await _context.Users
-            .Where(u => u.Id == currentUserId && u.TenantId == tenantId)
-            .Select(u => u.Role)
+            .Where(u => u.Id == currentUserId && u.TenantId == tenantId && u.IsActive)
+            .Select(u => (UserRole?)u.Role)
             .FirstOrDefaultAsync(cancellationToken);
+        if (!currentUserRole.HasValue)
+            throw new ForbiddenException("The authenticated user is not active in this workspace.");
 
         if (currentUserRole == UserRole.Client)
-            query = query.Where(p => p.ClientId == currentUserId);
+        {
+            query = query.Where(p => p.ClientId == currentUserId && p.Status == PlanStatus.Active);
+        }
+        else if (currentUserRole is UserRole.Coach or UserRole.Trainer or UserRole.FreelanceCoach)
+        {
+            query = query.Where(p => _context.CoachClients.Any(cc => cc.TenantId == tenantId
+                && cc.CoachId == currentUserId
+                && cc.ClientId == p.ClientId
+                && cc.IsActive
+                && cc.UnassignedAt == null));
+        }
 
         if (request.CoachId.HasValue)
             query = query.Where(p => p.CoachId == request.CoachId.Value);
@@ -57,13 +71,35 @@ public class GetDietPlansQueryHandler : IRequestHandler<GetDietPlansQuery, List<
                 ClientId = p.ClientId,
                 ClientName = p.Client.Profile != null ? p.Client.Profile.FullName : p.Client.Email,
                 Name = p.Name,
+                Description = p.Description,
+                MealsPerDay = p.MealsPerDay,
                 StartDate = p.StartDate,
                 EndDate = p.EndDate,
                 Status = p.Status,
                 TargetCalories = p.TargetCalories,
                 TargetProtein = p.TargetProtein,
                 TargetCarbs = p.TargetCarbs,
-                TargetFats = p.TargetFats
+                TargetFats = p.TargetFats,
+                Meals = p.Meals.Select(m => new DailyMealDto
+                {
+                    Id = m.Id,
+                    PlanId = m.PlanId,
+                    Name = m.Name,
+                    OrderIndex = m.OrderIndex,
+                    Time = m.Time,
+                    Items = m.Items.Select(i => new MealItemDto
+                    {
+                        Id = i.Id,
+                        MealId = i.MealId,
+                        FoodId = i.FoodId,
+                        FoodName = i.Food.Name,
+                        AssignedQuantity = i.AssignedQuantity,
+                        CalcCalories = i.CalcCalories,
+                        CalcProtein = i.CalcProtein,
+                        CalcCarbs = i.CalcCarbs,
+                        CalcFats = i.CalcFats
+                    }).ToList()
+                }).ToList()
             })
             .ToListAsync(cancellationToken);
     }

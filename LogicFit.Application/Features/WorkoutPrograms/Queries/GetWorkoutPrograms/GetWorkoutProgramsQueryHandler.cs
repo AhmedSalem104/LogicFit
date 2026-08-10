@@ -1,6 +1,7 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.WorkoutPrograms.DTOs;
 using LogicFit.Domain.Enums;
+using LogicFit.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,20 +30,36 @@ public class GetWorkoutProgramsQueryHandler : IRequestHandler<GetWorkoutPrograms
             .Where(p => p.TenantId == tenantId)
             .AsQueryable();
 
-        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        if (!Guid.TryParse(_currentUserService.UserId, out var currentUserId))
+            throw new ForbiddenException("An authenticated workspace user is required.");
         var currentUserRole = await _context.Users
-            .Where(u => u.Id == currentUserId && u.TenantId == tenantId)
-            .Select(u => u.Role)
+            .Where(u => u.Id == currentUserId && u.TenantId == tenantId && u.IsActive)
+            .Select(u => (UserRole?)u.Role)
             .FirstOrDefaultAsync(cancellationToken);
+        if (!currentUserRole.HasValue)
+            throw new ForbiddenException("The authenticated user is not active in this workspace.");
 
         if (currentUserRole == UserRole.Client)
-            query = query.Where(p => p.ClientId == currentUserId);
+        {
+            query = query.Where(p => p.ClientId == currentUserId && p.Status == PlanStatus.Active);
+        }
+        else if (currentUserRole is UserRole.Coach or UserRole.Trainer or UserRole.FreelanceCoach)
+        {
+            query = query.Where(p => _context.CoachClients.Any(cc => cc.TenantId == tenantId
+                && cc.CoachId == currentUserId
+                && cc.ClientId == p.ClientId
+                && cc.IsActive
+                && cc.UnassignedAt == null));
+        }
 
         if (request.CoachId.HasValue)
             query = query.Where(p => p.CoachId == request.CoachId.Value);
 
         if (request.ClientId.HasValue)
             query = query.Where(p => p.ClientId == request.ClientId.Value);
+
+        if (request.Status.HasValue)
+            query = query.Where(p => p.Status == request.Status.Value);
 
         return await query
             .Select(p => new WorkoutProgramDto
@@ -54,8 +71,35 @@ public class GetWorkoutProgramsQueryHandler : IRequestHandler<GetWorkoutPrograms
                 ClientId = p.ClientId,
                 ClientName = p.Client.Profile != null ? p.Client.Profile.FullName : p.Client.Email,
                 Name = p.Name,
+                Description = p.Description,
+                Goal = p.Goal,
+                Difficulty = p.Difficulty,
+                DaysPerWeek = p.DaysPerWeek,
+                Status = p.Status,
                 StartDate = p.StartDate,
-                EndDate = p.EndDate
+                EndDate = p.EndDate,
+                Routines = p.Routines.Select(r => new ProgramRoutineDto
+                {
+                    Id = r.Id,
+                    ProgramId = r.ProgramId,
+                    Name = r.Name,
+                    DayOfWeek = r.DayOfWeek,
+                    Exercises = r.Exercises.Select(e => new RoutineExerciseDto
+                    {
+                        Id = e.Id,
+                        RoutineId = e.RoutineId,
+                        ExerciseId = e.ExerciseId,
+                        ExerciseName = e.Exercise.Name,
+                        Sets = e.Sets,
+                        RepsMin = e.RepsMin,
+                        RepsMax = e.RepsMax,
+                        RestSec = e.RestSec,
+                        TargetWeightKg = e.TargetWeightKg,
+                        Notes = e.Notes,
+                        Tempo = e.Tempo,
+                        SupersetGroupId = e.SupersetGroupId
+                    }).ToList()
+                }).ToList()
             })
             .ToListAsync(cancellationToken);
     }

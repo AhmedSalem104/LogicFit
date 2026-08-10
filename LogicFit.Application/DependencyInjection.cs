@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantSubscriptionGuard, TenantSubscriptionGuard>();
         services.AddScoped<ITenantAccessGuard, TenantAccessGuard>();
         services.AddScoped<ICommissionService, CommissionService>();
+        services.AddScoped<ICoachPlanAccessService, CoachPlanAccessService>();
         services.AddScoped<ITenantUsageCalculator, TenantUsageCalculator>();
         services.AddScoped<IWorkspaceMembershipQuotaService, WorkspaceMembershipQuotaService>();
         services.AddScoped<IIdentityWorkspaceSessionIssuer, IdentityWorkspaceSessionIssuer>();

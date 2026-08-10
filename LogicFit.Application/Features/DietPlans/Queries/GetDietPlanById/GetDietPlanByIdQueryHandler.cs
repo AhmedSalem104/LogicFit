@@ -1,6 +1,7 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.DietPlans.DTOs;
 using LogicFit.Domain.Enums;
+using LogicFit.Domain.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,9 +23,12 @@ public class GetDietPlanByIdQueryHandler : IRequestHandler<GetDietPlanByIdQuery,
     public async Task<DietPlanDto?> Handle(GetDietPlanByIdQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
-        var currentUserId = Guid.Parse(_currentUserService.UserId!);
-        var role = await _context.Users.Where(u => u.Id == currentUserId && u.TenantId == tenantId)
-            .Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
+        if (!Guid.TryParse(_currentUserService.UserId, out var currentUserId))
+            throw new ForbiddenException("An authenticated workspace user is required.");
+        var role = await _context.Users.Where(u => u.Id == currentUserId && u.TenantId == tenantId && u.IsActive)
+            .Select(u => (UserRole?)u.Role).FirstOrDefaultAsync(cancellationToken);
+        if (!role.HasValue)
+            throw new ForbiddenException("The authenticated user is not active in this workspace.");
 
         return await _context.DietPlans
             .Include(p => p.Coach).ThenInclude(c => c.Profile)
@@ -33,7 +37,14 @@ public class GetDietPlanByIdQueryHandler : IRequestHandler<GetDietPlanByIdQuery,
                 .ThenInclude(m => m.Items)
                     .ThenInclude(i => i.Food)
             .Where(p => p.Id == request.Id && p.TenantId == tenantId
-                && (role != UserRole.Client || p.ClientId == currentUserId))
+                && ((role == UserRole.Client && p.ClientId == currentUserId && p.Status == PlanStatus.Active)
+                    || (role == UserRole.Owner || role == UserRole.Manager || role == UserRole.FreelanceOwner)
+                    || ((role == UserRole.Coach || role == UserRole.Trainer || role == UserRole.FreelanceCoach)
+                        && _context.CoachClients.Any(cc => cc.TenantId == tenantId
+                            && cc.CoachId == currentUserId
+                            && cc.ClientId == p.ClientId
+                            && cc.IsActive
+                            && cc.UnassignedAt == null))))
             .Select(p => new DietPlanDto
             {
                 Id = p.Id,
@@ -43,6 +54,8 @@ public class GetDietPlanByIdQueryHandler : IRequestHandler<GetDietPlanByIdQuery,
                 ClientId = p.ClientId,
                 ClientName = p.Client.Profile != null ? p.Client.Profile.FullName : p.Client.Email,
                 Name = p.Name,
+                Description = p.Description,
+                MealsPerDay = p.MealsPerDay,
                 StartDate = p.StartDate,
                 EndDate = p.EndDate,
                 Status = p.Status,
@@ -56,6 +69,7 @@ public class GetDietPlanByIdQueryHandler : IRequestHandler<GetDietPlanByIdQuery,
                     PlanId = m.PlanId,
                     Name = m.Name,
                     OrderIndex = m.OrderIndex,
+                    Time = m.Time,
                     Items = m.Items.Select(i => new MealItemDto
                     {
                         Id = i.Id,
