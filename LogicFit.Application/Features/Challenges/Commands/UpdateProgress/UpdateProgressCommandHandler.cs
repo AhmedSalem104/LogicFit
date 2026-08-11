@@ -9,26 +9,34 @@ namespace LogicFit.Application.Features.Challenges.Commands.UpdateProgress;
 public class UpdateProgressCommandHandler : IRequestHandler<UpdateProgressCommand, bool>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeService _dateTimeService;
 
     public UpdateProgressCommandHandler(
         IApplicationDbContext context,
+        ITenantService tenantService,
         ICurrentUserService currentUserService,
         IDateTimeService dateTimeService)
     {
         _context = context;
+        _tenantService = tenantService;
         _currentUserService = currentUserService;
         _dateTimeService = dateTimeService;
     }
 
     public async Task<bool> Handle(UpdateProgressCommand request, CancellationToken cancellationToken)
     {
-        var clientId = Guid.Parse(_currentUserService.UserId!);
+        var tenantId = _tenantService.GetCurrentTenantId();
+        if (!Guid.TryParse(_currentUserService.UserId, out var clientId))
+            throw new UnauthorizedException("An authenticated workspace user is required.");
 
         var clientChallenge = await _context.ClientChallenges
             .Include(cc => cc.Challenge)
-            .FirstOrDefaultAsync(cc => cc.ChallengeId == request.ChallengeId && cc.ClientId == clientId, cancellationToken);
+            .FirstOrDefaultAsync(cc => cc.TenantId == tenantId
+                && cc.Challenge.TenantId == tenantId
+                && cc.ChallengeId == request.ChallengeId
+                && cc.ClientId == clientId, cancellationToken);
 
         if (clientChallenge == null)
             throw new NotFoundException("ClientChallenge", request.ChallengeId);

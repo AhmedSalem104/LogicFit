@@ -33,7 +33,7 @@ public class AssignClientToCoachCommandHandler : IRequestHandler<AssignClientToC
 
         // Get current user to check role
         var currentUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == currentUserId, cancellationToken)
+            .FirstOrDefaultAsync(u => u.Id == currentUserId && u.TenantId == tenantId && u.IsActive, cancellationToken)
             ?? throw new NotFoundException("Current user not found");
 
         // Determine coach ID
@@ -57,17 +57,20 @@ public class AssignClientToCoachCommandHandler : IRequestHandler<AssignClientToC
 
         // Validate coach exists and is a coach
         var coach = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == coachId && (u.Role == UserRole.Coach || u.Role == UserRole.Owner), cancellationToken)
+            .FirstOrDefaultAsync(u => u.Id == coachId && u.TenantId == tenantId && u.IsActive
+                && (u.Role == UserRole.Coach || u.Role == UserRole.Owner), cancellationToken)
             ?? throw new NotFoundException("Coach not found");
 
         // Validate client exists and is a client
         var client = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == request.ClientId && u.Role == UserRole.Client, cancellationToken)
+            .FirstOrDefaultAsync(u => u.Id == request.ClientId && u.TenantId == tenantId
+                && u.IsActive && u.Role == UserRole.Client, cancellationToken)
             ?? throw new NotFoundException("Client not found");
 
         // Check if client is already assigned to an active coach
         var existingAssignment = await _context.CoachClients
-            .FirstOrDefaultAsync(cc => cc.ClientId == request.ClientId && cc.IsActive, cancellationToken);
+            .FirstOrDefaultAsync(cc => cc.TenantId == tenantId
+                && cc.ClientId == request.ClientId && cc.IsActive, cancellationToken);
 
         if (existingAssignment != null)
         {

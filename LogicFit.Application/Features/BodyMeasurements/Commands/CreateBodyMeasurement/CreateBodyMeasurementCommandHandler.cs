@@ -28,11 +28,16 @@ public class CreateBodyMeasurementCommandHandler : IRequestHandler<CreateBodyMea
 
     public async Task<Guid> Handle(CreateBodyMeasurementCommand request, CancellationToken cancellationToken)
     {
-        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var tenantId = _tenantService.GetCurrentTenantId();
+        if (!Guid.TryParse(_currentUserService.UserId, out var currentUserId))
+            throw new ForbiddenException("An authenticated workspace user is required.");
         var currentUserRole = await _context.Users
-            .Where(u => u.Id == currentUserId)
-            .Select(u => u.Role)
+            .Where(u => u.Id == currentUserId && u.TenantId == tenantId && u.IsActive)
+            .Select(u => (UserRole?)u.Role)
             .FirstOrDefaultAsync(cancellationToken);
+
+        if (!currentUserRole.HasValue)
+            throw new ForbiddenException("The authenticated user is not active in this workspace.");
 
         var clientId = request.ClientId;
         if (currentUserRole == UserRole.Client)
@@ -41,6 +46,24 @@ public class CreateBodyMeasurementCommandHandler : IRequestHandler<CreateBodyMea
                 throw new ForbiddenException("Clients can only create measurements for themselves");
 
             clientId = currentUserId;
+        }
+
+        var clientExists = await _context.Users.AnyAsync(u => u.Id == clientId
+            && u.TenantId == tenantId
+            && u.Role == UserRole.Client
+            && u.IsActive, cancellationToken);
+        if (!clientExists)
+            throw new NotFoundException("Client", clientId);
+
+        if (currentUserRole is UserRole.Coach or UserRole.Trainer or UserRole.FreelanceCoach)
+        {
+            var assigned = await _context.CoachClients.AnyAsync(cc => cc.TenantId == tenantId
+                && cc.CoachId == currentUserId
+                && cc.ClientId == clientId
+                && cc.IsActive
+                && cc.UnassignedAt == null, cancellationToken);
+            if (!assigned)
+                throw new ForbiddenException("The client is not actively assigned to the current coach.");
         }
 
         string? inbodyImageUrl = null;
@@ -72,7 +95,7 @@ public class CreateBodyMeasurementCommandHandler : IRequestHandler<CreateBodyMea
         var measurement = new BodyMeasurement
         {
             Id = Guid.NewGuid(),
-            TenantId = _tenantService.GetCurrentTenantId(),
+            TenantId = tenantId,
             ClientId = clientId,
             DateRecorded = request.DateRecorded,
             WeightKg = request.WeightKg,
