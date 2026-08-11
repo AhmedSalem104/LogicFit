@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
+Generated: `2026-08-11 15:48 UTC`  |  Total endpoints: **404**
 
 ## Contract rules
 
@@ -135,11 +135,59 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 - **Inputs:** Query `status`: `DatabaseResourceStatus?`<br>Query `tenantId`: `Guid?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] DatabaseResourceStatus? status = null, [FromQuery] Guid? tenantId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize`
 - **Declared response:** Task<ActionResult<PlatformPage<PlatformDatabaseResourceDto>>>
 
-#### `POST /api/platform/database-resources` - `Register`
+#### `POST /api/platform/database-resources` - `Create`
 
 - **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
-- **Inputs:** Body `request`: `RegisterDatabaseResourceRequest`<br>Handler signature: `[FromBody] RegisterDatabaseResourceRequest request, [FromServices] IConnectionStringProtector connectionStringProtector`
-- **Declared response:** typeof(PlatformDatabaseResourceDto), StatusCodes.Status201Created
+- **Inputs:** Body `request`: `CreateDatabaseResourceRequest`<br>Handler signature: `[FromBody] CreateDatabaseResourceRequest request`
+- **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
+
+#### `DELETE /api/platform/database-resources/{id:guid}` - `Delete`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<IActionResult>
+
+#### `GET /api/platform/database-resources/{id:guid}` - `Get`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
+
+#### `PUT /api/platform/database-resources/{id:guid}` - `Update`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `UpdateDatabaseResourceRequest`<br>Handler signature: `Guid id, [FromBody] UpdateDatabaseResourceRequest request`
+- **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/backup` - `Backup`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<BackupBatchDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/migrations` - `RunMigrations`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<DatabaseResourceOperationDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/repair-connection` - `RepairConnection`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `RepairDatabaseResourceConnectionRequest`<br>Handler signature: `Guid id, [FromBody] RepairDatabaseResourceConnectionRequest request`
+- **Declared response:** Task<ActionResult<DatabaseResourceOperationDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/status` - `SetStatus`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `SetDatabaseResourceStatusRequest`<br>Handler signature: `Guid id, [FromBody] SetDatabaseResourceStatusRequest request`
+- **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
+
+#### `POST /api/platform/database-resources/test-connection` - `TestConnection`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `DatabaseConnectionTestRequest`<br>Handler signature: `[FromBody] DatabaseConnectionTestRequest request`
+- **Declared response:** Task<ActionResult<DatabaseConnectionTestDto>>
 
 ### PlatformDiagnostics
 
@@ -446,8 +494,8 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 #### `POST /api/platform/tenants` - `CreateTenant`
 
 - **Access:** JWT + Policy: `Permissions.ManageTenants`
-- **Inputs:** Body `command`: `CreateTenantWithOwnerCommand` { `Name`: string; `Subdomain`: string?; `Email`: string?; `PhoneNumber`: string?; `OwnerEmail`: string; `OwnerPhoneNumber`: string?; `OwnerPassword`: string; `OwnerFullName`: string }<br>Handler signature: `[FromBody] CreateTenantWithOwnerCommand command`
-- **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status201Created
+- **Inputs:** Body `command`: `CreateTenantWithOwnerCommand` { `Name`: string; `Subdomain`: string?; `Email`: string?; `PhoneNumber`: string?; `OwnerEmail`: string; `OwnerPhoneNumber`: string?; `OwnerPassword`: string; `OwnerFullName`: string; `IdempotencyKey`: string? }<br>Handler signature: `[FromHeader(Name = "Idempotency-Key")] string? idempotencyKey, [FromBody] CreateTenantWithOwnerCommand command`
+- **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status201Created<br>StatusCodes.Status400BadRequest<br>StatusCodes.Status409Conflict<br>StatusCodes.Status503ServiceUnavailable
 
 #### `POST /api/platform/tenants/{id:guid}/activate` - `Activate`
 
