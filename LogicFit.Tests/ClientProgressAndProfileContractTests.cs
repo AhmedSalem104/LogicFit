@@ -8,7 +8,7 @@ public sealed class ClientProgressAndProfileContractTests
     public void Client_progress_has_a_self_scoped_endpoint_and_report_handler()
     {
         var root = RepoRoot();
-        var controller = Read(root, "LogicFit.Api", "Features", "ClientDashboard", "ClientDashboardController.cs");
+        var controller = Read(root, "LogicFit.API", "Features", "ClientDashboard", "ClientDashboardController.cs");
         var handler = Read(root, "LogicFit.Application", "Features", "Reports", "Queries", "GetTraineeProgressReport", "GetTraineeProgressReportQueryHandler.cs");
 
         Assert.Contains("[HttpGet(\"my-progress\")]", controller, StringComparison.Ordinal);
