@@ -600,3 +600,10 @@ fails startup if apply or post-apply verification fails.
   planned exercise fields, meal timing, and calorie-plan metadata. This work is local/task-branch
   only until its Pull Requests are reviewed, merged to `develop`, released, deployed, and health-
   verified in the target environment.
+
+### 2026-08-11 — role-based screen contract hardening (Issues #279/#280)
+
+- Coach client lists, assignments, body measurements, and challenge operations now enforce the active tenant and the existing coach-to-client assignment boundary in the application handlers. Owners/managers retain workspace scope; coaches/trainers remain assignment-scoped.
+- Client progress is exposed through the authenticated self-service route `GET /api/client/my-progress`; the handler rejects cross-tenant and cross-client access and filters all report aggregates to the active tenant.
+- Client self-profile reads and updates now use the tenant-scoped `/api/profile` contract. Phone updates validate duplicates within the active tenant without changing the existing profile concept.
+- Added static API-contract regression tests for Coach isolation and Client progress/profile ownership. These changes must still pass the repository build/test suite and the deployed `/health` check after merge and release.

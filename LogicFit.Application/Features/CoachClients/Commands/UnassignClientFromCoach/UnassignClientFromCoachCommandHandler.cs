@@ -9,31 +9,37 @@ namespace LogicFit.Application.Features.CoachClients.Commands.UnassignClientFrom
 public class UnassignClientFromCoachCommandHandler : IRequestHandler<UnassignClientFromCoachCommand, Unit>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IDateTimeService _dateTimeService;
 
     public UnassignClientFromCoachCommandHandler(
         IApplicationDbContext context,
+        ITenantService tenantService,
         ICurrentUserService currentUserService,
         IDateTimeService dateTimeService)
     {
         _context = context;
+        _tenantService = tenantService;
         _currentUserService = currentUserService;
         _dateTimeService = dateTimeService;
     }
 
     public async Task<Unit> Handle(UnassignClientFromCoachCommand request, CancellationToken cancellationToken)
     {
-        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var tenantId = _tenantService.GetCurrentTenantId();
+        if (!Guid.TryParse(_currentUserService.UserId, out var currentUserId))
+            throw new ForbiddenException("An authenticated workspace user is required.");
 
         // Get current user to check role
         var currentUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == currentUserId, cancellationToken)
+            .FirstOrDefaultAsync(u => u.Id == currentUserId && u.TenantId == tenantId && u.IsActive, cancellationToken)
             ?? throw new NotFoundException("Current user not found");
 
         // Find active assignment
         var assignment = await _context.CoachClients
-            .FirstOrDefaultAsync(cc => cc.ClientId == request.ClientId && cc.IsActive, cancellationToken)
+            .FirstOrDefaultAsync(cc => cc.TenantId == tenantId
+                && cc.ClientId == request.ClientId && cc.IsActive, cancellationToken)
             ?? throw new NotFoundException("No active assignment found for this client");
 
         // Check authorization: Owner can unassign anyone, Coach can only unassign their own clients

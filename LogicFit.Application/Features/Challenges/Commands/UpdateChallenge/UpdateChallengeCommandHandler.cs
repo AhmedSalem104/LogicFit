@@ -8,16 +8,19 @@ namespace LogicFit.Application.Features.Challenges.Commands.UpdateChallenge;
 public class UpdateChallengeCommandHandler : IRequestHandler<UpdateChallengeCommand, bool>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenantService;
 
-    public UpdateChallengeCommandHandler(IApplicationDbContext context)
+    public UpdateChallengeCommandHandler(IApplicationDbContext context, ITenantService tenantService)
     {
         _context = context;
+        _tenantService = tenantService;
     }
 
     public async Task<bool> Handle(UpdateChallengeCommand request, CancellationToken cancellationToken)
     {
+        var tenantId = _tenantService.GetCurrentTenantId();
         var challenge = await _context.Challenges
-            .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == request.Id && c.TenantId == tenantId && !c.IsDeleted, cancellationToken);
 
         if (challenge == null)
             throw new NotFoundException("Challenge", request.Id);

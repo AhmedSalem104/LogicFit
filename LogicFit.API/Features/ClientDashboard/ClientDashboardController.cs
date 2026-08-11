@@ -1,3 +1,4 @@
+using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.ClientDashboard.DTOs;
 using LogicFit.Application.Features.ClientDashboard.Queries.GetMyAppointments;
 using LogicFit.Application.Features.ClientDashboard.Queries.GetMyCoach;
@@ -6,6 +7,8 @@ using LogicFit.Application.Features.ClientDashboard.Queries.GetMyDietPlans;
 using LogicFit.Application.Features.ClientDashboard.Queries.GetMyMeasurements;
 using LogicFit.Application.Features.ClientDashboard.Queries.GetMyPrograms;
 using LogicFit.Application.Features.ClientDashboard.Queries.GetMySubscriptions;
+using LogicFit.Application.Features.Reports.DTOs;
+using LogicFit.Application.Features.Reports.Queries.GetTraineeProgressReport;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,10 +21,12 @@ namespace LogicFit.API.Features.ClientDashboard;
 public class ClientDashboardController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ICurrentUserService _currentUserService;
 
-    public ClientDashboardController(IMediator mediator)
+    public ClientDashboardController(IMediator mediator, ICurrentUserService currentUserService)
     {
         _mediator = mediator;
+        _currentUserService = currentUserService;
     }
 
     [HttpGet("dashboard")]
@@ -72,5 +77,14 @@ public class ClientDashboardController : ControllerBase
     {
         var result = await _mediator.Send(new GetMyAppointmentsQuery());
         return Ok(result);
+    }
+
+    [HttpGet("my-progress")]
+    public async Task<ActionResult<TraineeProgressReportDto>> GetMyProgress()
+    {
+        if (!Guid.TryParse(_currentUserService.UserId, out var clientId))
+            return Unauthorized();
+
+        return Ok(await _mediator.Send(new GetTraineeProgressReportQuery { ClientId = clientId }));
     }
 }

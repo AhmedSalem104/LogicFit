@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-11 13:36 UTC`  |  Total endpoints: **395**
+Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 ## Contract rules
 
@@ -880,6 +880,12 @@ Generated: `2026-08-11 13:36 UTC`  |  Total endpoints: **395**
 - **Access:** JWT required
 - **Inputs:** No request input.
 - **Declared response:** Task<ActionResult<List<MyWorkoutProgramDto>>>
+
+#### `GET /api/client/my-progress` - `GetMyProgress`
+
+- **Access:** JWT required
+- **Inputs:** No request input.
+- **Declared response:** Task<ActionResult<TraineeProgressReportDto>>
 
 #### `GET /api/client/my-subscriptions` - `GetMySubscriptions`
 
