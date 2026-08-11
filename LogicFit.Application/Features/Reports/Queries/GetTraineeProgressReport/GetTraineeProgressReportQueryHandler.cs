@@ -10,40 +10,53 @@ namespace LogicFit.Application.Features.Reports.Queries.GetTraineeProgressReport
 public class GetTraineeProgressReportQueryHandler : IRequestHandler<GetTraineeProgressReportQuery, TraineeProgressReportDto>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
 
     public GetTraineeProgressReportQueryHandler(
         IApplicationDbContext context,
+        ITenantService tenantService,
         ICurrentUserService currentUserService)
     {
         _context = context;
+        _tenantService = tenantService;
         _currentUserService = currentUserService;
     }
 
     public async Task<TraineeProgressReportDto> Handle(GetTraineeProgressReportQuery request, CancellationToken cancellationToken)
     {
-        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var tenantId = _tenantService.GetCurrentTenantId();
+        if (!Guid.TryParse(_currentUserService.UserId, out var currentUserId))
+            throw new ForbiddenException("An authenticated workspace user is required.");
 
         // Verify the current user is the coach of this client or owner
         var currentUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == currentUserId, cancellationToken)
+            .FirstOrDefaultAsync(u => u.Id == currentUserId && u.TenantId == tenantId && u.IsActive, cancellationToken)
             ?? throw new NotFoundException("Current user not found");
 
         var coachClient = await _context.CoachClients
-            .FirstOrDefaultAsync(cc => cc.ClientId == request.ClientId && cc.IsActive, cancellationToken);
+            .FirstOrDefaultAsync(cc => cc.TenantId == tenantId
+                && cc.ClientId == request.ClientId && cc.IsActive, cancellationToken);
 
-        if (currentUser.Role == UserRole.Coach && (coachClient == null || coachClient.CoachId != currentUserId))
+        if (currentUser.Role == UserRole.Client && request.ClientId != currentUserId)
+            throw new ForbiddenException("Clients can only view their own progress.");
+
+        if (currentUser.Role is (UserRole.Coach or UserRole.Trainer or UserRole.FreelanceCoach)
+            && (coachClient == null || coachClient.CoachId != currentUserId))
             throw new ForbiddenException("This client is not assigned to you");
 
         // Get client details
         var client = await _context.Users
             .Include(u => u.Profile)
-            .FirstOrDefaultAsync(u => u.Id == request.ClientId, cancellationToken)
+            .FirstOrDefaultAsync(u => u.Id == request.ClientId
+                && u.TenantId == tenantId
+                && u.Role == UserRole.Client
+                && u.IsActive, cancellationToken)
             ?? throw new NotFoundException("Client not found");
 
         // Get body measurements
         var measurements = await _context.BodyMeasurements
-            .Where(bm => bm.ClientId == request.ClientId)
+            .Where(bm => bm.TenantId == tenantId && bm.ClientId == request.ClientId)
             .OrderBy(bm => bm.DateRecorded)
             .ToListAsync(cancellationToken);
 
@@ -61,7 +74,7 @@ public class GetTraineeProgressReportQueryHandler : IRequestHandler<GetTraineePr
 
         // Get workout sessions
         var sessions = await _context.WorkoutSessions
-            .Where(ws => ws.ClientId == request.ClientId)
+            .Where(ws => ws.TenantId == tenantId && ws.ClientId == request.ClientId)
             .ToListAsync(cancellationToken);
 
         var totalSessions = sessions.Count;
@@ -83,7 +96,7 @@ public class GetTraineeProgressReportQueryHandler : IRequestHandler<GetTraineePr
 
         // Get active workout programs
         var workoutPrograms = await _context.WorkoutPrograms
-            .Where(wp => wp.ClientId == request.ClientId)
+            .Where(wp => wp.TenantId == tenantId && wp.ClientId == request.ClientId && !wp.IsDeleted)
             .Include(wp => wp.Routines)
             .Select(wp => new ActiveProgramDto
             {
@@ -96,7 +109,8 @@ public class GetTraineeProgressReportQueryHandler : IRequestHandler<GetTraineePr
 
         // Get active diet plans
         var dietPlans = await _context.DietPlans
-            .Where(dp => dp.ClientId == request.ClientId && dp.Status == PlanStatus.Active)
+            .Where(dp => dp.TenantId == tenantId && dp.ClientId == request.ClientId
+                && dp.Status == PlanStatus.Active && !dp.IsDeleted)
             .Select(dp => new ActivePlanDto
             {
                 Id = dp.Id,
@@ -110,7 +124,8 @@ public class GetTraineeProgressReportQueryHandler : IRequestHandler<GetTraineePr
         var personalRecords = await _context.SessionSets
             .Include(ss => ss.Session)
             .Include(ss => ss.Exercise)
-            .Where(ss => ss.Session.ClientId == request.ClientId && ss.IsPr)
+            .Where(ss => ss.Session.TenantId == tenantId
+                && ss.Session.ClientId == request.ClientId && ss.IsPr)
             .OrderByDescending(ss => ss.WeightKg)
             .Take(10)
             .Select(ss => new PersonalRecordDto

@@ -8,18 +8,24 @@ namespace LogicFit.Application.Features.Challenges.Commands.DeleteChallenge;
 public class DeleteChallengeCommandHandler : IRequestHandler<DeleteChallengeCommand, bool>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
 
-    public DeleteChallengeCommandHandler(IApplicationDbContext context, ICurrentUserService currentUserService)
+    public DeleteChallengeCommandHandler(
+        IApplicationDbContext context,
+        ITenantService tenantService,
+        ICurrentUserService currentUserService)
     {
         _context = context;
+        _tenantService = tenantService;
         _currentUserService = currentUserService;
     }
 
     public async Task<bool> Handle(DeleteChallengeCommand request, CancellationToken cancellationToken)
     {
+        var tenantId = _tenantService.GetCurrentTenantId();
         var challenge = await _context.Challenges
-            .FirstOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Id == request.Id && c.TenantId == tenantId && !c.IsDeleted, cancellationToken);
 
         if (challenge == null)
             throw new NotFoundException("Challenge", request.Id);

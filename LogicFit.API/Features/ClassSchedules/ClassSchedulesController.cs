@@ -6,6 +6,7 @@ using LogicFit.Application.Features.ClassSchedules.Commands.CancelClassSchedule;
 using LogicFit.Application.Features.ClassSchedules.Commands.CreateClassSchedule;
 using LogicFit.Application.Features.ClassSchedules.Queries.GetClassSchedules;
 using LogicFit.Application.Features.GroupClasses.DTOs;
+using LogicFit.Domain.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +15,7 @@ namespace LogicFit.API.Features.ClassSchedules;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageBranches)]
 public class ClassSchedulesController : ControllerBase
 {
     private readonly IMediator _mediator;

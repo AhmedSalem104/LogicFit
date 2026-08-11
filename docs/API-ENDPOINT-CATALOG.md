@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-10 13:33 UTC`  |  Total endpoints: **395**
+Generated: `2026-08-11 15:48 UTC`  |  Total endpoints: **404**
 
 ## Contract rules
 
@@ -135,11 +135,59 @@ Generated: `2026-08-10 13:33 UTC`  |  Total endpoints: **395**
 - **Inputs:** Query `status`: `DatabaseResourceStatus?`<br>Query `tenantId`: `Guid?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] DatabaseResourceStatus? status = null, [FromQuery] Guid? tenantId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize`
 - **Declared response:** Task<ActionResult<PlatformPage<PlatformDatabaseResourceDto>>>
 
-#### `POST /api/platform/database-resources` - `Register`
+#### `POST /api/platform/database-resources` - `Create`
 
 - **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
-- **Inputs:** Body `request`: `RegisterDatabaseResourceRequest`<br>Handler signature: `[FromBody] RegisterDatabaseResourceRequest request, [FromServices] IConnectionStringProtector connectionStringProtector`
-- **Declared response:** typeof(PlatformDatabaseResourceDto), StatusCodes.Status201Created
+- **Inputs:** Body `request`: `CreateDatabaseResourceRequest`<br>Handler signature: `[FromBody] CreateDatabaseResourceRequest request`
+- **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
+
+#### `DELETE /api/platform/database-resources/{id:guid}` - `Delete`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<IActionResult>
+
+#### `GET /api/platform/database-resources/{id:guid}` - `Get`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
+
+#### `PUT /api/platform/database-resources/{id:guid}` - `Update`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `UpdateDatabaseResourceRequest`<br>Handler signature: `Guid id, [FromBody] UpdateDatabaseResourceRequest request`
+- **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/backup` - `Backup`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<BackupBatchDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/migrations` - `RunMigrations`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<DatabaseResourceOperationDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/repair-connection` - `RepairConnection`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `RepairDatabaseResourceConnectionRequest`<br>Handler signature: `Guid id, [FromBody] RepairDatabaseResourceConnectionRequest request`
+- **Declared response:** Task<ActionResult<DatabaseResourceOperationDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/status` - `SetStatus`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `SetDatabaseResourceStatusRequest`<br>Handler signature: `Guid id, [FromBody] SetDatabaseResourceStatusRequest request`
+- **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
+
+#### `POST /api/platform/database-resources/test-connection` - `TestConnection`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `DatabaseConnectionTestRequest`<br>Handler signature: `[FromBody] DatabaseConnectionTestRequest request`
+- **Declared response:** Task<ActionResult<DatabaseConnectionTestDto>>
 
 ### PlatformDiagnostics
 
@@ -446,8 +494,8 @@ Generated: `2026-08-10 13:33 UTC`  |  Total endpoints: **395**
 #### `POST /api/platform/tenants` - `CreateTenant`
 
 - **Access:** JWT + Policy: `Permissions.ManageTenants`
-- **Inputs:** Body `command`: `CreateTenantWithOwnerCommand` { `Name`: string; `Subdomain`: string?; `Email`: string?; `PhoneNumber`: string?; `OwnerEmail`: string; `OwnerPhoneNumber`: string?; `OwnerPassword`: string; `OwnerFullName`: string }<br>Handler signature: `[FromBody] CreateTenantWithOwnerCommand command`
-- **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status201Created
+- **Inputs:** Body `command`: `CreateTenantWithOwnerCommand` { `Name`: string; `Subdomain`: string?; `Email`: string?; `PhoneNumber`: string?; `OwnerEmail`: string; `OwnerPhoneNumber`: string?; `OwnerPassword`: string; `OwnerFullName`: string; `IdempotencyKey`: string? }<br>Handler signature: `[FromHeader(Name = "Idempotency-Key")] string? idempotencyKey, [FromBody] CreateTenantWithOwnerCommand command`
+- **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status201Created<br>StatusCodes.Status400BadRequest<br>StatusCodes.Status409Conflict<br>StatusCodes.Status503ServiceUnavailable
 
 #### `POST /api/platform/tenants/{id:guid}/activate` - `Activate`
 
@@ -803,43 +851,43 @@ Generated: `2026-08-10 13:33 UTC`  |  Total endpoints: **395**
 
 #### `GET /api/ClassSchedules` - `GetSchedules`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Query `groupClassId`: `Guid?`<br>Query `coachId`: `Guid?`<br>Query `roomId`: `Guid?`<br>Query `branchId`: `Guid?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Query `includeCancelled`: `bool?`<br>Handler signature: `[FromQuery] Guid? groupClassId, [FromQuery] Guid? coachId, [FromQuery] Guid? roomId, [FromQuery] Guid? branchId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] bool? includeCancelled`
 - **Declared response:** Task<ActionResult<List<ClassScheduleDto>>>
 
 #### `POST /api/ClassSchedules` - `Create`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Handler signature: `CreateClassScheduleCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `POST /api/ClassSchedules/{id}/book` - `Book`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Body `command`: `BookClassCommand` { `ScheduleId`: Guid; `ClientId`: Guid }<br>Handler signature: `Guid id, [FromBody] BookClassCommand command`
 - **Declared response:** Task<ActionResult<ClassEnrollmentDto>>
 
 #### `POST /api/ClassSchedules/{id}/cancel` - `Cancel`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Body `command`: `CancelClassScheduleCommand` { `Id`: Guid; `Reason`: string? }<br>Handler signature: `Guid id, [FromBody] CancelClassScheduleCommand command`
 - **Declared response:** Task<ActionResult>
 
 #### `GET /api/ClassSchedules/{id}/enrollments` - `GetEnrollments`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Query `includeCancelled`: `bool`<br>Handler signature: `Guid id, [FromQuery] bool includeCancelled = false`
 - **Declared response:** Task<ActionResult<List<ClassEnrollmentDto>>>
 
 #### `POST /api/ClassSchedules/enrollments/{enrollmentId}/attended` - `MarkAttended`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Handler signature: `Guid enrollmentId`
 - **Declared response:** Task<ActionResult>
 
 #### `POST /api/ClassSchedules/enrollments/{enrollmentId}/cancel` - `CancelEnrollment`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Body `command`: `CancelEnrollmentCommand` { `Id`: Guid; `Reason`: string? }<br>Handler signature: `Guid enrollmentId, [FromBody] CancelEnrollmentCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -880,6 +928,12 @@ Generated: `2026-08-10 13:33 UTC`  |  Total endpoints: **395**
 - **Access:** JWT required
 - **Inputs:** No request input.
 - **Declared response:** Task<ActionResult<List<MyWorkoutProgramDto>>>
+
+#### `GET /api/client/my-progress` - `GetMyProgress`
+
+- **Access:** JWT required
+- **Inputs:** No request input.
+- **Declared response:** Task<ActionResult<TraineeProgressReportDto>>
 
 #### `GET /api/client/my-subscriptions` - `GetMySubscriptions`
 
@@ -1357,25 +1411,25 @@ Generated: `2026-08-10 13:33 UTC`  |  Total endpoints: **395**
 
 #### `GET /api/GroupClasses` - `GetClasses`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Query `branchId`: `Guid?`<br>Query `isActive`: `bool?`<br>Query `category`: `string?`<br>Handler signature: `[FromQuery] Guid? branchId, [FromQuery] bool? isActive, [FromQuery] string? category`
 - **Declared response:** Task<ActionResult<List<GroupClassDto>>>
 
 #### `POST /api/GroupClasses` - `Create`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Handler signature: `CreateGroupClassCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/GroupClasses/{id}` - `Delete`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `PUT /api/GroupClasses/{id}` - `Update`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Handler signature: `Guid id, UpdateGroupClassCommand command`
 - **Declared response:** Task<ActionResult>
 

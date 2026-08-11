@@ -5,6 +5,7 @@ namespace LogicFit.Application.Features.Profile.Commands.UpdateMyProfile;
 public class UpdateMyProfileCommand : IRequest<bool>
 {
     public string? FullName { get; set; }
+    public string? PhoneNumber { get; set; }
     public int? Gender { get; set; }
     public DateTime? BirthDate { get; set; }
     public double? HeightCm { get; set; }
