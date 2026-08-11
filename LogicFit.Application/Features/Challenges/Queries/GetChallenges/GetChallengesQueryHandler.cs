@@ -8,15 +8,20 @@ namespace LogicFit.Application.Features.Challenges.Queries.GetChallenges;
 public class GetChallengesQueryHandler : IRequestHandler<GetChallengesQuery, List<ChallengeDto>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenantService;
 
-    public GetChallengesQueryHandler(IApplicationDbContext context)
+    public GetChallengesQueryHandler(IApplicationDbContext context, ITenantService tenantService)
     {
         _context = context;
+        _tenantService = tenantService;
     }
 
     public async Task<List<ChallengeDto>> Handle(GetChallengesQuery request, CancellationToken cancellationToken)
     {
-        var query = _context.Challenges.AsQueryable();
+        var tenantId = _tenantService.GetCurrentTenantId();
+        var query = _context.Challenges
+            .Where(c => c.TenantId == tenantId && !c.IsDeleted)
+            .AsQueryable();
 
         if (request.Status.HasValue)
             query = query.Where(c => c.Status == request.Status.Value);

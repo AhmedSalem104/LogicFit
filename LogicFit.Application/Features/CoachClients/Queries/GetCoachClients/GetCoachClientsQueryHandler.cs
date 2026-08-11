@@ -10,23 +10,28 @@ namespace LogicFit.Application.Features.CoachClients.Queries.GetCoachClients;
 public class GetCoachClientsQueryHandler : IRequestHandler<GetCoachClientsQuery, List<CoachClientDto>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
 
     public GetCoachClientsQueryHandler(
         IApplicationDbContext context,
+        ITenantService tenantService,
         ICurrentUserService currentUserService)
     {
         _context = context;
+        _tenantService = tenantService;
         _currentUserService = currentUserService;
     }
 
     public async Task<List<CoachClientDto>> Handle(GetCoachClientsQuery request, CancellationToken cancellationToken)
     {
-        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        var tenantId = _tenantService.GetCurrentTenantId();
+        if (!Guid.TryParse(_currentUserService.UserId, out var currentUserId))
+            throw new ForbiddenException("An authenticated workspace user is required.");
 
         // Get current user to check role
         var currentUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.Id == currentUserId, cancellationToken)
+            .FirstOrDefaultAsync(u => u.Id == currentUserId && u.TenantId == tenantId && u.IsActive, cancellationToken)
             ?? throw new NotFoundException("Current user not found");
 
         // Determine which coach to query for
@@ -34,12 +39,13 @@ public class GetCoachClientsQueryHandler : IRequestHandler<GetCoachClientsQuery,
         if (request.CoachId.HasValue)
         {
             // Only Owner can view other coaches' clients
-            if (currentUser.Role != UserRole.Owner && request.CoachId.Value != currentUserId)
+            if (currentUser.Role is not (UserRole.Owner or UserRole.FreelanceOwner)
+                && request.CoachId.Value != currentUserId)
                 throw new ForbiddenException("You can only view your own clients");
 
             coachId = request.CoachId;
         }
-        else if (currentUser.Role == UserRole.Coach)
+        else if (currentUser.Role is UserRole.Coach or UserRole.Trainer or UserRole.FreelanceCoach)
         {
             // Coach viewing their own clients
             coachId = currentUserId;
@@ -47,6 +53,7 @@ public class GetCoachClientsQueryHandler : IRequestHandler<GetCoachClientsQuery,
         // Owner without coachId filter sees all
 
         var query = _context.CoachClients
+            .Where(cc => cc.TenantId == tenantId)
             .Include(cc => cc.Coach).ThenInclude(c => c.Profile)
             .Include(cc => cc.Client).ThenInclude(c => c.Profile)
             .Include(cc => cc.Client).ThenInclude(c => c.Subscriptions)

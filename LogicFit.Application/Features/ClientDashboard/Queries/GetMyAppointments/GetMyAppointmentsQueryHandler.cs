@@ -36,7 +36,7 @@ public class GetMyAppointmentsQueryHandler : IRequestHandler<GetMyAppointmentsQu
                 StartTime = a.StartTime,
                 EndTime = a.EndTime,
                 Title = a.Title,
-                Status = a.Status.ToString()
+                Status = a.Status
             })
             .ToListAsync(cancellationToken);
     }

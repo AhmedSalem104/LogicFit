@@ -9,16 +9,19 @@ namespace LogicFit.Application.Features.Challenges.Queries.GetChallengeById;
 public class GetChallengeByIdQueryHandler : IRequestHandler<GetChallengeByIdQuery, ChallengeDto>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenantService;
 
-    public GetChallengeByIdQueryHandler(IApplicationDbContext context)
+    public GetChallengeByIdQueryHandler(IApplicationDbContext context, ITenantService tenantService)
     {
         _context = context;
+        _tenantService = tenantService;
     }
 
     public async Task<ChallengeDto> Handle(GetChallengeByIdQuery request, CancellationToken cancellationToken)
     {
+        var tenantId = _tenantService.GetCurrentTenantId();
         var challenge = await _context.Challenges
-            .Where(c => c.Id == request.Id)
+            .Where(c => c.Id == request.Id && c.TenantId == tenantId && !c.IsDeleted)
             .Select(c => new ChallengeDto
             {
                 Id = c.Id,
