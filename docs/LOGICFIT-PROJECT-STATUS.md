@@ -26,6 +26,12 @@
 
 Last reviewed: 2026-08-03
 
+> **Issue #276 — task branch:** the existing client appointments query now exposes the shared
+> `AppointmentStatus` enum instead of converting it to a string. This keeps the client screen
+> contract aligned with the coach appointment API and does not add a new domain concept. The
+> matching Angular screen/route is tracked in `LogiFit_Angular#71`; this slice is unreleased until
+> CI, merge, deployment, and health verification pass.
+
 > **Issue #239 — local implementation slice:** the existing Platform Admin `/backups` screen now
 > uses the server-owned batch contracts, defaults to `FullSystem` coverage (platform database plus
 > active assigned tenant mappings), and shows per-target status, SHA-256, manifest, retry state,
