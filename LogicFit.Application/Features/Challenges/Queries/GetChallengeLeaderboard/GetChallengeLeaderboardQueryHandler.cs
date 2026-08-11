@@ -10,23 +10,28 @@ public class GetChallengeLeaderboardQueryHandler
     : IRequestHandler<GetChallengeLeaderboardQuery, List<ChallengeLeaderboardEntryDto>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenantService;
 
-    public GetChallengeLeaderboardQueryHandler(IApplicationDbContext context)
+    public GetChallengeLeaderboardQueryHandler(IApplicationDbContext context, ITenantService tenantService)
     {
         _context = context;
+        _tenantService = tenantService;
     }
 
     public async Task<List<ChallengeLeaderboardEntryDto>> Handle(
         GetChallengeLeaderboardQuery request, CancellationToken cancellationToken)
     {
+        var tenantId = _tenantService.GetCurrentTenantId();
         var challenge = await _context.Challenges
-            .FirstOrDefaultAsync(c => c.Id == request.ChallengeId, cancellationToken)
+            .FirstOrDefaultAsync(c => c.Id == request.ChallengeId
+                && c.TenantId == tenantId
+                && !c.IsDeleted, cancellationToken)
             ?? throw new NotFoundException("Challenge", request.ChallengeId);
 
         var target = challenge.TargetValue;
 
         var participants = await _context.ClientChallenges
-            .Where(cc => cc.ChallengeId == request.ChallengeId)
+            .Where(cc => cc.ChallengeId == request.ChallengeId && cc.TenantId == tenantId)
             // Finishers first, then highest progress, then whoever completed earliest.
             .OrderByDescending(cc => cc.IsCompleted)
             .ThenByDescending(cc => cc.CurrentProgress)

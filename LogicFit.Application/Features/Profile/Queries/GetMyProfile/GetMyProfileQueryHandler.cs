@@ -8,11 +8,16 @@ namespace LogicFit.Application.Features.Profile.Queries.GetMyProfile;
 public class GetMyProfileQueryHandler : IRequestHandler<GetMyProfileQuery, UserDto?>
 {
     private readonly IApplicationDbContext _context;
+    private readonly ITenantService _tenantService;
     private readonly ICurrentUserService _currentUserService;
 
-    public GetMyProfileQueryHandler(IApplicationDbContext context, ICurrentUserService currentUserService)
+    public GetMyProfileQueryHandler(
+        IApplicationDbContext context,
+        ITenantService tenantService,
+        ICurrentUserService currentUserService)
     {
         _context = context;
+        _tenantService = tenantService;
         _currentUserService = currentUserService;
     }
 
@@ -22,10 +27,11 @@ public class GetMyProfileQueryHandler : IRequestHandler<GetMyProfileQuery, UserD
             return null;
 
         var userId = Guid.Parse(_currentUserService.UserId);
+        var tenantId = _tenantService.GetCurrentTenantId();
 
         return await _context.Users
             .Include(u => u.Profile)
-            .Where(u => u.Id == userId)
+            .Where(u => u.Id == userId && u.TenantId == tenantId)
             .Select(u => new UserDto
             {
                 Id = u.Id,

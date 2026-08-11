@@ -1,4 +1,5 @@
 using MediatR;
+using LogicFit.Domain.Enums;
 
 namespace LogicFit.Application.Features.ClientDashboard.Queries.GetMyAppointments;
 
@@ -13,5 +14,5 @@ public class MyAppointmentDto
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
     public string? Title { get; set; }
-    public string Status { get; set; } = string.Empty;
+    public AppointmentStatus Status { get; set; }
 }
