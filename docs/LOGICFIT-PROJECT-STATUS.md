@@ -26,6 +26,12 @@
 
 Last reviewed: 2026-08-03
 
+> **Issue #277 — task branch:** Group class and class schedule endpoints now require the existing
+> `ManageBranches` tenant permission, matching the branch/room/facility management boundary used
+> by the screens. The Angular routes/sidebar use the same guard. No endpoint shape or domain flow
+> changed; this closes direct-URL and API authorization gaps and remains unreleased until CI,
+> merge, deployment, and health verification pass.
+
 > **Issue #276 — task branch:** the existing client appointments query now exposes the shared
 > `AppointmentStatus` enum instead of converting it to a string. This keeps the client screen
 > contract aligned with the coach appointment API and does not add a new domain concept. The

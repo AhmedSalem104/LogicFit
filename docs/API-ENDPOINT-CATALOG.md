@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-11 13:00 UTC`  |  Total endpoints: **395**
+Generated: `2026-08-11 13:36 UTC`  |  Total endpoints: **395**
 
 ## Contract rules
 
@@ -803,43 +803,43 @@ Generated: `2026-08-11 13:00 UTC`  |  Total endpoints: **395**
 
 #### `GET /api/ClassSchedules` - `GetSchedules`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Query `groupClassId`: `Guid?`<br>Query `coachId`: `Guid?`<br>Query `roomId`: `Guid?`<br>Query `branchId`: `Guid?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Query `includeCancelled`: `bool?`<br>Handler signature: `[FromQuery] Guid? groupClassId, [FromQuery] Guid? coachId, [FromQuery] Guid? roomId, [FromQuery] Guid? branchId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] bool? includeCancelled`
 - **Declared response:** Task<ActionResult<List<ClassScheduleDto>>>
 
 #### `POST /api/ClassSchedules` - `Create`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Handler signature: `CreateClassScheduleCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `POST /api/ClassSchedules/{id}/book` - `Book`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Body `command`: `BookClassCommand` { `ScheduleId`: Guid; `ClientId`: Guid }<br>Handler signature: `Guid id, [FromBody] BookClassCommand command`
 - **Declared response:** Task<ActionResult<ClassEnrollmentDto>>
 
 #### `POST /api/ClassSchedules/{id}/cancel` - `Cancel`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Body `command`: `CancelClassScheduleCommand` { `Id`: Guid; `Reason`: string? }<br>Handler signature: `Guid id, [FromBody] CancelClassScheduleCommand command`
 - **Declared response:** Task<ActionResult>
 
 #### `GET /api/ClassSchedules/{id}/enrollments` - `GetEnrollments`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Query `includeCancelled`: `bool`<br>Handler signature: `Guid id, [FromQuery] bool includeCancelled = false`
 - **Declared response:** Task<ActionResult<List<ClassEnrollmentDto>>>
 
 #### `POST /api/ClassSchedules/enrollments/{enrollmentId}/attended` - `MarkAttended`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Handler signature: `Guid enrollmentId`
 - **Declared response:** Task<ActionResult>
 
 #### `POST /api/ClassSchedules/enrollments/{enrollmentId}/cancel` - `CancelEnrollment`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Body `command`: `CancelEnrollmentCommand` { `Id`: Guid; `Reason`: string? }<br>Handler signature: `Guid enrollmentId, [FromBody] CancelEnrollmentCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -1357,25 +1357,25 @@ Generated: `2026-08-11 13:00 UTC`  |  Total endpoints: **395**
 
 #### `GET /api/GroupClasses` - `GetClasses`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Query `branchId`: `Guid?`<br>Query `isActive`: `bool?`<br>Query `category`: `string?`<br>Handler signature: `[FromQuery] Guid? branchId, [FromQuery] bool? isActive, [FromQuery] string? category`
 - **Declared response:** Task<ActionResult<List<GroupClassDto>>>
 
 #### `POST /api/GroupClasses` - `Create`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Handler signature: `CreateGroupClassCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/GroupClasses/{id}` - `Delete`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `PUT /api/GroupClasses/{id}` - `Update`
 
-- **Access:** JWT required
+- **Access:** JWT + Policy: `Permissions.ManageBranches`
 - **Inputs:** Handler signature: `Guid id, UpdateGroupClassCommand command`
 - **Declared response:** Task<ActionResult>
 

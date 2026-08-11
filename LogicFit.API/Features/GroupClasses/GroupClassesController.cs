@@ -3,6 +3,7 @@ using LogicFit.Application.Features.GroupClasses.Commands.DeleteGroupClass;
 using LogicFit.Application.Features.GroupClasses.Commands.UpdateGroupClass;
 using LogicFit.Application.Features.GroupClasses.DTOs;
 using LogicFit.Application.Features.GroupClasses.Queries.GetGroupClasses;
+using LogicFit.Domain.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,7 @@ namespace LogicFit.API.Features.GroupClasses;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Policy = Permissions.ManageBranches)]
 public class GroupClassesController : ControllerBase
 {
     private readonly IMediator _mediator;
