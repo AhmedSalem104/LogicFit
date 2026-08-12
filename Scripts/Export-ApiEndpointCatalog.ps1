@@ -24,6 +24,16 @@ $controllerFiles = @(
 )
 $sourceFiles = Get-ChildItem -LiteralPath $repositoryRoot -Recurse -Filter '*.cs' -File |
     Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }
+$typeSourceMap = @{}
+foreach ($file in $sourceFiles) {
+    $fileSource = [System.IO.File]::ReadAllText($file.FullName, [System.Text.Encoding]::UTF8)
+    foreach ($typeMatch in [regex]::Matches($fileSource, '(?m)\b(?:class|record|struct)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\b')) {
+        $typeName = $typeMatch.Groups['name'].Value
+        if (-not $typeSourceMap.ContainsKey($typeName)) {
+            $typeSourceMap[$typeName] = $fileSource
+        }
+    }
+}
 
 function Get-TypeProperties {
     param([string]$TypeName)
@@ -33,12 +43,14 @@ function Get-TypeProperties {
         return @()
     }
 
-    $candidate = $sourceFiles | Where-Object { $_.BaseName -eq $shortName } | Select-Object -First 1
-    if ($null -eq $candidate) { return @() }
-
-    $source = Get-Content -LiteralPath $candidate.FullName -Raw
+    # DTOs are frequently grouped in a shared file or declared as nested
+    # records inside a controller. Do not rely on the file name matching the
+    # type name; search the source set for the actual declaration.
+    $source = if ($typeSourceMap.ContainsKey($shortName)) { $typeSourceMap[$shortName] } else { $null }
+    if ($null -eq $source) { return @() }
     $properties = [System.Collections.Generic.List[string]]::new()
-    foreach ($match in [regex]::Matches($source, '(?m)^\s*public\s+(?:required\s+)?(?<type>[A-Za-z_][A-Za-z0-9_\.<>?,\[\]]*)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\{\s*get;')) {
+    foreach ($match in [regex]::Matches($source, '(?ms)(?<attributes>(?:^\s*\[[^\]]+\]\s*)*)^\s*public\s+(?:required\s+)?(?<type>[A-Za-z_][A-Za-z0-9_\.<>?,\[\]]*)\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\{\s*get;')) {
+        if ($match.Groups['attributes'].Value -match 'JsonIgnore') { continue }
         $properties.Add(('`{0}`: {1}' -f $match.Groups['name'].Value, $match.Groups['type'].Value))
     }
 
@@ -114,6 +126,129 @@ function Get-ResponseTypes {
     return @($responses | Select-Object -Unique)
 }
 
+function Get-ResponseSchema {
+    param([string]$Declaration)
+
+    $normalized = $Declaration.Trim()
+    $normalized = $normalized -replace 'typeof\((?<type>[^\)]+)\)', '$1'
+    $normalized = $normalized -replace 'StatusCodes\.[A-Za-z0-9_]+', ''
+    $normalized = $normalized.Trim(' ', ',')
+
+    if ([string]::IsNullOrWhiteSpace($normalized)) {
+        return 'No response body declared.'
+    }
+
+    $typeName = $normalized
+    while ($typeName -match '^(?:Task|ActionResult)\s*<(?<inner>.*)>$') {
+        $typeName = $matches['inner'].Trim()
+    }
+
+    $candidates = [System.Collections.Generic.List[string]]::new()
+    $candidates.Add($typeName)
+    if ($typeName -match '<(?<inner>[^<>]+)>') { $candidates.Add($matches['inner'].Trim()) }
+
+    foreach ($candidate in $candidates) {
+        $properties = @(Get-TypeProperties -TypeName $candidate)
+        if ($properties.Count -gt 0) {
+            return ('`{0}` with fields: {{ {1} }}' -f $normalized, ($properties -join '; '))
+        }
+    }
+
+    if ($normalized -match 'NoContent|void|204') { return 'No response body (HTTP 204).' }
+    if ($normalized -match 'File|IActionResult|ActionResult') { return ('`{0}`; body is action-specific or a file/blob.' -f $normalized) }
+    return ('`{0}`; concrete properties are not declared in a discoverable DTO.' -f $normalized)
+}
+
+function Get-ControllerPurpose {
+    param([string]$Controller)
+
+    $purposeMap = [ordered]@{
+        'PlatformAuth|Identity|Auth' = 'Identity, login, and session issuance/rotation.'
+        'WorkspaceApplication|FreelanceTeamApplication' = 'Gym and FreelanceCoach applications, review, and provisioning.'
+        'PlatformTenant|Tenants' = 'Workspace lifecycle, isolation, status, and owner membership.'
+        'PlatformDatabaseResource|DatabaseResource|TenantDatabase' = 'Database resource allocation, connectivity, migrations, and mapping.'
+        'PlatformBackup|TenantBackup|Restore' = 'Backup creation, checksum verification, retry, and controlled restore.'
+        'PlatformPayment|Payment|Invoice|Subscription|Billing' = 'Payments, invoices, subscriptions, and financial transitions.'
+        'PlatformPlan|Feature|Quota|Dependency' = 'SaaS product configuration: plans, features, quotas, and dependencies.'
+        'PlatformDashboard|PlatformReport|Report' = 'Operational and financial indicators and reports.'
+        'PlatformAdministrator|PlatformRole|PlatformAudit|PlatformAlert|PlatformNotification' = 'Governance, permissions, audit history, and alerts.'
+        'Operations|Maintenance|Job|Outbox' = 'Background jobs, Outbox messages, and operational monitoring.'
+        'Coach|Workout|Diet|Exercise|Food|Muscle|BodyMeasurement|MealLog' = 'Training, nutrition, measurements, and content libraries.'
+        'ClientDashboard|Client|CoachClient|WorkspaceClient' = 'Client management, trainee portal, and coach relationships.'
+        'Attendance|GateAccess|Appointment|Class|Schedule' = 'Attendance, appointments, classes, and scheduling.'
+        'Branch|Room|Equipment|Supplier|Product|Stock|Sale|Expense|Payroll|Employee|Leave|Commission' = 'Gym operations, facilities, finance, inventory, and staff.'
+        'Notification|Chat|Challenge' = 'Communication, notifications, and challenges.'
+    }
+
+    foreach ($key in $purposeMap.Keys) {
+        if ($Controller -match $key) { return $purposeMap[$key] }
+    }
+
+    return ('LogicFit API module `{0}`.' -f ($Controller -replace 'Controller$', ''))
+}
+
+function Get-OperationProfile {
+    param([string]$Method, [string]$Action, [string]$Controller)
+
+    $combined = "$Action $Controller"
+    if ($Method -in @('GET', 'HEAD')) {
+        return [PSCustomObject]@{
+            Kind = 'Read / Query'
+            Importance = 'Reads the authoritative state or data with tenant isolation and authorization.'
+            Benefit = 'Gives the UI and operators reliable information for decisions without changing server state.'
+            Safety = 'Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.'
+        }
+    }
+
+    if ($combined -match 'approve|reject|transition|activate|suspend|archive|restore|retry|provision|migrat|status|reset|logout|assign|join|read-all|check-out|complete|start|end') {
+        return [PSCustomObject]@{
+            Kind = 'Workflow / Lifecycle Command'
+            Importance = 'Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.'
+            Benefit = 'Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.'
+            Safety = 'Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.'
+        }
+    }
+
+    if ($Method -eq 'DELETE') {
+        return [PSCustomObject]@{
+            Kind = 'Delete / Remove'
+            Importance = 'Removes a configuration record or relationship that the domain explicitly allows to be deleted.'
+            Benefit = 'Cleans non-historical configuration without deleting immutable financial or operational history.'
+            Safety = 'Enforce authorization, isolation, and duplicate prevention; use lifecycle or reversal for historical records.'
+        }
+    }
+
+    if ($Method -in @('PUT', 'PATCH')) {
+        return [PSCustomObject]@{
+            Kind = 'Update / Patch'
+            Importance = 'Updates an existing entity while preserving authorization and optimistic concurrency rules.'
+            Benefit = 'Corrects or configures data without creating duplicates or breaking existing relationships.'
+            Safety = 'Validate input, isolation, and RowVersion where required; return 400 for validation and 409 for conflicts.'
+        }
+    }
+
+    return [PSCustomObject]@{
+        Kind = 'Create / Command'
+        Importance = 'Creates an entity or executes a command inside a defined business module.'
+        Benefit = 'Turns user input into an audited server operation and links required entities transactionally where needed.'
+        Safety = 'Use validation, unique constraints, and idempotency for commands that may be retried.'
+    }
+}
+
+function Get-CommonFailureContract {
+    param([string]$Method, [string]$Authorization)
+
+    $codes = [System.Collections.Generic.List[string]]::new()
+    if ($Authorization -notmatch 'Anonymous') { $codes.Add('401: missing or expired session') }
+    $codes.Add('403: insufficient permission or workspace scope')
+    $codes.Add('400: invalid input or rejected business rule')
+    $codes.Add('404: resource missing or outside the visible scope')
+    if ($Method -ne 'GET' -and $Method -ne 'HEAD') { $codes.Add('409: state, RowVersion, or duplicate conflict') }
+    $codes.Add('429: rate limit exceeded')
+    $codes.Add('500: unexpected server error; inspect state before retrying a mutation')
+    return ($codes -join ' · ')
+}
+
 function Get-InputDescription {
     param([string]$Parameters)
 
@@ -177,11 +312,24 @@ foreach ($file in $controllerFiles) {
         $routeSuffix = ''
         $literalRoute = [regex]::Match($httpMatch.Groups['args'].Value, '"(?<route>[^"]*)"')
         if ($literalRoute.Success) { $routeSuffix = $literalRoute.Groups['route'].Value }
-        $route = ('/{0}' -f (($baseRoute.Trim('/') + '/' + $routeSuffix.Trim('/')).TrimEnd('/')))
-        if ($route -eq '/') { $route = '/' + $baseRoute.Trim('/') }
+
+        # ASP.NET Core treats an action template that starts with `/` as an
+        # absolute route and ignores the controller prefix.  Keep the catalog
+        # aligned with runtime routing instead of producing paths such as
+        # `/api/freelance/team/applications/api/freelance/team/invites`.
+        $routePath = if ($routeSuffix.StartsWith('/')) {
+            $routeSuffix.Trim('/')
+        } elseif ([string]::IsNullOrWhiteSpace($routeSuffix)) {
+            $baseRoute.Trim('/')
+        } else {
+            ($baseRoute.Trim('/') + '/' + $routeSuffix.Trim('/')).Trim('/')
+        }
+        $route = ('/{0}' -f $routePath)
 
         $methodAttributes = $signatureMatch.Groups['attributes'].Value
         $returnType = $signatureMatch.Groups['return'].Value
+        $responses = @(Get-ResponseTypes -Attributes $methodAttributes -ReturnType $returnType)
+        $profile = Get-OperationProfile -Method $httpMatch.Groups['method'].Value.ToUpperInvariant() -Action $signatureMatch.Groups['name'].Value -Controller $controllerName
         $entries.Add([PSCustomObject]@{
             Surface = $surface
             Controller = $controllerName
@@ -190,7 +338,14 @@ foreach ($file in $controllerFiles) {
             Action = $signatureMatch.Groups['name'].Value
             Authorization = Get-AuthorizationLabel -ClassAttributes $classAttributes -MethodAttributes $methodAttributes
             Inputs = Get-InputDescription -Parameters $signatureMatch.Groups['parameters'].Value
-            Responses = (Get-ResponseTypes -Attributes $methodAttributes -ReturnType $returnType) -join '<br>'
+            Responses = $responses -join '<br>'
+            ResponseSchema = (($responses | ForEach-Object { Get-ResponseSchema -Declaration $_ }) -join '<br>')
+            Purpose = Get-ControllerPurpose -Controller $controllerName
+            OperationKind = $profile.Kind
+            Importance = $profile.Importance
+            Benefit = $profile.Benefit
+            Safety = $profile.Safety
+            FailureContract = Get-CommonFailureContract -Method $httpMatch.Groups['method'].Value.ToUpperInvariant() -Authorization (Get-AuthorizationLabel -ClassAttributes $classAttributes -MethodAttributes $methodAttributes)
         })
     }
 }
@@ -221,8 +376,15 @@ foreach ($surfaceGroup in ($ordered | Group-Object Surface)) {
             $lines.Add(('#### `{0} {1}` - `{2}`' -f $endpoint.Method, $endpoint.Route, $endpoint.Action))
             $lines.Add('')
             $lines.Add(('- **Access:** {0}' -f $endpoint.Authorization))
+            $lines.Add(('- **Business purpose:** {0}' -f $endpoint.Purpose))
+            $lines.Add(('- **Operation profile:** `{0}`' -f $endpoint.OperationKind))
+            $lines.Add(('- **Why it matters:** {0}' -f $endpoint.Importance))
+            $lines.Add(('- **Business benefit:** {0}' -f $endpoint.Benefit))
             $lines.Add(('- **Inputs:** {0}' -f $endpoint.Inputs))
             $lines.Add(('- **Declared response:** {0}' -f $endpoint.Responses))
+            $lines.Add(('- **Response schema:** {0}' -f $endpoint.ResponseSchema))
+            $lines.Add(('- **Failure contract:** {0}' -f $endpoint.FailureContract))
+            $lines.Add(('- **Safety/side effects:** {0}' -f $endpoint.Safety))
             $lines.Add('')
         }
     }

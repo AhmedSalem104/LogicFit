@@ -9,6 +9,7 @@
 
 | الوثيقة | لمن؟ | ماذا تجيب؟ |
 |---|---|---|
+| [التوثيق الكامل للمشروع](COMPLETE-PROJECT-DOCUMENTATION.md) | الفريق كله | خريطة المستودعات، التدفقات من البداية للنهاية، الحالات، الشاشات، عقود الاستجابة، الصلاحيات، التشغيل والقبول. |
 | [حالة المشروع](LOGICFIT-PROJECT-STATUS.md) | الفريق كله | ما الذي نُفذ الآن، العقود، الاختبارات، النشر والمخاطر المعروفة؟ |
 | [المنتج والتدفقات](PRODUCT-AND-FLOWS.md) | مالك المنتج والتشغيل | ما هي فكرة الـSaaS؟ كيف تسجل صالة؟ كيف يعمل الدفع والاشتراك والميزات؟ |
 | [المستخدمون والصلاحيات](USERS-AND-PERMISSIONS.md) | الإدارة والأمن | من يدخل النظام، ماذا يستطيع أن يفعل، وما حدود العزل؟ |
@@ -67,6 +68,16 @@ Keep those references synchronized with the source in the same Pull Request. `AP
 السكربت ومراجعة التغيّر الناتج قبل الـPull Request. هذا يمنع فقد endpoint من
 التوثيق، ولا يلغي الحاجة إلى توثيق قرار الـDomain أو تدفق المستخدم في الملفات
 المتخصصة أعلاه.
+
+ويُعاد توليد ربط الشاشات مع الـRoutes ونسخة كتالوج الـAPI للواجهات من خلال:
+
+```powershell
+.\Scripts\Export-FrontendRouteDocumentation.ps1
+```
+
+السكربت يقرأ مصادر الـAngular الفعلية، يحدّث الجداول المعلّمة داخل وثائق الواجهات،
+وينسخ كتالوج الـAPI المولّد إلى مستودعي الواجهة ولوحة الإدارة. لا يكتب أسراراً ولا
+ينقل Connection Strings.
 - [Platform/Tenant DbContext and Migration Split](DBCONTEXT-MIGRATION-SPLIT.md)
 - [Database Resource Pool](DATABASE-RESOURCE-POOL.md)
 - [Tenant Database Resolver](TENANT-DATABASE-RESOLVER.md)
