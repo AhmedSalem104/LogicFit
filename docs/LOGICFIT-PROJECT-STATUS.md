@@ -607,3 +607,22 @@ fails startup if apply or post-apply verification fails.
 - Client progress is exposed through the authenticated self-service route `GET /api/client/my-progress`; the handler rejects cross-tenant and cross-client access and filters all report aggregates to the active tenant.
 - Client self-profile reads and updates now use the tenant-scoped `/api/profile` contract. Phone updates validate duplicates within the active tenant without changing the existing profile concept.
 - Added static API-contract regression tests for Coach isolation and Client progress/profile ownership. These changes must still pass the repository build/test suite and the deployed `/health` check after merge and release.
+
+### 2026-08-13 — Gym/FreelanceCoach workspace capability split (Issue #296)
+
+- Added a shared `WorkspaceCapabilities` contract derived from the persisted `WorkspaceType`.
+  Gym retains its facilities, attendance, staff, inventory, POS, gate, membership-card, gym-plan,
+  and gym-report surface. FreelanceCoach receives the coaching/client/finance/progress/reporting
+  surface and a limited assistant-team surface without Gym-only navigation or APIs.
+- Added backend capability policies to Gym-only controllers and a distinct
+  `WORKSPACE_CAPABILITY_NOT_AVAILABLE` 403 response. Workspace selection and refresh now return the
+  selected workspace type plus its server-calculated capability snapshot.
+- Scoped RBAC authorization loading to the selected tenant and changed the `FreelanceOwner` seed
+  mapping so it no longer inherits every `TenantPermissions` grant.
+- Tenant UI now derives navigation and lazy-route access from capabilities, provides a blocked
+  workspace screen, and adds the missing owner client/coach detail routes plus shared coaching
+  finance navigation.
+- Verification on the task branches: Backend Release build passed with five pre-existing nullable
+  warnings; 207 backend tests passed;
+  Tenant Angular build passed with existing budget/CommonJS warnings; 33 ChromeHeadless tests
+  passed. This work is not merged, deployed, or production-health-verified yet.

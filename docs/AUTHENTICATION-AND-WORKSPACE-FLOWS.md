@@ -230,3 +230,22 @@ Backend remains the security boundary.
 - [SaaS domain and data](SAAS-DOMAIN-AND-DATA.md) — states, snapshots, and migrations.
 - [Operations and deployment](OPERATIONS-AND-DEPLOYMENT.md) — secrets, migrations, health checks,
   and rollback.
+
+## Workspace capability snapshot (Issue #296, task branch)
+
+After identity login, workspace selection returns `workspaceType` and the server-calculated
+`capabilities` list in the auth response. The list is scoped to the selected tenant. A refresh
+token repeats this calculation so a workspace switch or a role/permission invalidation cannot
+leave a stale capability snapshot in the session.
+
+The tenant dashboard may be opened only after the existing identity, membership, workspace,
+subscription, database, and permission gates pass. The frontend uses the capability list to
+choose the Gym or FreelanceCoach navigation and to block direct URLs; the API independently
+rejects a feature that is not valid for the selected `WorkspaceType` with
+`403 WORKSPACE_CAPABILITY_NOT_AVAILABLE`.
+
+`FreelanceOwner` is mapped to the coaching panel and receives `FreelanceOwner` permissions,
+not the full Gym owner permission set. An existing identity can own or manage more than one
+workspace; each selected workspace gets its own type, membership, permissions, and capability
+snapshot. This change is local/task-branch only until merge, release, deployment, and health
+verification.

@@ -330,3 +330,17 @@ schema/history, and keep the rollback plan. After deployment, require `/health` 
 expected healthy response before enabling the screens. Smoke-test aggregate workout/diet create and
 update, cross-tenant and unassigned access rejection, client session start/set/end, meal logging,
 and the no-partial-write retry behavior. This task branch is not production-verified yet.
+
+## Workspace capability release gate (Issue #296)
+
+This change adds server authorization policies and changes the seeded `FreelanceOwner` permission
+set, so it requires the normal migration-aware release process even though no new database table is
+needed. Before release, review the generated endpoint catalog, apply any pending migrations using
+the idempotent script, verify the seeder against a representative Gym and FreelanceCoach tenant,
+and take the approved backup.
+
+After deployment, require the protected `/health` endpoint to return HTTP 200 and the expected
+healthy response. Smoke-test workspace selection/refresh response capabilities, a FreelanceCoach
+request to every denied Gym endpoint (403 capability code), a Gym request to its allowed endpoints,
+and a cross-tenant request with a valid identity. The branch is not merged, deployed, or production
+verified by this document.

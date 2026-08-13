@@ -150,3 +150,17 @@ item and client; its response includes the meal name, food/unit, consumed quanti
 server-calculated macros. Cross-tenant food/exercise references are rejected before an aggregate is
 written. The migration is task-branch only until reviewed, merged, applied with a backup/rollback
 plan, and verified by health and schema checks.
+
+## Workspace type and capabilities (Issue #296)
+
+`Tenant.WorkspaceType` remains the persisted discriminator for the shared platform. It does not
+create a second tenant model or database model. The API derives an immutable capability set for
+the selected tenant at authorization time: a Gym has the complete gym operational surface, while
+a FreelanceCoach has coaching, client, finance, reporting, and assistant-team capabilities without
+branches, staff/payroll, inventory, POS, gate access, membership cards, group classes, or gym
+membership plans.
+
+Capabilities are an access contract, not a data isolation shortcut. Tenant query filters,
+membership checks, subscription checks, and ownership checks continue to apply to every aggregate.
+Switching workspaces recalculates both tenant-scoped permissions and capabilities, so one identity
+may safely manage multiple workspaces without carrying grants from one tenant into another.

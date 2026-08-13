@@ -12,6 +12,7 @@ namespace LogicFit.API.Features.Sales;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManagePOS)]
+[Authorize(Policy = WorkspaceCapabilities.GymPos)]
 public class SalesController : ControllerBase
 {
     private readonly IMediator _mediator;

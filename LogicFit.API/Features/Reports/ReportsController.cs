@@ -38,6 +38,7 @@ public class ReportsController : ControllerBase
     /// Get dashboard summary report
     /// </summary>
     [HttpGet("dashboard")]
+    [Authorize(Policy = WorkspaceCapabilities.GymReports)]
     [ProducesResponseType(typeof(DashboardReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<DashboardReportDto>> GetDashboardReport()
     {
@@ -49,6 +50,7 @@ public class ReportsController : ControllerBase
     /// Get detailed clients report
     /// </summary>
     [HttpGet("clients")]
+    [Authorize(Policy = WorkspaceCapabilities.GymReports)]
     [ProducesResponseType(typeof(ClientsReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<ClientsReportDto>> GetClientsReport(
         [FromQuery] DateTime? fromDate,
@@ -66,6 +68,7 @@ public class ReportsController : ControllerBase
     /// Get subscriptions report
     /// </summary>
     [HttpGet("subscriptions")]
+    [Authorize(Policy = WorkspaceCapabilities.GymReports)]
     [ProducesResponseType(typeof(SubscriptionsReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<SubscriptionsReportDto>> GetSubscriptionsReport(
         [FromQuery] DateTime? fromDate,
@@ -83,6 +86,7 @@ public class ReportsController : ControllerBase
     /// Get financial report
     /// </summary>
     [HttpGet("financial")]
+    [Authorize(Policy = WorkspaceCapabilities.CoachingFinance)]
     [ProducesResponseType(typeof(FinancialReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<FinancialReportDto>> GetFinancialReport(
         [FromQuery] DateTime? fromDate,
@@ -104,6 +108,7 @@ public class ReportsController : ControllerBase
     /// - Coach: sees only their own dashboard
     /// </summary>
     [HttpGet("coach/dashboard")]
+    [Authorize(Policy = WorkspaceCapabilities.CoachingReports)]
     [ProducesResponseType(typeof(CoachDashboardReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<CoachDashboardReportDto>> GetCoachDashboardReport(
         [FromQuery] Guid? coachId)
@@ -121,6 +126,7 @@ public class ReportsController : ControllerBase
     /// - Coach: sees only their own trainees
     /// </summary>
     [HttpGet("coach/trainees")]
+    [Authorize(Policy = WorkspaceCapabilities.CoachingReports)]
     [ProducesResponseType(typeof(CoachTraineesReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<CoachTraineesReportDto>> GetCoachTraineesReport(
         [FromQuery] Guid? coachId)
@@ -138,6 +144,7 @@ public class ReportsController : ControllerBase
     /// - Coach: can only view their own trainees
     /// </summary>
     [HttpGet("coach/trainee/{clientId}")]
+    [Authorize(Policy = WorkspaceCapabilities.CoachingReports)]
     [ProducesResponseType(typeof(TraineeProgressReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<TraineeProgressReportDto>> GetTraineeProgressReport(Guid clientId)
     {
@@ -154,6 +161,7 @@ public class ReportsController : ControllerBase
     /// Live operations dashboard: active members, today check-ins, revenue, expenses, capacity, low stock, etc.
     /// </summary>
     [HttpGet("operations-dashboard")]
+    [Authorize(Policy = WorkspaceCapabilities.GymReports)]
     [ProducesResponseType(typeof(OperationsDashboardDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<OperationsDashboardDto>> GetOperationsDashboard()
         => Ok(await _mediator.Send(new GetOperationsDashboardQuery()));
@@ -167,6 +175,7 @@ public class ReportsController : ControllerBase
         => Ok(await _mediator.Send(new GetExpensesReportQuery { FromDate = fromDate, ToDate = toDate, BranchId = branchId }));
 
     [HttpGet("pos-sales")]
+    [Authorize(Policy = WorkspaceCapabilities.GymReports)]
     [ProducesResponseType(typeof(PosSalesReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<PosSalesReportDto>> GetPosSalesReport(
         [FromQuery] DateTime? fromDate,
@@ -182,11 +191,13 @@ public class ReportsController : ControllerBase
         }));
 
     [HttpGet("stock-valuation")]
+    [Authorize(Policy = WorkspaceCapabilities.GymReports)]
     [ProducesResponseType(typeof(StockValuationReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<StockValuationReportDto>> GetStockValuationReport([FromQuery] Guid? branchId)
         => Ok(await _mediator.Send(new GetStockValuationReportQuery { BranchId = branchId }));
 
     [HttpGet("payroll-summary")]
+    [Authorize(Policy = WorkspaceCapabilities.GymReports)]
     [ProducesResponseType(typeof(PayrollSummaryReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<PayrollSummaryReportDto>> GetPayrollSummaryReport(
         [FromQuery] int? year,
@@ -194,6 +205,7 @@ public class ReportsController : ControllerBase
         => Ok(await _mediator.Send(new GetPayrollSummaryReportQuery { Year = year, Month = month }));
 
     [HttpGet("class-attendance")]
+    [Authorize(Policy = WorkspaceCapabilities.GymReports)]
     [ProducesResponseType(typeof(ClassAttendanceReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<ClassAttendanceReportDto>> GetClassAttendanceReport(
         [FromQuery] DateTime? fromDate,
@@ -202,11 +214,13 @@ public class ReportsController : ControllerBase
         => Ok(await _mediator.Send(new GetClassAttendanceReportQuery { FromDate = fromDate, ToDate = toDate, BranchId = branchId }));
 
     [HttpGet("equipment-utilization")]
+    [Authorize(Policy = WorkspaceCapabilities.GymReports)]
     [ProducesResponseType(typeof(EquipmentUtilizationReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<EquipmentUtilizationReportDto>> GetEquipmentUtilizationReport([FromQuery] Guid? branchId)
         => Ok(await _mediator.Send(new GetEquipmentUtilizationReportQuery { BranchId = branchId }));
 
     [HttpGet("branch-comparison")]
+    [Authorize(Policy = WorkspaceCapabilities.GymReports)]
     [ProducesResponseType(typeof(BranchComparisonReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<BranchComparisonReportDto>> GetBranchComparisonReport(
         [FromQuery] DateTime? fromDate,
@@ -214,6 +228,7 @@ public class ReportsController : ControllerBase
         => Ok(await _mediator.Send(new GetBranchComparisonReportQuery { FromDate = fromDate, ToDate = toDate }));
 
     [HttpGet("commissions")]
+    [Authorize(Policy = WorkspaceCapabilities.GymReports)]
     [ProducesResponseType(typeof(CommissionReportDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<CommissionReportDto>> GetCommissionReport(
         [FromQuery] DateTime? fromDate,

@@ -58,6 +58,7 @@ The existing guides remain useful by audience. The following two references are 
 |---|---|
 | [Feature catalog](FEATURE-CATALOG.md) | Complete registry of the Platform, workspace, finance, fitness, HR, inventory, communication, identity, and frontend feature families, including the implementation source and responsible roles. |
 | [Authentication and workspace flows](AUTHENTICATION-AND-WORKSPACE-FLOWS.md) | The current legacy and identity-first login flows, workspace selection, freelance applications, review, approval, team membership, session recovery, and access gates. |
+| [Workspace capabilities](WORKSPACE-CAPABILITIES.md) | The shared `Gym`/`FreelanceCoach` capability contract, backend enforcement, selected-workspace auth response, and release verification gate. |
 | [Monster capability assessment](MONSTER-CAPABILITY-ASSESSMENT.md) | Current hosting limits, provider guards, and evidence required before native backup/restore or tenant activation. |
 | [Schema ownership inventory](SCHEMA-OWNERSHIP-INVENTORY.md) | Entity-by-entity Platform/Tenant ownership, shared contracts, and the baseline plan for the legacy migrations. |
 

@@ -24,6 +24,26 @@ public class TenantAuthorizationResultHandler : IAuthorizationMiddlewareResultHa
             && authorizeResult.AuthorizationFailure?.FailedRequirements
                 .OfType<ActiveTenantRequirement>().Any() == true;
 
+        var capability = authorizeResult.AuthorizationFailure?.FailedRequirements
+            .OfType<WorkspaceCapabilityRequirement>().FirstOrDefault();
+        var failedOnCapability = authorizeResult.Forbidden && capability is not null;
+
+        if (failedOnCapability && capability is not null)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/json";
+            var body = JsonSerializer.Serialize(new
+            {
+                statusCode = 403,
+                code = "WORKSPACE_CAPABILITY_NOT_AVAILABLE",
+                capability = capability.Capability,
+                message = "This feature is not available for the selected workspace type.",
+                errors = (object?)null
+            });
+            await context.Response.WriteAsync(body);
+            return;
+        }
+
         if (failedOnTenant)
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;

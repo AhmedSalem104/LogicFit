@@ -4,6 +4,7 @@ using LogicFit.Application.Features.Auth.DTOs;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
+using LogicFit.Domain.Authorization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -63,7 +64,15 @@ public sealed class SelectIdentityWorkspaceCommandHandler
         if (TenantAccessPolicy.EvaluateHardBlock(await _tenantAccessGuard.GetStateAsync(request.WorkspaceId, cancellationToken)) is { } block)
             throw new TenantAccessException(block.Code, block.HttpStatus);
 
-        var auth = await _rbacService.GetUserAuthorizationAsync(membership.UserId, cancellationToken);
+        var workspaceType = await _context.Tenants
+            .IgnoreQueryFilters()
+            .Where(x => x.Id == request.WorkspaceId && !x.IsDeleted)
+            .Select(x => (WorkspaceType?)x.WorkspaceType)
+            .SingleOrDefaultAsync(cancellationToken)
+            ?? throw new TenantAccessException("WORKSPACE_NOT_FOUND", 404);
+
+        var auth = await _rbacService.GetUserAuthorizationForTenantAsync(
+            membership.UserId, request.WorkspaceId, cancellationToken);
         var accessToken = _jwtService.GenerateAccessToken(
             membership.UserId,
             membership.User.Email,
@@ -87,6 +96,8 @@ public sealed class SelectIdentityWorkspaceCommandHandler
             Roles = auth.Roles,
             Permissions = auth.Permissions,
             TenantId = membership.TenantId,
+            WorkspaceType = workspaceType,
+            Capabilities = WorkspaceCapabilities.For(workspaceType),
             AccessToken = accessToken.Token,
             RefreshToken = refreshToken.Token,
             ExpiresAt = accessToken.ExpiresAt,
