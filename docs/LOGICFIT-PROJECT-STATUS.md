@@ -619,3 +619,16 @@ fails startup if apply or post-apply verification fails.
 - Client progress is exposed through the authenticated self-service route `GET /api/client/my-progress`; the handler rejects cross-tenant and cross-client access and filters all report aggregates to the active tenant.
 - Client self-profile reads and updates now use the tenant-scoped `/api/profile` contract. Phone updates validate duplicates within the active tenant without changing the existing profile concept.
 - Added static API-contract regression tests for Coach isolation and Client progress/profile ownership. These changes must still pass the repository build/test suite and the deployed `/health` check after merge and release.
+# 2026-08-13 — Issues #290 and #88 screen/API contract review
+
+Local task branches contain a verified fix for the platform admin failures reported as
+`database-resources`/`test-connection` HTTP 400 and `tenants`/dashboard/workspace-application
+HTTP 500 responses. Database-name inference and mismatch validation are explicit, connection
+material remains protected server-side, platform member counts use separate bounded cross-tenant
+queries, and duplicate historical payment rows no longer crash the workspace-application list.
+
+The Tenants admin create action is routed to the unified Gym/FreelanceCoach application flow.
+Backend verification passed locally with 241 tests and a successful build; admin verification
+passed with 22 tests and a successful production build. The deployed health endpoint returned
+HTTP 200 `Healthy` during this task. This entry is local/task-branch evidence only until the
+approved branches are merged, published, and rechecked in Production.

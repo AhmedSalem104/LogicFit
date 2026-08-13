@@ -157,6 +157,14 @@ The review list can filter the same application by `applicationType`, applicatio
 read the next action from the lifecycle response rather than interpreting `Active` as proof that
 payment, database readiness, membership, and access are all complete.
 
+The legacy `POST /api/platform/tenants` contract remains available for compatibility and accepts an
+`Idempotency-Key` header, but the Platform dashboard no longer uses its old direct-creation form.
+New Gym and FreelanceCoach workspaces must be started from `/workspace-applications`, because that
+flow creates the plan snapshot, pending subscription, payment request, identity link, and
+provisioning record required by the access gate. The `/tenants` screen is an operational list and
+routes its creation action to that unified flow; this prevents a partial tenant from being created
+without payment or database prerequisites.
+
 The public tracking response `GET /api/workspace-applications/tracking` now carries the same safe
 lifecycle facts for the applicant: `workspaceType`, payment/workspace/subscription/database and
 provisioning states, `canAccessDashboard`, `requiredAction`, `nextStep`, `userMessage`, and the
@@ -221,6 +229,19 @@ Identity Active
 Identity, Platform, and Tenant refresh cookies are separate. Changing a password, role, or
 permission version revokes old refresh sessions. Frontend route guards only improve navigation; the
 Backend remains the security boundary.
+
+## Platform screen query resilience (Issues #290 and #88)
+
+The platform tenant list and the Dashboard tenant widget intentionally do not calculate member
+counts inside a correlated tenant projection. They page the tenant rows first, then run an
+explicit cross-tenant member-count query with tenant filters disabled and merge the bounded result
+in memory. This keeps the platform screens readable across production EF/SQL combinations where
+the older correlated shape could translate to a 500.
+
+The workspace-application list also groups payment snapshots by application and selects the latest
+updated row. This makes historical duplicate payment records harmless to screen loading while
+preserving the newest lifecycle status for review actions. No connection material is involved in
+either response.
 
 ## Canonical references
 
