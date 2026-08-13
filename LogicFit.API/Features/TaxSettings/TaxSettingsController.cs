@@ -13,6 +13,7 @@ namespace LogicFit.API.Features.TaxSettings;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageSettings)]
+[Authorize(Policy = WorkspaceCapabilities.GymSettings)]
 public class TaxSettingsController : ControllerBase
 {
     private readonly IMediator _mediator;

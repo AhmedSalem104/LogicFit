@@ -13,6 +13,7 @@ namespace LogicFit.API.Features.Shifts;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageEmployees)]
+[Authorize(Policy = WorkspaceCapabilities.GymStaff)]
 public class ShiftsController : ControllerBase
 {
     private readonly IMediator _mediator;

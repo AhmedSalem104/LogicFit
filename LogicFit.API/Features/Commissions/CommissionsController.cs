@@ -13,6 +13,7 @@ namespace LogicFit.API.Features.Commissions;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageFinance)]
+[Authorize(Policy = WorkspaceCapabilities.GymStaff)]
 public class CommissionsController : ControllerBase
 {
     private readonly IMediator _mediator;

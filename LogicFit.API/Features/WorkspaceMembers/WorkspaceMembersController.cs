@@ -18,6 +18,7 @@ namespace LogicFit.API.Features.WorkspaceMembers;
 [ApiController]
 [Route("api/workspace-members")]
 [Authorize(Policy = Permissions.ManageEmployees)]
+[Authorize(Policy = WorkspaceCapabilities.GymStaff)]
 public sealed class WorkspaceMembersController : ControllerBase
 {
     private readonly IMediator _mediator;

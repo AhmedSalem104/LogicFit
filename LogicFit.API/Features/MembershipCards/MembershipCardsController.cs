@@ -12,6 +12,7 @@ namespace LogicFit.API.Features.MembershipCards;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageMembers)]
+[Authorize(Policy = WorkspaceCapabilities.GymMembershipCards)]
 public class MembershipCardsController : ControllerBase
 {
     private readonly IMediator _mediator;

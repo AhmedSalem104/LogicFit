@@ -14,11 +14,28 @@ public class RbacService : IRbacService
     }
 
     public async Task<UserAuthorization> GetUserAuthorizationAsync(Guid userId, CancellationToken cancellationToken = default)
+        => await GetUserAuthorizationCoreAsync(userId, tenantId: null, cancellationToken);
+
+    public async Task<UserAuthorization> GetUserAuthorizationForTenantAsync(
+        Guid userId,
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+        => await GetUserAuthorizationCoreAsync(userId, tenantId, cancellationToken);
+
+    private async Task<UserAuthorization> GetUserAuthorizationCoreAsync(
+        Guid userId,
+        Guid? tenantId,
+        CancellationToken cancellationToken)
     {
         // IgnoreQueryFilters: role resolution runs during anonymous login before a tenant is set.
-        var roleIds = await _context.UserRoleAssignments
+        var roleAssignments = _context.UserRoleAssignments
             .IgnoreQueryFilters()
-            .Where(ur => ur.UserId == userId)
+            .Where(ur => ur.UserId == userId);
+
+        if (tenantId.HasValue)
+            roleAssignments = roleAssignments.Where(ur => ur.TenantId == tenantId.Value);
+
+        var roleIds = await roleAssignments
             .Select(ur => ur.RoleId)
             .ToListAsync(cancellationToken);
 

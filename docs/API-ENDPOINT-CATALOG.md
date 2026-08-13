@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
+Generated: `2026-08-13 15:38 UTC`  |  Total endpoints: **396**
 
 ## Contract rules
 
@@ -597,31 +597,31 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Attendance` - `GetAttendances`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Inputs:** Query `clientId`: `Guid?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Query `checkedInOnly`: `bool?`<br>Handler signature: `[FromQuery] Guid? clientId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] bool? checkedInOnly`
 - **Declared response:** Task<ActionResult<List<AttendanceDto>>>
 
 #### `DELETE /api/Attendance/{id}` - `DeleteAttendance`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `POST /api/Attendance/{id}/check-out` - `CheckOut`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `POST /api/Attendance/check-in` - `CheckIn`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Inputs:** Handler signature: `CheckInCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `GET /api/Attendance/summary` - `GetAttendanceSummary`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** Task<ActionResult<AttendanceSummaryDto>>
 
@@ -675,37 +675,37 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Branches` - `GetBranches`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Query `isActive`: `bool?`<br>Query `searchTerm`: `string?`<br>Handler signature: `[FromQuery] bool? isActive, [FromQuery] string? searchTerm`
 - **Declared response:** typeof(List<BranchDto>), StatusCodes.Status200OK
 
 #### `POST /api/Branches` - `CreateBranch`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `CreateBranchCommand command`
 - **Declared response:** typeof(Guid), StatusCodes.Status200OK
 
 #### `DELETE /api/Branches/{id}` - `DeleteBranch`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** StatusCodes.Status204NoContent
 
 #### `GET /api/Branches/{id}` - `GetBranch`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(BranchDto), StatusCodes.Status200OK<br>StatusCodes.Status404NotFound
 
 #### `PUT /api/Branches/{id}` - `UpdateBranch`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid id, UpdateBranchCommand command`
 - **Declared response:** StatusCodes.Status204NoContent
 
 #### `PUT /api/Branches/{id}/operating-hours` - `SetOperatingHours`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid id, SetOperatingHoursCommand command`
 - **Declared response:** StatusCodes.Status204NoContent
 
@@ -803,43 +803,43 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/ClassSchedules` - `GetSchedules`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Query `groupClassId`: `Guid?`<br>Query `coachId`: `Guid?`<br>Query `roomId`: `Guid?`<br>Query `branchId`: `Guid?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Query `includeCancelled`: `bool?`<br>Handler signature: `[FromQuery] Guid? groupClassId, [FromQuery] Guid? coachId, [FromQuery] Guid? roomId, [FromQuery] Guid? branchId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] bool? includeCancelled`
 - **Declared response:** Task<ActionResult<List<ClassScheduleDto>>>
 
 #### `POST /api/ClassSchedules` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `CreateClassScheduleCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `POST /api/ClassSchedules/{id}/book` - `Book`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Body `command`: `BookClassCommand` { `ScheduleId`: Guid; `ClientId`: Guid }<br>Handler signature: `Guid id, [FromBody] BookClassCommand command`
 - **Declared response:** Task<ActionResult<ClassEnrollmentDto>>
 
 #### `POST /api/ClassSchedules/{id}/cancel` - `Cancel`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Body `command`: `CancelClassScheduleCommand` { `Id`: Guid; `Reason`: string? }<br>Handler signature: `Guid id, [FromBody] CancelClassScheduleCommand command`
 - **Declared response:** Task<ActionResult>
 
 #### `GET /api/ClassSchedules/{id}/enrollments` - `GetEnrollments`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Query `includeCancelled`: `bool`<br>Handler signature: `Guid id, [FromQuery] bool includeCancelled = false`
 - **Declared response:** Task<ActionResult<List<ClassEnrollmentDto>>>
 
 #### `POST /api/ClassSchedules/enrollments/{enrollmentId}/attended` - `MarkAttended`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid enrollmentId`
 - **Declared response:** Task<ActionResult>
 
 #### `POST /api/ClassSchedules/enrollments/{enrollmentId}/cancel` - `CancelEnrollment`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Body `command`: `CancelEnrollmentCommand` { `Id`: Guid; `Reason`: string? }<br>Handler signature: `Guid enrollmentId, [FromBody] CancelEnrollmentCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -1017,19 +1017,19 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Commissions` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageFinance`
+- **Access:** JWT + Policies: `Permissions.ManageFinance` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Query `employeeId`: `Guid?`<br>Query `status`: `CommissionStatus?`<br>Query `sourceType`: `CommissionSourceType?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] Guid? employeeId, [FromQuery] CommissionStatus? status, [FromQuery] CommissionSourceType? sourceType, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** Task<ActionResult<List<CommissionDto>>>
 
 #### `GET /api/Commissions/rules` - `GetRules`
 
-- **Access:** JWT + Policy: `Permissions.ManageFinance`
+- **Access:** JWT + Policies: `Permissions.ManageFinance` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Query `isActive`: `bool?`<br>Handler signature: `[FromQuery] bool? isActive`
 - **Declared response:** Task<ActionResult<List<CommissionRuleDto>>>
 
 #### `POST /api/Commissions/rules` - `CreateRule`
 
-- **Access:** JWT + Policy: `Permissions.ManageFinance`
+- **Access:** JWT + Policies: `Permissions.ManageFinance` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `CreateCommissionRuleCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
@@ -1143,37 +1143,37 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Employees` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Query `branchId`: `Guid?`<br>Query `department`: `string?`<br>Query `isActive`: `bool?`<br>Query `searchTerm`: `string?`<br>Handler signature: `[FromQuery] Guid? branchId, [FromQuery] string? department, [FromQuery] bool? isActive, [FromQuery] string? searchTerm`
 - **Declared response:** Task<ActionResult<List<EmployeeDto>>>
 
 #### `POST /api/Employees` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `CreateEmployeeCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `PUT /api/Employees/{id}` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `Guid id, UpdateEmployeeCommand command`
 - **Declared response:** Task<ActionResult>
 
 #### `POST /api/Employees/{id}/qr/regenerate` - `RegenerateQr`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult<object>>
 
 #### `POST /api/Employees/{id}/qr/revoke` - `RevokeQr`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<IActionResult>
 
 #### `POST /api/Employees/{id}/terminate` - `Terminate`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Body `command`: `TerminateEmployeeCommand` { `Id`: Guid; `TerminationDate`: DateTime?; `Reason`: string? }<br>Handler signature: `Guid id, [FromBody] TerminateEmployeeCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -1181,31 +1181,31 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Equipment` - `GetEquipment`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Query `branchId`: `Guid?`<br>Query `roomId`: `Guid?`<br>Query `status`: `EquipmentStatus?`<br>Query `searchTerm`: `string?`<br>Handler signature: `[FromQuery] Guid? branchId, [FromQuery] Guid? roomId, [FromQuery] EquipmentStatus? status, [FromQuery] string? searchTerm`
 - **Declared response:** typeof(List<EquipmentDto>), StatusCodes.Status200OK
 
 #### `POST /api/Equipment` - `CreateEquipment`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `CreateEquipmentCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/Equipment/{id}` - `DeleteEquipment`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `PUT /api/Equipment/{id}` - `UpdateEquipment`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid id, UpdateEquipmentCommand command`
 - **Declared response:** Task<ActionResult>
 
 #### `PUT /api/Equipment/{id}/status` - `ChangeStatus`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid id, ChangeEquipmentStatusCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -1329,13 +1329,13 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `POST /api/freelance/team/applications` - `Sponsor`
 
-- **Access:** JWT + Policy: `Permissions.ManageCoaches`
+- **Access:** JWT + Policies: `Permissions.ManageCoaches` AND `WorkspaceCapabilities.FreelanceTeam`
 - **Inputs:** Body `command`: `SponsorFreelanceMembershipCommand` { `IdentityEmail`: string; `RequestedRole`: UserRole; `FullName`: string }<br>Handler signature: `[FromBody] SponsorFreelanceMembershipCommand command`
 - **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status201Created
 
 #### `POST /api/freelance/team/applications/api/freelance/team/invites` - `Invite`
 
-- **Access:** JWT + Policy: `Permissions.ManageCoaches`
+- **Access:** JWT + Policies: `Permissions.ManageCoaches` AND `WorkspaceCapabilities.FreelanceTeam`
 - **Inputs:** Body `command`: `CreateWorkspaceInviteCommand` { `Email`: string; `RequestedRole`: UserRole }<br>Handler signature: `[FromBody] CreateWorkspaceInviteCommand command`
 - **Declared response:** typeof(WorkspaceInviteCreatedDto), StatusCodes.Status201Created
 
@@ -1343,19 +1343,19 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `POST /api/GateAccess/check-in-qr` - `CheckInByQr`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymGateAccess`
 - **Inputs:** Handler signature: `GateCheckInByQrCommand command`
 - **Declared response:** typeof(GateCheckInResultDto), StatusCodes.Status200OK
 
 #### `GET /api/GateAccess/logs` - `GetLogs`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymGateAccess`
 - **Inputs:** Query `clientId`: `Guid?`<br>Query `branchId`: `Guid?`<br>Query `result`: `GateAccessResult?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Query `take`: `int`<br>Handler signature: `[FromQuery] Guid? clientId, [FromQuery] Guid? branchId, [FromQuery] GateAccessResult? result, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] int take = 200`
 - **Declared response:** typeof(List<GateAccessLogDto>), StatusCodes.Status200OK
 
 #### `GET /api/GateAccess/scan` - `Scan`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymGateAccess`
 - **Inputs:** Query `qrCode`: `string`<br>Handler signature: `[FromQuery] string qrCode`
 - **Declared response:** typeof(QrMemberLookupDto), StatusCodes.Status200OK
 
@@ -1363,25 +1363,25 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/GroupClasses` - `GetClasses`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Query `branchId`: `Guid?`<br>Query `isActive`: `bool?`<br>Query `category`: `string?`<br>Handler signature: `[FromQuery] Guid? branchId, [FromQuery] bool? isActive, [FromQuery] string? category`
 - **Declared response:** Task<ActionResult<List<GroupClassDto>>>
 
 #### `POST /api/GroupClasses` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `CreateGroupClassCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/GroupClasses/{id}` - `Delete`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `PUT /api/GroupClasses/{id}` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid id, UpdateGroupClassCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -1389,43 +1389,43 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/GymProfile` - `GetProfile`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Inputs:** No request input.
 - **Declared response:** typeof(GymProfileDto), StatusCodes.Status200OK<br>StatusCodes.Status404NotFound
 
 #### `PUT /api/GymProfile` - `UpdateProfile`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Inputs:** Body `command`: `UpdateGymProfileCommand` { `Name`: string?; `Description`: string?; `Address`: string?; `PhoneNumber`: string?; `Email`: string?; `LogoUrl`: string?; `CoverImageUrl`: string?; `GalleryImages`: List<string>?; `PrimaryColor`: string?; `SecondaryColor`: string?; `LogoDarkUrl`: string?; `LogoLightUrl`: string?; `LogoIconUrl`: string?; `FaviconUrl`: string?; `LoginBackgroundUrl`: string?; `DashboardBannerUrl`: string?; `PrimaryHoverColor`: string?; `PrimaryForegroundColor`: string?; `SecondaryHoverColor`: string?; `SecondaryForegroundColor`: string?; `AccentColor`: string?; `BackgroundColor`: string?; `SurfaceColor`: string?; `CardColor`: string? }<br>Handler signature: `[FromBody] UpdateGymProfileCommand command`
 - **Declared response:** StatusCodes.Status204NoContent<br>StatusCodes.Status404NotFound
 
 #### `POST /api/GymProfile/assets` - `UploadBrandAsset`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Inputs:** Form `file`: `IFormFile`<br>Form `assetType`: `string`<br>Form `title`: `string?`<br>Form `altText`: `string?`<br>Handler signature: `[FromForm] IFormFile file, [FromForm] string assetType = "Gallery", [FromForm] string? title = null, [FromForm] string? altText = null`
 - **Declared response:** Task<ActionResult<BrandAssetResponse>>
 
 #### `DELETE /api/GymProfile/assets/{id:guid}` - `DeleteBrandAsset`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<IActionResult>
 
 #### `POST /api/GymProfile/cover` - `UploadCover`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Inputs:** Handler signature: `IFormFile file`
 - **Declared response:** typeof(UploadResponseDto), StatusCodes.Status200OK<br>StatusCodes.Status400BadRequest
 
 #### `POST /api/GymProfile/gallery` - `UploadGalleryImages`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Inputs:** Form `files`: `List<IFormFile>`<br>Handler signature: `[FromForm] List<IFormFile> files`
 - **Declared response:** typeof(UploadMultipleResponseDto), StatusCodes.Status200OK<br>StatusCodes.Status400BadRequest
 
 #### `POST /api/GymProfile/logo` - `UploadLogo`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Inputs:** Handler signature: `IFormFile file`
 - **Declared response:** typeof(UploadResponseDto), StatusCodes.Status200OK<br>StatusCodes.Status400BadRequest
 
@@ -1509,19 +1509,19 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Leaves` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Query `employeeId`: `Guid?`<br>Query `status`: `LeaveStatus?`<br>Query `leaveType`: `LeaveType?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] Guid? employeeId, [FromQuery] LeaveStatus? status, [FromQuery] LeaveType? leaveType, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** Task<ActionResult<List<LeaveRequestDto>>>
 
 #### `POST /api/Leaves` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `CreateLeaveRequestCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `POST /api/Leaves/{id}/review` - `Review`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Body `command`: `ReviewLeaveRequestCommand` { `Id`: Guid; `Decision`: LeaveStatus; `Notes`: string? }<br>Handler signature: `Guid id, [FromBody] ReviewLeaveRequestCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -1529,19 +1529,19 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Maintenance` - `GetRecords`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Query `equipmentId`: `Guid?`<br>Query `status`: `MaintenanceStatus?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] Guid? equipmentId, [FromQuery] MaintenanceStatus? status, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** typeof(List<MaintenanceRecordDto>), StatusCodes.Status200OK
 
 #### `POST /api/Maintenance` - `CreateMaintenance`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `CreateMaintenanceCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `POST /api/Maintenance/{id}/resolve` - `Resolve`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid id, ResolveMaintenanceCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -1583,19 +1583,19 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/MembershipCards` - `GetCards`
 
-- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Access:** JWT + Policies: `Permissions.ManageMembers` AND `WorkspaceCapabilities.GymMembershipCards`
 - **Inputs:** Query `clientId`: `Guid?`<br>Query `isActive`: `bool?`<br>Handler signature: `[FromQuery] Guid? clientId, [FromQuery] bool? isActive`
 - **Declared response:** typeof(List<MembershipCardDto>), StatusCodes.Status200OK
 
 #### `POST /api/MembershipCards/{id}/revoke` - `RevokeCard`
 
-- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Access:** JWT + Policies: `Permissions.ManageMembers` AND `WorkspaceCapabilities.GymMembershipCards`
 - **Inputs:** Body `command`: `RevokeMembershipCardCommand` { `Id`: Guid; `Reason`: string? }<br>Handler signature: `Guid id, [FromBody] RevokeMembershipCardCommand command`
 - **Declared response:** StatusCodes.Status204NoContent
 
 #### `POST /api/MembershipCards/issue` - `IssueCard`
 
-- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Access:** JWT + Policies: `Permissions.ManageMembers` AND `WorkspaceCapabilities.GymMembershipCards`
 - **Inputs:** Handler signature: `IssueMembershipCardCommand command`
 - **Declared response:** typeof(Guid), StatusCodes.Status200OK
 
@@ -1687,31 +1687,31 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Payroll` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Query `year`: `int?`<br>Query `month`: `int?`<br>Query `branchId`: `Guid?`<br>Query `status`: `PayrollStatus?`<br>Handler signature: `[FromQuery] int? year, [FromQuery] int? month, [FromQuery] Guid? branchId, [FromQuery] PayrollStatus? status`
 - **Declared response:** Task<ActionResult<List<PayrollRunDto>>>
 
 #### `POST /api/Payroll/{id}/approve` - `Approve`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `POST /api/Payroll/{id}/pay` - `Pay`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `POST /api/Payroll/generate` - `Generate`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `GeneratePayrollCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `PUT /api/Payroll/items/{id}` - `UpdateItem`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `Guid id, UpdatePayrollItemCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -1719,25 +1719,25 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/ProductCategories` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Query `isActive`: `bool?`<br>Handler signature: `[FromQuery] bool? isActive`
 - **Declared response:** Task<ActionResult<List<ProductCategoryDto>>>
 
 #### `POST /api/ProductCategories` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Handler signature: `CreateProductCategoryCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/ProductCategories/{id}` - `Delete`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `PUT /api/ProductCategories/{id}` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Handler signature: `Guid id, UpdateProductCategoryCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -1745,25 +1745,25 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Products` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Query `categoryId`: `Guid?`<br>Query `isActive`: `bool?`<br>Query `searchTerm`: `string?`<br>Query `lowStockOnly`: `bool?`<br>Query `branchId`: `Guid?`<br>Handler signature: `[FromQuery] Guid? categoryId, [FromQuery] bool? isActive, [FromQuery] string? searchTerm, [FromQuery] bool? lowStockOnly, [FromQuery] Guid? branchId`
 - **Declared response:** Task<ActionResult<List<ProductDto>>>
 
 #### `POST /api/Products` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Handler signature: `CreateProductCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/Products/{id}` - `Delete`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `PUT /api/Products/{id}` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Handler signature: `Guid id, UpdateProductCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -1797,55 +1797,55 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Reports/branch-comparison` - `GetBranchComparisonReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** typeof(BranchComparisonReportDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/class-attendance` - `GetClassAttendanceReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Query `branchId`: `Guid?`<br>Handler signature: `[FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] Guid? branchId`
 - **Declared response:** typeof(ClassAttendanceReportDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/clients` - `GetClientsReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** typeof(ClientsReportDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/coach/dashboard` - `GetCoachDashboardReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.CoachingReports`
 - **Inputs:** Query `coachId`: `Guid?`<br>Handler signature: `[FromQuery] Guid? coachId`
 - **Declared response:** typeof(CoachDashboardReportDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/coach/trainee/{clientId}` - `GetTraineeProgressReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.CoachingReports`
 - **Inputs:** Handler signature: `Guid clientId`
 - **Declared response:** typeof(TraineeProgressReportDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/coach/trainees` - `GetCoachTraineesReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.CoachingReports`
 - **Inputs:** Query `coachId`: `Guid?`<br>Handler signature: `[FromQuery] Guid? coachId`
 - **Declared response:** typeof(CoachTraineesReportDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/commissions` - `GetCommissionReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Query `employeeId`: `Guid?`<br>Handler signature: `[FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] Guid? employeeId`
 - **Declared response:** typeof(CommissionReportDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/dashboard` - `GetDashboardReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Inputs:** No request input.
 - **Declared response:** typeof(DashboardReportDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/equipment-utilization` - `GetEquipmentUtilizationReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Inputs:** Query `branchId`: `Guid?`<br>Handler signature: `[FromQuery] Guid? branchId`
 - **Declared response:** typeof(EquipmentUtilizationReportDto), StatusCodes.Status200OK
 
@@ -1857,37 +1857,37 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Reports/financial` - `GetFinancialReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.CoachingFinance`
 - **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** typeof(FinancialReportDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/operations-dashboard` - `GetOperationsDashboard`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Inputs:** No request input.
 - **Declared response:** typeof(OperationsDashboardDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/payroll-summary` - `GetPayrollSummaryReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Inputs:** Query `year`: `int?`<br>Query `month`: `int?`<br>Handler signature: `[FromQuery] int? year, [FromQuery] int? month`
 - **Declared response:** typeof(PayrollSummaryReportDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/pos-sales` - `GetPosSalesReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Query `branchId`: `Guid?`<br>Query `topProductsCount`: `int`<br>Handler signature: `[FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] Guid? branchId, [FromQuery] int topProductsCount = 10`
 - **Declared response:** typeof(PosSalesReportDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/stock-valuation` - `GetStockValuationReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Inputs:** Query `branchId`: `Guid?`<br>Handler signature: `[FromQuery] Guid? branchId`
 - **Declared response:** typeof(StockValuationReportDto), StatusCodes.Status200OK
 
 #### `GET /api/Reports/subscriptions` - `GetSubscriptionsReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** typeof(SubscriptionsReportDto), StatusCodes.Status200OK
 
@@ -1895,25 +1895,25 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Rooms` - `GetRooms`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Query `branchId`: `Guid?`<br>Query `type`: `RoomType?`<br>Query `isActive`: `bool?`<br>Handler signature: `[FromQuery] Guid? branchId, [FromQuery] RoomType? type, [FromQuery] bool? isActive`
 - **Declared response:** typeof(List<RoomDto>), StatusCodes.Status200OK
 
 #### `POST /api/Rooms` - `CreateRoom`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `CreateRoomCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/Rooms/{id}` - `DeleteRoom`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `PUT /api/Rooms/{id}` - `UpdateRoom`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Inputs:** Handler signature: `Guid id, UpdateRoomCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -1921,13 +1921,13 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Sales` - `GetSales`
 
-- **Access:** JWT + Policy: `Permissions.ManagePOS`
+- **Access:** JWT + Policies: `Permissions.ManagePOS` AND `WorkspaceCapabilities.GymPos`
 - **Inputs:** Query `branchId`: `Guid?`<br>Query `clientId`: `Guid?`<br>Query `cashierId`: `Guid?`<br>Query `paymentMethod`: `PaymentMethod?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] Guid? branchId, [FromQuery] Guid? clientId, [FromQuery] Guid? cashierId, [FromQuery] PaymentMethod? paymentMethod, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** Task<ActionResult<List<SaleDto>>>
 
 #### `POST /api/Sales/checkout` - `Checkout`
 
-- **Access:** JWT + Policy: `Permissions.ManagePOS`
+- **Access:** JWT + Policies: `Permissions.ManagePOS` AND `WorkspaceCapabilities.GymPos`
 - **Inputs:** Handler signature: `CheckoutSaleCommand command`
 - **Declared response:** typeof(Guid), StatusCodes.Status200OK
 
@@ -1935,25 +1935,25 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Shifts` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Query `branchId`: `Guid?`<br>Query `isActive`: `bool?`<br>Handler signature: `[FromQuery] Guid? branchId, [FromQuery] bool? isActive`
 - **Declared response:** Task<ActionResult<List<ShiftDto>>>
 
 #### `POST /api/Shifts` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `CreateShiftCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `POST /api/Shifts/assign` - `Assign`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `AssignShiftCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `GET /api/Shifts/assignments` - `GetAssignments`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Query `employeeId`: `Guid?`<br>Query `shiftId`: `Guid?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] Guid? employeeId, [FromQuery] Guid? shiftId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** Task<ActionResult<List<ShiftAssignmentDto>>>
 
@@ -1961,19 +1961,19 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/staff-attendance` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Query `branchId`: `Guid?`<br>Query `userId`: `Guid?`<br>Handler signature: `[FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate, [FromQuery] Guid? branchId, [FromQuery] Guid? userId`
 - **Declared response:** Task<ActionResult<List<StaffAttendanceDto>>>
 
 #### `POST /api/staff-attendance/{id}/check-out` - `CheckOut`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<IActionResult>
 
 #### `POST /api/staff-attendance/toggle-qr` - `ToggleByQr`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Inputs:** Body `request`: `ToggleStaffQrRequest`<br>Handler signature: `[FromBody] ToggleStaffQrRequest request`
 - **Declared response:** Task<ActionResult<StaffAttendanceDto>>
 
@@ -1981,25 +1981,25 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Stock` - `GetStock`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Query `branchId`: `Guid?`<br>Query `productId`: `Guid?`<br>Query `lowStockOnly`: `bool?`<br>Handler signature: `[FromQuery] Guid? branchId, [FromQuery] Guid? productId, [FromQuery] bool? lowStockOnly`
 - **Declared response:** Task<ActionResult<List<StockItemDto>>>
 
 #### `POST /api/Stock/adjust` - `Adjust`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Handler signature: `AdjustStockCommand command`
 - **Declared response:** Task<ActionResult>
 
 #### `GET /api/Stock/movements` - `GetMovements`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Query `productId`: `Guid?`<br>Query `branchId`: `Guid?`<br>Query `type`: `StockMovementType?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] Guid? productId, [FromQuery] Guid? branchId, [FromQuery] StockMovementType? type, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** Task<ActionResult<List<StockMovementDto>>>
 
 #### `POST /api/Stock/transfer` - `Transfer`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Handler signature: `TransferStockCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -2067,31 +2067,31 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Subscriptions/plans` - `GetSubscriptionPlans`
 
-- **Access:** JWT + Policy: `Permissions.ManageClientSubscriptions`
+- **Access:** JWT + Policies: `Permissions.ManageClientSubscriptions` AND `WorkspaceCapabilities.GymMembershipPlans`
 - **Inputs:** Query `isActive`: `bool?`<br>Handler signature: `[FromQuery] bool? isActive`
 - **Declared response:** Task<ActionResult<List<SubscriptionPlanDto>>>
 
 #### `POST /api/Subscriptions/plans` - `CreateSubscriptionPlan`
 
-- **Access:** JWT + Policy: `Permissions.ManageClientSubscriptions`
+- **Access:** JWT + Policies: `Permissions.ManageClientSubscriptions` AND `WorkspaceCapabilities.GymMembershipPlans`
 - **Inputs:** Handler signature: `CreateSubscriptionPlanCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/Subscriptions/plans/{id}` - `DeleteSubscriptionPlan`
 
-- **Access:** JWT + Policy: `Permissions.ManageClientSubscriptions`
+- **Access:** JWT + Policies: `Permissions.ManageClientSubscriptions` AND `WorkspaceCapabilities.GymMembershipPlans`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `GET /api/Subscriptions/plans/{id}` - `GetSubscriptionPlan`
 
-- **Access:** JWT + Policy: `Permissions.ManageClientSubscriptions`
+- **Access:** JWT + Policies: `Permissions.ManageClientSubscriptions` AND `WorkspaceCapabilities.GymMembershipPlans`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult<SubscriptionPlanDto>>
 
 #### `PUT /api/Subscriptions/plans/{id}` - `UpdateSubscriptionPlan`
 
-- **Access:** JWT + Policy: `Permissions.ManageClientSubscriptions`
+- **Access:** JWT + Policies: `Permissions.ManageClientSubscriptions` AND `WorkspaceCapabilities.GymMembershipPlans`
 - **Inputs:** Handler signature: `Guid id, UpdateSubscriptionPlanCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -2099,25 +2099,25 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/Suppliers` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Query `isActive`: `bool?`<br>Query `searchTerm`: `string?`<br>Handler signature: `[FromQuery] bool? isActive, [FromQuery] string? searchTerm`
 - **Declared response:** Task<ActionResult<List<SupplierDto>>>
 
 #### `POST /api/Suppliers` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Handler signature: `CreateSupplierCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/Suppliers/{id}` - `Delete`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `PUT /api/Suppliers/{id}` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Inputs:** Handler signature: `Guid id, UpdateSupplierCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -2125,25 +2125,25 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/TaxSettings` - `GetSettings`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Inputs:** Query `isActive`: `bool?`<br>Handler signature: `[FromQuery] bool? isActive`
 - **Declared response:** Task<ActionResult<List<TaxSettingDto>>>
 
 #### `POST /api/TaxSettings` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Inputs:** Handler signature: `CreateTaxSettingCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/TaxSettings/{id}` - `Delete`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult>
 
 #### `PUT /api/TaxSettings/{id}` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Inputs:** Handler signature: `Guid id, UpdateTaxSettingCommand command`
 - **Declared response:** Task<ActionResult>
 
@@ -2521,36 +2521,36 @@ Generated: `2026-08-11 14:57 UTC`  |  Total endpoints: **396**
 
 #### `GET /api/workspace-members` - `List`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Query `role`: `UserRole?`<br>Query `accessStatus`: `string?`<br>Query `searchTerm`: `string?`<br>Handler signature: `[FromQuery] UserRole? role, [FromQuery] string? accessStatus, [FromQuery] string? searchTerm`
 - **Declared response:** typeof(IReadOnlyList<WorkspaceMemberDto>), StatusCodes.Status200OK
 
 #### `POST /api/workspace-members` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Body `command`: `CreateWorkspaceMemberCommand` { `Email`: string; `PhoneNumber`: string?; `FullName`: string; `Role`: UserRole }<br>Handler signature: `[FromBody] CreateWorkspaceMemberCommand command`
 - **Declared response:** typeof(WorkspaceMemberCreatedDto), StatusCodes.Status201Created
 
 #### `POST /api/workspace-members/{membershipId:guid}/activate` - `Activate`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `Guid membershipId`
 - **Declared response:** Task<ActionResult<WorkspaceMemberDto>>
 
 #### `POST /api/workspace-members/{membershipId:guid}/remove` - `Remove`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `Guid membershipId`
 - **Declared response:** Task<ActionResult<WorkspaceMemberDto>>
 
 #### `POST /api/workspace-members/{membershipId:guid}/reset-password` - `ResetPassword`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `Guid membershipId`
 - **Declared response:** typeof(WorkspaceMemberCreatedDto), StatusCodes.Status200OK
 
 #### `POST /api/workspace-members/{membershipId:guid}/suspend` - `Suspend`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Inputs:** Handler signature: `Guid membershipId`
 - **Declared response:** Task<ActionResult<WorkspaceMemberDto>>

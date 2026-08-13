@@ -128,3 +128,17 @@ plan items. Tenant filters are always applied in addition to these role/assignme
 The UI may hide an action, but a missing action is never a security control. Unauthorized, inactive,
 cross-tenant, or unassigned identifiers are rejected by the API and must render a clear blocked/error
 state rather than an empty successful screen.
+
+## Workspace capabilities (Issue #296)
+
+RBAC and workspace type are separate checks. The `FreelanceOwner` role no longer inherits the
+complete `TenantPermissions` set. Its seeded permissions cover clients, coaching, finance,
+reports, settings, billing, and the limited assistant-team workflow; Gym-only permissions such
+as branches, inventory, POS, and gym membership plans are not granted. Stale grants are removed
+by the idempotent seeder and the permission version is incremented to invalidate old sessions.
+
+The `WorkspaceCapabilityAuthorizationHandler` resolves `TenantId` from the authenticated claims,
+loads the tenant's persisted `WorkspaceType`, and evaluates the capability policy. It never
+accepts the workspace type from the request. A valid identity with a valid RBAC permission still
+gets `403 WORKSPACE_CAPABILITY_NOT_AVAILABLE` when the feature is outside the selected workspace
+surface. Tenant filters and ownership rules continue to apply after the capability check.

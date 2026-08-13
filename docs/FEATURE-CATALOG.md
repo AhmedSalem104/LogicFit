@@ -173,3 +173,17 @@ and state-action screens.
   history and legacy sequential child-save behavior are no longer the active path.
 - Backend migration: `20260810125711_CoachPlanExecutionFields`. Availability remains task-branch only
   until merge/release/deployment/health verification.
+
+### Workspace-specific product surface (Issue #296)
+
+The shared API now exposes a `WorkspaceCapabilities` contract derived from `WorkspaceType`.
+`Gym` keeps facilities, staff, attendance, inventory, POS, gate access, membership cards, gym
+membership plans, and gym reports. `FreelanceCoach` receives the coaching surface (clients,
+training, nutrition, progress, appointments, finance, reports) plus a small assistant-team
+surface, but not Gym-only features. Billing, settings, backups, and shared coaching components
+remain available when their existing permission and plan rules allow them.
+
+Gym-only controllers enforce the capability on the server; hiding a navigation item is not the
+security boundary. See [WORKSPACE-CAPABILITIES.md](WORKSPACE-CAPABILITIES.md) for the complete
+mapping and the `WORKSPACE_CAPABILITY_NOT_AVAILABLE` response contract. This implementation is
+task-branch only until review, merge, release, deployment, and health verification.

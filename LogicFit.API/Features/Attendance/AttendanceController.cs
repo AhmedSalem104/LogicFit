@@ -14,6 +14,7 @@ namespace LogicFit.API.Features.Attendance;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageAttendance)]
+[Authorize(Policy = WorkspaceCapabilities.GymAttendance)]
 public class AttendanceController : ControllerBase
 {
     private readonly IMediator _mediator;

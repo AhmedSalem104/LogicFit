@@ -37,6 +37,7 @@ public class SubscriptionsController : ControllerBase
     // ==================== Subscription Plans ====================
 
     [HttpGet("plans")]
+    [Authorize(Policy = WorkspaceCapabilities.GymMembershipPlans)]
     public async Task<ActionResult<List<SubscriptionPlanDto>>> GetSubscriptionPlans([FromQuery] bool? isActive)
     {
         var result = await _mediator.Send(new GetSubscriptionPlansQuery { IsActive = isActive });
@@ -44,6 +45,7 @@ public class SubscriptionsController : ControllerBase
     }
 
     [HttpGet("plans/{id}")]
+    [Authorize(Policy = WorkspaceCapabilities.GymMembershipPlans)]
     public async Task<ActionResult<SubscriptionPlanDto>> GetSubscriptionPlan(Guid id)
     {
         var result = await _mediator.Send(new GetSubscriptionPlanByIdQuery { Id = id });
@@ -52,6 +54,7 @@ public class SubscriptionsController : ControllerBase
     }
 
     [HttpPost("plans")]
+    [Authorize(Policy = WorkspaceCapabilities.GymMembershipPlans)]
     public async Task<ActionResult<Guid>> CreateSubscriptionPlan(CreateSubscriptionPlanCommand command)
     {
         var id = await _mediator.Send(command);
@@ -59,6 +62,7 @@ public class SubscriptionsController : ControllerBase
     }
 
     [HttpPut("plans/{id}")]
+    [Authorize(Policy = WorkspaceCapabilities.GymMembershipPlans)]
     public async Task<ActionResult> UpdateSubscriptionPlan(Guid id, UpdateSubscriptionPlanCommand command)
     {
         command.Id = id;
@@ -67,6 +71,7 @@ public class SubscriptionsController : ControllerBase
     }
 
     [HttpDelete("plans/{id}")]
+    [Authorize(Policy = WorkspaceCapabilities.GymMembershipPlans)]
     public async Task<ActionResult> DeleteSubscriptionPlan(Guid id)
     {
         await _mediator.Send(new DeleteSubscriptionPlanCommand { Id = id });

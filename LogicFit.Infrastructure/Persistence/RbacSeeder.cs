@@ -54,7 +54,17 @@ public class RbacSeeder
         {
             Permissions.ViewMembers, Permissions.ManageAttendance, Permissions.ViewReports
         },
-        [SystemRoles.FreelanceOwner] = Permissions.TenantPermissions.ToArray(),
+        // Freelance workspaces manage clients, coaching delivery and their own
+        // finance. Gym infrastructure is deliberately not part of this role.
+        [SystemRoles.FreelanceOwner] = new[]
+        {
+            Permissions.ViewMembers, Permissions.ManageMembers, Permissions.CreateMembers,
+            Permissions.UpdateMembers, Permissions.DeleteMembers, Permissions.ManageCoaches,
+            Permissions.ManageClientSubscriptions,
+            Permissions.ManageFinance, Permissions.ViewReports, Permissions.ManageReports,
+            Permissions.ManageSettings, Permissions.ManageTenantBilling,
+            Permissions.CreateAndDownloadTenantBackup
+        },
         [SystemRoles.FreelanceCoach] = new[]
         {
             Permissions.ViewMembers, Permissions.CreateMembers, Permissions.UpdateMembers,
@@ -318,6 +328,39 @@ public class RbacSeeder
                     RoleId = role.Id,
                     PermissionId = permId
                 });
+            }
+
+            // Older deployments seeded FreelanceOwner with all tenant permissions.
+            // Remove only those stale grants for this system role and invalidate
+            // its existing sessions so the reduced set is effective immediately.
+            if (roleName == SystemRoles.FreelanceOwner)
+            {
+                var desiredIds = permissionCodes
+                    .Where(permissionsByCode.ContainsKey)
+                    .Select(code => permissionsByCode[code])
+                    .ToHashSet();
+                var staleMappings = await _context.RolePermissions
+                    .Where(rp => rp.RoleId == role.Id && !desiredIds.Contains(rp.PermissionId))
+                    .ToListAsync();
+                if (staleMappings.Count > 0)
+                {
+                    _context.RolePermissions.RemoveRange(staleMappings);
+                    var roleUserIds = await _context.UserRoleAssignments
+                        .IgnoreQueryFilters()
+                        .Where(assignment => assignment.RoleId == role.Id)
+                        .Select(assignment => assignment.UserId)
+                        .Distinct()
+                        .ToListAsync();
+                    var roleUsers = await _context.Set<User>()
+                        .IgnoreQueryFilters()
+                        .Where(user => roleUserIds.Contains(user.Id))
+                        .ToListAsync();
+                    foreach (var roleUser in roleUsers)
+                        roleUser.PermissionsVersion++;
+                    _logger.LogInformation(
+                        "Removed {Count} stale Gym permissions from FreelanceOwner and invalidated {UserCount} sessions.",
+                        staleMappings.Count, roleUsers.Count);
+                }
             }
         }
 

@@ -13,6 +13,7 @@ namespace LogicFit.API.Features.Leaves;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageEmployees)]
+[Authorize(Policy = WorkspaceCapabilities.GymStaff)]
 public class LeavesController : ControllerBase
 {
     private readonly IMediator _mediator;

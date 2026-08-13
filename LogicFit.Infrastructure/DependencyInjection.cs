@@ -109,6 +109,7 @@ public static class DependencyInjection
         // and evaluated against the "permission" claims embedded in the JWT at login.
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
         services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, WorkspaceCapabilityAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ActiveTenantAuthorizationHandler>();
         services.AddAuthorization(options =>
         {
