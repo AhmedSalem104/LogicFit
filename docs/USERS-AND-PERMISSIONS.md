@@ -142,3 +142,8 @@ loads the tenant's persisted `WorkspaceType`, and evaluates the capability polic
 accepts the workspace type from the request. A valid identity with a valid RBAC permission still
 gets `403 WORKSPACE_CAPABILITY_NOT_AVAILABLE` when the feature is outside the selected workspace
 surface. Tenant filters and ownership rules continue to apply after the capability check.
+
+For Issue #298, a session without a selected workspace type is fail-closed. It cannot receive
+the Gym capability set merely because the browser has an old token or incomplete local user
+record. The client must refresh the tenant session and use the server-returned type; if the
+server cannot provide one, the session is cleared and the user returns to identity login.

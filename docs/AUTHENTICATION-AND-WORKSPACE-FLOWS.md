@@ -249,3 +249,13 @@ not the full Gym owner permission set. An existing identity can own or manage mo
 workspace; each selected workspace gets its own type, membership, permissions, and capability
 snapshot. This change is local/task-branch only until merge, release, deployment, and health
 verification.
+
+## Issue #298 — stale tenant sessions and workspace capabilities
+
+The tenant refresh contract remains authoritative for an existing session: it resolves the
+persisted `WorkspaceType` from the selected `TenantId` and returns the matching capability list.
+The Angular client must not interpret a missing `WorkspaceType` as `Gym`; a missing workspace
+context is an invalid/stale session and must be reconciled through refresh or sent back to
+identity login. Gym-only APIs remain protected by `WorkspaceCapabilities` and return
+`WORKSPACE_CAPABILITY_NOT_AVAILABLE` for a FreelanceCoach tenant. No API response contract was
+changed by this fix.
