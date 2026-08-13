@@ -47,6 +47,18 @@ The identity context does not contain tenant permissions or a tenant JWT. A user
 workspace can continue automatically; a user with multiple workspaces chooses one. Pending
 applications remain visible and do not block access to another active workspace.
 
+### Issue #292 — platform/tenant query boundary (task branch, not production-verified)
+
+The identity session issuer reads `WorkspaceMembership`, `Tenant`, application, billing,
+provisioning, and database-resource state from the Platform database. It must not include or
+filter by the tenant-owned `User` navigation while the request has no resolved tenant database.
+The platform model intentionally does not map that navigation. The regression previously caused
+invalid credentials to return the expected `401`, while valid credentials reached the unmapped
+navigation and returned `500`. The fix keeps login on platform-owned state and leaves local-user
+and tenant access checks to the workspace-selection/access boundary. The fix is recorded in
+Issue #292 and is not considered production-ready until its PR, deployment, and post-deploy
+health/login verification are complete.
+
 For an already-Active Gym whose owner membership was left in
 `PendingPlatformApproval` by an older release, the issuer performs a narrow, idempotent repair
 during identity login: only that Gym owner's membership is promoted to `Active`. Pending client

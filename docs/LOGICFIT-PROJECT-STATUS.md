@@ -1,5 +1,12 @@
 # LogicFit Project Status
 
+> **Issue #292 — task branch:** Tenant-platform identity login returned `500` only after valid
+> credentials because the session issuer included the tenant-owned `User` navigation while
+> querying Platform-owned memberships. The implementation now queries only Platform-owned
+> membership/workspace state and has regression coverage for the pending workspace application
+> context. This is unreleased and not production-verified until the PR, deployment, and health
+> check pass.
+
 > **Issues #210 and #217 - task branch:** Platform approval/activation promotes a non-deleted Gym
 > owner's `PendingPlatformApproval` workspace membership to `Active`. Identity login also performs
 > the same narrow owner-only repair for gyms already marked `Active`, preventing an empty context

@@ -1,5 +1,11 @@
 # نموذج بيانات الـSaaS وثوابت الأعمال
 
+> **Issue #292 — task branch note:** The pre-workspace identity session is a Platform-database
+> operation. Its membership query may use only Platform-owned membership/workspace state; the
+> tenant-owned `User` navigation is intentionally absent from `PlatformDbContext` and must be
+> loaded only after the tenant database has been resolved. This describes the branch fix and is
+> not a production deployment claim.
+
 ## طبقات الحل
 
 ```text
