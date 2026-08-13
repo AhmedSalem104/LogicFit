@@ -72,6 +72,48 @@ public sealed class IdentityWorkspaceSessionIssuerTests
         Assert.Equal(WorkspaceMembershipStatus.PendingWorkspaceApproval, persistedClientMembership.Status);
     }
 
+    [Fact]
+    public async Task Identity_login_returns_a_pending_workspace_application_without_dashboard_access()
+    {
+        await using var fixture = await TestFixture.CreateAsync();
+        var identity = NewIdentity("pending-owner");
+        var workspace = new Tenant
+        {
+            Name = "Pending Gym",
+            Subdomain = $"pending-gym-{Guid.NewGuid():N}",
+            WorkspaceType = WorkspaceType.Gym,
+            Status = TenantStatus.PendingApproval
+        };
+        var application = new ApplicationRequest
+        {
+            IdentityAccountId = identity.Id,
+            ApplicationType = ApplicationType.GymWorkspaceCreation,
+            Status = ApplicationRequestStatus.Submitted,
+            TargetScopeKey = $"workspace:{workspace.Subdomain}",
+            ReservedWorkspaceIdentifier = workspace.Subdomain,
+            RequestedRole = UserRole.Owner,
+            PayloadJson = "{}",
+            SubmittedAt = fixture.Clock.UtcNow,
+            ProvisionedWorkspaceId = workspace.Id
+        };
+
+        fixture.Db.IdentityAccounts.Add(identity);
+        fixture.Db.Tenants.Add(workspace);
+        fixture.Db.ApplicationRequests.Add(application);
+        await fixture.Db.SaveChangesAsync();
+        fixture.Db.ChangeTracker.Clear();
+
+        var issuer = new IdentityWorkspaceSessionIssuer(fixture.Db, fixture.Clock, fixture.CurrentUser);
+        var response = await issuer.IssueAsync(identity.Id);
+
+        Assert.Empty(response.ActiveWorkspaces);
+        var pending = Assert.Single(response.PendingApplications);
+        Assert.Equal(application.Id, pending.ApplicationId);
+        Assert.Equal(ApplicationRequestStatus.Submitted, pending.Status);
+        Assert.Equal(WorkspaceType.Gym, pending.WorkspaceType);
+        Assert.False(pending.CanAccessDashboard);
+    }
+
     private static IdentityAccount NewIdentity(string prefix)
     {
         var suffix = Guid.NewGuid().ToString("N");

@@ -32,6 +32,12 @@ never replaces authorization: `WorkspaceMembership.Active`, local `User.Active`,
 workspace/subscription gates, permissions, and ownership checks still decide access. Password
 reset/change revokes linked refresh and workspace-selection sessions.
 
+For Issue #292, the pre-workspace identity login query is restricted to Platform-owned identity,
+membership, workspace, application, subscription, payment, provisioning, and database-resource
+records. It must not load a tenant-owned `User` navigation before a tenant database is resolved.
+This is a database-ownership boundary, not a relaxation of authorization: dashboard access still
+requires the active local user, membership, workspace, subscription, and permission gates.
+
 For a Gym, the Platform tenant approval/activation command promotes only the owner's
 `PendingPlatformApproval` membership to `Active` and records the decision actor/time. A client
 membership in `PendingWorkspaceApproval` is a separate gym-operator decision and is not promoted

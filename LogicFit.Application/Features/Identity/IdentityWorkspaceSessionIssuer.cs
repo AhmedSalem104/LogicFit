@@ -24,14 +24,19 @@ public sealed class IdentityWorkspaceSessionIssuer : IIdentityWorkspaceSessionIs
             ?? throw new UnauthorizedException("Invalid credentials");
         var now = _dateTimeService.UtcNow;
         var memberships = await _context.WorkspaceMemberships.IgnoreQueryFilters()
-            .Include(x => x.User).Include(x => x.Tenant)
+            // Memberships and workspace metadata are platform-owned. The workspace User row is
+            // tenant-owned and is intentionally not mapped by PlatformDbContext; including it
+            // here made every successful identity login fail with a 500 after the platform/tenant
+            // database split. Selection/access validation reads the local account at the point
+            // where a tenant context is available.
+            .Include(x => x.Tenant)
             .Where(x => x.IdentityAccountId == identity.Id && !x.IsDeleted &&
                 (x.Status == WorkspaceMembershipStatus.Active ||
                     (x.Status == WorkspaceMembershipStatus.PendingPlatformApproval &&
                      x.Role == UserRole.Owner &&
                      x.Tenant.WorkspaceType == WorkspaceType.Gym &&
                      x.Tenant.Status == TenantStatus.Active)) &&
-                x.User.IsActive && !x.User.IsDeleted && !x.Tenant.IsDeleted)
+                !x.Tenant.IsDeleted)
             .OrderBy(x => x.Tenant.Name).ToListAsync(cancellationToken);
 
         // Older gyms could be activated before the approval handler also repaired the owner's

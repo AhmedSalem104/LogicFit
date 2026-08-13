@@ -24,6 +24,16 @@ Backend and Platform Dashboard together because `/api/platform/auth/login` retur
 directly and no OTP verification call is valid. Do not add OTP, Phone Login, Passkey, or WebAuthn
 secrets to the server. No Production deployment or migration was performed by this change.
 
+## Issue #292 identity-login verification gate
+
+The tenant login `POST /api/identity/login` must be tested with both an invalid credential
+(`401`) and a valid newly registered owner whose workspace application is still pending (`200`
+with `pendingApplications` and `canAccessDashboard=false`). The valid path must not query the
+tenant-owned `User` table before workspace selection. After release, verify `/health` returns
+HTTP `200` with the expected healthy response, then run the non-secret login checks and record the
+request ID/status in Issue #292. A source build or a healthy old deployment does not prove that
+the production login fix is active.
+
 ## Tenant approval and existing owner memberships (Issues #210 and #217)
 
 When a Gym is approved or activated through `/api/platform/tenants/{id}/activate`, the Backend
