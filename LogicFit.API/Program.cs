@@ -274,6 +274,11 @@ app.UseAuthentication();
 // see the current tenant.
 app.UseTenant();
 
+// Resolve the server-side TenantDatabaseMapping before any tenant-owned DbSet is accessed.
+// This is required for the first dashboard request after select-workspace as well as all later
+// tenant requests; without it the routing proxy must fail closed instead of using the shared DB.
+app.UseTenantDatabaseRouting();
+
 // Identity and membership are a separate boundary from subscription and permissions. Linked
 // accounts are enforced immediately and unlinked legacy sessions fail closed.
 app.UseIdentityWorkspaceAccessGate();

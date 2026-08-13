@@ -38,6 +38,12 @@ records. It must not load a tenant-owned `User` navigation before a tenant datab
 This is a database-ownership boundary, not a relaxation of authorization: dashboard access still
 requires the active local user, membership, workspace, subscription, and permission gates.
 
+For Issue #294, the same ownership boundary applies to `/api/identity/select-workspace`: the
+membership is selected from Platform using scalar ids, then the server resolves the assigned
+Tenant mapping before reading the local user, profile, and RBAC projection. A missing mapping or
+failed tenant connection is a typed `TENANT_DATABASE_UNAVAILABLE` 503, never a generic 500 or a
+shared-database fallback.
+
 For a Gym, the Platform tenant approval/activation command promotes only the owner's
 `PendingPlatformApproval` membership to `Active` and records the decision actor/time. A client
 membership in `PendingWorkspaceApproval` is a separate gym-operator decision and is not promoted

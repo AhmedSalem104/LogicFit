@@ -59,6 +59,21 @@ and tenant access checks to the workspace-selection/access boundary. The fix is 
 Issue #292 and is not considered production-ready until its PR, deployment, and post-deploy
 health/login verification are complete.
 
+### Issue #294 — workspace selection database boundary
+
+`POST /api/identity/select-workspace` is an anonymous exchange because the identity has not
+received a tenant JWT yet. Its membership query therefore stays on `PlatformDbContext` and uses
+scalar `UserId` data only; it never includes the tenant-owned `User` or `UserProfile` navigation.
+After the platform membership and workspace gates pass, the server resolves the active mapping,
+decrypts its protected connection material in memory, installs the request-scoped
+`TenantDbContext`, and only then reads the local account/profile and tenant RBAC projection.
+
+An unavailable, unassigned, stale, or unhealthy mapping returns the typed
+`503 TENANT_DATABASE_UNAVAILABLE` response. A missing or inactive local account returns a typed
+workspace-access denial. The normal `TenantDatabaseRoutingMiddleware` is registered after
+`TenantMiddleware`, so the first dashboard request and every later tenant request use the assigned
+database and never fall back to the shared store.
+
 For an already-Active Gym whose owner membership was left in
 `PendingPlatformApproval` by an older release, the issuer performs a narrow, idempotent repair
 during identity login: only that Gym owner's membership is promoted to `Active`. Pending client
