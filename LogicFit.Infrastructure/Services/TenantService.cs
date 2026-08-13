@@ -24,6 +24,8 @@ public class TenantService : ITenantService
         return Task.CompletedTask;
     }
 
+    public void ClearTenant() => _currentTenantId = null;
+
     public async Task SetTenantBySubdomainAsync(string subdomain)
     {
         using var scope = _serviceProvider.CreateScope();

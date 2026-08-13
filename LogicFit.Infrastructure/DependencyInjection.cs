@@ -91,6 +91,7 @@ public static class DependencyInjection
         services.AddSingleton<IConnectionStringProtector, DataProtectionConnectionStringProtector>();
         services.AddScoped<ITenantDatabaseMappingReader, PlatformTenantDatabaseMappingReader>();
         services.AddScoped<ITenantDatabaseResolver, TenantDatabaseResolver>();
+        services.AddScoped<IWorkspaceDatabaseScope, WorkspaceDatabaseScope>();
         services.AddOptions<StartupDatabaseMigrationOptions>()
             .Bind(configuration.GetSection(StartupDatabaseMigrationOptions.SectionName))
             .Validate(
