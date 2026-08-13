@@ -68,7 +68,17 @@ public sealed class GetPlatformApplicationsQueryHandler
                 x.UpdatedAt,
                 x.CreatedAt))
             .ToListAsync(cancellationToken);
-        var paymentsByApplication = payments.ToDictionary(x => x.ApplicationId);
+        // A resubmission or a legacy repair can leave more than one payment row for the same
+        // application. The screen must remain readable; use the newest payment deterministically
+        // instead of allowing ToDictionary to turn historical data into a 500 response.
+        var paymentsByApplication = payments
+            .GroupBy(x => x.ApplicationId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)
+                    .ThenByDescending(x => x.CreatedAt)
+                    .First());
 
         var tenants = await _context.Tenants.IgnoreQueryFilters().AsNoTracking()
             .Where(x => workspaceIds.Contains(x.Id))

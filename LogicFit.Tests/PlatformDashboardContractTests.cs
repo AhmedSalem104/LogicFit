@@ -51,6 +51,77 @@ public sealed class PlatformDashboardContractTests
     }
 
     [Fact]
+    public void Tenant_list_uses_a_separate_unfiltered_member_count_query()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..",
+            "LogicFit.Application",
+            "Features",
+            "Platform",
+            "Tenants",
+            "Queries",
+            "GetPlatformTenants",
+            "GetPlatformTenantsQueryHandler.cs"));
+
+        Assert.Contains("var tenantRows", source);
+        Assert.Contains("IgnoreQueryFilters()", source);
+        Assert.Contains("GroupBy(u => u.TenantId)", source);
+        Assert.DoesNotContain("MembersCount = _context.Users", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Dashboard_tenant_summary_uses_a_separate_unfiltered_member_count_query()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..",
+            "LogicFit.API",
+            "Features",
+            "Platform",
+            "Dashboard",
+            "PlatformDashboardController.cs"));
+
+        Assert.Contains("var paged", source, StringComparison.Ordinal);
+        Assert.Contains("GroupBy(user => user.TenantId)", source, StringComparison.Ordinal);
+        Assert.Contains("IgnoreQueryFilters()", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("MembersCount = context.Users", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Workspace_application_list_chooses_the_latest_duplicate_payment_row()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..",
+            "LogicFit.Application",
+            "Features",
+            "WorkspaceApplications",
+            "Queries",
+            "GetPlatformApplications",
+            "GetPlatformApplicationsQueryHandler.cs"));
+
+        Assert.Contains("GroupBy(x => x.ApplicationId)", source, StringComparison.Ordinal);
+        Assert.Contains("OrderByDescending(x => x.UpdatedAt ?? x.CreatedAt)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("var paymentsByApplication = payments.ToDictionary", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Database_resource_list_ignores_legacy_null_backup_resource_ids()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..",
+            "LogicFit.API",
+            "Features",
+            "Platform",
+            "DatabaseResources",
+            "PlatformDatabaseResourcesController.cs"));
+
+        Assert.Contains("x.DatabaseResourceId.HasValue && resourceIds.Contains(x.DatabaseResourceId.Value)", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Version_contract_truncates_build_sha_and_uses_explicit_api_contract_version()
     {
         var configuration = new ConfigurationBuilder()

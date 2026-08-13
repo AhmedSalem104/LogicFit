@@ -79,7 +79,7 @@ public sealed class PlatformDatabaseResourcesController(
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
         var backups = await context.DatabaseBackups.AsNoTracking().IgnoreQueryFilters()
-            .Where(x => resourceIds.Contains(x.DatabaseResourceId!.Value))
+            .Where(x => x.DatabaseResourceId.HasValue && resourceIds.Contains(x.DatabaseResourceId.Value))
             .OrderByDescending(x => x.CompletedAtUtc ?? x.StartedAtUtc)
             .ToListAsync(cancellationToken);
 
@@ -118,10 +118,10 @@ public sealed class PlatformDatabaseResourcesController(
         CancellationToken cancellationToken)
     {
         var databaseName = request.DatabaseName?.Trim();
-        if (!TryNormalizeConnection(request.ConnectionString, databaseName, out var normalized, out var validationError))
+        if (!TryNormalizeConnection(request.ConnectionString, databaseName, out var normalized, out var resolvedDatabaseName, out var validationError))
             return BadRequest(new { errorCode = "DATABASE_CONNECTION_INVALID", message = validationError });
 
-        var result = await TestSqlConnectionAsync(normalized, databaseName!, cancellationToken);
+        var result = await TestSqlConnectionAsync(normalized, resolvedDatabaseName, cancellationToken);
         return result.Succeeded ? Ok(result) : UnprocessableEntity(result);
     }
 
@@ -132,12 +132,13 @@ public sealed class PlatformDatabaseResourcesController(
     {
         var provider = string.IsNullOrWhiteSpace(request.Provider) ? "ManualMonster" : request.Provider.Trim();
         var databaseName = request.DatabaseName?.Trim();
-        if (string.IsNullOrWhiteSpace(databaseName) || string.IsNullOrWhiteSpace(request.ConnectionString))
-            return BadRequest(new { errorCode = "DATABASE_RESOURCE_FIELDS_REQUIRED", message = "Provider, database name and connection string are required." });
+        if (string.IsNullOrWhiteSpace(request.ConnectionString))
+            return BadRequest(new { errorCode = "DATABASE_RESOURCE_FIELDS_REQUIRED", message = "A connection string is required." });
 
-        if (!TryNormalizeConnection(request.ConnectionString, databaseName, out var normalized, out var validationError))
+        if (!TryNormalizeConnection(request.ConnectionString, databaseName, out var normalized, out var resolvedDatabaseName, out var validationError))
             return BadRequest(new { errorCode = "DATABASE_CONNECTION_INVALID", message = validationError });
 
+        databaseName = resolvedDatabaseName;
         var test = await TestSqlConnectionAsync(normalized, databaseName, cancellationToken);
         if (!test.Succeeded)
             return UnprocessableEntity(test);
@@ -190,7 +191,7 @@ public sealed class PlatformDatabaseResourcesController(
         DatabaseConnectionTestDto? test = null;
         if (connectionChanged)
         {
-            if (!TryNormalizeConnection(request.ConnectionString!, databaseName, out normalized, out var validationError))
+            if (!TryNormalizeConnection(request.ConnectionString!, databaseName, out normalized, out _, out var validationError))
                 return BadRequest(new { errorCode = "DATABASE_CONNECTION_INVALID", message = validationError });
             test = await TestSqlConnectionAsync(normalized, databaseName, cancellationToken);
             if (!test.Succeeded) return UnprocessableEntity(test);
@@ -250,7 +251,7 @@ public sealed class PlatformDatabaseResourcesController(
                 message = "An allocated resource must have an active workspace mapping, while an unallocated resource must be Available, Failed, or Disabled before repair."
             });
 
-        if (!TryNormalizeConnection(request.ConnectionString, resource.DatabaseName, out var normalized, out var validationError))
+        if (!TryNormalizeConnection(request.ConnectionString, resource.DatabaseName, out var normalized, out _, out var validationError))
         {
             await TryAuditRepairAsync(id, resource.DatabaseName, false, "DATABASE_CONNECTION_INVALID", cancellationToken);
             return BadRequest(new { errorCode = "DATABASE_CONNECTION_INVALID", message = validationError });
@@ -525,18 +526,19 @@ public sealed class PlatformDatabaseResourcesController(
         }
     }
 
-    private static bool TryNormalizeConnection(string? connectionString, string? expectedDatabaseName, out string normalized, out string error)
+    private static bool TryNormalizeConnection(
+        string? connectionString,
+        string? expectedDatabaseName,
+        out string normalized,
+        out string resolvedDatabaseName,
+        out string error)
     {
         normalized = string.Empty;
+        resolvedDatabaseName = string.Empty;
         error = string.Empty;
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             error = "A connection string is required.";
-            return false;
-        }
-        if (string.IsNullOrWhiteSpace(expectedDatabaseName))
-        {
-            error = "A database name is required.";
             return false;
         }
         try
@@ -553,11 +555,17 @@ public sealed class PlatformDatabaseResourcesController(
                 error = "The connection string does not contain an initial catalog.";
                 return false;
             }
-            if (!string.Equals(builder.InitialCatalog.Trim(), expectedDatabaseName.Trim(), StringComparison.OrdinalIgnoreCase))
+            var connectionDatabaseName = builder.InitialCatalog.Trim();
+            if (!string.IsNullOrWhiteSpace(expectedDatabaseName) &&
+                !string.Equals(connectionDatabaseName, expectedDatabaseName.Trim(), StringComparison.OrdinalIgnoreCase))
             {
                 error = "The database name must match the connection string initial catalog.";
                 return false;
             }
+            // The initial catalog is the authoritative identity when the caller omits the
+            // optional display field. A non-empty caller value is still checked above, so a
+            // typo can never silently point a resource at another database.
+            resolvedDatabaseName = connectionDatabaseName;
             normalized = builder.ConnectionString;
             return true;
         }

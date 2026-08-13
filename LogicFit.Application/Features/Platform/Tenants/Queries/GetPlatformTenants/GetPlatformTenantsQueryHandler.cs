@@ -39,7 +39,7 @@ public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenants
 
         var (page, pageSize) = PageRequest.Normalize(request.Page, request.PageSize);
         var totalCount = await query.CountAsync(cancellationToken);
-        var items = await query
+        var tenantRows = await query
             .OrderByDescending(t => t.CreatedAt)
             .Select(t => new PlatformTenantDto
             {
@@ -51,16 +51,30 @@ public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenants
                 PhoneNumber = t.PhoneNumber,
                 IsDeleted = t.IsDeleted,
                 DeletedAt = t.DeletedAt,
-                // Platform queries run with CurrentTenantId == null, so the tenant query filter is
-                // already bypassed; an explicit IgnoreQueryFilters here would not translate in a subquery.
-                MembersCount = _context.Users
-                    .Count(u => u.TenantId == t.Id && u.Role == UserRole.Client && !u.IsDeleted),
                 CreatedAt = t.CreatedAt
             })
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        return PagedResult<PlatformTenantDto>.Create(items, totalCount, page, pageSize);
+        // Keep the cross-tenant member count as a separate query. A correlated count against the
+        // tenant-filtered Users set can fail translation on some production EF/SQL combinations,
+        // turning a harmless list request into a 500. The platform view must explicitly bypass
+        // tenant filters for both sides of this read.
+        var tenantIds = tenantRows.Select(t => t.Id).ToArray();
+        var memberCounts = tenantIds.Length == 0
+            ? new Dictionary<Guid, int>()
+            : await _context.Users
+                .AsNoTracking()
+                .IgnoreQueryFilters()
+                .Where(u => tenantIds.Contains(u.TenantId) && u.Role == UserRole.Client && !u.IsDeleted)
+                .GroupBy(u => u.TenantId)
+                .Select(group => new { TenantId = group.Key, Count = group.Count() })
+                .ToDictionaryAsync(x => x.TenantId, x => x.Count, cancellationToken);
+
+        foreach (var tenant in tenantRows)
+            tenant.MembersCount = memberCounts.GetValueOrDefault(tenant.Id);
+
+        return PagedResult<PlatformTenantDto>.Create(tenantRows, totalCount, page, pageSize);
     }
 }
