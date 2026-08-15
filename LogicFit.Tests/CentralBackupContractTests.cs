@@ -29,10 +29,15 @@ public sealed class CentralBackupContractTests
     {
         var artifact = new BackupArtifactDto(
             Guid.NewGuid(), null, "Completed", 42, null, DateTimeOffset.UtcNow,
-            "platform-20260805-010203.bacpac", "ABC123", null);
+            "platform-20260805-010203.bacpac", "ABC123", null,
+            "Air Gym", "airgym", "Gym");
 
         Assert.Equal("ABC123", artifact.Sha256);
+        Assert.Equal("Air Gym", artifact.TenantName);
+        Assert.Equal("airgym", artifact.WorkspaceIdentifier);
+        Assert.Equal("Gym", artifact.WorkspaceType);
         Assert.DoesNotContain("Connection", string.Join(',', artifact.GetType().GetProperties().Select(x => x.Name)));
+        Assert.DoesNotContain("DatabaseName", string.Join(',', artifact.GetType().GetProperties().Select(x => x.Name)));
     }
 
     [Fact]

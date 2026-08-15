@@ -135,7 +135,7 @@ public sealed class DatabaseBackupService(
 
         var existing = await db.BackupBatches.AsNoTracking().Include(x => x.Artifacts)
             .SingleOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
-        if (existing is not null) return ToDto(existing);
+        if (existing is not null) return await ToDtoAsync(existing, cancellationToken);
 
         if (!await ProcessLock.WaitAsync(0, cancellationToken))
             throw new InvalidOperationException("A backup batch is already running.");
@@ -146,7 +146,7 @@ public sealed class DatabaseBackupService(
             distributedLockConnection = await AcquireDistributedLockAsync(cancellationToken);
             existing = await db.BackupBatches.Include(x => x.Artifacts)
                 .SingleOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
-            if (existing is not null) return ToDto(existing);
+            if (existing is not null) return await ToDtoAsync(existing, cancellationToken);
 
             var targets = await ResolveTargetsAsync(request, cancellationToken);
             if (targets.Count == 0)
@@ -206,14 +206,14 @@ public sealed class DatabaseBackupService(
             SecurityAuditLog.Add(db, currentUser, clock, "PlatformBackupBatchFinished",
                 batch.Status == BackupBatchStatus.Completed, batch.Id);
             await db.SaveChangesAsync(cancellationToken);
-            return ToDto(batch);
+            return await ToDtoAsync(batch, cancellationToken);
         }
         catch (DbUpdateException)
         {
             if (!await IsDuplicateIdempotencyAsync(idempotencyKey, cancellationToken)) throw;
             var duplicate = await db.BackupBatches.AsNoTracking().Include(x => x.Artifacts)
                 .SingleAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
-            return ToDto(duplicate);
+            return await ToDtoAsync(duplicate, cancellationToken);
         }
         finally
         {
@@ -225,8 +225,20 @@ public sealed class DatabaseBackupService(
     public IReadOnlyList<BackupBatchDto> ListBatches(int take = 50)
     {
         take = Math.Clamp(take, 1, 100);
-        return db.BackupBatches.AsNoTracking().Include(x => x.Artifacts)
-            .OrderByDescending(x => x.StartedAtUtc).Take(take).AsEnumerable().Select(ToDto).ToList();
+        var batches = db.BackupBatches.AsNoTracking().Include(x => x.Artifacts)
+            .OrderByDescending(x => x.StartedAtUtc).Take(take).ToList();
+        var tenantIds = batches.SelectMany(x => x.Artifacts)
+            .Where(x => x.TenantId.HasValue)
+            .Select(x => x.TenantId!.Value)
+            .Distinct()
+            .ToArray();
+        var metadata = tenantIds.Length == 0
+            ? new Dictionary<Guid, BackupTenantMetadata>()
+            : db.Tenants.AsNoTracking().IgnoreQueryFilters()
+                .Where(x => tenantIds.Contains(x.Id))
+                .Select(x => new BackupTenantMetadata(x.Id, x.Name, x.Subdomain, x.WorkspaceType.ToString()))
+                .ToDictionary(x => x.TenantId);
+        return batches.Select(x => ToDto(x, metadata)).ToList();
     }
 
     public async Task<BackupBatchDto> RetryBatchAsync(Guid batchId, CancellationToken cancellationToken)
@@ -483,7 +495,24 @@ public sealed class DatabaseBackupService(
         string.Equals(fileName, Path.GetFileName(fileName), StringComparison.Ordinal) &&
         BackupFileNamePattern.IsMatch(fileName);
 
-    private static BackupBatchDto ToDto(BackupBatch batch) => new(
+    private async Task<BackupBatchDto> ToDtoAsync(BackupBatch batch, CancellationToken cancellationToken)
+    {
+        var tenantIds = batch.Artifacts.Where(x => x.TenantId.HasValue)
+            .Select(x => x.TenantId!.Value)
+            .Distinct()
+            .ToArray();
+        var metadata = tenantIds.Length == 0
+            ? new Dictionary<Guid, BackupTenantMetadata>()
+            : await db.Tenants.AsNoTracking().IgnoreQueryFilters()
+                .Where(x => tenantIds.Contains(x.Id))
+                .Select(x => new BackupTenantMetadata(x.Id, x.Name, x.Subdomain, x.WorkspaceType.ToString()))
+                .ToDictionaryAsync(x => x.TenantId, cancellationToken);
+        return ToDto(batch, metadata);
+    }
+
+    private static BackupBatchDto ToDto(
+        BackupBatch batch,
+        IReadOnlyDictionary<Guid, BackupTenantMetadata> metadata) => new(
         batch.Id,
         batch.Scope,
         batch.Status.ToString(),
@@ -499,12 +528,22 @@ public sealed class DatabaseBackupService(
             ToOffset(x.CompletedAtUtc),
             x.StorageKey,
             x.Sha256,
-            x.ErrorMessage)).ToList());
+            x.ErrorMessage,
+            x.TenantId is { } tenantId && metadata.TryGetValue(tenantId, out var tenant)
+                ? tenant.Name
+                : null,
+            x.TenantId is { } identifierTenantId && metadata.TryGetValue(identifierTenantId, out var identifier)
+                ? identifier.Subdomain
+                : null,
+            x.TenantId is { } typeTenantId && metadata.TryGetValue(typeTenantId, out var type)
+                ? type.WorkspaceType
+                : null)).ToList());
 
     private static DateTimeOffset? ToOffset(DateTime? value) =>
         value.HasValue ? new DateTimeOffset(DateTime.SpecifyKind(value.Value, DateTimeKind.Utc)) : null;
 
     private sealed record BackupTarget(Guid? TenantId, Guid? DatabaseResourceId, string DatabaseName, string ConnectionString);
+    private sealed record BackupTenantMetadata(Guid TenantId, string Name, string? Subdomain, string WorkspaceType);
     private sealed record BackupSettings(string StorageDirectory, int RetentionDays, TimeSpan RunAtUtc);
     private sealed record ExportResult(Guid ArtifactId, DatabaseBackupStatus Status, string? StorageKey, long SizeBytes,
         string? Sha256, DateTime? StartedAtUtc, DateTime? CompletedAtUtc, string? ErrorMessage);

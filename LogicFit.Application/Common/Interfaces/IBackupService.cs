@@ -30,7 +30,10 @@ public sealed record BackupArtifactDto(
     DateTimeOffset? CompletedAtUtc,
     string? StorageKey,
     string? Sha256,
-    string? ErrorCode);
+    string? ErrorCode,
+    string? TenantName = null,
+    string? WorkspaceIdentifier = null,
+    string? WorkspaceType = null);
 
 public sealed record BackupBatchDto(
     Guid Id,
