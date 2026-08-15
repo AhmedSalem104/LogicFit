@@ -46,6 +46,7 @@ public class GetPlatformTenantsQueryHandler : IRequestHandler<GetPlatformTenants
                 Id = t.Id,
                 Name = t.Name,
                 Subdomain = t.Subdomain,
+                WorkspaceType = t.WorkspaceType,
                 Status = t.Status,
                 Email = t.Email,
                 PhoneNumber = t.PhoneNumber,

@@ -17,6 +17,13 @@ Supported scopes are `Platform`, `SelectedTenants`, `AllGyms`, `AllFreelance`, `
 also produces a JSON manifest containing safe metadata and SHA-256 checksums.  Connection strings,
 passwords, absolute paths, and file contents are never returned by the API or written to logs.
 
+The operator UI uses `SelectedTenants` for a single-workspace backup. The request contains exactly
+one tenant identifier after the operator selects a Gym or FreelanceCoach; the server still resolves
+the active mapping and assigned resource before exporting. Batch artifact responses add only safe
+display metadata (`TenantName`, `WorkspaceIdentifier`, and `WorkspaceType`) so an operator can
+identify the exported workspace without seeing a database name or connection material. Platform
+artifacts keep these fields null.
+
 ## Reliability
 
 `BackupBatches` and `DatabaseBackups` are platform-owned records.  A unique idempotency key makes
