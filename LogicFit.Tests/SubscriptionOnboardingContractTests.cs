@@ -30,7 +30,6 @@ public sealed class SubscriptionOnboardingContractTests
         Assert.Contains("if (dbTransaction is not null)", subscription, StringComparison.Ordinal);
         Assert.Contains("RollbackAsync", subscription, StringComparison.Ordinal);
     }
-
     [Fact]
     public void New_client_onboarding_normalizes_optional_email_and_does_not_require_a_valid_seller_claim()
     {
