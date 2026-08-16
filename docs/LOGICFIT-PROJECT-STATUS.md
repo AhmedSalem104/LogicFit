@@ -636,4 +636,15 @@ fails startup if apply or post-apply verification fails.
 - This is a JSON validation/flow correction with no database migration. The matching Platform Admin
   screen initializes only valid fields and prevents a request with an invalid field name before the API
   call. This work is local/task-branch only until the required PR is reviewed, merged, released,
-  deployed, and health-verified.
+deployed, and health-verified.
+
+### 2026-08-16 — owner payment-proof completion from tracking (Issue #302 extension)
+
+- Added the tracking-token-protected `POST /api/workspace-applications/tracking/payment-proof`
+  route for Gym and FreelanceCoach owners whose application is awaiting additional information.
+- Uploaded receipts are stored privately as retained, versioned `PaymentProof` metadata with a
+  checksum and audit event; the browser never chooses a payment-request id or receives a storage
+  key.
+- Resubmission is blocked with `PAYMENT_PROOF_REQUIRED` when an editable workspace payment has no
+  current proof. Platform Admin continues to preview and approve payment separately from workspace
+  approval/provisioning.

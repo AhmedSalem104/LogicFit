@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-15 11:20 UTC`  |  Total endpoints: **396**
+Generated: `2026-08-16 12:31 UTC`  |  Total endpoints: **399**
 
 ## Contract rules
 
@@ -308,8 +308,20 @@ Generated: `2026-08-15 11:20 UTC`  |  Total endpoints: **396**
 #### `GET /api/platform/payment-requests/{id:guid}/proof` - `Proof`
 
 - **Access:** JWT + Policy: `Permissions.ManagePaymentRequests`
-- **Inputs:** Handler signature: `Guid id`
+- **Inputs:** Query `version`: `int?`<br>Handler signature: `Guid id, [FromQuery] int? version`
 - **Declared response:** Task<IActionResult>
+
+#### `POST /api/platform/payment-requests/{id:guid}/proof` - `UploadProof`
+
+- **Access:** JWT + Policy: `Permissions.ManagePaymentRequests`
+- **Inputs:** Handler signature: `Guid id, [FromForm(Name = "proof")] IFormFile? proof`
+- **Declared response:** typeof(PaymentRequestDto), StatusCodes.Status200OK
+
+#### `GET /api/platform/payment-requests/{id:guid}/proofs` - `ProofHistory`
+
+- **Access:** JWT + Policy: `Permissions.ManagePaymentRequests`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** typeof(IReadOnlyList<PaymentProofDto>), StatusCodes.Status200OK
 
 #### `POST /api/platform/payment-requests/{id:guid}/reject` - `Reject`
 
@@ -2470,6 +2482,12 @@ Generated: `2026-08-15 11:20 UTC`  |  Total endpoints: **396**
 - **Access:** Server default (not declared explicitly)
 - **Inputs:** Body `System`: `IReadOnlyDictionary<string,`<br>Handler signature: `[FromBody] IReadOnlyDictionary<string, System.Text.Json.JsonElement> fields`
 - **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status200OK
+
+#### `POST /api/workspace-applications/tracking/payment-proof` - `UploadTrackingPaymentProof`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Handler signature: `[FromForm(Name = "proof")] IFormFile? proof`
+- **Declared response:** typeof(ApplicationPaymentProofUploadedDto), StatusCodes.Status200OK
 
 #### `POST /api/workspace-applications/tracking/resubmit` - `Resubmit`
 

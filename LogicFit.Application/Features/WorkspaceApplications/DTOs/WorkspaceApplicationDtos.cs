@@ -65,6 +65,16 @@ public sealed class ApplicationTrackingStatusDto
     public IReadOnlyDictionary<string, JsonElement> EditableValues { get; init; } = new Dictionary<string, JsonElement>();
 }
 
+/// <summary>Safe result returned after an owner uploads a payment proof through a tracking session.</summary>
+public sealed class ApplicationPaymentProofUploadedDto
+{
+    public Guid ApplicationId { get; init; }
+    public int Version { get; init; }
+    public string OriginalFileName { get; init; } = string.Empty;
+    public string ContentType { get; init; } = string.Empty;
+    public long SizeBytes { get; init; }
+}
+
 /// <summary>One-time owner credential handoff returned only by an explicit platform create call.</summary>
 public sealed class OneTimeOwnerCredentialsDto
 {

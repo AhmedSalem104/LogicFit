@@ -35,6 +35,7 @@ public sealed class WorkspaceApplicationInformationContractTests
         Assert.Contains("\"WorkspaceName\"", fields, StringComparison.Ordinal);
         Assert.Contains("\"BrandName\"", fields, StringComparison.Ordinal);
         Assert.Contains("\"Bio\"", fields, StringComparison.Ordinal);
+        Assert.Contains("\"PaymentProof\"", fields, StringComparison.Ordinal);
         Assert.DoesNotContain("\"Address\"", fields, StringComparison.Ordinal);
     }
 

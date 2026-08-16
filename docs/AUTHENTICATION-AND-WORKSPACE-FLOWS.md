@@ -117,6 +117,13 @@ workspace-creation requests, Gym and FreelanceCoach use the shared payload white
 Platform Admin uses explicit `ManageTenants` and `ManagePaymentRequests` permissions to review,
 request information, approve/reject payment, approve/reject the application, and retry provisioning.
 
+For the review sequence, the operator stays in the workspace-application queue: open the protected
+payment proof, check the amount/reference/date, upload a replacement only when necessary, approve
+or reject the payment with a recorded decision, and only then approve the workspace to start
+provisioning. Proof uploads are versioned with SHA-256 and retained for audit; a replacement never
+removes an earlier version. The server blocks payment approval for a workspace application when
+there is no current proof, while legacy tenant billing retains its existing compatibility behavior.
+
 Application transitions are concurrency-safe and audited: Draft -> Submitted -> UnderReview ->
 NeedsMoreInformation -> Submitted, or UnderReview -> Approved/Rejected. Repeated submissions use
 revision history and idempotency keys.
@@ -158,6 +165,15 @@ The review list can filter the same application by `applicationType`, applicatio
 `paymentStatus`, `workspaceStatus`, `subscriptionStatus`, and `provisioningStatus`. Operators must
 read the next action from the lifecycle response rather than interpreting `Active` as proof that
 payment, database readiness, membership, and access are all complete.
+
+The platform payment contract used by that queue is:
+
+* `GET /api/platform/payment-requests/{id}/proof` — protected stream for the current proof;
+* `GET /api/platform/payment-requests/{id}/proof?version=N` — protected stream for a retained version;
+* `GET /api/platform/payment-requests/{id}/proofs` — safe metadata/history list without storage keys;
+* `POST /api/platform/payment-requests/{id}/proof` — multipart attachment/replacement while payment is pending;
+* `POST /api/platform/payment-requests/{id}/approve` — approves payment only after the current proof gate;
+* `POST /api/platform/payment-requests/{id}/reject` — records a separate payment decision and reason.
 
 The public tracking response `GET /api/workspace-applications/tracking` now carries the same safe
 lifecycle facts for the applicant: `workspaceType`, payment/workspace/subscription/database and
@@ -261,3 +277,18 @@ context is an invalid/stale session and must be reconciled through refresh or se
 identity login. Gym-only APIs remain protected by `WorkspaceCapabilities` and return
 `WORKSPACE_CAPABILITY_NOT_AVAILABLE` for a FreelanceCoach tenant. No API response contract was
 changed by this fix.
+
+## Workspace application payment-proof completion (Issue #302 extension)
+
+When Platform Admin returns a Gym or FreelanceCoach application for additional information and
+the payment proof is missing, the owner can upload the receipt from the tracking screen. The
+public route is `POST /api/workspace-applications/tracking/payment-proof` and accepts only a
+private JPG, PNG, or PDF up to 10 MB. It uses the short-lived
+`X-Application-Tracking-Token`; the client never supplies a payment-request id.
+
+The server resolves the application from the tracking session, verifies that the application is a
+workspace request in `NeedsMoreInformation` and that its payment is still editable, then stores a
+new versioned `PaymentProof` row with a SHA-256 checksum and audit event. Previous proof versions
+remain retained. Workspace resubmission fails closed with `PAYMENT_PROOF_REQUIRED` until a current
+proof exists. Payment approval by Platform Admin remains a separate action from workspace approval
+and provisioning.

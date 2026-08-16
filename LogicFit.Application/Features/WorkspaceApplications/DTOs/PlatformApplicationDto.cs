@@ -24,6 +24,8 @@ public sealed class PlatformApplicationDto
     public WorkspaceType? WorkspaceType { get; init; }
     public Guid? PaymentRequestId { get; init; }
     public PaymentRequestStatus? PaymentStatus { get; init; }
+    public bool HasPaymentProof { get; init; }
+    public int PaymentProofVersion { get; init; }
     public TenantStatus? WorkspaceStatus { get; init; }
     public TenantSubscriptionStatus? SubscriptionStatus { get; init; }
     public DatabaseResourceStatus? DatabaseStatus { get; init; }
