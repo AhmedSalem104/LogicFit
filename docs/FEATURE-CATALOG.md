@@ -64,7 +64,7 @@ membership and other workspace associations are revoked.
 | طلبات مساحات العمل | إنشاء ومراجعة وطلب معلومات ورفض واعتماد/تجهيز وإعادة محاولة لكل من `Gym` و`FreelanceCoach` مع حالات الدفع والمساحة وقاعدة البيانات والاشتراك والوصول | `LogicFit.API/Features/Platform/WorkspaceApplications`، `/api/platform/workspace-applications/*` | `ManageTenants` |
 | الخطط والميزات | الخطط، feature catalog، overrides، quotas، dependencies | `Features/Platform/Plans` و`FeatureCatalog`، `/api/platform/plans/*` و`/api/platform/features/*` | `ManagePlans` / `ManageFeatures` |
 | اشتراكات الـSaaS | العرض، الاستهلاك، lifecycle، التمديد ومعاينة الترقية | `Features/Platform/Subscriptions`، `/api/platform/subscriptions/*` | `ManageSubscriptions` |
-| الفوترة اليدوية | طرق الدفع، طلبات إثبات الدفع، الاعتماد/الرفض، فواتير المنصة | `PaymentMethods` و`PaymentRequests` و`Invoices`، `/api/platform/payment-*` و`/api/platform/invoices` | صلاحيات الفوترة المركزية |
+| الفوترة اليدوية | طرق الدفع، طلبات إثبات الدفع، معاينة محمية، سجل إصدارات دائم مع SHA-256، الاعتماد/الرفض، فواتير المنصة؛ لا يعتمد دفع مساحة عمل بلا إثبات حالي | `PaymentMethods` و`PaymentRequests` و`Invoices`، `/api/platform/payment-*` و`/api/platform/invoices` | صلاحيات الفوترة المركزية |
 | مسؤولو المنصة وRBAC | إنشاء/تعطيل مسؤول، أدوار المنصة وخريطة صلاحياتها | `Administrators` و`Authorization`، `/api/platform/administrators/*` و`/api/platform/roles/*` | `PlatformOwner` |
 | المراقبة والتدقيق | alerts، audit logs، Outbox/jobs مع تنسيق متعدد النسخ، نسخ BACPAC مستقلة للمنصة أو مساحة عمل واحدة أو نطاق جماعي، والتقارير | `Alerts`، `Audit`، `Operations`، `Backups`، `Reports` | أدوار تشغيل المنصة |
 | عقد تشغيل لوحة المنصة | ملخصات مراجعة الطلبات والدفع، سعة Pool، Provisioning، النسخ والاستعادة، وتشخيص إصدار الـAPI | `Features/Platform/Dashboard`، `DatabaseResources`، `Diagnostics`، `Operations`؛ `/api/platform/dashboard/*`، `/api/platform/database-resources`، `/api/platform/diagnostics/version`، `/api/platform/operations/provisioning` | `ManagePlatformReports` / `ManagePlatformBackups` |
@@ -93,6 +93,11 @@ membership and other workspace associations are revoked.
 كل بوابات الوصول. حجز الـDatabaseResource يتم ذريًا من الـPool، وتبقى connection material داخل
 الخادم، مع migrations و`CanConnect` وhealth check قبل إنشاء الـmapping. الطلبات التي تحتاج سعة أو
 إعادة محاولة لا تنشئ كيانات مكررة.
+
+إثبات الدفع جزء من السجل التشغيلي طويل الأجل: كل رفع ينشئ `PaymentProof` version جديدة مع اسم الملف
+والنوع والحجم و`SHA-256` ووقت الرفع، وتبقى النسخ السابقة محفوظة عند الاستبدال. مسارات المنصة
+المحمية تعرض metadata فقط في سجل التاريخ، وتسترجع الملف الحالي أو إصدارًا تاريخيًا دون كشف مفتاح
+التخزين؛ اعتماد الدفع منفصل عن اعتماد المساحة وبدء provisioning.
 
 ## تشغيل مساحة الجيم أو المدرب الحر
 

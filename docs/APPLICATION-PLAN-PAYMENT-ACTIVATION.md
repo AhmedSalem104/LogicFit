@@ -35,4 +35,19 @@ Existing tenant renewal/payment requests retain their legacy approval behavior f
 All payment and application transitions continue to use the existing concurrency columns and
 review permissions.
 
+## Payment-proof retention and platform review
+
+The platform review queue exposes the proof as a protected server stream; it never returns a
+connection string, storage key, or public upload URL. `POST
+/api/platform/payment-requests/{id}/proof` is the operator replacement/attachment endpoint for a
+pending workspace payment. It accepts only JPEG, PNG, or PDF up to 10 MiB, calculates SHA-256 on
+the server, and writes an immutable `PaymentProof` version plus the `PaymentRequest.ProofFileUrl`.
+
+Replacing a proof marks the previous row `IsCurrent=false` but does not delete its file or metadata.
+The complete retained metadata is available through `GET
+/api/platform/payment-requests/{id}/proofs`; a current or historical file is streamed through
+`GET /api/platform/payment-requests/{id}/proof` with an optional `?version=N`. Only the current
+version can satisfy the payment approval gate. A workspace payment cannot be approved without a
+current proof, and payment approval remains separate from workspace approval/provisioning.
+
 The migration is additive and review-only. It has not been applied to Production.

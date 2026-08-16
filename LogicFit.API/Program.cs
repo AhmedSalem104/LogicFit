@@ -252,7 +252,22 @@ if (!Directory.Exists(uploadsPath))
     Log.Information("Created uploads directory: {UploadsPath}", uploadsPath);
 }
 
-// Enable static files for file uploads
+// Payment proofs and uploaded documents are private. They remain retained on disk,
+// but can only be streamed by an authenticated feature endpoint. Do this before
+// UseStaticFiles so a direct /uploads/documents URL cannot bypass authorization.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/uploads/documents", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        await context.Response.CompleteAsync();
+        return;
+    }
+
+    await next();
+});
+
+// Enable static files for non-sensitive public assets.
 app.UseStaticFiles();
 
 app.UseCors("AppCors");
