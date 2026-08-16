@@ -31,6 +31,20 @@ public sealed class ResubmitApplicationCommandHandler
         if (!ApplicationRequestStateMachine.CanTransition(application.Status, ApplicationRequestStatus.Submitted))
             throw new ConflictException("This application cannot be resubmitted.");
 
+        if (application.ApplicationType is ApplicationType.GymWorkspaceCreation or ApplicationType.FreelanceWorkspaceCreation)
+        {
+            var payment = await _context.PaymentRequests
+                .Include(x => x.Proofs)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.ApplicationRequestId == application.Id && !x.IsDeleted, cancellationToken);
+            var hasProof = payment is not null &&
+                (!string.IsNullOrWhiteSpace(payment.ProofFileUrl) || payment.Proofs.Any(x => x.IsCurrent));
+            if (payment is not null &&
+                (payment.Status == PaymentRequestStatus.Draft || payment.Status == PaymentRequestStatus.Pending) &&
+                !hasProof)
+                throw new ConflictException("PAYMENT_PROOF_REQUIRED", "Upload a payment proof before resubmitting this workspace application.");
+        }
+
         var nextRevision = await _context.ApplicationRequestRevisions
             .Where(x => x.ApplicationRequestId == application.Id)
             .Select(x => (int?)x.RevisionNumber)

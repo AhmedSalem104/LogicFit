@@ -31,6 +31,8 @@ public sealed class UpdateApplicationRequestedFieldsCommandHandler
             throw new ConflictException("Only applications awaiting more information can be edited.");
 
         var requestedFields = GetApplicationTrackingStatusQueryHandler.ReadStringList(application.RequestedFieldsJson);
+        if (request.Fields.Keys.Any(key => key.Equals("PaymentProof", StringComparison.Ordinal)))
+            throw new ValidationException("PaymentProof", "Upload the payment proof through the payment-proof upload action.");
         if (request.Fields.Keys.Any(key => !requestedFields.Contains(key, StringComparer.Ordinal)))
             throw new ForbiddenException("Only fields explicitly requested by the platform can be edited.");
 

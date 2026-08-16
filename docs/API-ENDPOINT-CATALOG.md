@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-16 09:24 UTC`  |  Total endpoints: **398**
+Generated: `2026-08-16 12:31 UTC`  |  Total endpoints: **399**
 
 ## Contract rules
 
@@ -2482,6 +2482,12 @@ Generated: `2026-08-16 09:24 UTC`  |  Total endpoints: **398**
 - **Access:** Server default (not declared explicitly)
 - **Inputs:** Body `System`: `IReadOnlyDictionary<string,`<br>Handler signature: `[FromBody] IReadOnlyDictionary<string, System.Text.Json.JsonElement> fields`
 - **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status200OK
+
+#### `POST /api/workspace-applications/tracking/payment-proof` - `UploadTrackingPaymentProof`
+
+- **Access:** Server default (not declared explicitly)
+- **Inputs:** Handler signature: `[FromForm(Name = "proof")] IFormFile? proof`
+- **Declared response:** typeof(ApplicationPaymentProofUploadedDto), StatusCodes.Status200OK
 
 #### `POST /api/workspace-applications/tracking/resubmit` - `Resubmit`
 
