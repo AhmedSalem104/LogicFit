@@ -65,6 +65,17 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
 
         var amountPaid = request.AmountPaid ?? 0;
         var paymentMethod = request.PaymentMethod;
+        Guid? sellerUserId = Guid.TryParse(_currentUserService.UserId, out var sellerId)
+            ? sellerId
+            : null;
+        if (sellerUserId.HasValue && !await _context.Users.AnyAsync(
+                u => u.Id == sellerUserId.Value && u.TenantId == tenantId && !u.IsDeleted,
+                cancellationToken))
+        {
+            // A token can outlive a workspace membership migration. Do not turn a
+            // non-critical commission link into a foreign-key/HTTP 500 failure.
+            sellerUserId = null;
+        }
 
         var dbTransaction = request.UseExistingTransaction
             ? null
@@ -109,7 +120,7 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
                 StartDate = request.StartDate,
                 EndDate = request.StartDate.AddMonths(plan.DurationMonths),
                 Status = SubscriptionStatus.Active,
-                SalesCoachId = Guid.Parse(_currentUserService.UserId!),
+                SalesCoachId = sellerUserId,
                 PaymentMethod = paymentMethod,
                 TotalAmount = totalAmount,
                 AmountPaid = amountPaid,
@@ -120,7 +131,6 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
             _context.ClientSubscriptions.Add(subscription);
 
             // Accrue a sales commission for the selling staff/coach (staged on the same transaction).
-            Guid? sellerUserId = Guid.TryParse(_currentUserService.UserId, out var sellerId) ? sellerId : null;
             await _commissionService.AccrueAsync(
                 tenantId, sellerUserId, CommissionSourceType.SubscriptionSale, totalAmount, subscription.Id,
                 DateTime.UtcNow, $"Commission for subscription {subscription.Id}", cancellationToken);
