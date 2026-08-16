@@ -248,6 +248,12 @@ review، more information، provisioning، provisioning failed/retry، active ac
 expired، وقاعدة بيانات غير متاحة. يجب أن تكون `/health` HTTP 200 و`Healthy` بعد كل تعديل/نشر؛
 لا تُختبر هذه الرحلة بإنشاء Tenant أو Mapping في Production دون backup ونافذة تشغيل معتمدة.
 
+تتضمن مراجعة الدفع في الإصدار المتوافق فحص `GET /api/platform/payment-requests/{id}/proof` ثم
+سجل `.../{id}/proofs` للتأكد من حفظ الإصدار والـSHA-256، وتجربة `?version=N` عند وجود أكثر من
+إصدار. لا يُسمح بـ`approve` لمساحة عمل بلا إثبات حالي، بينما يبقى `approve-workspace` قرارًا
+مستقلًا يبدأ التجهيز بعد اعتماد الدفع. عند استبدال الملف يجب أن يبقى الإصدار السابق قابلًا
+للاسترجاع وألا يظهر storage key أو connection material في الاستجابة أو السجلات.
+
 ### Redis cache and distributed request controls (Issue #197)
 
 The tenant-access gate uses `IDistributedCache`. In non-production environments without Redis it
