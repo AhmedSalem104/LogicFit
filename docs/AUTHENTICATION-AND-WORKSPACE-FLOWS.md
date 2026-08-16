@@ -277,3 +277,18 @@ context is an invalid/stale session and must be reconciled through refresh or se
 identity login. Gym-only APIs remain protected by `WorkspaceCapabilities` and return
 `WORKSPACE_CAPABILITY_NOT_AVAILABLE` for a FreelanceCoach tenant. No API response contract was
 changed by this fix.
+
+## Workspace application payment-proof completion (Issue #302 extension)
+
+When Platform Admin returns a Gym or FreelanceCoach application for additional information and
+the payment proof is missing, the owner can upload the receipt from the tracking screen. The
+public route is `POST /api/workspace-applications/tracking/payment-proof` and accepts only a
+private JPG, PNG, or PDF up to 10 MB. It uses the short-lived
+`X-Application-Tracking-Token`; the client never supplies a payment-request id.
+
+The server resolves the application from the tracking session, verifies that the application is a
+workspace request in `NeedsMoreInformation` and that its payment is still editable, then stores a
+new versioned `PaymentProof` row with a SHA-256 checksum and audit event. Previous proof versions
+remain retained. Workspace resubmission fails closed with `PAYMENT_PROOF_REQUIRED` until a current
+proof exists. Payment approval by Platform Admin remains a separate action from workspace approval
+and provisioning.
