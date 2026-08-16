@@ -25,13 +25,15 @@ public sealed class PlatformDashboardContractTests
     }
 
     [Fact]
-    public void Database_resource_contract_does_not_expose_connection_metadata()
+    public void Database_resource_contract_exposes_safe_name_but_not_connection_material()
     {
         var propertyNames = typeof(PlatformDatabaseResourceDto).GetProperties()
             .Select(property => property.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        Assert.DoesNotContain("DatabaseName", propertyNames);
+        Assert.Contains("DatabaseName", propertyNames);
+        Assert.Contains("ServerHost", propertyNames);
+        Assert.Contains("LastConnectionErrorCode", propertyNames);
         Assert.DoesNotContain("ConnectionString", propertyNames);
         Assert.DoesNotContain("EncryptedConnectionString", propertyNames);
 
@@ -48,6 +50,23 @@ public sealed class PlatformDashboardContractTests
             .Cast<AuthorizeAttribute>();
 
         Assert.Contains(authorize, attribute => attribute.Policy == Permissions.ManagePlatformBackups);
+    }
+
+    [Fact]
+    public void Database_resource_console_exposes_guarded_operational_actions()
+    {
+        var methodNames = typeof(PlatformDatabaseResourcesController)
+            .GetMethods()
+            .Select(method => method.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
+        Assert.Contains("TestConnection", methodNames);
+        Assert.Contains("TestStoredConnection", methodNames);
+        Assert.Contains("RepairConnection", methodNames);
+        Assert.Contains("RunMigrations", methodNames);
+        Assert.Contains("CreateBackup", methodNames);
+        Assert.Contains("SetStatus", methodNames);
+        Assert.Contains("Delete", methodNames);
     }
 
     [Fact]

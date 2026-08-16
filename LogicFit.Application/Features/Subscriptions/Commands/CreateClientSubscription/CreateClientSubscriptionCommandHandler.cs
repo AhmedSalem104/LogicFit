@@ -66,64 +66,81 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
         var amountPaid = request.AmountPaid ?? 0;
         var paymentMethod = request.PaymentMethod;
 
-        await using var dbTransaction = await _context.BeginTransactionAsync(cancellationToken);
+        var dbTransaction = request.UseExistingTransaction
+            ? null
+            : await _context.BeginTransactionAsync(cancellationToken);
 
-        // Handle wallet payment
-        if (request.PayFromWallet)
+        try
         {
-            var walletPayAmount = amountPaid > 0 ? amountPaid : totalAmount;
-            var balanceAfter = await WalletBalanceOperations.ApplyAsync(
-                _context,
-                tenantId,
-                request.ClientId,
-                -walletPayAmount,
-                cancellationToken,
-                validationKey: "PayFromWallet");
-            amountPaid = walletPayAmount;
-            paymentMethod = Domain.Enums.PaymentMethod.Wallet;
-
-            // Create wallet transaction
-            var transaction = new WalletTransaction
+            // Handle wallet payment
+            if (request.PayFromWallet)
             {
+                var walletPayAmount = amountPaid > 0 ? amountPaid : totalAmount;
+                var balanceAfter = await WalletBalanceOperations.ApplyAsync(
+                    _context,
+                    tenantId,
+                    request.ClientId,
+                    -walletPayAmount,
+                    cancellationToken,
+                    validationKey: "PayFromWallet");
+                amountPaid = walletPayAmount;
+                paymentMethod = Domain.Enums.PaymentMethod.Wallet;
+
+                // Create wallet transaction
+                var transaction = new WalletTransaction
+                {
+                    TenantId = tenantId,
+                    UserId = request.ClientId,
+                    Type = TransactionType.Payment,
+                    Amount = walletPayAmount,
+                    BalanceAfter = balanceAfter,
+                    Description = $"Subscription payment - {plan.Name}",
+                    ReferenceType = "Subscription"
+                };
+                _context.WalletTransactions.Add(transaction);
+            }
+
+            var subscription = new ClientSubscription
+            {
+                Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                UserId = request.ClientId,
-                Type = TransactionType.Payment,
-                Amount = walletPayAmount,
-                BalanceAfter = balanceAfter,
-                Description = $"Subscription payment - {plan.Name}",
-                ReferenceType = "Subscription"
+                ClientId = request.ClientId,
+                PlanId = request.PlanId,
+                StartDate = request.StartDate,
+                EndDate = request.StartDate.AddMonths(plan.DurationMonths),
+                Status = SubscriptionStatus.Active,
+                SalesCoachId = Guid.Parse(_currentUserService.UserId!),
+                PaymentMethod = paymentMethod,
+                TotalAmount = totalAmount,
+                AmountPaid = amountPaid,
+                Discount = discount,
+                Notes = request.Notes
             };
-            _context.WalletTransactions.Add(transaction);
+
+            _context.ClientSubscriptions.Add(subscription);
+
+            // Accrue a sales commission for the selling staff/coach (staged on the same transaction).
+            Guid? sellerUserId = Guid.TryParse(_currentUserService.UserId, out var sellerId) ? sellerId : null;
+            await _commissionService.AccrueAsync(
+                tenantId, sellerUserId, CommissionSourceType.SubscriptionSale, totalAmount, subscription.Id,
+                DateTime.UtcNow, $"Commission for subscription {subscription.Id}", cancellationToken);
+
+            await _context.SaveChangesAsync(cancellationToken);
+            if (dbTransaction is not null)
+                await dbTransaction.CommitAsync(cancellationToken);
+
+            return subscription.Id;
         }
-
-        var subscription = new ClientSubscription
+        catch
         {
-            Id = Guid.NewGuid(),
-            TenantId = tenantId,
-            ClientId = request.ClientId,
-            PlanId = request.PlanId,
-            StartDate = request.StartDate,
-            EndDate = request.StartDate.AddMonths(plan.DurationMonths),
-            Status = SubscriptionStatus.Active,
-            SalesCoachId = Guid.Parse(_currentUserService.UserId!),
-            PaymentMethod = paymentMethod,
-            TotalAmount = totalAmount,
-            AmountPaid = amountPaid,
-            Discount = discount,
-            Notes = request.Notes
-        };
-
-        _context.ClientSubscriptions.Add(subscription);
-
-        // Accrue a sales commission for the selling staff/coach (staged on the same transaction).
-        Guid? sellerUserId = Guid.TryParse(_currentUserService.UserId, out var sellerId) ? sellerId : null;
-        await _commissionService.AccrueAsync(
-            tenantId, sellerUserId, CommissionSourceType.SubscriptionSale, totalAmount, subscription.Id,
-            DateTime.UtcNow, $"Commission for subscription {subscription.Id}", cancellationToken);
-
-        await _context.SaveChangesAsync(cancellationToken);
-        await dbTransaction.CommitAsync(cancellationToken);
-
-        return subscription.Id;
+            if (dbTransaction is not null)
+                await dbTransaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+        finally
+        {
+            if (dbTransaction is not null)
+                await dbTransaction.DisposeAsync();
+        }
     }
 }

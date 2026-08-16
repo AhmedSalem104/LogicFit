@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-16 12:31 UTC`  |  Total endpoints: **399**
+Generated: `2026-08-16 14:17 UTC`  |  Total endpoints: **406**
 
 ## Contract rules
 
@@ -138,8 +138,50 @@ Generated: `2026-08-16 12:31 UTC`  |  Total endpoints: **399**
 #### `POST /api/platform/database-resources` - `Register`
 
 - **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
-- **Inputs:** Body `request`: `RegisterDatabaseResourceRequest`<br>Handler signature: `[FromBody] RegisterDatabaseResourceRequest request, [FromServices] IConnectionStringProtector connectionStringProtector`
+- **Inputs:** Body `request`: `RegisterDatabaseResourceRequest`<br>Handler signature: `[FromBody] RegisterDatabaseResourceRequest request`
 - **Declared response:** typeof(PlatformDatabaseResourceDto), StatusCodes.Status201Created
+
+#### `DELETE /api/platform/database-resources/{id:guid}` - `Delete`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<IActionResult>
+
+#### `POST /api/platform/database-resources/{id:guid}/backup` - `CreateBackup`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<BackupBatchDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/migrations` - `RunMigrations`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<PlatformResourceOperationDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/repair-connection` - `RepairConnection`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `RepairConnectionRequest`<br>Handler signature: `Guid id, [FromBody] RepairConnectionRequest request`
+- **Declared response:** Task<ActionResult<PlatformResourceOperationDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/status` - `SetStatus`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `SetResourceStatusRequest`<br>Handler signature: `Guid id, [FromBody] SetResourceStatusRequest request`
+- **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
+
+#### `POST /api/platform/database-resources/{id:guid}/test-connection` - `TestStoredConnection`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<PlatformConnectionTestDto>>
+
+#### `POST /api/platform/database-resources/test-connection` - `TestConnection`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Inputs:** Body `request`: `TestConnectionRequest`<br>Handler signature: `[FromBody] TestConnectionRequest request`
+- **Declared response:** Task<ActionResult<PlatformConnectionTestDto>>
 
 ### PlatformDiagnostics
 

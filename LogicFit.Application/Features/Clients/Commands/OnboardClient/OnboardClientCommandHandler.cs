@@ -47,7 +47,8 @@ public sealed class OnboardClientCommandHandler : IRequestHandler<OnboardClientC
                     AmountPaid = request.Membership.AmountPaid,
                     Discount = request.Membership.Discount,
                     Notes = request.Membership.Notes,
-                    PayFromWallet = request.Membership.PayFromWallet
+                    PayFromWallet = request.Membership.PayFromWallet,
+                    UseExistingTransaction = true
                 }, cancellationToken);
 
                 if (request.Membership.IssueCard)

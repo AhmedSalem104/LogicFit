@@ -13,9 +13,28 @@ Issue: #174
 
 The Platform database now records pre-created customer databases independently from Workspace
 ids. `DatabaseResource` is the operator-managed pool row and `TenantDatabaseMapping` is the
-server-side assignment. The database name is never derived from `TenantId`, accepted from a
-frontend, or returned with an encrypted connection string. Platform DTOs may expose only the
-safe `HasProtectedConnection` Boolean; the protected value itself remains server-side.
+server-side assignment. The safe database name and optional server host/port are stored as
+operator metadata; they are never derived from `TenantId`, and are returned without any credential
+material. Platform DTOs expose diagnostics such as the last test time, duration, safe error code
+and user-facing reason. The encrypted connection string itself remains server-side.
+
+## Platform console operations
+
+`GET /api/platform/database-resources` returns the database name, provider, safe server metadata,
+workspace mapping, provisioning/backup summary, health timestamps and the last connection-test
+diagnostics. It never returns `ConnectionString` or `EncryptedConnectionString`.
+
+`POST /api/platform/database-resources/test-connection` tests a new value without persisting it;
+`POST /api/platform/database-resources/{id}/test-connection` tests the already protected value on
+the server. Registration and repair persist a sanitized result so a failed resource remains
+visible as `Faulted` with an actionable code such as `DATABASE_AUTHENTICATION_FAILED`,
+`DATABASE_NOT_FOUND`, `DATABASE_CONNECTION_TIMEOUT`, or `DATABASE_CONNECTION_REFUSED`.
+
+`DELETE /api/platform/database-resources/{id}` is a permanent metadata/credential deletion, not a
+drop of the external database. The server rejects it when the resource has an active tenant
+mapping, an active provisioning or restore job, a reservation, or any historical backup artifact.
+Every successful deletion is audited. The UI therefore displays a delete button only when the
+server reports `canDelete=true` and explains the blocking reason otherwise.
 
 ## Lifecycle
 
