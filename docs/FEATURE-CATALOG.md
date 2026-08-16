@@ -193,8 +193,9 @@ remain available when their existing permission and plan rules allow them.
 
 Gym-only controllers enforce the capability on the server; hiding a navigation item is not the
 security boundary. See [WORKSPACE-CAPABILITIES.md](WORKSPACE-CAPABILITIES.md) for the complete
-mapping and the `WORKSPACE_CAPABILITY_NOT_AVAILABLE` response contract. This implementation is
-task-branch only until review, merge, release, deployment, and health verification.
+mapping and the `WORKSPACE_CAPABILITY_NOT_AVAILABLE` response contract. The implementation is
+merged into `develop`; production release still requires the approved migration, deployment,
+and post-release health verification.
 
 ## Subscriber, membership, training and nutrition parity (Issue #313)
 
