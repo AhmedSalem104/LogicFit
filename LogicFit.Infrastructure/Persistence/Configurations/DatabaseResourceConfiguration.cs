@@ -13,8 +13,11 @@ public sealed class DatabaseResourceConfiguration : IEntityTypeConfiguration<Dat
         builder.Property(x => x.Provider).HasMaxLength(64).IsRequired();
         builder.Property(x => x.DatabaseName).HasMaxLength(256).IsRequired();
         builder.Property(x => x.ServerKey).HasMaxLength(256);
+        builder.Property(x => x.ServerHost).HasMaxLength(256);
         builder.Property(x => x.EncryptedConnectionString).HasMaxLength(4096);
         builder.Property(x => x.Status).IsRequired();
+        builder.Property(x => x.LastConnectionErrorCode).HasMaxLength(100);
+        builder.Property(x => x.LastConnectionErrorMessage).HasMaxLength(1000);
         builder.Property(x => x.SchemaVersion).HasMaxLength(64);
         builder.Property(x => x.LastError).HasMaxLength(2000);
         builder.Property(x => x.RowVersion).IsRowVersion().IsConcurrencyToken();
