@@ -62,6 +62,9 @@ membership and other workspace associations are revoked.
 | لوحة المتابعة | مؤشرات المنصة وقائمة المساحات | `Features/Platform/Dashboard`، `/api/platform/dashboard/*` | صلاحيات Platform المناسبة |
 | إدارة المساحات | إنشاء، قائمة، اعتماد، تعليق، تفعيل وأرشفة الجيم/المساحة؛ تفعيل عضوية مالك الجيم المنتظرة مع اعتماد المساحة | `Features/Platform/Tenants`، `/api/platform/tenants/*` | `ManageTenants` |
 | طلبات مساحات العمل | إنشاء ومراجعة وطلب معلومات ورفض واعتماد/تجهيز وإعادة محاولة لكل من `Gym` و`FreelanceCoach` مع حالات الدفع والمساحة وقاعدة البيانات والاشتراك والوصول | `LogicFit.API/Features/Platform/WorkspaceApplications`، `/api/platform/workspace-applications/*` | `ManageTenants` |
+
+طلب الاستكمال لمساحة Gym أو FreelanceCoach يستخدم حقول payload المشتركة المسموحة، بينما تظل طلبات
+العضوية مقصورة على `FullName`؛ الحقول غير المعتمدة مثل `Address` لا تُقبل من الخادم.
 | الخطط والميزات | الخطط، feature catalog، overrides، quotas، dependencies | `Features/Platform/Plans` و`FeatureCatalog`، `/api/platform/plans/*` و`/api/platform/features/*` | `ManagePlans` / `ManageFeatures` |
 | اشتراكات الـSaaS | العرض، الاستهلاك، lifecycle، التمديد ومعاينة الترقية | `Features/Platform/Subscriptions`، `/api/platform/subscriptions/*` | `ManageSubscriptions` |
 | الفوترة اليدوية | طرق الدفع، طلبات إثبات الدفع، الاعتماد/الرفض، فواتير المنصة | `PaymentMethods` و`PaymentRequests` و`Invoices`، `/api/platform/payment-*` و`/api/platform/invoices` | صلاحيات الفوترة المركزية |
