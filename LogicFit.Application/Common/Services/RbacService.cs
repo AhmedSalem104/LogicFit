@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -67,7 +68,23 @@ public class RbacService : IRbacService
 
         if (role == null)
         {
-            throw new InvalidOperationException($"System role '{systemRoleName}' is not seeded.");
+            // Client is a zero-permission system role. Some pre-RBAC tenant databases
+            // contain the operational tables but do not contain the reference role yet;
+            // create this safe role on demand so onboarding does not fail with HTTP 500.
+            // Permission-bearing roles remain a startup/provisioning seed responsibility.
+            if (!string.Equals(systemRoleName, SystemRoles.Client, StringComparison.Ordinal))
+                throw new InvalidOperationException($"System role '{systemRoleName}' is not seeded.");
+
+            role = new Role
+            {
+                TenantId = null,
+                Name = SystemRoles.Client,
+                NameAr = "عميل",
+                NormalizedName = SystemRoles.Client.ToUpperInvariant(),
+                Description = "System role: Client",
+                IsSystemRole = true
+            };
+            _context.AppRoles.Add(role);
         }
 
         var alreadyAssigned = await _context.UserRoleAssignments

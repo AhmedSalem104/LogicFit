@@ -30,13 +30,25 @@ public class CreateClientCommandHandler : IRequestHandler<CreateClientCommand, G
     public async Task<Guid> Handle(CreateClientCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
+        var phoneNumber = request.PhoneNumber.Trim();
+        var email = string.IsNullOrWhiteSpace(request.Email)
+            ? $"{phoneNumber}@client.logicfit.com"
+            : request.Email.Trim();
 
         // Check if phone number already exists
         var existingUser = await _context.Users
-            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.PhoneNumber == request.PhoneNumber, cancellationToken);
+            .FirstOrDefaultAsync(u => u.TenantId == tenantId && u.PhoneNumber == phoneNumber, cancellationToken);
 
         if (existingUser != null)
             throw new ConflictException("Phone number already registered");
+
+        // Email is unique per tenant. The UI keeps email optional, so use the same
+        // deterministic fallback as the legacy flow instead of persisting an empty
+        // string that would collide on the second client without an email.
+        var existingEmail = await _context.Users
+            .AnyAsync(u => u.TenantId == tenantId && u.Email == email, cancellationToken);
+        if (existingEmail)
+            throw new ConflictException("Email already registered");
 
         // Auto-generate password if not provided (using phone number + random suffix)
         var password = request.Password ?? $"{request.PhoneNumber}@{Guid.NewGuid().ToString("N")[..6]}";
@@ -45,8 +57,8 @@ public class CreateClientCommandHandler : IRequestHandler<CreateClientCommand, G
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
-            PhoneNumber = request.PhoneNumber,
-            Email = request.Email ?? $"{request.PhoneNumber}@client.logicfit.com",
+            PhoneNumber = phoneNumber,
+            Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
             Role = UserRole.Client,
             IsActive = true,

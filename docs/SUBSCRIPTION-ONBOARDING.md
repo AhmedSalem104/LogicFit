@@ -20,3 +20,4 @@ This prevents the EF Core error caused by attempting to start a second transacti
 The handler validates that the selected plan and client belong to the current tenant, that the plan is active, and that the client has no overlapping active or suspended subscription. A phone conflict or business conflict returns a clear conflict response without creating duplicate data.
 
 The tenant is resolved from the authenticated context; client, plan, subscription, and card identifiers supplied by the browser are never treated as an authorization boundary.
+Optional client email is normalized to a deterministic tenant-local fallback when it is blank, and duplicate phone/email values return a conflict instead of a database 500. The onboarding path also tolerates a missing zero-permission Client RBAC seed and ignores an invalid/stale seller claim for the non-critical commission link.
