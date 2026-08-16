@@ -648,3 +648,21 @@ deployed, and health-verified.
 - Resubmission is blocked with `PAYMENT_PROOF_REQUIRED` when an editable workspace payment has no
   current proof. Platform Admin continues to preview and approve payment separately from workspace
   approval/provisioning.
+
+### 2026-08-16 — subscriber, training and nutrition parity (Issue #313)
+
+- The member lifecycle keeps identity separate from tenant membership. One member may have
+  multiple memberships, while training plans, nutrition plans, measurements, sessions, meal logs,
+  and daily check-ins remain preserved when a membership changes state.
+- Subscription money is represented by an immutable payment ledger with a server-generated receipt,
+  amount, date, and receiver. Create, payment, renew, and update flows validate dates, overlap,
+  overpayment, and frozen-subscription rules before writing.
+- Workout and nutrition builders accept complete nested aggregates atomically, carry notes and
+  metadata, require an optimistic `Version`, and soft-delete removed children so history remains
+  readable.
+- Meal logs retain food/meal/serving snapshots and calculate macros from the food serving size.
+  The client training overview combines plans, sessions, meal logs, measurements, and readiness
+  check-ins; a client has at most one check-in per day.
+- The branch adds shared and tenant parity migrations. Release requires backup, reviewed idempotent
+  SQL, schema verification, deployment, and a post-release health/smoke-test gate. This entry is an
+  implementation-branch record, not a production-deployment claim.

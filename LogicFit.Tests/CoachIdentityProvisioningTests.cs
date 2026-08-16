@@ -17,7 +17,7 @@ public sealed class CoachIdentityProvisioningTests
     public async Task Creating_a_coach_creates_identity_and_active_workspace_membership()
     {
         await using var fixture = await TestFixture.CreateAsync();
-        var gym = new Tenant
+        var gym = new LogicFit.Domain.Entities.Tenant
         {
             Name = "Coach Identity Gym",
             Subdomain = $"coach-identity-{Guid.NewGuid():N}",
@@ -77,7 +77,7 @@ public sealed class CoachIdentityProvisioningTests
     public async Task First_identity_login_migrates_an_existing_legacy_coach_after_password_match()
     {
         await using var fixture = await TestFixture.CreateAsync();
-        var gym = new Tenant
+        var gym = new LogicFit.Domain.Entities.Tenant
         {
             Name = "Legacy Coach Gym",
             Subdomain = $"legacy-coach-{Guid.NewGuid():N}",

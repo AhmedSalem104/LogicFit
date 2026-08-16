@@ -35,7 +35,7 @@ public static class DbContextOwnership
         typeof(FoodMicronutrient), typeof(Recipe), typeof(RecipeIngredient), typeof(DietPlan),
         typeof(DailyMeal), typeof(MealItem), typeof(MealLog), typeof(Muscle), typeof(Exercise),
         typeof(WorkoutProgram), typeof(ProgramRoutine), typeof(RoutineExercise),
-        typeof(WorkoutSession), typeof(SessionSet), typeof(BodyMeasurement),
+        typeof(WorkoutSession), typeof(SessionSet), typeof(BodyMeasurement), typeof(AthleteCheckin),
         typeof(SubscriptionPlan), typeof(ClientSubscription), typeof(SubscriptionFreeze),
         typeof(CoachClient), typeof(ExerciseSecondaryMuscle), typeof(Notification),
         typeof(Attendance), typeof(StaffAttendance), typeof(Appointment),

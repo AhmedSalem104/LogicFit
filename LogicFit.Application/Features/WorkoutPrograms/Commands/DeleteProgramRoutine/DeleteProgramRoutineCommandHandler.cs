@@ -34,11 +34,15 @@ public class DeleteProgramRoutineCommandHandler : IRequestHandler<DeleteProgramR
 
         await _accessService.EnsureCanManageRoutineAsync(request.Id, cancellationToken);
 
-        // Delete all exercises first
-        _context.RoutineExercises.RemoveRange(routine.Exercises);
-
-        // Then delete the routine
-        _context.ProgramRoutines.Remove(routine);
+        // Preserve the routine and its session history. The global soft-delete filter
+        // removes it from active plans while old sessions can still resolve the FK.
+        routine.IsDeleted = true;
+        routine.DeletedAt = DateTime.UtcNow;
+        foreach (var exercise in routine.Exercises)
+        {
+            exercise.IsDeleted = true;
+            exercise.DeletedAt = DateTime.UtcNow;
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
 

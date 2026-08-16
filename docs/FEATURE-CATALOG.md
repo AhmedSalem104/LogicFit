@@ -195,3 +195,20 @@ Gym-only controllers enforce the capability on the server; hiding a navigation i
 security boundary. See [WORKSPACE-CAPABILITIES.md](WORKSPACE-CAPABILITIES.md) for the complete
 mapping and the `WORKSPACE_CAPABILITY_NOT_AVAILABLE` response contract. This implementation is
 task-branch only until review, merge, release, deployment, and health verification.
+
+## Subscriber, membership, training and nutrition parity (Issue #313)
+
+| Capability | Backend contract | Business rule |
+|---|---|---|
+| Member identity and memberships | `Clients`, `ClientSubscriptions`, coach-client assignments | One member identity may have multiple memberships; tenant and ownership checks remain mandatory. |
+| Membership billing | Subscription create/update/renew/payment and `Payments` history | Payment rows are append-only, receipts are generated server-side, dates are inclusive, and duplicate/overlapping or overpaid operations are rejected. |
+| Training authoring | `WorkoutPrograms` aggregate create/update/duplicate/delete | Nested routines and exercises are saved atomically; `Version` prevents lost updates; removed children are soft-deleted. |
+| Nutrition authoring | `DietPlans` aggregate create/update/duplicate/delete | Nested meals and items are saved atomically; calculator metadata and notes are preserved; removed children remain available to history. |
+| Training execution | `WorkoutSessions`, `SessionSets`, client training overview | The client can execute only an active plan belonging to the active tenant and receives server-confirmed progress. |
+| Nutrition execution | `meal-logs`, nutrition summary, food/meal snapshots | Macros use the food's serving size and the consumed quantity; historical logs do not change when a plan child is removed. |
+| Measurements and readiness | `BodyMeasurements`, `clients/{id}/checkins` | Measurements are tenant-scoped; check-ins are unique per client/day and expose a calculated readiness score. |
+
+The implementation is tracked in Backend Issue #313 and Tenant UI Issue #102. The Platform Admin
+repository has no source or documentation impact from this feature. Generated endpoint details
+are in [API-ENDPOINT-CATALOG.md](API-ENDPOINT-CATALOG.md); the migration/release gate is documented
+in [OPERATIONS-AND-DEPLOYMENT.md](OPERATIONS-AND-DEPLOYMENT.md).

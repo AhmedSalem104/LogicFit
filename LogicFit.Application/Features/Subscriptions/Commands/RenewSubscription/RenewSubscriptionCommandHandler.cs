@@ -30,6 +30,7 @@ public class RenewSubscriptionCommandHandler : IRequestHandler<RenewSubscription
 
         // Load existing subscription
         var oldSubscription = await _context.ClientSubscriptions
+            .Include(s => s.Freezes)
             .FirstOrDefaultAsync(s => s.Id == request.SubscriptionId && s.TenantId == tenantId, cancellationToken);
 
         if (oldSubscription == null)
@@ -47,8 +48,11 @@ public class RenewSubscriptionCommandHandler : IRequestHandler<RenewSubscription
             throw new ValidationException("PlanId", "This plan is not active");
 
         // Determine start date
-        var startDate = request.StartDate
-            ?? (oldSubscription.EndDate > DateTime.UtcNow ? oldSubscription.EndDate : DateTime.UtcNow);
+        var today = DateTime.UtcNow.Date;
+        if (oldSubscription.Freezes.Any(f => !f.IsDeleted && f.IsActive && f.StartDate.Date <= today && f.EndDate.Date >= today))
+            throw new ConflictException("A subscription cannot be renewed while it is currently frozen. Resume it first.");
+        var startDate = (request.StartDate?.Date)
+            ?? (oldSubscription.EndDate.Date >= today ? oldSubscription.EndDate.Date.AddDays(1) : today);
 
         // Calculate amounts
         var discount = request.Discount ?? 0;
@@ -56,7 +60,12 @@ public class RenewSubscriptionCommandHandler : IRequestHandler<RenewSubscription
         if (totalAmount < 0) totalAmount = 0;
 
         var amountPaid = request.AmountPaid ?? 0;
+        if (amountPaid > totalAmount)
+            throw new ValidationException("AmountPaid", "Amount paid cannot exceed the renewal total after discount.");
         var paymentMethod = request.PaymentMethod;
+        Guid? sellerUserId = Guid.TryParse(_currentUserService.UserId, out var parsedSellerId) ? parsedSellerId : null;
+        if (sellerUserId.HasValue && !await _context.Users.AnyAsync(u => u.Id == sellerUserId.Value && u.TenantId == tenantId && !u.IsDeleted, cancellationToken))
+            sellerUserId = null;
 
         await using var dbTransaction = await _context.BeginTransactionAsync(cancellationToken);
 
@@ -101,10 +110,10 @@ public class RenewSubscriptionCommandHandler : IRequestHandler<RenewSubscription
             ClientId = oldSubscription.ClientId,
             PlanId = planId,
             StartDate = startDate,
-            EndDate = startDate.AddMonths(plan.DurationMonths),
+            EndDate = startDate.AddMonths(plan.DurationMonths).AddDays(-1),
             Status = SubscriptionStatus.Active,
-            SalesCoachId = Guid.Parse(_currentUserService.UserId!),
-            PaymentMethod = paymentMethod,
+            SalesCoachId = sellerUserId,
+            PaymentMethod = amountPaid > 0 ? paymentMethod ?? Domain.Enums.PaymentMethod.Cash : paymentMethod,
             TotalAmount = totalAmount,
             AmountPaid = amountPaid,
             Discount = discount,
@@ -113,6 +122,15 @@ public class RenewSubscriptionCommandHandler : IRequestHandler<RenewSubscription
         };
 
         _context.ClientSubscriptions.Add(newSubscription);
+        SubscriptionPaymentLedger.Append(
+            _context,
+            tenantId,
+            newSubscription,
+            amountPaid,
+            paymentMethod ?? Domain.Enums.PaymentMethod.Cash,
+            sellerUserId,
+            DateTime.UtcNow,
+            "Subscription renewed");
         await _context.SaveChangesAsync(cancellationToken);
         await dbTransaction.CommitAsync(cancellationToken);
 

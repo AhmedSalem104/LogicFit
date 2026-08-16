@@ -27,7 +27,8 @@ public class GetNutritionSummaryQueryHandler : IRequestHandler<GetNutritionSumma
     public async Task<NutritionSummaryDto> Handle(GetNutritionSummaryQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
-        var clientId = Guid.Parse(_currentUserService.UserId!);
+        if (!Guid.TryParse(_currentUserService.UserId, out var clientId))
+            throw new LogicFit.Domain.Exceptions.ForbiddenException("An authenticated client is required.");
 
         var day = (request.Date ?? _dateTimeService.UtcNow).Date;
         var next = day.AddDays(1);

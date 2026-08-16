@@ -14,6 +14,13 @@ public class BodyMeasurementConfiguration : IEntityTypeConfiguration<BodyMeasure
 
         builder.Property(e => e.WeightKg)
             .HasPrecision(10, 2);
+        builder.Property(e => e.HeightCm).HasPrecision(10, 2);
+        builder.Property(e => e.ChestCm).HasPrecision(10, 2);
+        builder.Property(e => e.WaistCm).HasPrecision(10, 2);
+        builder.Property(e => e.HipsCm).HasPrecision(10, 2);
+        builder.Property(e => e.ArmsCm).HasPrecision(10, 2);
+        builder.Property(e => e.ThighsCm).HasPrecision(10, 2);
+        builder.Property(e => e.Notes).HasMaxLength(1000);
 
         builder.Property(e => e.InbodyImageUrl)
             .HasMaxLength(500);

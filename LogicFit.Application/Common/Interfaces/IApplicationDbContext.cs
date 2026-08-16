@@ -42,6 +42,7 @@ public interface IApplicationDbContext
     DbSet<WorkoutSession> WorkoutSessions { get; }
     DbSet<SessionSet> SessionSets { get; }
     DbSet<BodyMeasurement> BodyMeasurements { get; }
+    DbSet<AthleteCheckin> AthleteCheckins { get; }
     DbSet<SubscriptionPlan> SubscriptionPlans { get; }
     DbSet<ClientSubscription> ClientSubscriptions { get; }
     DbSet<SubscriptionFreeze> SubscriptionFreezes { get; }

@@ -53,7 +53,7 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
         var hasOverlapping = await _context.ClientSubscriptions
             .AnyAsync(s => s.ClientId == request.ClientId && s.TenantId == tenantId
                 && (s.Status == SubscriptionStatus.Active || s.Status == SubscriptionStatus.Suspended)
-                && s.EndDate > DateTime.UtcNow, cancellationToken);
+                && s.EndDate.Date >= DateTime.UtcNow.Date, cancellationToken);
 
         if (hasOverlapping)
             throw new ConflictException("Client already has an active subscription");
@@ -64,6 +64,8 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
         if (totalAmount < 0) totalAmount = 0;
 
         var amountPaid = request.AmountPaid ?? 0;
+        if (amountPaid > totalAmount)
+            throw new ValidationException("AmountPaid", "Amount paid cannot exceed the subscription total after discount.");
         var paymentMethod = request.PaymentMethod;
         Guid? sellerUserId = Guid.TryParse(_currentUserService.UserId, out var sellerId)
             ? sellerId
@@ -118,10 +120,10 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
                 ClientId = request.ClientId,
                 PlanId = request.PlanId,
                 StartDate = request.StartDate,
-                EndDate = request.StartDate.AddMonths(plan.DurationMonths),
+                EndDate = request.StartDate.Date.AddMonths(plan.DurationMonths).AddDays(-1),
                 Status = SubscriptionStatus.Active,
                 SalesCoachId = sellerUserId,
-                PaymentMethod = paymentMethod,
+                PaymentMethod = amountPaid > 0 ? paymentMethod ?? Domain.Enums.PaymentMethod.Cash : paymentMethod,
                 TotalAmount = totalAmount,
                 AmountPaid = amountPaid,
                 Discount = discount,
@@ -129,6 +131,15 @@ public class CreateClientSubscriptionCommandHandler : IRequestHandler<CreateClie
             };
 
             _context.ClientSubscriptions.Add(subscription);
+            SubscriptionPaymentLedger.Append(
+                _context,
+                tenantId,
+                subscription,
+                amountPaid,
+                paymentMethod ?? Domain.Enums.PaymentMethod.Cash,
+                sellerUserId,
+                DateTime.UtcNow,
+                "Subscription created");
 
             // Accrue a sales commission for the selling staff/coach (staged on the same transaction).
             await _commissionService.AccrueAsync(

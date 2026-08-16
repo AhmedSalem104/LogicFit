@@ -12,11 +12,13 @@ public class AddSubscriptionPaymentCommandHandler : IRequestHandler<AddSubscript
 {
     private readonly IApplicationDbContext _context;
     private readonly ITenantService _tenantService;
+    private readonly ICurrentUserService _currentUserService;
 
-    public AddSubscriptionPaymentCommandHandler(IApplicationDbContext context, ITenantService tenantService)
+    public AddSubscriptionPaymentCommandHandler(IApplicationDbContext context, ITenantService tenantService, ICurrentUserService currentUserService)
     {
         _context = context;
         _tenantService = tenantService;
+        _currentUserService = currentUserService;
     }
 
     public async Task<bool> Handle(AddSubscriptionPaymentCommand request, CancellationToken cancellationToken)
@@ -62,6 +64,15 @@ public class AddSubscriptionPaymentCommandHandler : IRequestHandler<AddSubscript
 
         subscription.AmountPaid += request.Amount;
         subscription.PaymentMethod = request.PayFromWallet ? Domain.Enums.PaymentMethod.Wallet : request.PaymentMethod;
+        SubscriptionPaymentLedger.Append(
+            _context,
+            tenantId,
+            subscription,
+            request.Amount,
+            subscription.PaymentMethod ?? Domain.Enums.PaymentMethod.Cash,
+            Guid.TryParse(_currentUserService.UserId, out var receivedById) ? receivedById : null,
+            DateTime.UtcNow,
+            "Subscription payment");
 
         await _context.SaveChangesAsync(cancellationToken);
         await dbTransaction.CommitAsync(cancellationToken);

@@ -20,8 +20,8 @@ public class GetExpiringSubscriptionsQueryHandler : IRequestHandler<GetExpiringS
     public async Task<List<ClientSubscriptionDto>> Handle(GetExpiringSubscriptionsQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
-        var now = DateTime.UtcNow;
-        var expiryDate = now.AddDays(request.Days);
+        var today = DateTime.UtcNow.Date;
+        var expiryDate = today.AddDays(request.Days);
 
         return await _context.ClientSubscriptions
             .Include(s => s.Client).ThenInclude(c => c.Profile)
@@ -30,7 +30,7 @@ public class GetExpiringSubscriptionsQueryHandler : IRequestHandler<GetExpiringS
             .Where(s => s.TenantId == tenantId
                 && s.Status == SubscriptionStatus.Active
                 && s.EndDate <= expiryDate
-                && s.EndDate > now)
+                && s.EndDate.Date >= today)
             .OrderBy(s => s.EndDate)
             .Select(s => new ClientSubscriptionDto
             {

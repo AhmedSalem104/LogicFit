@@ -90,7 +90,7 @@ public sealed class PlatformOwnerBootstrapTests
             Role = UserRole.PlatformOwner,
             IsActive = true
         };
-        fixture.Db.Tenants.Add(new Tenant
+        fixture.Db.Tenants.Add(new LogicFit.Domain.Entities.Tenant
         {
             Id = PlatformConstants.PlatformTenantId,
             Name = "Platform",
@@ -192,7 +192,7 @@ public sealed class PlatformOwnerBootstrapTests
     {
         await using var fixture = await BootstrapFixture.CreateAsync(new PlatformOwnerBootstrapOptions());
         await fixture.Seeder.SeedAsync();
-        var tenant = new Tenant { Name = "RBAC tenant", Subdomain = $"rbac-{Guid.NewGuid():N}", Status = TenantStatus.Active };
+        var tenant = new LogicFit.Domain.Entities.Tenant { Name = "RBAC tenant", Subdomain = $"rbac-{Guid.NewGuid():N}", Status = TenantStatus.Active };
         var user = new User
         {
             TenantId = tenant.Id,

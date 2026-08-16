@@ -279,6 +279,86 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.ToTable("Appointments", (string)null);
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.AthleteCheckin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double?>("BodyweightKg")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("float(10)");
+
+                    b.Property<DateTime>("CheckinDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("Fatigue")
+                        .HasColumnType("int");
+
+                    b.Property<double?>("Hrv")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("float(8)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("Mood")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int?>("RestingHeartRate")
+                        .HasColumnType("int");
+
+                    b.Property<double?>("SleepHours")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("float(4)");
+
+                    b.Property<int?>("SleepQuality")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Soreness")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Stress")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("TenantId", "ClientId", "CheckinDate")
+                        .IsUnique();
+
+                    b.ToTable("AthleteCheckins", (string)null);
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.Attendance", b =>
                 {
                     b.Property<Guid>("Id")
@@ -465,6 +545,10 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<double?>("ArmsCm")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("float(10)");
+
                     b.Property<string>("BackPhotoUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -477,6 +561,10 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Property<double?>("BodyFatPercent")
                         .HasColumnType("float");
+
+                    b.Property<double?>("ChestCm")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("float(10)");
 
                     b.Property<Guid>("ClientId")
                         .HasColumnType("uniqueidentifier");
@@ -500,12 +588,24 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<double?>("HeightCm")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("float(10)");
+
+                    b.Property<double?>("HipsCm")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("float(10)");
+
                     b.Property<string>("InbodyImageUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<string>("SidePhotoUrl")
                         .HasMaxLength(500)
@@ -516,6 +616,10 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<double?>("ThighsCm")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("float(10)");
 
                     b.Property<double?>("TotalBodyWater")
                         .HasColumnType("float");
@@ -528,6 +632,10 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Property<int?>("VisceralFatLevel")
                         .HasColumnType("int");
+
+                    b.Property<double?>("WaistCm")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("float(10)");
 
                     b.Property<double>("WeightKg")
                         .HasPrecision(10, 2)
@@ -1578,6 +1686,10 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<int>("OrderIndex")
                         .HasColumnType("int");
 
@@ -1786,6 +1898,17 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("CalculatorMetadata")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<double?>("CalorieAdjustment")
+                        .HasColumnType("float");
+
+                    b.Property<string>("CalorieGoal")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<Guid>("ClientId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1821,6 +1944,10 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
 
@@ -1847,6 +1974,11 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Version")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
 
                     b.HasKey("Id");
 
@@ -3348,11 +3480,22 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Property<int>("FoodId")
                         .HasColumnType("int");
 
+                    b.Property<double?>("FoodServingSizeSnapshot")
+                        .HasColumnType("float");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<Guid>("MealId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ServingUnit")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -3404,11 +3547,38 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<double?>("FoodCaloriesSnapshot")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("FoodCarbsSnapshot")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("FoodFatsSnapshot")
+                        .HasColumnType("float");
+
+                    b.Property<string>("FoodNameSnapshot")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<double?>("FoodProteinSnapshot")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("FoodServingSizeSnapshot")
+                        .HasColumnType("float");
+
+                    b.Property<string>("FoodUnitSnapshot")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<Guid>("MealItemId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("MealNameSnapshot")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -4451,6 +4621,10 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<Guid>("ProgramId")
                         .HasColumnType("uniqueidentifier");
@@ -7147,6 +7321,10 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
 
@@ -7161,6 +7339,11 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Version")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
 
                     b.HasKey("Id");
 
@@ -7772,6 +7955,17 @@ namespace LogicFit.Infrastructure.Persistence.Migrations
                     b.Navigation("Client");
 
                     b.Navigation("Coach");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.AthleteCheckin", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.User", "Client")
+                        .WithMany()
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Client");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Attendance", b =>

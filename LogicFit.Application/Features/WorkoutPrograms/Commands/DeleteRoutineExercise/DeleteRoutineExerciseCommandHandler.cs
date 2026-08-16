@@ -33,7 +33,8 @@ public class DeleteRoutineExerciseCommandHandler : IRequestHandler<DeleteRoutine
 
         await _accessService.EnsureCanManageRoutineAsync(routineExercise.RoutineId, cancellationToken);
 
-        _context.RoutineExercises.Remove(routineExercise);
+        routineExercise.IsDeleted = true;
+        routineExercise.DeletedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
 
         return true;

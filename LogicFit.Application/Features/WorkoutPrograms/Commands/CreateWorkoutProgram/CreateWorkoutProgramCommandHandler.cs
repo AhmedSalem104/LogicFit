@@ -49,7 +49,8 @@ public class CreateWorkoutProgramCommandHandler : IRequestHandler<CreateWorkoutP
             DaysPerWeek = request.DaysPerWeek,
             Status = request.Status ?? PlanStatus.Active,
             StartDate = request.StartDate,
-            EndDate = request.EndDate
+            EndDate = request.EndDate,
+            Notes = request.Notes?.Trim()
         };
 
         foreach (var routineInput in request.Routines)
@@ -59,7 +60,8 @@ public class CreateWorkoutProgramCommandHandler : IRequestHandler<CreateWorkoutP
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
                 Name = routineInput.Name,
-                DayOfWeek = routineInput.DayOfWeek
+                DayOfWeek = routineInput.DayOfWeek,
+                Notes = routineInput.Notes?.Trim()
             };
 
             foreach (var exerciseInput in routineInput.Exercises)

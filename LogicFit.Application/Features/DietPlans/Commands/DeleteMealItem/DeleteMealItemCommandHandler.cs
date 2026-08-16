@@ -33,7 +33,8 @@ public class DeleteMealItemCommandHandler : IRequestHandler<DeleteMealItemComman
 
         await _accessService.EnsureCanManageMealAsync(item.MealId, cancellationToken);
 
-        _context.MealItems.Remove(item);
+        item.IsDeleted = true;
+        item.DeletedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
 
         return true;

@@ -11,6 +11,8 @@ public class MealItemConfiguration : IEntityTypeConfiguration<MealItem>
         builder.ToTable("MealItems");
 
         builder.HasKey(e => e.Id);
+        builder.Property(e => e.ServingUnit).HasMaxLength(40);
+        builder.Property(e => e.Notes).HasMaxLength(500);
 
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => e.MealId);

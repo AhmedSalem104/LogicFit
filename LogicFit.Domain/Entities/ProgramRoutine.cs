@@ -7,6 +7,7 @@ public class ProgramRoutine : TenantAuditableEntity
     public Guid ProgramId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int DayOfWeek { get; set; }
+    public string? Notes { get; set; }
 
     // Navigation Properties
     public virtual WorkoutProgram Program { get; set; } = null!;
