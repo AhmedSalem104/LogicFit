@@ -350,3 +350,28 @@ healthy response. Smoke-test workspace selection/refresh response capabilities, 
 request to every denied Gym endpoint (403 capability code), a Gym request to its allowed endpoints,
 and a cross-tenant request with a valid identity. The branch is not merged, deployed, or production
 verified by this document.
+
+## Subscriber, training and nutrition release gate (Issue #313)
+
+Before release, run the shared and tenant idempotent migration scripts for the parity migrations,
+review the SQL and backup/rollback plan, then verify schema history on a representative Gym and
+FreelanceCoach tenant. Do not mark a workspace active until its database is ready and health checks
+pass.
+
+Required smoke tests cover: member creation and multiple memberships; subscription create,
+payment, renew, freeze, cancel, and overpayment rejection; complete workout and nutrition
+aggregate create/update with stale-version rejection; soft deletion with historical session/meal
+log reads; serving-size macro calculation; measurement update; one-per-day check-in; and the
+combined client training overview. Repeat authorization tests with a different tenant, an
+unassigned coach, and a different client.
+
+The required local gates are:
+
+1. `dotnet build LogicFit.API/LogicFit.API.csproj --no-restore /m:1`.
+2. `dotnet test --no-restore /m:1`.
+3. Tenant Angular production build and unit tests.
+4. Generated API catalog review.
+5. Deployed `/health` HTTP 200 with body `Healthy`.
+
+This is an implementation branch until PR review, merge, migration application, deployment,
+and post-deployment smoke tests complete.

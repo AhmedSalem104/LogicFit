@@ -12,23 +12,27 @@ public static class MealLogMacros
 {
     public static MealLogDto ToDto(MealLog log)
     {
-        var food = log.AlternativeFood ?? log.MealItem.Food;
-        var factor = log.ConsumedQuantity / 100.0;
+        var food = log.AlternativeFood ?? log.MealItem?.Food;
+        var hasSnapshot = log.FoodCaloriesSnapshot.HasValue;
+        var servingSize = log.FoodServingSizeSnapshot is > 0
+            ? log.FoodServingSizeSnapshot.Value
+            : (food?.ServingSize is > 0 ? food.ServingSize.Value : 100d);
+        var factor = log.ConsumedQuantity / servingSize;
 
         return new MealLogDto
         {
             Id = log.Id,
             MealItemId = log.MealItemId,
-            MealName = log.MealItem.Meal.Name,
-            FoodName = food.Name,
-            Unit = food.ServingUnit,
+            MealName = log.MealNameSnapshot ?? log.MealItem?.Meal?.Name ?? string.Empty,
+            FoodName = log.FoodNameSnapshot ?? food?.Name ?? string.Empty,
+            Unit = log.FoodUnitSnapshot ?? food?.ServingUnit,
             IsAlternative = log.AlternativeFoodId.HasValue,
             ConsumedQuantity = log.ConsumedQuantity,
             ConsumedAt = log.ConsumedAt,
-            Calories = Math.Round(food.CaloriesPer100g * factor, 1),
-            Protein = Math.Round(food.ProteinPer100g * factor, 1),
-            Carbs = Math.Round(food.CarbsPer100g * factor, 1),
-            Fats = Math.Round(food.FatsPer100g * factor, 1)
+            Calories = Math.Round((hasSnapshot ? log.FoodCaloriesSnapshot!.Value : food?.CaloriesPer100g ?? 0) * factor, 1),
+            Protein = Math.Round((hasSnapshot ? log.FoodProteinSnapshot!.Value : food?.ProteinPer100g ?? 0) * factor, 1),
+            Carbs = Math.Round((hasSnapshot ? log.FoodCarbsSnapshot!.Value : food?.CarbsPer100g ?? 0) * factor, 1),
+            Fats = Math.Round((hasSnapshot ? log.FoodFatsSnapshot!.Value : food?.FatsPer100g ?? 0) * factor, 1)
         };
     }
 }

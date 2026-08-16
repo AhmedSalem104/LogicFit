@@ -23,6 +23,8 @@ public class DeleteWorkoutProgramCommandHandler : IRequestHandler<DeleteWorkoutP
         var tenantId = _tenantService.GetCurrentTenantId();
 
         var program = await _context.WorkoutPrograms
+            .Include(p => p.Routines)
+                .ThenInclude(r => r.Exercises)
             .FirstOrDefaultAsync(p => p.Id == request.Id && p.TenantId == tenantId, cancellationToken);
 
         if (program == null)
@@ -30,7 +32,18 @@ public class DeleteWorkoutProgramCommandHandler : IRequestHandler<DeleteWorkoutP
 
         await _accessService.EnsureCanManageWorkoutProgramAsync(request.Id, cancellationToken);
 
-        _context.WorkoutPrograms.Remove(program);
+        program.IsDeleted = true;
+        program.DeletedAt = DateTime.UtcNow;
+        foreach (var routine in program.Routines)
+        {
+            routine.IsDeleted = true;
+            routine.DeletedAt = DateTime.UtcNow;
+            foreach (var exercise in routine.Exercises)
+            {
+                exercise.IsDeleted = true;
+                exercise.DeletedAt = DateTime.UtcNow;
+            }
+        }
         await _context.SaveChangesAsync(cancellationToken);
 
         return true;

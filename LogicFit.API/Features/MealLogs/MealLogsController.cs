@@ -34,9 +34,9 @@ public class MealLogsController : ControllerBase
     /// <summary>The signed-in client's logged meals for a day (defaults to today), with computed macros.</summary>
     [HttpGet]
     [ProducesResponseType(typeof(List<MealLogDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<MealLogDto>>> GetMealLogs([FromQuery] DateTime? date)
+    public async Task<ActionResult<List<MealLogDto>>> GetMealLogs([FromQuery] DateTime? date, [FromQuery] Guid? clientId)
     {
-        var result = await _mediator.Send(new GetMealLogsQuery { Date = date });
+        var result = await _mediator.Send(new GetMealLogsQuery { Date = date, ClientId = clientId });
         return Ok(result);
     }
 

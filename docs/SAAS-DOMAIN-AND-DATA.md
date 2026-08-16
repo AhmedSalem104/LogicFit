@@ -168,3 +168,24 @@ Capabilities are an access contract, not a data isolation shortcut. Tenant query
 membership checks, subscription checks, and ownership checks continue to apply to every aggregate.
 Switching workspaces recalculates both tenant-scoped permissions and capabilities, so one identity
 may safely manage multiple workspaces without carrying grants from one tenant into another.
+
+## Subscriber, membership and coaching data (Issue #313)
+
+The platform keeps the member identity separate from the membership record. A client may have
+multiple tenant subscriptions over time or across workspaces; membership state does not delete
+the client-owned coaching history. Subscription payment rows are an immutable ledger and include
+the generated receipt number, amount, payment date, and receiver/audit context.
+
+`WorkoutProgram` and `DietPlan` are tenant-owned aggregates. Their nested rows are reconciled
+inside the same transaction and carry plan metadata, notes, and optimistic versioning. Removing
+a routine, exercise, meal, or item is a soft delete so `WorkoutSession` and `MealLog` history
+continues to resolve. Meal logs retain food, meal, quantity, unit, serving-size, and calculated
+macro snapshots; later food or plan edits do not rewrite the member's history.
+
+`BodyMeasurement` stores the extended body profile and circumference fields. `AthleteCheckin`
+stores sleep, recovery, soreness, stress, mood, vitals, bodyweight, and notes with a unique
+(`TenantId`, `ClientId`, `CheckinDate`) constraint. The training overview is a read model assembled
+from these tenant-scoped aggregates; it is not a second source of truth.
+
+The parity migrations are additive and must be applied to both the platform/shared schema and
+tenant schemas using an idempotent release script after backup and before enabling the new UI.

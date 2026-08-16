@@ -42,6 +42,7 @@ public class TenantDbContext : DbContext
     public DbSet<WorkoutSession> WorkoutSessions => Set<WorkoutSession>();
     public DbSet<SessionSet> SessionSets => Set<SessionSet>();
     public DbSet<BodyMeasurement> BodyMeasurements => Set<BodyMeasurement>();
+    public DbSet<AthleteCheckin> AthleteCheckins => Set<AthleteCheckin>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
     public DbSet<ClientSubscription> ClientSubscriptions => Set<ClientSubscription>();
     public DbSet<SubscriptionFreeze> SubscriptionFreezes => Set<SubscriptionFreeze>();

@@ -7,6 +7,9 @@ public class MealItem : TenantAuditableEntity
     public Guid MealId { get; set; }
     public int FoodId { get; set; }
     public double AssignedQuantity { get; set; }
+    public string? ServingUnit { get; set; }
+    public string? Notes { get; set; }
+    public double? FoodServingSizeSnapshot { get; set; }
 
     // Computed Fields (calculated in Application layer before saving)
     public double CalcCalories { get; set; }

@@ -1,4 +1,5 @@
 using LogicFit.Domain.Enums;
+using LogicFit.Application.Features.Payments.DTOs;
 
 namespace LogicFit.Application.Features.Subscriptions.DTOs;
 
@@ -40,7 +41,7 @@ public class ClientSubscriptionDto
     public string? PaymentMethodName => PaymentMethod?.ToString();
     public decimal TotalAmount { get; set; }
     public decimal AmountPaid { get; set; }
-    public decimal RemainingAmount => TotalAmount - AmountPaid;
+    public decimal RemainingAmount => Math.Max(0m, TotalAmount - AmountPaid);
     public decimal Discount { get; set; }
     public bool IsPaid => AmountPaid >= TotalAmount && TotalAmount > 0;
     public string? Notes { get; set; }
@@ -49,7 +50,7 @@ public class ClientSubscriptionDto
     public Guid? RenewedFromId { get; set; }
 
     // Computed
-    public int RemainingDays => EndDate > DateTime.UtcNow ? (EndDate - DateTime.UtcNow).Days : 0;
+    public int RemainingDays => EndDate.Date >= DateTime.UtcNow.Date ? Math.Max(0, (EndDate.Date - DateTime.UtcNow.Date).Days + 1) : 0;
     public int TotalFreezeDays { get; set; }
 
     public List<SubscriptionFreezeDto> Freezes { get; set; } = new();
@@ -61,6 +62,7 @@ public class ClientSubscriptionDetailDto : ClientSubscriptionDto
     public string? ClientPhone { get; set; }
     public string? ClientEmail { get; set; }
     public List<RenewalHistoryDto> RenewalHistory { get; set; } = new();
+    public List<PaymentDto> Payments { get; set; } = new();
 }
 
 public class RenewalHistoryDto

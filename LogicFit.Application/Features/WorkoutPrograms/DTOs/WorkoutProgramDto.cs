@@ -18,6 +18,8 @@ public class WorkoutProgramDto
     public PlanStatus Status { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public string? Notes { get; set; }
+    public int Version { get; set; }
     public List<ProgramRoutineDto> Routines { get; set; } = new();
 }
 
@@ -27,6 +29,7 @@ public class ProgramRoutineDto
     public Guid ProgramId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int DayOfWeek { get; set; }
+    public string? Notes { get; set; }
     public List<RoutineExerciseDto> Exercises { get; set; } = new();
 }
 
@@ -65,6 +68,7 @@ public class WorkoutRoutineInputDto
     public Guid? Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public int DayOfWeek { get; set; }
+    public string? Notes { get; set; }
     public List<WorkoutRoutineExerciseInputDto> Exercises { get; set; } = new();
 }
 

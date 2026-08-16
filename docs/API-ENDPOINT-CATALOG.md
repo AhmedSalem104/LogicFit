@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-16 14:17 UTC`  |  Total endpoints: **406**
+Generated: `2026-08-16 20:23 UTC`  |  Total endpoints: **412**
 
 ## Contract rules
 
@@ -647,6 +647,32 @@ Generated: `2026-08-16 14:17 UTC`  |  Total endpoints: **406**
 - **Inputs:** Body `command`: `UpdateAppointmentStatusCommand` { `Id`: Guid; `Status`: AppointmentStatus }<br>Handler signature: `Guid id, [FromBody] UpdateAppointmentStatusCommand command`
 - **Declared response:** Task<ActionResult>
 
+### AthleteCheckins
+
+#### `GET /api/clients/{clientId:guid}/checkins` - `Get`
+
+- **Access:** JWT required
+- **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `Guid clientId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
+- **Declared response:** typeof(List<AthleteCheckinDto>), StatusCodes.Status200OK
+
+#### `POST /api/clients/{clientId:guid}/checkins` - `Create`
+
+- **Access:** JWT required
+- **Inputs:** Body `command`: `CreateAthleteCheckinCommand` { `ClientId`: Guid; `CheckinDate`: DateTime; `SleepHours`: double?; `SleepQuality`: int?; `Fatigue`: int?; `Soreness`: int?; `Stress`: int?; `Mood`: int?; `RestingHeartRate`: int?; `Hrv`: double?; `BodyweightKg`: double?; `Notes`: string? }<br>Handler signature: `Guid clientId, [FromBody] CreateAthleteCheckinCommand command`
+- **Declared response:** typeof(Guid), StatusCodes.Status201Created
+
+#### `DELETE /api/clients/{clientId:guid}/checkins/{id:guid}` - `Delete`
+
+- **Access:** JWT required
+- **Inputs:** Handler signature: `Guid clientId, Guid id`
+- **Declared response:** Task<ActionResult>
+
+#### `PUT /api/clients/{clientId:guid}/checkins/{id:guid}` - `Update`
+
+- **Access:** JWT required
+- **Inputs:** Body `command`: `UpdateAthleteCheckinCommand` { `Id`: Guid; `ClientId`: Guid; `SleepHours`: double?; `SleepQuality`: int?; `Fatigue`: int?; `Soreness`: int?; `Stress`: int?; `Mood`: int?; `RestingHeartRate`: int?; `Hrv`: double?; `BodyweightKg`: double?; `Notes`: string? }<br>Handler signature: `Guid clientId, Guid id, [FromBody] UpdateAthleteCheckinCommand command`
+- **Declared response:** Task<ActionResult>
+
 ### Attendance
 
 #### `GET /api/Attendance` - `GetAttendances`
@@ -710,13 +736,19 @@ Generated: `2026-08-16 14:17 UTC`  |  Total endpoints: **406**
 #### `POST /api/BodyMeasurements` - `CreateBodyMeasurement`
 
 - **Access:** JWT required
-- **Inputs:** Body `command`: `CreateBodyMeasurementCommand` { `ClientId`: Guid; `DateRecorded`: DateTime; `WeightKg`: double; `SkeletalMuscleMass`: double?; `BodyFatMass`: double?; `BodyFatPercent`: double?; `TotalBodyWater`: double?; `Bmr`: double?; `VisceralFatLevel`: int?; `InbodyImage`: IFormFile?; `FrontPhoto`: IFormFile?; `SidePhoto`: IFormFile?; `BackPhoto`: IFormFile? }<br>Handler signature: `[FromBody] CreateBodyMeasurementCommand command`
+- **Inputs:** Body `command`: `CreateBodyMeasurementCommand` { `ClientId`: Guid; `DateRecorded`: DateTime; `WeightKg`: double; `HeightCm`: double?; `ChestCm`: double?; `WaistCm`: double?; `HipsCm`: double?; `ArmsCm`: double?; `ThighsCm`: double?; `SkeletalMuscleMass`: double?; `BodyFatMass`: double?; `BodyFatPercent`: double?; `TotalBodyWater`: double?; `Bmr`: double?; `VisceralFatLevel`: int?; `Notes`: string?; `InbodyImage`: IFormFile?; `FrontPhoto`: IFormFile?; `SidePhoto`: IFormFile?; `BackPhoto`: IFormFile? }<br>Handler signature: `[FromBody] CreateBodyMeasurementCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 
 #### `DELETE /api/BodyMeasurements/{id}` - `DeleteBodyMeasurement`
 
 - **Access:** JWT required
 - **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult>
+
+#### `PUT /api/BodyMeasurements/{id}` - `UpdateBodyMeasurement`
+
+- **Access:** JWT required
+- **Inputs:** Body `command`: `UpdateBodyMeasurementCommand` { `Id`: Guid; `WeightKg`: double?; `HeightCm`: double?; `ChestCm`: double?; `WaistCm`: double?; `HipsCm`: double?; `ArmsCm`: double?; `ThighsCm`: double?; `SkeletalMuscleMass`: double?; `BodyFatMass`: double?; `BodyFatPercent`: double?; `TotalBodyWater`: double?; `Bmr`: double?; `VisceralFatLevel`: int?; `InbodyImageUrl`: string?; `FrontPhotoUrl`: string?; `SidePhotoUrl`: string?; `BackPhotoUrl`: string?; `Notes`: string? }<br>Handler signature: `Guid id, [FromBody] UpdateBodyMeasurementCommand command`
 - **Declared response:** Task<ActionResult>
 
 #### `POST /api/BodyMeasurements/with-images` - `CreateBodyMeasurementWithImages`
@@ -978,6 +1010,12 @@ Generated: `2026-08-16 14:17 UTC`  |  Total endpoints: **406**
 - **Access:** JWT + Policy: `Permissions.UpdateMembers`
 - **Inputs:** Handler signature: `Guid id, UpdateClientCommand command`
 - **Declared response:** Task<ActionResult>
+
+#### `GET /api/Clients/{id}/training-overview` - `GetTrainingOverview`
+
+- **Access:** JWT required
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<ClientTrainingOverviewDto>>
 
 #### `POST /api/Clients/onboard` - `OnboardClient`
 
@@ -1604,7 +1642,7 @@ Generated: `2026-08-16 14:17 UTC`  |  Total endpoints: **406**
 #### `GET /api/meal-logs` - `GetMealLogs`
 
 - **Access:** JWT required
-- **Inputs:** Query `date`: `DateTime?`<br>Handler signature: `[FromQuery] DateTime? date`
+- **Inputs:** Query `date`: `DateTime?`<br>Query `clientId`: `Guid?`<br>Handler signature: `[FromQuery] DateTime? date, [FromQuery] Guid? clientId`
 - **Declared response:** typeof(List<MealLogDto>), StatusCodes.Status200OK
 
 #### `POST /api/meal-logs` - `LogMeal`

@@ -147,3 +147,18 @@ For Issue #298, a session without a selected workspace type is fail-closed. It c
 the Gym capability set merely because the browser has an old token or incomplete local user
 record. The client must refresh the tenant session and use the server-returned type; if the
 server cannot provide one, the session is cleared and the user returns to identity login.
+
+## Subscriber, training and nutrition access (Issue #313)
+
+- Owners and managers may manage active members, memberships, plans, payments, measurements, and
+  check-ins inside their selected tenant.
+- Coaches and trainers may manage only members with an active coach-client assignment. The same
+  assignment boundary applies to workout/nutrition aggregates, sessions, measurements, and check-ins.
+- A client may read and execute only their own active plans, sessions, meal logs, measurements, and
+  daily check-ins. A client cannot submit another member's identifier to widen access.
+- Payment history is read-only after creation. Editing a subscription can append an immutable
+  adjustment payment but cannot reduce a previously recorded amount.
+- Aggregate updates require the current `Version`; a stale client receives a conflict instead of
+  silently overwriting another coach's plan.
+- UI hiding is not authorization. Every handler verifies tenant, membership/assignment, ownership,
+  and active subscription rules before changing or returning data.

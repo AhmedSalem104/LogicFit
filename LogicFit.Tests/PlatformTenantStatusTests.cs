@@ -18,7 +18,7 @@ public sealed class PlatformTenantStatusTests
         TenantStatus initialTenantStatus)
     {
         await using var fixture = await TestFixture.CreateAsync();
-        var tenant = new Tenant
+        var tenant = new LogicFit.Domain.Entities.Tenant
         {
             Name = "Pending Gym",
             Subdomain = $"pending-gym-{Guid.NewGuid():N}",

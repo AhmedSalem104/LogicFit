@@ -24,7 +24,7 @@ public sealed class AuthSecurityTests
     public async Task Refresh_rotation_detects_reuse_and_revokes_the_token_family()
     {
         await using var fixture = await RefreshFixture.CreateAsync();
-        var tenant = new Tenant
+        var tenant = new LogicFit.Domain.Entities.Tenant
         {
             Name = "Refresh Test Workspace",
             Subdomain = $"refresh-{Guid.NewGuid():N}",

@@ -3,6 +3,7 @@ using LogicFit.Application.Features.Clients.Commands.DeleteClient;
 using LogicFit.Application.Features.Clients.Commands.UpdateClient;
 using LogicFit.Application.Features.Clients.DTOs;
 using LogicFit.Application.Features.Clients.Queries.GetClientById;
+using LogicFit.Application.Features.Clients.Queries.GetClientTrainingOverview;
 using LogicFit.Application.Features.Clients.Queries.GetClients;
 using LogicFit.Application.Features.Clients.Commands.OnboardClient;
 using MediatR;
@@ -45,6 +46,14 @@ public class ClientsController : ControllerBase
         var result = await _mediator.Send(new GetClientByIdQuery { Id = id });
         if (result == null)
             return NotFound();
+        return Ok(result);
+    }
+
+    [HttpGet("{id}/training-overview")]
+    public async Task<ActionResult<ClientTrainingOverviewDto>> GetTrainingOverview(Guid id)
+    {
+        var result = await _mediator.Send(new GetClientTrainingOverviewQuery { ClientId = id });
+        if (result == null) return NotFound();
         return Ok(result);
     }
 
