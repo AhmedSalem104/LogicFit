@@ -110,7 +110,9 @@ The unified multipart endpoint is `POST /api/workspace-applications`. It creates
 payment request, plan snapshot, and pending subscription, then returns an opaque tracking session.
 The tracking response exposes only the user journey (`Submitted`, `UnderReview`, `MoreInformation`,
 `Preparing`, `Ready`, or a safe failure state). Requested fields can be updated with
-`PATCH /api/workspace-applications/tracking/fields` and resubmitted without restarting.
+`PATCH /api/workspace-applications/tracking/fields` and resubmitted without restarting. For
+workspace-creation requests, Gym and FreelanceCoach use the shared payload whitelist (for example
+`WorkspaceName`, `BrandName`, and `Bio`); membership requests remain limited to `FullName`.
 
 Platform Admin uses explicit `ManageTenants` and `ManagePaymentRequests` permissions to review,
 request information, approve/reject payment, approve/reject the application, and retry provisioning.

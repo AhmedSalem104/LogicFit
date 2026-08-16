@@ -71,6 +71,10 @@ memberships in `PendingWorkspaceApproval` remain unchanged.
 Tenant أو Subscription أو Identity أو Mapping جديدة. `FreelanceCoach` يستخدم نفس الكيانات مع
 `WorkspaceType=FreelanceCoach` وعضوية `FreelanceOwner` مستقلة عن أي Gym.
 
+طلبات استكمال بيانات إنشاء مساحة Gym أو FreelanceCoach تستخدم whitelist الـpayload المشتركة، مثل
+`WorkspaceName` و`BrandName` و`Bio`، بينما طلبات العضوية تستخدم `FullName` فقط. لا تسمح هذه العملية
+بتعديل `WorkspaceIdentifier` أو بيانات الاتصال أو أي حقل غير معتمد، ولا تحتاج إلى migration.
+
 كيانات الصالة ترث في الغالب من `TenantAuditableEntity`: العملاء، الفروع، الحضور،
 البرامج، التغذية، المدفوعات، المخزون، الموظفون وغيرها. هذا يجعل `TenantId` وحد
 العزل جزءاً من البيانات لا اتفاقاً بين الواجهات.
