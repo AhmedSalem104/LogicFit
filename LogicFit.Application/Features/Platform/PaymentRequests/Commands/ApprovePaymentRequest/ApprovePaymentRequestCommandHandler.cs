@@ -48,6 +48,19 @@ public class ApprovePaymentRequestCommandHandler : IRequestHandler<ApprovePaymen
             return ToDto(pr, pr.Plan?.Name);
         }
 
+        // Workspace onboarding must have reviewable evidence before payment can unlock
+        // workspace approval. Legacy non-application billing requests keep their existing
+        // contract, while new Gym/FreelanceCoach applications fail closed until a proof URL
+        // or a current versioned proof row exists.
+        if (pr.ApplicationRequestId.HasValue &&
+            string.IsNullOrWhiteSpace(pr.ProofFileUrl) &&
+            !await _context.PaymentProofs.AnyAsync(
+                x => x.PaymentRequestId == pr.Id && x.IsCurrent,
+                cancellationToken))
+        {
+            throw new ConflictException("PAYMENT_PROOF_REQUIRED", "A payment proof is required before approving this workspace payment.");
+        }
+
         var now = _dateTimeService.UtcNow;
         var reviewer = _currentUserService.UserId;
 
