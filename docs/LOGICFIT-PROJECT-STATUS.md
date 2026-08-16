@@ -627,3 +627,13 @@ fails startup if apply or post-apply verification fails.
   warnings; 207 backend tests passed;
   Tenant Angular build passed with existing budget/CommonJS warnings; 33 ChromeHeadless tests
   passed. This work is not merged, deployed, or production-health-verified yet.
+
+### 2026-08-16 — workspace application completion field contract (Issue #304)
+
+- The Platform Admin `request-information` command now applies the shared workspace payload whitelist
+  to both `GymWorkspaceCreation` and `FreelanceWorkspaceCreation`. Membership applications retain the
+  narrower `FullName` rule; unsupported fields such as `Address` remain rejected by the server.
+- This is a JSON validation/flow correction with no database migration. The matching Platform Admin
+  screen initializes only valid fields and prevents a request with an invalid field name before the API
+  call. This work is local/task-branch only until the required PR is reviewed, merged, released,
+  deployed, and health-verified.

@@ -1,6 +1,6 @@
 namespace LogicFit.Application.Features.WorkspaceApplications;
 
-/// <summary>Whitelist of payload keys that Platform Admin may request from a freelance applicant.</summary>
+/// <summary>Whitelist of shared workspace payload keys that Platform Admin may request from a Gym or FreelanceCoach applicant.</summary>
 internal static class FreelanceWorkspaceApplicationFields
 {
     private static readonly HashSet<string> Allowed = new(StringComparer.Ordinal)
