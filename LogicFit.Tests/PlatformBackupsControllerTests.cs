@@ -1,6 +1,8 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.API.Features.Platform.Backups;
 using LogicFit.Domain.Enums;
+using LogicFit.Domain.Exceptions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
@@ -66,6 +68,40 @@ public class PlatformBackupsControllerTests
     }
 
     [Fact]
+    public async Task Batch_endpoint_maps_storage_failures_to_503_without_exposing_exception_details()
+    {
+        var controller = new PlatformBackupsController(
+            new StubBackupService(batchException: new IOException(@"C:\private\connection-string.txt")));
+
+        var result = await controller.CreateBatch(
+            new BackupBatchRequest(BackupScope.Platform, IdempotencyKey: "storage-failure"),
+            CancellationToken.None);
+
+        var unavailable = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, unavailable.StatusCode);
+        var payload = unavailable.Value!;
+        Assert.Equal("BACKUP_SERVICE_UNAVAILABLE", payload.GetType().GetProperty("errorCode")?.GetValue(payload));
+        Assert.DoesNotContain("connection-string", payload.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Batch_endpoint_preserves_safe_service_unavailable_code()
+    {
+        var controller = new PlatformBackupsController(
+            new StubBackupService(batchException: new ServiceUnavailableException(
+                "BACKUP_STORAGE_UNAVAILABLE", "Backup storage is temporarily unavailable.")));
+
+        var result = await controller.CreateBatch(
+            new BackupBatchRequest(BackupScope.Platform, IdempotencyKey: "service-failure"),
+            CancellationToken.None);
+
+        var unavailable = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, unavailable.StatusCode);
+        var payload = unavailable.Value!;
+        Assert.Equal("BACKUP_STORAGE_UNAVAILABLE", payload.GetType().GetProperty("errorCode")?.GetValue(payload));
+    }
+
+    [Fact]
     public async Task Retry_endpoint_returns_a_new_attempt_contract()
     {
         var expected = new BackupBatchDto(Guid.NewGuid(), BackupScope.Platform, "Running", null, null, null, []);
@@ -77,16 +113,22 @@ public class PlatformBackupsControllerTests
         Assert.Same(expected, ok.Value);
     }
 
-    private sealed class StubBackupService(BackupStatus? status = null, bool isMissing = false, BackupBatchDto? batch = null) : IBackupService
+    private sealed class StubBackupService(
+        BackupStatus? status = null,
+        bool isMissing = false,
+        BackupBatchDto? batch = null,
+        Exception? batchException = null) : IBackupService
     {
         public BackupBatchRequest? LastRequest { get; private set; }
         private readonly BackupBatchDto _batch = batch ?? new BackupBatchDto(Guid.NewGuid(), BackupScope.Platform, "Completed", null, null, null, []);
+        private readonly Exception? _batchException = batchException;
         public Task<BackupRecord> CreateAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
         public IReadOnlyList<BackupRecord> List() => [];
         public BackupStatus GetStatus() => status ?? new BackupStatus(true, true, "BACPAC", 7, "02:00", 0, null);
         public Task<BackupBatchDto> CreateBatchAsync(BackupBatchRequest request, CancellationToken cancellationToken)
         {
             LastRequest = request;
+            if (_batchException is not null) return Task.FromException<BackupBatchDto>(_batchException);
             return Task.FromResult(_batch);
         }
         public Task<BackupBatchDto> RetryBatchAsync(Guid batchId, CancellationToken cancellationToken) => Task.FromResult(_batch);

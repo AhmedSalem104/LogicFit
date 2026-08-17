@@ -58,5 +58,8 @@ public sealed class CentralBackupContractTests
         Assert.Contains("PlatformBackupBatchFinished", source, StringComparison.Ordinal);
         Assert.Contains("failedArtifacts", source, StringComparison.Ordinal);
         Assert.Contains("IncludePlatform", source, StringComparison.Ordinal);
+        Assert.Contains("IDistributedLockProvider", source, StringComparison.Ordinal);
+        Assert.Contains("CryptographicException", source, StringComparison.Ordinal);
+        Assert.Contains("BACKUP_MANIFEST_WRITE_FAILED", source, StringComparison.Ordinal);
     }
 }
