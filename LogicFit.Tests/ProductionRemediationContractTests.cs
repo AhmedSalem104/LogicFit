@@ -74,17 +74,23 @@ public sealed class ProductionRemediationContractTests
     }
 
     [Fact]
-    public void Central_backup_lock_declares_and_reads_the_sql_application_lock_result()
+    public void Central_backup_uses_the_shared_sql_application_lock_provider()
     {
-        var source = File.ReadAllText(Path.Combine(
+        var serviceSource = File.ReadAllText(Path.Combine(
             RepositoryRoot,
             "LogicFit.Infrastructure",
             "Services",
             "DatabaseBackupService.cs"));
+        var providerSource = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "LogicFit.Infrastructure",
+            "Services",
+            "SqlServerDistributedLockProvider.cs"));
 
-        Assert.Contains("DECLARE @result int", source, StringComparison.Ordinal);
-        Assert.Contains("sys.sp_getapplock", source, StringComparison.Ordinal);
-        Assert.Contains("SELECT @result", source, StringComparison.Ordinal);
-        Assert.Contains("ExecuteScalarAsync", source, StringComparison.Ordinal);
+        Assert.Contains("IDistributedLockProvider", serviceSource, StringComparison.Ordinal);
+        Assert.Contains("TryAcquireAsync", serviceSource, StringComparison.Ordinal);
+        Assert.Contains("sys.sp_getapplock", providerSource, StringComparison.Ordinal);
+        Assert.Contains("SELECT @result", providerSource, StringComparison.Ordinal);
+        Assert.Contains("ExecuteScalarAsync", providerSource, StringComparison.Ordinal);
     }
 }

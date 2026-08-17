@@ -54,6 +54,13 @@ IDs; database names and connection material remain server-side. The server retur
 status, size, safe storage key, SHA-256 and manifest reference. Batch start/finish events are
 written to the Platform Audit Log.
 
+If `POST /api/platform/backups/batch` returns `503 BACKUP_SERVICE_UNAVAILABLE`,
+`BACKUP_DATABASE_UNAVAILABLE`, or `BACKUP_STORAGE_UNAVAILABLE`, inspect the protected batch history
+and `/api/platform/backups/status`, repair the reported database/storage dependency, and use the
+retry action for the recorded `Failed` or `Partial` batch. A raw `500` from this route is a release
+regression: collect the safe server log category and exception type, verify `/health`, and do not
+repeat the operation with a new idempotency key until the cause is fixed.
+
 Creation and retry require confirmation. Retry is limited to `Failed` or `Partial` batches. The
 screen locks the action while confirmation or the request is in flight and sends an idempotency
 key for manual creation. It never renders connection material, credentials, raw exceptions, or
