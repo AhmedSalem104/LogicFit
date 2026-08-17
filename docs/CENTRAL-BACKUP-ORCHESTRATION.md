@@ -20,11 +20,19 @@ passwords, absolute paths, and file contents are never returned by the API or wr
 ## Reliability
 
 `BackupBatches` and `DatabaseBackups` are platform-owned records.  A unique idempotency key makes
-retries return the existing batch rather than create duplicate exports.  A SQL Server application
-lock plus an in-process guard prevents overlapping batches across API instances.  Per-target
-exports are bounded by `Backup:MaxConcurrent` (clamped to 1-4), and each partial file is removed
-on failure.  Batch status is `Completed`, `Partial`, or `Failed` and each artifact records its own
-status, size, checksum, timestamps, and safe error code.
+retries return the existing batch rather than create duplicate exports.  The shared
+`IDistributedLockProvider` uses a SQL Server session-owned application lock, while an in-process
+guard prevents overlapping batches in the same worker.  Per-target exports are bounded by
+`Backup:MaxConcurrent` (clamped to 1-4), and each partial file is removed on failure.  Batch status
+is `Completed`, `Partial`, or `Failed` and each artifact records its own status, size, checksum,
+timestamps, and safe error code.
+
+The service verifies that the private `App_Data` storage can be created and written before starting
+database work. Manifest writes are atomic. Mapping decryption failures fail closed instead of
+silently reducing coverage. SQL, storage, metadata, and cryptographic infrastructure failures are
+logged with safe exception types and returned as `503` with a stable backup error code; raw
+connection material and exception details never cross the API boundary. A manifest failure records
+the terminal batch state so the operator can retry it without leaving a permanent `Running` batch.
 
 ## Download and retry correctness
 
