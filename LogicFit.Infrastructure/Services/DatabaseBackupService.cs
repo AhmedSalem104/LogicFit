@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.SqlServer.Dac;
+using LogicFit.Domain.Exceptions;
 
 namespace LogicFit.Infrastructure.Services;
 
@@ -28,9 +29,11 @@ public sealed class DatabaseBackupService(
     ICurrentUserService currentUser,
     IDateTimeService clock,
     ILogger<DatabaseBackupService> logger,
-    TimeProvider timeProvider) : IBackupService
+    TimeProvider timeProvider,
+    IDistributedLockProvider distributedLockProvider) : IBackupService
 {
     private const string BackupSearchPattern = "*.bacpac";
+    private const string DistributedLockResource = "LogicFit:CentralDatabaseBackup";
     private static readonly SemaphoreSlim ProcessLock = new(1, 1);
     private static readonly Regex BackupFileNamePattern = new(
         "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}-(?:\\d{8}-\\d{6}|[0-9a-fA-F]{8})\\.(?:bacpac|json)$",
@@ -140,10 +143,10 @@ public sealed class DatabaseBackupService(
         if (!await ProcessLock.WaitAsync(0, cancellationToken))
             throw new InvalidOperationException("A backup batch is already running.");
 
-        SqlConnection? distributedLockConnection = null;
+        IAsyncDisposable? distributedLock = null;
         try
         {
-            distributedLockConnection = await AcquireDistributedLockAsync(cancellationToken);
+            distributedLock = await AcquireDistributedLockAsync(cancellationToken);
             existing = await db.BackupBatches.Include(x => x.Artifacts)
                 .SingleOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
             if (existing is not null) return await ToDtoAsync(existing, cancellationToken);
@@ -200,7 +203,22 @@ public sealed class DatabaseBackupService(
 
             var manifestName = $"manifest-{batch.Id:N}.json";
             var manifestPath = Path.Combine(settings.StorageDirectory, manifestName);
-            await WriteManifestAsync(manifestPath, batch, cancellationToken);
+            try
+            {
+                await WriteManifestAsync(manifestPath, batch, cancellationToken);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                logger.LogError("Backup batch {BackupBatchId} completed exports but could not persist its manifest ({ExceptionType}).", batch.Id, exception.GetType().Name);
+                batch.Status = successful == 0 ? BackupBatchStatus.Failed : BackupBatchStatus.Partial;
+                batch.CompletedAtUtc = timeProvider.GetUtcNow().UtcDateTime;
+                batch.ErrorMessage = "BACKUP_MANIFEST_WRITE_FAILED";
+                SecurityAuditLog.Add(db, currentUser, clock, "PlatformBackupBatchFinished", false, batch.Id);
+                await TryPersistFailedBatchAsync(batch);
+                throw new ServiceUnavailableException(
+                    "BACKUP_STORAGE_UNAVAILABLE",
+                    "Backup storage is temporarily unavailable. The batch was recorded and can be retried after storage is repaired.");
+            }
             batch.ManifestStorageKey = manifestName;
             PruneExpiredBackups(settings.StorageDirectory, settings.RetentionDays);
             SecurityAuditLog.Add(db, currentUser, clock, "PlatformBackupBatchFinished",
@@ -208,16 +226,38 @@ public sealed class DatabaseBackupService(
             await db.SaveChangesAsync(cancellationToken);
             return await ToDtoAsync(batch, cancellationToken);
         }
-        catch (DbUpdateException)
+        catch (DbUpdateException exception)
         {
-            if (!await IsDuplicateIdempotencyAsync(idempotencyKey, cancellationToken)) throw;
-            var duplicate = await db.BackupBatches.AsNoTracking().Include(x => x.Artifacts)
-                .SingleAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
-            return await ToDtoAsync(duplicate, cancellationToken);
+            try
+            {
+                if (await IsDuplicateIdempotencyAsync(idempotencyKey, cancellationToken))
+                {
+                    var duplicate = await db.BackupBatches.AsNoTracking().Include(x => x.Artifacts)
+                        .SingleAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
+                    return await ToDtoAsync(duplicate, cancellationToken);
+                }
+            }
+            catch (Exception lookupException) when (IsBackupInfrastructureException(lookupException))
+            {
+                logger.LogError("The backup idempotency recovery lookup failed for key {IdempotencyKey} ({ExceptionType}).", idempotencyKey, lookupException.GetType().Name);
+            }
+
+            logger.LogError("Backup batch {IdempotencyKey} could not be persisted ({ExceptionType}).", idempotencyKey, exception.GetType().Name);
+            throw new ServiceUnavailableException(
+                "BACKUP_DATABASE_UNAVAILABLE",
+                "The backup record could not be saved. Verify the platform database and retry.");
+        }
+        catch (Exception exception) when (IsBackupInfrastructureException(exception))
+        {
+            logger.LogError("Backup batch {IdempotencyKey} failed because a required infrastructure dependency was unavailable ({ExceptionType}).", idempotencyKey, exception.GetType().Name);
+            throw new ServiceUnavailableException(
+                "BACKUP_SERVICE_UNAVAILABLE",
+                "The backup service is temporarily unavailable. Verify database and storage readiness, then retry.");
         }
         finally
         {
-            await ReleaseDistributedLockAsync(distributedLockConnection);
+            if (distributedLock is not null)
+                await distributedLock.DisposeAsync();
             ProcessLock.Release();
         }
     }
@@ -253,12 +293,13 @@ public sealed class DatabaseBackupService(
         var failedArtifacts = batch.Artifacts
             .Where(x => x.Status != DatabaseBackupStatus.Completed)
             .ToList();
-        var tenantIds = failedArtifacts.Where(x => x.TenantId.HasValue)
+        var retryArtifacts = failedArtifacts.Count == 0 ? batch.Artifacts.ToList() : failedArtifacts;
+        var tenantIds = retryArtifacts.Where(x => x.TenantId.HasValue)
             .Select(x => x.TenantId!.Value).ToArray();
         return await CreateBatchAsync(
             new BackupBatchRequest(batch.Scope, tenantIds,
                 $"retry:{batch.Id:N}:{timeProvider.GetUtcNow():yyyyMMddHHmmss}",
-                IncludePlatform: failedArtifacts.Any(x => !x.TenantId.HasValue)),
+                IncludePlatform: retryArtifacts.Any(x => !x.TenantId.HasValue)),
             cancellationToken);
     }
 
@@ -316,9 +357,11 @@ public sealed class DatabaseBackupService(
                     item.resource.DatabaseName,
                     connectionStringProtector.Unprotect(item.mapping.EncryptedConnectionString)));
             }
-            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or CryptographicException)
             {
-                logger.LogWarning("A tenant database mapping could not be resolved for backup.");
+                logger.LogWarning("A tenant database mapping could not be resolved for backup ({ExceptionType}); the batch is stopped to avoid false complete coverage.", ex.GetType().Name);
+                throw new InvalidOperationException(
+                    "A tenant database mapping could not be resolved for backup. Repair the mapping before retrying.", ex);
             }
         }
         return targets;
@@ -365,43 +408,10 @@ public sealed class DatabaseBackupService(
         }
     }
 
-    private async Task<SqlConnection?> AcquireDistributedLockAsync(CancellationToken cancellationToken)
+    private async Task<IAsyncDisposable> AcquireDistributedLockAsync(CancellationToken cancellationToken)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
-        if (string.IsNullOrWhiteSpace(connectionString)) return null;
-        var connection = new SqlConnection(connectionString);
-        try
-        {
-            await connection.OpenAsync(cancellationToken);
-            await using var command = connection.CreateCommand();
-            command.CommandText = "EXEC @result = sp_getapplock @Resource = @resource, @LockMode = 'Exclusive', @LockOwner = 'Session', @LockTimeout = 0;";
-            var result = command.Parameters.Add("@result", System.Data.SqlDbType.Int);
-            result.Direction = System.Data.ParameterDirection.ReturnValue;
-            command.Parameters.AddWithValue("@resource", "LogicFit:CentralDatabaseBackup");
-            await command.ExecuteNonQueryAsync(cancellationToken);
-            if (result.Value is int value && value < 0)
-                throw new InvalidOperationException("A backup batch is already running on another instance.");
-            return connection;
-        }
-        catch
-        {
-            await connection.DisposeAsync();
-            throw;
-        }
-    }
-
-    private static async Task ReleaseDistributedLockAsync(SqlConnection? connection)
-    {
-        if (connection is null) return;
-        try
-        {
-            await using var command = connection.CreateCommand();
-            command.CommandText = "EXEC sp_releaseapplock @Resource = @resource, @LockOwner = 'Session';";
-            command.Parameters.AddWithValue("@resource", "LogicFit:CentralDatabaseBackup");
-            await command.ExecuteNonQueryAsync();
-        }
-        catch { /* the session release is best-effort during shutdown */ }
-        await connection.DisposeAsync();
+        return await distributedLockProvider.TryAcquireAsync(DistributedLockResource, cancellationToken)
+            ?? throw new InvalidOperationException("A backup batch is already running on another instance.");
     }
 
     private async Task<bool> IsDuplicateIdempotencyAsync(string key, CancellationToken cancellationToken)
@@ -430,8 +440,27 @@ public sealed class DatabaseBackupService(
                 ErrorCode = x.ErrorMessage
             })
         };
-        await using var stream = File.Create(path);
-        await JsonSerializer.SerializeAsync(stream, manifest, cancellationToken: cancellationToken);
+        var temporaryPath = path + ".partial";
+        try
+        {
+            await using (var stream = new FileStream(
+                temporaryPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                64 * 1024,
+                FileOptions.Asynchronous | FileOptions.SequentialScan))
+            {
+                await JsonSerializer.SerializeAsync(stream, manifest, cancellationToken: cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+            }
+
+            File.Move(temporaryPath, path, overwrite: true);
+        }
+        finally
+        {
+            TryDelete(temporaryPath);
+        }
     }
 
     private bool TryGetSettings(out BackupSettings settings, out string reason)
@@ -458,6 +487,25 @@ public sealed class DatabaseBackupService(
             reason = "Backup storage must remain private inside App_Data.";
             return false;
         }
+        string? probePath = null;
+        try
+        {
+            Directory.CreateDirectory(storage);
+            probePath = Path.Combine(storage, $".backup-write-probe-{Guid.NewGuid():N}.tmp");
+            using (var probe = new FileStream(probePath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                probe.WriteByte(0);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning("The private backup storage failed its write-readiness check ({ExceptionType}).", exception.GetType().Name);
+            reason = "Private backup storage is unavailable.";
+            return false;
+        }
+        finally
+        {
+            if (probePath is not null) TryDelete(probePath);
+        }
+
         settings = new BackupSettings(storage,
             Math.Clamp(configuration.GetValue("Backup:RetentionDays", 7), 1, 3650), GetRunAtUtc());
         return true;
@@ -473,14 +521,37 @@ public sealed class DatabaseBackupService(
         return Convert.ToHexString(hash);
     }
 
-    private static void PruneExpiredBackups(string directory, int retentionDays)
+    private void PruneExpiredBackups(string directory, int retentionDays)
     {
-        if (!Directory.Exists(directory)) return;
-        foreach (var file in Directory.EnumerateFiles(directory)
-                     .Select(path => new FileInfo(path))
-                     .Where(file => file.CreationTimeUtc < DateTime.UtcNow.AddDays(-retentionDays)))
-            TryDelete(file.FullName);
+        try
+        {
+            if (!Directory.Exists(directory)) return;
+            foreach (var file in Directory.EnumerateFiles(directory)
+                         .Select(path => new FileInfo(path))
+                         .Where(file => file.CreationTimeUtc < DateTime.UtcNow.AddDays(-retentionDays)))
+                TryDelete(file.FullName);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning("Expired backup pruning was skipped because private storage was unavailable ({ExceptionType}).", exception.GetType().Name);
+        }
     }
+
+    private async Task TryPersistFailedBatchAsync(BackupBatch batch)
+    {
+        try
+        {
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError("Failed to persist the terminal failure state for backup batch {BackupBatchId} ({ExceptionType}).", batch.Id, exception.GetType().Name);
+        }
+    }
+
+    private static bool IsBackupInfrastructureException(Exception exception) => exception is
+        DbUpdateException or SqlException or CryptographicException or IOException or
+        UnauthorizedAccessException or TimeoutException;
 
     private static void TryDelete(string path)
     {

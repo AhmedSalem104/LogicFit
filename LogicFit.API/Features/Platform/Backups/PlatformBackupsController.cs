@@ -1,15 +1,21 @@
+using System.Security.Cryptography;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Authorization;
+using LogicFit.Domain.Exceptions;
 using LogicFit.API.Features.Platform.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace LogicFit.API.Features.Platform.Backups;
 
 [ApiController]
 [Route("api/platform/backups")]
 [Authorize(Policy = Permissions.ManagePlatformBackups)]
-public sealed class PlatformBackupsController(IBackupService backupService) : ControllerBase
+public sealed class PlatformBackupsController(
+    IBackupService backupService,
+    ILogger<PlatformBackupsController>? logger = null) : ControllerBase
 {
     [HttpGet]
     public ActionResult<PlatformPage<BackupRecord>> List(
@@ -43,6 +49,10 @@ public sealed class PlatformBackupsController(IBackupService backupService) : Co
                 title: "خدمة النسخ الاحتياطي غير متاحة",
                 detail: ex.Message);
         }
+        catch (Exception ex) when (IsBackupInfrastructureException(ex))
+        {
+            return BackupUnavailable(ex, "Backup download");
+        }
     }
 
     [HttpPost]
@@ -58,6 +68,15 @@ public sealed class PlatformBackupsController(IBackupService backupService) : Co
                 statusCode: StatusCodes.Status503ServiceUnavailable,
                 title: "خدمة النسخ الاحتياطي غير مهيأة",
                 detail: ex.Message);
+        }
+        catch (ServiceUnavailableException ex)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { errorCode = ex.Code, message = ex.Message });
+        }
+        catch (Exception ex) when (IsBackupInfrastructureException(ex))
+        {
+            return BackupUnavailable(ex, "Platform backup");
         }
     }
 
@@ -78,6 +97,15 @@ public sealed class PlatformBackupsController(IBackupService backupService) : Co
         {
             return Problem(statusCode: StatusCodes.Status503ServiceUnavailable,
                 title: "Backup service is not ready.", detail: ex.Message);
+        }
+        catch (ServiceUnavailableException ex)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { errorCode = ex.Code, message = ex.Message });
+        }
+        catch (Exception ex) when (IsBackupInfrastructureException(ex))
+        {
+            return BackupUnavailable(ex, "Platform backup batch");
         }
     }
 
@@ -104,5 +132,29 @@ public sealed class PlatformBackupsController(IBackupService backupService) : Co
         {
             return Conflict(new { errorCode = "BACKUP_RETRY_NOT_ALLOWED", message = ex.Message });
         }
+        catch (ServiceUnavailableException ex)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { errorCode = ex.Code, message = ex.Message });
+        }
+        catch (Exception ex) when (IsBackupInfrastructureException(ex))
+        {
+            return BackupUnavailable(ex, "Backup retry");
+        }
     }
+
+    private ObjectResult BackupUnavailable(Exception exception, string operation)
+    {
+        logger?.LogError("{Operation} failed because a backup dependency was unavailable ({ExceptionType}).", operation, exception.GetType().Name);
+        return StatusCode(StatusCodes.Status503ServiceUnavailable,
+            new
+            {
+                errorCode = "BACKUP_SERVICE_UNAVAILABLE",
+                message = "The backup service is temporarily unavailable. Verify database and storage readiness, then retry."
+            });
+    }
+
+    private static bool IsBackupInfrastructureException(Exception exception) => exception is
+        SqlException or DbUpdateException or CryptographicException or IOException or
+        UnauthorizedAccessException or TimeoutException;
 }
