@@ -92,6 +92,7 @@ Require-Value 'LOGICFIT_E2E_EMAIL' $Email
 Require-Value 'LOGICFIT_E2E_PASSWORD' $Password
 Require-Value 'LOGICFIT_E2E_WORKSPACE_ID' $WorkspaceId
 
+[Guid]$workspaceGuid = [Guid]::Empty
 if (-not [Guid]::TryParse($WorkspaceId, [ref]$workspaceGuid)) {
     throw 'LOGICFIT_E2E_WORKSPACE_ID must be a valid GUID.'
 }
@@ -122,6 +123,8 @@ if ([string]::IsNullOrWhiteSpace([string]$refresh.accessToken)) {
 }
 
 if (-not [string]::IsNullOrWhiteSpace($TenantAId) -and -not [string]::IsNullOrWhiteSpace($TenantBId)) {
+    [Guid]$tenantAGuid = [Guid]::Empty
+    [Guid]$tenantBGuid = [Guid]::Empty
     if (-not [Guid]::TryParse($TenantAId, [ref]$tenantAGuid) -or
         -not [Guid]::TryParse($TenantBId, [ref]$tenantBGuid) -or
         $tenantAGuid -eq $tenantBGuid) {
