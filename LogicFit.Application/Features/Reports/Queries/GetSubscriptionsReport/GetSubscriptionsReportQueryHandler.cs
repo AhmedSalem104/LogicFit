@@ -31,6 +31,16 @@ public class GetSubscriptionsReportQueryHandler : IRequestHandler<GetSubscriptio
             .Where(cs => cs.TenantId == tenantId && !cs.IsDeleted)
             .ToListAsync(cancellationToken);
 
+        var refundsBySubscription = await _context.WalletTransactions
+            .AsNoTracking()
+            .Where(t => t.TenantId == tenantId &&
+                        t.Type == TransactionType.Refund &&
+                        t.ReferenceType == SubscriptionRevenueCalculator.SubscriptionReferenceType &&
+                        t.ReferenceId.HasValue)
+            .GroupBy(t => t.ReferenceId!.Value)
+            .Select(g => new { SubscriptionId = g.Key, Amount = g.Sum(t => t.Amount) })
+            .ToDictionaryAsync(x => x.SubscriptionId, x => x.Amount, cancellationToken);
+
         var totalSubscriptions = allSubscriptions.Count;
         var activeSubscriptions = allSubscriptions.Count(cs => cs.Status == SubscriptionStatus.Active);
         var suspendedSubscriptions = allSubscriptions.Count(cs => cs.Status == SubscriptionStatus.Suspended);
@@ -44,7 +54,9 @@ public class GetSubscriptionsReportQueryHandler : IRequestHandler<GetSubscriptio
             cs.Status == SubscriptionStatus.Active && cs.EndDate <= in30Days && cs.EndDate > now);
 
         decimal GetRevenue(Domain.Entities.ClientSubscription cs) =>
-            SubscriptionRevenueCalculator.PaidAmount(cs);
+            SubscriptionRevenueCalculator.NetCollectedAmount(
+                cs,
+                refundsBySubscription.GetValueOrDefault(cs.Id));
 
         var totalRevenue = allSubscriptions.Sum(GetRevenue);
         var revenueThisMonth = allSubscriptions
@@ -79,7 +91,7 @@ public class GetSubscriptionsReportQueryHandler : IRequestHandler<GetSubscriptio
                 TotalSold = sp.Subscriptions.Count(cs => !cs.IsDeleted),
                 TotalRevenue = sp.Subscriptions
                     .Where(cs => !cs.IsDeleted)
-                    .Sum(SubscriptionRevenueCalculator.PaidAmount)
+                    .Sum(GetRevenue)
             })
             .ToList();
 
@@ -110,7 +122,7 @@ public class GetSubscriptionsReportQueryHandler : IRequestHandler<GetSubscriptio
             {
                 PaymentMethod = g.Key.ToString(),
                 Count = g.Count(),
-                TotalRevenue = g.Sum(cs => cs.AmountPaid)
+                TotalRevenue = g.Sum(GetRevenue)
             })
             .ToList();
 

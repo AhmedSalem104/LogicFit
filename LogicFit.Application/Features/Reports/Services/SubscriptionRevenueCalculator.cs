@@ -9,7 +9,15 @@ namespace LogicFit.Application.Features.Reports.Services;
 /// </summary>
 public static class SubscriptionRevenueCalculator
 {
+    public const string SubscriptionReferenceType = "Subscription";
+
     public static decimal PaidAmount(ClientSubscription subscription) => subscription.AmountPaid;
+
+    public static decimal NetCollectedAmount(ClientSubscription subscription, decimal refundedAmount)
+    {
+        var boundedRefund = Math.Min(Math.Max(0m, refundedAmount), Math.Max(0m, subscription.AmountPaid));
+        return Math.Max(0m, subscription.AmountPaid - boundedRefund);
+    }
 
     public static decimal RemainingAmount(ClientSubscription subscription) =>
         Math.Max(0m, subscription.TotalAmount - subscription.AmountPaid);

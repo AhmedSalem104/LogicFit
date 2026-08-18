@@ -671,12 +671,14 @@ deployed, and health-verified.
 ### 2026-08-18 — paid revenue source of truth (Issue #321)
 
 - Financial, subscription, and dashboard revenue calculations use the persisted
-  `ClientSubscription.AmountPaid` aggregate. Plan/list prices and `TotalAmount` remain expected
-  values and are not recognized as collected revenue when payment is missing or partial.
+  `ClientSubscription.AmountPaid` aggregate, less linked subscription refund transactions in the
+  tenant wallet ledger. Plan/list prices and `TotalAmount` remain expected values and are not
+  recognized as collected revenue when payment is missing or partial.
 - No database migration, API shape, tenant-boundary, or UI change is included. The clients report
-  now follows the same collected-cash source instead of using the plan list price. Refunds and
-  cancellations still require a separate immutable reversal ledger before they can be represented
-  as net revenue. Subscription payments now share the same remaining-balance guard across the
+  now follows the same collected-cash source instead of using the plan list price. Wallet refunds
+  recorded by subscription reference are subtracted consistently across the financial,
+  subscription, dashboard, and clients reports; external payment-provider reversals still require
+  a separate immutable reversal ledger. Subscription payments now share the same remaining-balance guard across the
   generic payment endpoint and subscription-specific endpoint; discounts cannot reduce a total
   below money already collected. This entry records backend behavior on the task branch;
   deployment and production health verification remain outstanding until release.

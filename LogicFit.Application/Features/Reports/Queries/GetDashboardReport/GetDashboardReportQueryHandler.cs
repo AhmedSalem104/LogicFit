@@ -49,13 +49,29 @@ public class GetDashboardReportQueryHandler : IRequestHandler<GetDashboardReport
             .Include(cs => cs.Plan)
             .Where(cs => cs.TenantId == tenantId && cs.StartDate >= startOfMonth && !cs.IsDeleted)
             .ToListAsync(cancellationToken);
-        var revenueThisMonth = subscriptionsThisMonth.Sum(SubscriptionRevenueCalculator.PaidAmount);
 
         var subscriptionsLastMonth = await _context.ClientSubscriptions
             .Include(cs => cs.Plan)
             .Where(cs => cs.TenantId == tenantId && cs.StartDate >= startOfLastMonth && cs.StartDate < startOfMonth && !cs.IsDeleted)
             .ToListAsync(cancellationToken);
-        var revenueLastMonth = subscriptionsLastMonth.Sum(SubscriptionRevenueCalculator.PaidAmount);
+
+        var refundsBySubscription = await _context.WalletTransactions
+            .AsNoTracking()
+            .Where(t => t.TenantId == tenantId &&
+                        t.Type == TransactionType.Refund &&
+                        t.ReferenceType == SubscriptionRevenueCalculator.SubscriptionReferenceType &&
+                        t.ReferenceId.HasValue)
+            .GroupBy(t => t.ReferenceId!.Value)
+            .Select(g => new { SubscriptionId = g.Key, Amount = g.Sum(t => t.Amount) })
+            .ToDictionaryAsync(x => x.SubscriptionId, x => x.Amount, cancellationToken);
+
+        decimal GetRevenue(Domain.Entities.ClientSubscription subscription)
+            => SubscriptionRevenueCalculator.NetCollectedAmount(
+                subscription,
+                refundsBySubscription.GetValueOrDefault(subscription.Id));
+
+        var revenueThisMonth = subscriptionsThisMonth.Sum(GetRevenue);
+        var revenueLastMonth = subscriptionsLastMonth.Sum(GetRevenue);
 
         var workoutsThisMonth = await _context.WorkoutSessions
             .CountAsync(ws => ws.TenantId == tenantId && ws.StartedAt >= startOfMonth && !ws.IsDeleted, cancellationToken);

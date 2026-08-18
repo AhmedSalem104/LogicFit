@@ -26,6 +26,22 @@ public sealed class FinancialReportRevenueSourceTests
     }
 
     [Theory]
+    [InlineData(600, 600, 0, 600)]
+    [InlineData(600, 600, 125, 475)]
+    [InlineData(600, 600, 700, 0)]
+    [InlineData(600, 0, 100, 0)]
+    public void Net_collected_revenue_subtracts_recorded_refunds_without_going_negative(
+        decimal totalAmount,
+        decimal amountPaid,
+        decimal refundedAmount,
+        decimal expectedRevenue)
+    {
+        var subscription = new ClientSubscription { TotalAmount = totalAmount, AmountPaid = amountPaid };
+
+        Assert.Equal(expectedRevenue, SubscriptionRevenueCalculator.NetCollectedAmount(subscription, refundedAmount));
+    }
+
+    [Theory]
     [InlineData(600, 0, 600, true)]
     [InlineData(600, 250, 350, true)]
     [InlineData(600, 600, 0, false)]
@@ -57,10 +73,8 @@ public sealed class FinancialReportRevenueSourceTests
         foreach (var handler in handlers)
         {
             var source = File.ReadAllText(handler);
-            if (source.Contains("GetClientsReportQueryHandler", StringComparison.Ordinal))
-                Assert.Contains("Sum(s => s.AmountPaid)", source, StringComparison.Ordinal);
-            else
-                Assert.Contains("SubscriptionRevenueCalculator.PaidAmount", source, StringComparison.Ordinal);
+            Assert.Contains("SubscriptionRevenueCalculator.NetCollectedAmount", source, StringComparison.Ordinal);
+            Assert.Contains("WalletTransactions", source, StringComparison.Ordinal);
             Assert.DoesNotContain("Plan.Price", source, StringComparison.Ordinal);
         }
 

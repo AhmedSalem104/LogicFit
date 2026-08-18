@@ -162,13 +162,14 @@ states in the UI.
 ### Financial report source of truth
 
 Revenue fields in the financial, subscription, and dashboard reports represent collected cash from
-`ClientSubscription.AmountPaid`. `SubscriptionPlan.Price` and `ClientSubscription.TotalAmount`
-remain expected/contract values and must not be counted as paid revenue when a subscription is
-unpaid or partially paid.
+`ClientSubscription.AmountPaid`, less refund transactions recorded in the tenant wallet ledger
+with `Type=Refund`, `ReferenceType=Subscription`, and the subscription id as `ReferenceId`.
+`SubscriptionPlan.Price` and `ClientSubscription.TotalAmount` remain expected/contract values and
+must not be counted as paid revenue when a subscription is unpaid or partially paid.
 
-The clients report uses `ClientSubscription.AmountPaid` for its per-client collected total as well.
-The current domain has no immutable refund/reversal entity; reports therefore do not claim net
-revenue after refunds or cancellations until that ledger is introduced and reviewed.
+The clients report uses the same net-collected calculation for its per-client total. Refunds that
+are not recorded in this wallet ledger (for example an external payment-provider reversal) remain
+outside the current source of truth and require a reviewed immutable payment-reversal ledger.
 
 All subscription payment entry points reject amounts above the remaining balance, and a later
 discount cannot lower the contract total below already-collected cash.
