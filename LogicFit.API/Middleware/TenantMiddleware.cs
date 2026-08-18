@@ -1,6 +1,7 @@
 using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 using LogicFit.Application.Common.Interfaces;
-using LogicFit.Domain.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LogicFit.API.Middleware;
 
@@ -23,36 +24,93 @@ public class TenantMiddleware
             return;
         }
 
-        // 1. First try from JWT claims (most reliable for authenticated requests)
-        var tenantClaim = context.User?.FindFirst("TenantId")?.Value;
-        if (!string.IsNullOrEmpty(tenantClaim) && Guid.TryParse(tenantClaim, out var tenantIdFromClaim))
+        var isAnonymous = context.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() is not null;
+        var isAuthenticated = context.User?.Identity?.IsAuthenticated == true;
+        var isPlatformRoute = IsPlatformRoute(path);
+
+        // Platform routes are intentionally tenantless, but a tenant token must not be
+        // accepted on them. Anonymous platform login/refresh continues to work.
+        if (isPlatformRoute)
         {
+            if (isAuthenticated && !HasAudience(context.User!, "LogicFitPlatform"))
+            {
+                await RejectAsync(context, StatusCodes.Status403Forbidden, "A platform token is required.");
+                return;
+            }
+
+            await _next(context);
+            return;
+        }
+
+        // An authenticated request to a non-platform API is a tenant request. It must use a
+        // tenant-audience token with a signed TenantId claim. Header/host resolution is only
+        // retained for anonymous public flows; accepting X-Tenant-Id for an authenticated token
+        // would let a caller try to switch the query-filter context independently of the token.
+        if (isAuthenticated && !isAnonymous)
+        {
+            if (HasAudience(context.User!, "LogicFitPlatform"))
+            {
+                await RejectAsync(context, StatusCodes.Status403Forbidden, "A tenant token is required.");
+                return;
+            }
+
+            if (!HasAudience(context.User!, "LogicFitUsers"))
+            {
+                await RejectAsync(context, StatusCodes.Status403Forbidden, "A tenant audience is required.");
+                return;
+            }
+
+            var tenantClaim = context.User!.FindFirst("TenantId")?.Value;
+            if (!Guid.TryParse(tenantClaim, out var tenantIdFromClaim) || tenantIdFromClaim == Guid.Empty)
+            {
+                await RejectAsync(context, StatusCodes.Status403Forbidden, "Tenant context is required.");
+                return;
+            }
+
+            if (context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantIdHeader))
+            {
+                if (!Guid.TryParse(tenantIdHeader.ToString(), out var headerTenantId) || headerTenantId != tenantIdFromClaim)
+                {
+                    await RejectAsync(context, StatusCodes.Status403Forbidden, "Tenant context does not match the token.");
+                    return;
+                }
+            }
+
+            if (!await tenantService.TenantExistsAsync(tenantIdFromClaim))
+            {
+                await RejectAsync(context, StatusCodes.Status403Forbidden, "Tenant context is invalid.");
+                return;
+            }
+
             await tenantService.SetTenantAsync(tenantIdFromClaim);
             await _next(context);
             return;
         }
 
-        // 2. Try Header (X-Tenant-Id) for unauthenticated requests or when JWT doesn't have TenantId
-        if (context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantIdHeader))
+        // Anonymous public flows may resolve a tenant from an explicit header or host. They
+        // never receive an authenticated tenant context, and protected endpoints still stop at
+        // ASP.NET Core authorization.
+        if (context.Request.Headers.TryGetValue("X-Tenant-Id", out var anonymousTenantHeader))
         {
-            if (Guid.TryParse(tenantIdHeader, out var tenantId))
+            if (Guid.TryParse(anonymousTenantHeader.ToString(), out var tenantId))
             {
-                var tenantExists = await tenantService.TenantExistsAsync(tenantId);
-                if (tenantExists)
+                if (!await tenantService.TenantExistsAsync(tenantId))
                 {
-                    await tenantService.SetTenantAsync(tenantId);
-                }
-                else
-                {
-                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                    await context.Response.WriteAsJsonAsync(new { error = "Invalid tenant" });
+                    await RejectAsync(context, StatusCodes.Status400BadRequest, "Invalid tenant.");
                     return;
                 }
+
+                await tenantService.SetTenantAsync(tenantId);
+            }
+            else
+            {
+                await RejectAsync(context, StatusCodes.Status400BadRequest, "Invalid tenant.");
+                return;
             }
         }
-        // 3. Try a custom domain (full host), then fall back to subdomain.
         else
         {
+            // Try a custom domain (full host), then fall back to subdomain.
             var host = context.Request.Host.Host;
             var matchedCustomDomain = await tenantService.SetTenantByCustomDomainAsync(host);
 
@@ -60,36 +118,30 @@ public class TenantMiddleware
             {
                 var subdomain = host.Split('.')[0];
                 if (!string.IsNullOrEmpty(subdomain) && subdomain != "www")
-                {
                     await tenantService.SetTenantBySubdomainAsync(subdomain);
-                }
             }
-        }
-
-        // Hardening: an authenticated, non-platform user must have a resolved tenant.
-        // Otherwise CurrentTenantId stays null, which bypasses every tenant query filter
-        // (that null-bypass is reserved for platform users), leaking cross-tenant data.
-        var isAuthenticated = context.User?.Identity?.IsAuthenticated == true;
-        if (isAuthenticated && tenantService.CurrentTenantId == null && !IsPlatformUser(context.User!))
-        {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsJsonAsync(new { error = "Tenant could not be resolved" });
-            return;
         }
 
         await _next(context);
     }
 
-    private static bool IsPlatformUser(ClaimsPrincipal user)
+    private static bool HasAudience(ClaimsPrincipal user, string expectedAudience)
     {
-        // Platform users carry platform roles / permissions and no TenantId claim.
-        if (user.IsInRole(SystemRoles.PlatformOwner) || user.IsInRole(SystemRoles.PlatformAdmin))
-        {
-            return true;
-        }
+        return user.FindAll(JwtRegisteredClaimNames.Aud)
+            .Concat(user.FindAll("aud"))
+            .Any(c => string.Equals(c.Value, expectedAudience, StringComparison.Ordinal));
+    }
 
-        return user.FindAll("permission")
-            .Any(c => Permissions.PlatformPermissions.Contains(c.Value));
+    private static bool IsPlatformRoute(string? path)
+    {
+        return string.Equals(path, "/api/platform", StringComparison.OrdinalIgnoreCase)
+            || (path?.StartsWith("/api/platform/", StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    private static async Task RejectAsync(HttpContext context, int statusCode, string message)
+    {
+        context.Response.StatusCode = statusCode;
+        await context.Response.WriteAsJsonAsync(new { error = message });
     }
 }
 

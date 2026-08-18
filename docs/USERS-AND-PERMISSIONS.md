@@ -162,3 +162,13 @@ server cannot provide one, the session is cleared and the user returns to identi
   silently overwriting another coach's plan.
 - UI hiding is not authorization. Every handler verifies tenant, membership/assignment, ownership,
   and active subscription rules before changing or returning data.
+
+## Production tenant request boundary (Issue #321)
+
+Authenticated requests to non-platform APIs must carry a server-issued `LogicFitUsers` audience and
+the signed `TenantId` claim. `X-Tenant-Id` is accepted only when it matches that claim; it cannot
+select or replace the tenant for an authenticated request. A `LogicFitPlatform` token is rejected
+from tenant routes, while `/api/platform/*` remains tenantless and accepts only the platform
+audience. Missing, invalid, unknown, or mismatched tenant context fails closed with `403` before
+the request reaches authorization or a tenant query. Anonymous public flows retain their explicit
+tenant-header/host resolution for public endpoints only.

@@ -125,6 +125,15 @@ existing file to be overwritten. لا تُسجّل محتويات الملف
 
 1. راجع `git status` وتأكد أن النسخة المنشورة هي commit/branch المقصود؛ لا تخلط مجلد
    Visual Studio قديم مع GitHub.
+
+### Issue #321 - tenant boundary release gate
+
+The API now fails closed before authorization when an authenticated non-platform request has no
+valid tenant context. Tenant routes require the `LogicFitUsers` audience and signed `TenantId`,
+and an optional `X-Tenant-Id` header must match it. Platform routes are tenantless and require the
+`LogicFitPlatform` audience. After deployment, verify one authenticated tenant smoke request, one
+platform request, and negative checks for a platform token on a tenant route and a missing tenant
+claim. A build/test pass without these checks is not a production approval.
 2. شغّل build/tests ومراجعة migrations:
 
 ```powershell
