@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.Reports.DTOs;
+using LogicFit.Application.Features.Reports.Services;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -43,18 +44,18 @@ public class GetDashboardReportQueryHandler : IRequestHandler<GetDashboardReport
         var expiringSubscriptions = await _context.ClientSubscriptions
             .CountAsync(cs => cs.TenantId == tenantId && cs.Status == SubscriptionStatus.Active && cs.EndDate <= in7Days && !cs.IsDeleted, cancellationToken);
 
-        // Calculate revenue from subscription plan prices
+        // Revenue is collected cash, not the expected/list price of a subscription.
         var subscriptionsThisMonth = await _context.ClientSubscriptions
             .Include(cs => cs.Plan)
             .Where(cs => cs.TenantId == tenantId && cs.StartDate >= startOfMonth && !cs.IsDeleted)
             .ToListAsync(cancellationToken);
-        var revenueThisMonth = subscriptionsThisMonth.Sum(cs => cs.Plan?.Price ?? 0);
+        var revenueThisMonth = subscriptionsThisMonth.Sum(SubscriptionRevenueCalculator.PaidAmount);
 
         var subscriptionsLastMonth = await _context.ClientSubscriptions
             .Include(cs => cs.Plan)
             .Where(cs => cs.TenantId == tenantId && cs.StartDate >= startOfLastMonth && cs.StartDate < startOfMonth && !cs.IsDeleted)
             .ToListAsync(cancellationToken);
-        var revenueLastMonth = subscriptionsLastMonth.Sum(cs => cs.Plan?.Price ?? 0);
+        var revenueLastMonth = subscriptionsLastMonth.Sum(SubscriptionRevenueCalculator.PaidAmount);
 
         var workoutsThisMonth = await _context.WorkoutSessions
             .CountAsync(ws => ws.TenantId == tenantId && ws.StartedAt >= startOfMonth && !ws.IsDeleted, cancellationToken);

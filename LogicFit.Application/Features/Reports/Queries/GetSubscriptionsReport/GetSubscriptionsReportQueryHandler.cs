@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.Reports.DTOs;
+using LogicFit.Application.Features.Reports.Services;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -42,9 +43,8 @@ public class GetSubscriptionsReportQueryHandler : IRequestHandler<GetSubscriptio
         var expiringIn30Days = allSubscriptions.Count(cs =>
             cs.Status == SubscriptionStatus.Active && cs.EndDate <= in30Days && cs.EndDate > now);
 
-        // Revenue: use AmountPaid if > 0, otherwise fallback to Plan.Price
         decimal GetRevenue(Domain.Entities.ClientSubscription cs) =>
-            cs.AmountPaid > 0 ? cs.AmountPaid : (cs.Plan?.Price ?? 0);
+            SubscriptionRevenueCalculator.PaidAmount(cs);
 
         var totalRevenue = allSubscriptions.Sum(GetRevenue);
         var revenueThisMonth = allSubscriptions
@@ -79,7 +79,7 @@ public class GetSubscriptionsReportQueryHandler : IRequestHandler<GetSubscriptio
                 TotalSold = sp.Subscriptions.Count(cs => !cs.IsDeleted),
                 TotalRevenue = sp.Subscriptions
                     .Where(cs => !cs.IsDeleted)
-                    .Sum(cs => cs.AmountPaid > 0 ? cs.AmountPaid : sp.Price)
+                    .Sum(SubscriptionRevenueCalculator.PaidAmount)
             })
             .ToList();
 
