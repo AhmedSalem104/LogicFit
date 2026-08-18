@@ -134,6 +134,13 @@ and an optional `X-Tenant-Id` header must match it. Platform routes are tenantle
 `LogicFitPlatform` audience. After deployment, verify one authenticated tenant smoke request, one
 platform request, and negative checks for a platform token on a tenant route and a missing tenant
 claim. A build/test pass without these checks is not a production approval.
+
+The P0 remediation branch also routes tenant-owned `IApplicationDbContext` sets through the
+server-resolved `TenantDbContext`. `TenantDatabaseRoutingMiddleware` returns `503
+TENANT_DATABASE_UNAVAILABLE` when an assigned mapping cannot be resolved, and the compatibility
+proxy throws instead of falling back to the shared `ApplicationDbContext` for a resolved tenant.
+This runtime cutover must be reconciled with the current `master` deployment tree and verified
+against real staging mappings before merge; local contract tests do not replace that check.
 2. شغّل build/tests ومراجعة migrations:
 
 ```powershell

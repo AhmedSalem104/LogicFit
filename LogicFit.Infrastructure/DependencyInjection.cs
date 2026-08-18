@@ -25,13 +25,31 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddDataProtection();
 
-        // Database
+        // Platform DB remains the source of identity, workspace metadata, billing and mappings.
+        // Tenant-owned operational sets are routed separately after the tenant mapping is resolved.
+        services.AddDbContext<PlatformDbContext>(options =>
+            DbContextSqlServerOptions.UsePlatformDatabase(
+                options,
+                configuration.GetConnectionString("DefaultConnection")
+                    ?? throw new InvalidOperationException("DefaultConnection is not configured.")));
+
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(
                 configuration.GetConnectionString("DefaultConnection"),
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
-        services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        services.AddScoped<TenantDatabaseRequestScope>();
+        services.AddScoped<TenantDatabaseContextAccessor>();
+        services.AddOptions<TenantDatabaseRoutingOptions>()
+            .Bind(configuration.GetSection(TenantDatabaseRoutingOptions.SectionName))
+            .ValidateOnStart();
+        services.AddScoped<IApplicationDbContext>(provider =>
+            TenantAwareApplicationDbContextProxy.Create(
+                provider.GetRequiredService<PlatformDbContext>(),
+                provider.GetRequiredService<ApplicationDbContext>(),
+                provider.GetRequiredService<TenantDatabaseRequestScope>(),
+                provider.GetRequiredService<TenantDatabaseContextAccessor>(),
+                provider.GetRequiredService<ITenantService>()));
         services.AddSingleton<IDistributedLockProvider, SqlServerDistributedLockProvider>();
         services.AddScoped<IDatabaseResourcePool, DatabaseResourcePoolService>();
         services.AddScoped<LocalSqlTenantDatabasePurgeProvider>();
@@ -76,7 +94,7 @@ public static class DependencyInjection
             options.Password.RequiredLength = 8;
             options.User.RequireUniqueEmail = false; // We handle uniqueness per tenant
         })
-        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddEntityFrameworkStores<PlatformDbContext>()
         .AddDefaultTokenProviders();
 
         // JWT Authentication

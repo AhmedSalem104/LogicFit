@@ -27,7 +27,7 @@ public class TenantService : ITenantService
     public async Task SetTenantBySubdomainAsync(string subdomain)
     {
         using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
 
         var tenant = await dbContext.Tenants
             .IgnoreQueryFilters()
@@ -42,7 +42,7 @@ public class TenantService : ITenantService
     public async Task<bool> SetTenantByCustomDomainAsync(string host)
     {
         using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
 
         var tenant = await dbContext.Tenants
             .IgnoreQueryFilters()
@@ -64,7 +64,7 @@ public class TenantService : ITenantService
         var id = identifier.Trim().ToLowerInvariant();
 
         using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
 
         var tenant = await dbContext.Tenants
             .IgnoreQueryFilters()
@@ -76,7 +76,7 @@ public class TenantService : ITenantService
     public async Task<bool> TenantExistsAsync(Guid tenantId)
     {
         using var scope = _serviceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<PlatformDbContext>();
 
         return await dbContext.Tenants
             .IgnoreQueryFilters()
