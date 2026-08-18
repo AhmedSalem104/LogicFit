@@ -673,6 +673,8 @@ deployed, and health-verified.
 - Financial, subscription, and dashboard revenue calculations use the persisted
   `ClientSubscription.AmountPaid` aggregate. Plan/list prices and `TotalAmount` remain expected
   values and are not recognized as collected revenue when payment is missing or partial.
-- No database migration, API shape, tenant-boundary, or UI change is included. This entry records
-  backend behavior on the task branch; deployment and production health verification remain
-  outstanding until release.
+- No database migration, API shape, tenant-boundary, or UI change is included. The clients report
+  now follows the same collected-cash source instead of using the plan list price. Refunds and
+  cancellations still require a separate immutable reversal ledger before they can be represented
+  as net revenue. This entry records backend behavior on the task branch; deployment and production
+  health verification remain outstanding until release.

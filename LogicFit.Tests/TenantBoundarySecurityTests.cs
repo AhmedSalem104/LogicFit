@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LogicFit.API.Middleware;
 using LogicFit.Application.Common.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Xunit;
 
@@ -35,6 +36,21 @@ public sealed class TenantBoundarySecurityTests
 
         Assert.Equal(StatusCodes.Status403Forbidden, context.Response.StatusCode);
         Assert.False(nextCalled);
+    }
+
+    [Fact]
+    public async Task Platform_token_is_rejected_even_on_anonymous_non_platform_route()
+    {
+        var tenantService = new FakeTenantService();
+        var (context, nextCalled) = await InvokeAsync(
+            "/api/identity/login",
+            Principal("LogicFitPlatform"),
+            tenantService,
+            endpointIsAnonymous: true);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, context.Response.StatusCode);
+        Assert.False(nextCalled);
+        Assert.Null(tenantService.CurrentTenantId);
     }
 
     [Fact]
@@ -109,11 +125,19 @@ public sealed class TenantBoundarySecurityTests
         string path,
         ClaimsPrincipal principal,
         FakeTenantService tenantService,
-        string? tenantHeader = null)
+        string? tenantHeader = null,
+        bool endpointIsAnonymous = false)
     {
         var context = new DefaultHttpContext();
         context.Request.Path = path;
         context.User = principal;
+        if (endpointIsAnonymous)
+        {
+            context.SetEndpoint(new Endpoint(
+                _ => Task.CompletedTask,
+                new EndpointMetadataCollection(new AllowAnonymousAttribute()),
+                "anonymous-test"));
+        }
         if (tenantHeader is not null)
             context.Request.Headers["X-Tenant-Id"] = tenantHeader;
 

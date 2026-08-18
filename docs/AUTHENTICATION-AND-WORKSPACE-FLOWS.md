@@ -240,6 +240,14 @@ Identity, Platform, and Tenant refresh cookies are separate. Changing a password
 permission version revokes old refresh sessions. Frontend route guards only improve navigation; the
 Backend remains the security boundary.
 
+### Issue #321 — authenticated release smoke boundary
+
+The protected release gate logs in through `/api/identity/login`, exchanges the returned selection
+token through `/api/identity/select-workspace`, verifies tenant profile access and refresh-token
+rotation, then proves that a Tenant A token cannot use an `X-Tenant-Id` for Tenant B and that a
+Platform token is rejected by `/api/clients`. The fixture values are protected release-environment
+secrets; a missing fixture fails the gate rather than being treated as a passing E2E run.
+
 ## Canonical references
 
 - [API endpoint catalog](API-ENDPOINT-CATALOG.md) — generated from controllers.

@@ -165,3 +165,7 @@ Revenue fields in the financial, subscription, and dashboard reports represent c
 `ClientSubscription.AmountPaid`. `SubscriptionPlan.Price` and `ClientSubscription.TotalAmount`
 remain expected/contract values and must not be counted as paid revenue when a subscription is
 unpaid or partially paid.
+
+The clients report uses `ClientSubscription.AmountPaid` for its per-client collected total as well.
+The current domain has no immutable refund/reversal entity; reports therefore do not claim net
+revenue after refunds or cancellations until that ledger is introduced and reviewed.

@@ -57,7 +57,7 @@ public class GetClientsReportQueryHandler : IRequestHandler<GetClientsReportQuer
                 Name = u.Profile != null ? u.Profile.FullName ?? u.Email : u.Email,
                 PhoneNumber = u.PhoneNumber,
                 TotalSessions = u.WorkoutSessions.Count(ws => !ws.IsDeleted),
-                TotalPaid = u.Subscriptions.Where(s => !s.IsDeleted).Sum(s => s.Plan.Price)
+                TotalPaid = u.Subscriptions.Where(s => !s.IsDeleted).Sum(s => s.AmountPaid)
             })
             .ToListAsync(cancellationToken);
 

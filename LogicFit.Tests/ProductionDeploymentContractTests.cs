@@ -30,6 +30,12 @@ public class ProductionDeploymentContractTests
         Assert.Contains("Probe with the application SQL provider", workflow);
         Assert.Contains("diagnose-webdeploy-health.ps1", workflow);
         Assert.Contains("Compare remote database identity", workflow);
+        Assert.Contains("Assert-NoTrackedSecrets.ps1", workflow);
+        Assert.Contains("Block high and critical NuGet vulnerabilities", workflow);
+        Assert.Contains("authenticated-e2e:", workflow);
+        Assert.Contains("needs: [preflight, authenticated-e2e]", workflow);
+        Assert.Contains("LOGICFIT_E2E_PLATFORM_TOKEN", workflow);
+        Assert.Contains("Invoke-AuthenticatedReleaseE2E.ps1 -Mode Release", workflow);
     }
 
     [Fact]
@@ -80,5 +86,16 @@ public class ProductionDeploymentContractTests
         Assert.Contains("App_Data/PrivateBackups", script, StringComparison.Ordinal);
         Assert.Contains("enable_backups", workflow, StringComparison.Ordinal);
         Assert.Contains("$arguments.EnableBackups = $true", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Repository_has_a_non_logging_secret_scan_release_gate()
+    {
+        var script = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "Assert-NoTrackedSecrets.ps1"));
+
+        Assert.Contains("git -C $root ls-files", script, StringComparison.Ordinal);
+        Assert.Contains("Write-Host", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Write-Output $content", script, StringComparison.Ordinal);
+        Assert.Contains("appsettings\\.production\\.json", script, StringComparison.OrdinalIgnoreCase);
     }
 }

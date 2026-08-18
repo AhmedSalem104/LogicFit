@@ -33,13 +33,17 @@ public sealed class FinancialReportRevenueSourceTests
         {
             Path.Combine(root, "LogicFit.Application", "Features", "Reports", "Queries", "GetFinancialReport", "GetFinancialReportQueryHandler.cs"),
             Path.Combine(root, "LogicFit.Application", "Features", "Reports", "Queries", "GetSubscriptionsReport", "GetSubscriptionsReportQueryHandler.cs"),
-            Path.Combine(root, "LogicFit.Application", "Features", "Reports", "Queries", "GetDashboardReport", "GetDashboardReportQueryHandler.cs")
+            Path.Combine(root, "LogicFit.Application", "Features", "Reports", "Queries", "GetDashboardReport", "GetDashboardReportQueryHandler.cs"),
+            Path.Combine(root, "LogicFit.Application", "Features", "Reports", "Queries", "GetClientsReport", "GetClientsReportQueryHandler.cs")
         };
 
         foreach (var handler in handlers)
         {
             var source = File.ReadAllText(handler);
-            Assert.Contains("SubscriptionRevenueCalculator.PaidAmount", source, StringComparison.Ordinal);
+            if (source.Contains("GetClientsReportQueryHandler", StringComparison.Ordinal))
+                Assert.Contains("Sum(s => s.AmountPaid)", source, StringComparison.Ordinal);
+            else
+                Assert.Contains("SubscriptionRevenueCalculator.PaidAmount", source, StringComparison.Ordinal);
             Assert.DoesNotContain("Plan.Price", source, StringComparison.Ordinal);
         }
     }

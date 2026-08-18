@@ -42,18 +42,21 @@ public class TenantMiddleware
             return;
         }
 
+        // A platform token is never a tenant token. Reject it on every non-platform route,
+        // including endpoints marked AllowAnonymous, unless a future endpoint is deliberately
+        // moved under /api/platform or receives an explicit reviewed exception.
+        if (isAuthenticated && HasAudience(context.User!, "LogicFitPlatform"))
+        {
+            await RejectAsync(context, StatusCodes.Status403Forbidden, "A tenant token is required.");
+            return;
+        }
+
         // An authenticated request to a non-platform API is a tenant request. It must use a
         // tenant-audience token with a signed TenantId claim. Header/host resolution is only
         // retained for anonymous public flows; accepting X-Tenant-Id for an authenticated token
         // would let a caller try to switch the query-filter context independently of the token.
         if (isAuthenticated && !isAnonymous)
         {
-            if (HasAudience(context.User!, "LogicFitPlatform"))
-            {
-                await RejectAsync(context, StatusCodes.Status403Forbidden, "A tenant token is required.");
-                return;
-            }
-
             if (!HasAudience(context.User!, "LogicFitUsers"))
             {
                 await RejectAsync(context, StatusCodes.Status403Forbidden, "A tenant audience is required.");

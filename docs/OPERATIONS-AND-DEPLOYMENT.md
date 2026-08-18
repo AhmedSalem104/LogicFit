@@ -391,3 +391,17 @@ The required local gates are:
 
 This is an implementation branch until PR review, merge, migration application, deployment,
 and post-deployment smoke tests complete.
+
+## Production readiness gates (Issue #321)
+
+The backend CI and protected production preflight now run the tracked-secret scan and fail on
+High/Critical NuGet advisories. The protected deployment also depends on an authenticated E2E job
+using the `release-gates` environment. That job requires a safe non-production fixture account,
+two different tenant identifiers, and a platform token; it verifies identity login, workspace
+selection, tenant profile access, refresh-token rotation, cross-tenant header rejection, and the
+platform-token boundary. Credentials and tokens are read only from protected environment secrets
+and are never written to logs.
+
+The E2E gate is intentionally fail-closed when its environment is not configured. Provisioning,
+payment approval, backup, and retry mutation scenarios still require a dedicated disposable
+staging fixture and are not represented as production-verified by the read-only smoke gate.

@@ -96,6 +96,30 @@ jobs:
         with:
           dotnet-version: '8.0.x'
       - run: dotnet restore LogicFit.sln
+      - name: Assert tracked secret policy
+        shell: pwsh
+        run: ./Scripts/Assert-NoTrackedSecrets.ps1
+      - name: Block high and critical NuGet vulnerabilities
+        shell: pwsh
+        run: |
+          $report = (dotnet list LogicFit.sln package --vulnerable --include-transitive --format json | Out-String) | ConvertFrom-Json
+          $blocking = [System.Collections.Generic.List[string]]::new()
+          foreach ($project in @($report.projects)) {
+            foreach ($framework in @($project.frameworks)) {
+              foreach ($package in @($framework.topLevelPackages) + @($framework.transitivePackages)) {
+                foreach ($vulnerability in @($package.vulnerabilities)) {
+                  $severity = [string]$vulnerability.severity
+                  if ($severity -in @('High', 'Critical')) {
+                    $blocking.Add("$($package.id) $($package.resolvedVersion) $severity")
+                  }
+                }
+              }
+            }
+          }
+          if ($blocking.Count -gt 0) {
+            throw "High or critical NuGet vulnerabilities remain: $($blocking -join '; ')"
+          }
+          Write-Host 'NuGet vulnerability gate passed.'
       - run: dotnet build LogicFit.sln -c Release --no-restore
       - run: dotnet test LogicFit.sln -c Release --no-build --verbosity normal
         env:
@@ -111,7 +135,7 @@ jobs:
 
   deploy:
     if: ${{ inputs.confirm == 'DEPLOY-PRODUCTION' }}
-    needs: preflight
+    needs: [preflight, authenticated-e2e]
     runs-on: windows-latest
     environment: production
     steps:
@@ -198,6 +222,28 @@ jobs:
             -MigrationScriptPath "$env:RUNNER_TEMP/migration-plan/logicfit-migrations.sql" `
             -ApproveDestructiveMigrationReview `
             -HealthCheckUrl $env:UNIFIED_HEALTH_URL
+
+  authenticated-e2e:
+    if: ${{ inputs.confirm == 'DEPLOY-PRODUCTION' }}
+    needs: preflight
+    runs-on: ubuntu-latest
+    environment: release-gates
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.preflight.outputs.release_sha }}
+      - name: Run authenticated tenant and token-boundary E2E gate
+        shell: pwsh
+        env:
+          LOGICFIT_E2E_BASE_URL: ${{ secrets.LOGICFIT_E2E_BASE_URL }}
+          LOGICFIT_E2E_EMAIL: ${{ secrets.LOGICFIT_E2E_EMAIL }}
+          LOGICFIT_E2E_PASSWORD: ${{ secrets.LOGICFIT_E2E_PASSWORD }}
+          LOGICFIT_E2E_WORKSPACE_ID: ${{ secrets.LOGICFIT_E2E_WORKSPACE_ID }}
+          LOGICFIT_E2E_TENANT_A_ID: ${{ secrets.LOGICFIT_E2E_TENANT_A_ID }}
+          LOGICFIT_E2E_TENANT_B_ID: ${{ secrets.LOGICFIT_E2E_TENANT_B_ID }}
+          LOGICFIT_E2E_PLATFORM_TOKEN: ${{ secrets.LOGICFIT_E2E_PLATFORM_TOKEN }}
+        run: ./Scripts/Invoke-AuthenticatedReleaseE2E.ps1 -Mode Release
 
   recover-startup:
     if: ${{ inputs.confirm == 'RECOVER-PRODUCTION-STARTUP' }}
