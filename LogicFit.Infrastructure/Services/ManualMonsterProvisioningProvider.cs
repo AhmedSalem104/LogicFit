@@ -18,7 +18,7 @@ namespace LogicFit.Infrastructure.Services;
 public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningProvider
 {
     private readonly IDatabaseResourcePool resourcePool;
-    private readonly ApplicationDbContext? platformDb;
+    private readonly PlatformDbContext? platformDb;
     private readonly IConnectionStringProtector? connectionStringProtector;
     private readonly IDateTimeService? dateTime;
     private readonly ILogger<ManualMonsterProvisioningProvider>? logger;
@@ -30,7 +30,7 @@ public sealed class ManualMonsterProvisioningProvider : IDatabaseProvisioningPro
     [ActivatorUtilitiesConstructor]
     public ManualMonsterProvisioningProvider(
         IDatabaseResourcePool resourcePool,
-        ApplicationDbContext platformDb,
+        PlatformDbContext platformDb,
         IConnectionStringProtector connectionStringProtector,
         IDateTimeService dateTime,
         ILogger<ManualMonsterProvisioningProvider> logger)

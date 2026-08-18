@@ -19,7 +19,12 @@ public class ProductionDeploymentContractTests
         Assert.Contains("LOGICFIT_PRODUCTION_DB_CONNECTION", workflow);
         Assert.Contains("LOGICFIT_TEST_CONNECTION_STRING", workflow);
         Assert.Contains("mcr.microsoft.com/mssql/server:2022-latest", workflow);
-        Assert.Contains("logicfit-production-migration-plan", workflow);
+        Assert.Contains("logicfit-production-migration-topology", workflow);
+        Assert.Contains("Validate-EfMigrationTopology.ps1", workflow);
+        Assert.Contains("application-compatibility.sql", workflow);
+        var migrationGate = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "Validate-EfMigrationTopology.ps1"));
+        Assert.Contains("platform.sql", migrationGate);
+        Assert.Contains("tenant.sql", migrationGate);
         Assert.Contains("tree-equivalent to origin/master", workflow);
         Assert.Contains("needs.preflight.outputs.release_sha", workflow);
         Assert.Contains("DIAGNOSE-PRODUCTION-HEALTH", workflow);

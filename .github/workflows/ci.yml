@@ -52,11 +52,17 @@ jobs:
       - name: Install EF CLI
         run: dotnet tool install --global dotnet-ef --version 8.*
 
-      - name: Validate EF migrations
-        # The shared context remains the compatibility context until #174/#175/#166 cut over
-        # resolver/provisioning. The isolated contexts have their own migration assemblies and
-        # are validated by DbContextOwnershipTests in the same job.
-        run: dotnet ef migrations script --idempotent --configuration Release --project LogicFit.Infrastructure --startup-project LogicFit.API --context LogicFit.Infrastructure.Persistence.ApplicationDbContext --output /tmp/logicfit-migrations.sql
+      - name: Validate EF migration topology
+        shell: pwsh
+        run: ./Scripts/Validate-EfMigrationTopology.ps1 -Configuration Release -OutputDirectory "$env:RUNNER_TEMP/logicfit-migrations" -NoBuild
+
+      - name: Retain migration topology manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: logicfit-ci-migration-topology
+          path: ${{ runner.temp }}/logicfit-migrations
+          if-no-files-found: error
+          retention-days: 7
 
   security:
     runs-on: ubuntu-latest

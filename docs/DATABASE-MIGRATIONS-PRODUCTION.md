@@ -5,12 +5,20 @@ schema changes must be applied against the same database used by the deployed AP
 
 ## Supported production operation
 
-Starting with Issue #147, the unified API checks the connected database before `DataSeeder` and
-applies every pending migration compiled into the deployed artifact. SQL Server execution is
-serialized with an application lock, uses bounded timeouts, and is followed by a second pending
-check. This is an apply operation only: the server never creates or edits migration source files.
+Starting with Issue #147, the compatibility path checks the connected database before `DataSeeder`
+and applies pending migrations compiled into the legacy `ApplicationDbContext` artifact. SQL
+Server execution is serialized with an application lock, uses bounded timeouts, and is followed by
+a second pending check. This is an apply operation only: the server never creates or edits
+migration source files.
 
-Startup migration is enabled by default through `Database:StartupMigrations:Enabled`. The optional
+The runtime now has three explicit migration histories: `ApplicationDbContext` for the temporary
+compatibility schema, `PlatformDbContext` for central identity/workspace/billing data, and
+`TenantDbContext` for one isolated workspace database. CI and the protected preflight generate
+and validate all three idempotent scripts with `Scripts/Validate-EfMigrationTopology.ps1`.
+The script is a validation gate only; it does not apply a Platform or Tenant script to a database.
+
+Startup migration is enabled by default through `Database:StartupMigrations:Enabled` for the
+legacy compatibility context only. The optional
 environment variables are `Database__StartupMigrations__LockTimeoutSeconds` (default `120`) and
 `Database__StartupMigrations__CommandTimeoutSeconds` (default `300`). The emergency switch
 `Database__StartupMigrations__Enabled=false` transfers responsibility back to the operator and must
@@ -21,10 +29,13 @@ The supported release operation is the protected WebDeploy helper or the manual 
 
 1. Verify that the selected artifact is tree-equivalent to `origin/master` and that CI passes.
 2. Record a current, verified BACPAC backup reference.
-3. Generate and review the idempotent EF SQL from that exact release.
-4. Prefer applying pending migrations with the protected production database connection. If a
-   manual Visual Studio/WebDeploy publish is used, the startup migrator applies them before seeding.
-5. Stop before WebDeploy if backup, review, connection, or migration verification fails.
+3. Generate and review the three idempotent EF SQL plans from that exact release.
+4. Apply the reviewed compatibility, Platform, and Tenant scripts through their approved schema
+   owners. The compatibility script targets the central compatibility database; the Platform
+   script targets the central Platform database; the Tenant script must be applied per mapped
+   Tenant database (new Tenant provisioning already runs its Tenant migration). If the split
+   schema rollout has not been reconciled for the target, stop: the release is `NO-GO`.
+5. Stop before WebDeploy if backup, review, connection, migration ownership, or verification fails.
 6. Publish the unified API and require `/health` to return a success response.
 7. Run an authenticated smoke test for the affected flow.
 

@@ -125,12 +125,15 @@ jobs:
         env:
           LOGICFIT_TEST_CONNECTION_STRING: "Server=localhost,1433;Database=master;User Id=sa;Password=LogicFit_Test_Only_2026!;Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=True"
       - run: dotnet tool install --global dotnet-ef --version 8.*
-      - run: dotnet ef migrations script --idempotent --no-build --configuration Release --project LogicFit.Infrastructure --startup-project LogicFit.API --context LogicFit.Infrastructure.Persistence.ApplicationDbContext --output /tmp/logicfit-migrations.sql
+      - name: Validate EF migration topology
+        shell: pwsh
+        run: ./Scripts/Validate-EfMigrationTopology.ps1 -Configuration Release -OutputDirectory "$env:RUNNER_TEMP/logicfit-migrations" -NoBuild
       - name: Retain reviewed migration plan
         uses: actions/upload-artifact@v4
         with:
-          name: logicfit-production-migration-plan
-          path: /tmp/logicfit-migrations.sql
+          name: logicfit-production-migration-topology
+          path: ${{ runner.temp }}/logicfit-migrations
+          if-no-files-found: error
           retention-days: 14
 
   deploy:
@@ -150,7 +153,7 @@ jobs:
       - name: Download reviewed migration plan
         uses: actions/download-artifact@v4
         with:
-          name: logicfit-production-migration-plan
+          name: logicfit-production-migration-topology
           path: ${{ runner.temp }}/migration-plan
 
       - name: Require protected production configuration
@@ -219,7 +222,7 @@ jobs:
             -ContentPath "$env:RUNNER_TEMP/unified-publish" `
             -ApplyMigrations `
             -VerifiedBackupReference $env:BACKUP_REFERENCE `
-            -MigrationScriptPath "$env:RUNNER_TEMP/migration-plan/logicfit-migrations.sql" `
+            -MigrationScriptPath "$env:RUNNER_TEMP/migration-plan/application-compatibility.sql" `
             -ApproveDestructiveMigrationReview `
             -HealthCheckUrl $env:UNIFIED_HEALTH_URL
 
