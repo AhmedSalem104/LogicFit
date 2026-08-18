@@ -158,3 +158,10 @@ The member can record one daily readiness check-in with sleep, recovery, sorenes
 vitals, bodyweight, and notes. The client training overview reads plans, sessions, meals, logs,
 measurements, and check-ins from the server and returns clear loading, empty, blocked, and error
 states in the UI.
+
+### Financial report source of truth
+
+Revenue fields in the financial, subscription, and dashboard reports represent collected cash from
+`ClientSubscription.AmountPaid`. `SubscriptionPlan.Price` and `ClientSubscription.TotalAmount`
+remain expected/contract values and must not be counted as paid revenue when a subscription is
+unpaid or partially paid.

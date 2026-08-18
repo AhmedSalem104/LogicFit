@@ -667,3 +667,12 @@ deployed, and health-verified.
 - The branch adds shared and tenant parity migrations. Release requires backup, reviewed idempotent
   SQL, schema verification, deployment, and a post-release health/smoke-test gate. This entry is an
   implementation-branch record, not a production-deployment claim.
+
+### 2026-08-18 — paid revenue source of truth (Issue #321)
+
+- Financial, subscription, and dashboard revenue calculations use the persisted
+  `ClientSubscription.AmountPaid` aggregate. Plan/list prices and `TotalAmount` remain expected
+  values and are not recognized as collected revenue when payment is missing or partial.
+- No database migration, API shape, tenant-boundary, or UI change is included. This entry records
+  backend behavior on the task branch; deployment and production health verification remain
+  outstanding until release.
