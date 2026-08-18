@@ -10,4 +10,10 @@ namespace LogicFit.Application.Features.Reports.Services;
 public static class SubscriptionRevenueCalculator
 {
     public static decimal PaidAmount(ClientSubscription subscription) => subscription.AmountPaid;
+
+    public static decimal RemainingAmount(ClientSubscription subscription) =>
+        Math.Max(0m, subscription.TotalAmount - subscription.AmountPaid);
+
+    public static bool CanApplyPayment(ClientSubscription subscription, decimal amount) =>
+        amount > 0m && amount <= RemainingAmount(subscription);
 }

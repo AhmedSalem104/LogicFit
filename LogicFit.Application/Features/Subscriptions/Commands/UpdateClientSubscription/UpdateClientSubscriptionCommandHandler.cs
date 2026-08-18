@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Common.Services;
+using LogicFit.Application.Features.Reports.Services;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
 using MediatR;
@@ -44,9 +45,12 @@ public class UpdateClientSubscriptionCommandHandler : IRequestHandler<UpdateClie
 
         if (request.Discount.HasValue)
         {
+            var revisedTotal = Math.Max(0m, subscription.Plan.Price - request.Discount.Value);
+            if (revisedTotal < subscription.AmountPaid)
+                throw new ValidationException("Discount", "The discount cannot reduce the subscription total below the amount already collected.");
+
             subscription.Discount = request.Discount.Value;
-            subscription.TotalAmount = subscription.Plan.Price - subscription.Discount;
-            if (subscription.TotalAmount < 0) subscription.TotalAmount = 0;
+            subscription.TotalAmount = revisedTotal;
         }
 
         if (request.AmountPaid.HasValue)

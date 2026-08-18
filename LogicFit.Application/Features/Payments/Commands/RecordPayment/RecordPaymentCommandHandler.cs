@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Features.Reports.Services;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
@@ -79,13 +80,18 @@ public class RecordPaymentCommandHandler : IRequestHandler<RecordPaymentCommand,
                 invoice.Status = InvoiceStatus.PartiallyPaid;
         }
 
+        ClientSubscription? subscription = null;
         if (request.SubscriptionId.HasValue)
         {
-            var subscription = await _context.ClientSubscriptions
+            subscription = await _context.ClientSubscriptions
                 .FirstOrDefaultAsync(s => s.Id == request.SubscriptionId.Value && s.TenantId == tenantId, cancellationToken);
 
-            if (subscription != null)
-                subscription.AmountPaid += request.Amount;
+            if (subscription is null)
+                throw new NotFoundException("ClientSubscription", request.SubscriptionId.Value);
+            if (!SubscriptionRevenueCalculator.CanApplyPayment(subscription, request.Amount))
+                throw new ValidationException("Amount", $"Payment exceeds the remaining subscription balance ({SubscriptionRevenueCalculator.RemainingAmount(subscription):0.##})");
+
+            subscription.AmountPaid += request.Amount;
         }
 
         await _context.SaveChangesAsync(cancellationToken);

@@ -676,5 +676,7 @@ deployed, and health-verified.
 - No database migration, API shape, tenant-boundary, or UI change is included. The clients report
   now follows the same collected-cash source instead of using the plan list price. Refunds and
   cancellations still require a separate immutable reversal ledger before they can be represented
-  as net revenue. This entry records backend behavior on the task branch; deployment and production
-  health verification remain outstanding until release.
+  as net revenue. Subscription payments now share the same remaining-balance guard across the
+  generic payment endpoint and subscription-specific endpoint; discounts cannot reduce a total
+  below money already collected. This entry records backend behavior on the task branch;
+  deployment and production health verification remain outstanding until release.

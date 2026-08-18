@@ -169,3 +169,6 @@ unpaid or partially paid.
 The clients report uses `ClientSubscription.AmountPaid` for its per-client collected total as well.
 The current domain has no immutable refund/reversal entity; reports therefore do not claim net
 revenue after refunds or cancellations until that ledger is introduced and reviewed.
+
+All subscription payment entry points reject amounts above the remaining balance, and a later
+discount cannot lower the contract total below already-collected cash.
