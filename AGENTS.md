@@ -129,6 +129,17 @@ dotnet ef migrations script --idempotent --project LogicFit.Infrastructure --sta
 
 ## Decision log
 
+### 2026-08-19 — active production health target (Issue #325)
+
+- The active unified API host used by the deployed Admin and Tenant frontends is
+  `logicfit-saas-model.runasp.net`; its anonymous `/health` check returned HTTP 200 with
+  `Healthy` during the current verification.
+- `logicfit-platform.runasp.net` is a retired hostname with no DNS record and must not be used
+  as the protected release health URL. The protected `RUNASP_UNIFIED_HEALTHCHECK_URL` remains
+  the authoritative value and must be verified through the protected workflow.
+- This corrects the health-probe target only. It does not claim production GO while the protected
+  authenticated E2E fixtures and split-schema/master migration reconciliation remain outstanding.
+
 ### 2026-07-23
 
 - Keep billing manual; harden its correctness instead of adding a payment gateway.

@@ -401,6 +401,15 @@ and post-deployment smoke tests complete.
 
 ## Production readiness gates (Issue #321)
 
+### Active health target (Issue #325)
+
+The currently deployed unified API host used by the Admin and Tenant frontends is
+`https://logicfit-saas-model.runasp.net`. Its anonymous `GET /health` endpoint must return
+HTTP 200 with the exact body `Healthy`. The retired `logicfit-platform.runasp.net` hostname has
+no DNS record and must not be used for a release health check. Keep
+`RUNASP_UNIFIED_HEALTHCHECK_URL` aligned with the active host and verify it from the protected
+workflow before any deployment claim.
+
 The backend CI and protected production preflight now run the tracked-secret scan and fail on
 High/Critical NuGet advisories. The protected deployment also depends on an authenticated E2E job
 using the `release-gates` environment. That job requires a safe non-production fixture account,

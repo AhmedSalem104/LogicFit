@@ -24,7 +24,17 @@
 > Password-only contract. Platform and Tenant operations use their existing JWT, permission,
 > workspace, subscription, ownership, and concurrency gates.
 
-Last reviewed: 2026-08-03
+Last reviewed: 2026-08-19
+
+> **Issue #325 — production readiness verification (2026-08-19):** the previous health
+> probe used the retired hostname `logicfit-platform.runasp.net`, which has no DNS record.
+> The active unified API host used by both deployed frontends is
+> `https://logicfit-saas-model.runasp.net`; its anonymous `/health` endpoint currently
+> returns HTTP 200 with body `Healthy`, and the platform diagnostics endpoint responds with
+> HTTP 401 when unauthenticated. This closes the hostname/health false alarm, but it does not
+> close the release gate: the protected `release-gates` environment has not been configured
+> with the disposable authenticated E2E fixtures, and the split Platform/Tenant migration
+> ownership still requires reconciliation and verification before a production merge/deploy.
 
 > **Issue #277 — task branch:** Group class and class schedule endpoints now require the existing
 > `ManageBranches` tenant permission, matching the branch/room/facility management boundary used
