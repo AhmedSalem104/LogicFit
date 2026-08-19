@@ -44,6 +44,22 @@ public class ProductionDeploymentContractTests
     }
 
     [Fact]
+    public void Authenticated_release_e2e_fails_closed_on_health_and_validates_token_context()
+    {
+        var script = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "Invoke-AuthenticatedReleaseE2E.ps1"));
+
+        Assert.Contains("Assert-Health", script, StringComparison.Ordinal);
+        Assert.Contains("/health", script, StringComparison.Ordinal);
+        Assert.Contains("active-workspace list", script, StringComparison.Ordinal);
+        Assert.Contains("selected.tenantId", script, StringComparison.Ordinal);
+        Assert.Contains("LOGICFIT_E2E_TENANT_A_ID must match LOGICFIT_E2E_WORKSPACE_ID", script, StringComparison.Ordinal);
+        Assert.Contains("/api/platform/diagnostics/version", script, StringComparison.Ordinal);
+        Assert.Contains("Platform-token positive smoke check expected HTTP 200", script, StringComparison.Ordinal);
+        Assert.Contains("refreshedProfile", script, StringComparison.Ordinal);
+        Assert.Contains("$_.Exception.Response", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Webdeploy_applies_verified_migrations_before_sync_and_health_check()
     {
         var script = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "deploy-webdeploy.ps1"));

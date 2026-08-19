@@ -418,6 +418,13 @@ selection, tenant profile access, refresh-token rotation, cross-tenant header re
 platform-token boundary. Credentials and tokens are read only from protected environment secrets
 and are never written to logs.
 
+The gate now checks the API health response before authentication, confirms that the configured
+workspace is in the identity's active-workspace list and that the selected token carries the same
+tenant id, validates the Platform token positively before testing its tenant denial, and uses the
+rotated access token for a second protected profile request. It remains a smoke/boundary gate;
+full create/update/payment/provisioning/backup mutation coverage still requires a disposable
+staging fixture.
+
 The E2E gate is intentionally fail-closed when its environment is not configured. Provisioning,
 payment approval, backup, and retry mutation scenarios still require a dedicated disposable
 staging fixture and are not represented as production-verified by the read-only smoke gate.
