@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.Reports.DTOs;
+using LogicFit.Application.Features.Reports.Services;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -30,13 +31,28 @@ public class GetFinancialReportQueryHandler : IRequestHandler<GetFinancialReport
             .Where(cs => cs.TenantId == tenantId && !cs.IsDeleted)
             .ToListAsync(cancellationToken);
 
-        var totalRevenue = allSubscriptions.Sum(cs => cs.Plan?.Price ?? 0);
+        var refundsBySubscription = await _context.WalletTransactions
+            .AsNoTracking()
+            .Where(t => t.TenantId == tenantId &&
+                        t.Type == TransactionType.Refund &&
+                        t.ReferenceType == SubscriptionRevenueCalculator.SubscriptionReferenceType &&
+                        t.ReferenceId.HasValue)
+            .GroupBy(t => t.ReferenceId!.Value)
+            .Select(g => new { SubscriptionId = g.Key, Amount = g.Sum(t => t.Amount) })
+            .ToDictionaryAsync(x => x.SubscriptionId, x => x.Amount, cancellationToken);
+
+        decimal GetRevenue(Domain.Entities.ClientSubscription subscription)
+            => SubscriptionRevenueCalculator.NetCollectedAmount(
+                subscription,
+                refundsBySubscription.GetValueOrDefault(subscription.Id));
+
+        var totalRevenue = allSubscriptions.Sum(GetRevenue);
 
         var subscriptionsThisMonth = allSubscriptions.Where(cs => cs.StartDate >= startOfMonth).ToList();
-        var revenueThisMonth = subscriptionsThisMonth.Sum(cs => cs.Plan?.Price ?? 0);
+        var revenueThisMonth = subscriptionsThisMonth.Sum(GetRevenue);
 
         var subscriptionsLastMonth = allSubscriptions.Where(cs => cs.StartDate >= startOfLastMonth && cs.StartDate < startOfMonth).ToList();
-        var revenueLastMonth = subscriptionsLastMonth.Sum(cs => cs.Plan?.Price ?? 0);
+        var revenueLastMonth = subscriptionsLastMonth.Sum(GetRevenue);
 
         var growthPercentage = revenueLastMonth > 0
             ? ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100
@@ -57,7 +73,7 @@ public class GetFinancialReportQueryHandler : IRequestHandler<GetFinancialReport
             var monthEnd = monthStart.AddMonths(1);
 
             var monthSubs = allSubscriptions.Where(cs => cs.StartDate >= monthStart && cs.StartDate < monthEnd).ToList();
-            var revenue = monthSubs.Sum(cs => cs.Plan?.Price ?? 0);
+            var revenue = monthSubs.Sum(GetRevenue);
             var count = monthSubs.Count;
 
             monthlyRevenue.Add(new MonthlyRevenueDto
@@ -75,7 +91,7 @@ public class GetFinancialReportQueryHandler : IRequestHandler<GetFinancialReport
             {
                 PaymentMethod = g.Key,
                 Count = g.Count(),
-                TotalAmount = g.Sum(cs => cs.Plan?.Price ?? 0)
+                TotalAmount = g.Sum(GetRevenue)
             })
             .ToList();
 

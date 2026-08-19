@@ -282,6 +282,10 @@ app.UseAuthentication();
 // see the current tenant.
 app.UseTenant();
 
+// Resolve the server-side TenantDatabaseMapping before authorization and handlers can access
+// tenant-owned DbSets. A missing mapping returns 503 instead of using the shared DB.
+app.UseTenantDatabaseRouting();
+
 // Identity and membership are a separate boundary from subscription and permissions. Linked
 // accounts are enforced immediately and unlinked legacy sessions fail closed.
 app.UseIdentityWorkspaceAccessGate();

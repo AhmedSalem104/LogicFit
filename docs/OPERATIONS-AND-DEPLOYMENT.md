@@ -125,6 +125,22 @@ existing file to be overwritten. لا تُسجّل محتويات الملف
 
 1. راجع `git status` وتأكد أن النسخة المنشورة هي commit/branch المقصود؛ لا تخلط مجلد
    Visual Studio قديم مع GitHub.
+
+### Issue #321 - tenant boundary release gate
+
+The API now fails closed before authorization when an authenticated non-platform request has no
+valid tenant context. Tenant routes require the `LogicFitUsers` audience and signed `TenantId`,
+and an optional `X-Tenant-Id` header must match it. Platform routes are tenantless and require the
+`LogicFitPlatform` audience. After deployment, verify one authenticated tenant smoke request, one
+platform request, and negative checks for a platform token on a tenant route and a missing tenant
+claim. A build/test pass without these checks is not a production approval.
+
+The P0 remediation branch also routes tenant-owned `IApplicationDbContext` sets through the
+server-resolved `TenantDbContext`. `TenantDatabaseRoutingMiddleware` returns `503
+TENANT_DATABASE_UNAVAILABLE` when an assigned mapping cannot be resolved, and the compatibility
+proxy throws instead of falling back to the shared `ApplicationDbContext` for a resolved tenant.
+This runtime cutover must be reconciled with the current `master` deployment tree and verified
+against real staging mappings before merge; local contract tests do not replace that check.
 2. شغّل build/tests ومراجعة migrations:
 
 ```powershell
@@ -382,3 +398,33 @@ The required local gates are:
 
 This is an implementation branch until PR review, merge, migration application, deployment,
 and post-deployment smoke tests complete.
+
+## Production readiness gates (Issue #321)
+
+### Active health target (Issue #325)
+
+The currently deployed unified API host used by the Admin and Tenant frontends is
+`https://logicfit-saas-model.runasp.net`. Its anonymous `GET /health` endpoint must return
+HTTP 200 with the exact body `Healthy`. The retired `logicfit-platform.runasp.net` hostname has
+no DNS record and must not be used for a release health check. Keep
+`RUNASP_UNIFIED_HEALTHCHECK_URL` aligned with the active host and verify it from the protected
+workflow before any deployment claim.
+
+The backend CI and protected production preflight now run the tracked-secret scan and fail on
+High/Critical NuGet advisories. The protected deployment also depends on an authenticated E2E job
+using the `release-gates` environment. That job requires a safe non-production fixture account,
+two different tenant identifiers, and a platform token; it verifies identity login, workspace
+selection, tenant profile access, refresh-token rotation, cross-tenant header rejection, and the
+platform-token boundary. Credentials and tokens are read only from protected environment secrets
+and are never written to logs.
+
+The gate now checks the API health response before authentication, confirms that the configured
+workspace is in the identity's active-workspace list and that the selected token carries the same
+tenant id, validates the Platform token positively before testing its tenant denial, and uses the
+rotated access token for a second protected profile request. It remains a smoke/boundary gate;
+full create/update/payment/provisioning/backup mutation coverage still requires a disposable
+staging fixture.
+
+The E2E gate is intentionally fail-closed when its environment is not configured. Provisioning,
+payment approval, backup, and retry mutation scenarios still require a dedicated disposable
+staging fixture and are not represented as production-verified by the read-only smoke gate.

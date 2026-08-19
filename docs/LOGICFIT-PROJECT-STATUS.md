@@ -24,7 +24,17 @@
 > Password-only contract. Platform and Tenant operations use their existing JWT, permission,
 > workspace, subscription, ownership, and concurrency gates.
 
-Last reviewed: 2026-08-03
+Last reviewed: 2026-08-19
+
+> **Issue #325 — production readiness verification (2026-08-19):** the previous health
+> probe used the retired hostname `logicfit-platform.runasp.net`, which has no DNS record.
+> The active unified API host used by both deployed frontends is
+> `https://logicfit-saas-model.runasp.net`; its anonymous `/health` endpoint currently
+> returns HTTP 200 with body `Healthy`, and the platform diagnostics endpoint responds with
+> HTTP 401 when unauthenticated. This closes the hostname/health false alarm, but it does not
+> close the release gate: the protected `release-gates` environment has not been configured
+> with the disposable authenticated E2E fixtures, and the split Platform/Tenant migration
+> ownership still requires reconciliation and verification before a production merge/deploy.
 
 > **Issue #277 — task branch:** Group class and class schedule endpoints now require the existing
 > `ManageBranches` tenant permission, matching the branch/room/facility management boundary used
@@ -667,3 +677,18 @@ deployed, and health-verified.
 - The branch adds shared and tenant parity migrations. Release requires backup, reviewed idempotent
   SQL, schema verification, deployment, and a post-release health/smoke-test gate. This entry is an
   implementation-branch record, not a production-deployment claim.
+
+### 2026-08-18 — paid revenue source of truth (Issue #321)
+
+- Financial, subscription, and dashboard revenue calculations use the persisted
+  `ClientSubscription.AmountPaid` aggregate, less linked subscription refund transactions in the
+  tenant wallet ledger. Plan/list prices and `TotalAmount` remain expected values and are not
+  recognized as collected revenue when payment is missing or partial.
+- No database migration, API shape, tenant-boundary, or UI change is included. The clients report
+  now follows the same collected-cash source instead of using the plan list price. Wallet refunds
+  recorded by subscription reference are subtracted consistently across the financial,
+  subscription, dashboard, and clients reports; external payment-provider reversals still require
+  a separate immutable reversal ledger. Subscription payments now share the same remaining-balance guard across the
+  generic payment endpoint and subscription-specific endpoint; discounts cannot reduce a total
+  below money already collected. This entry records backend behavior on the task branch;
+  deployment and production health verification remain outstanding until release.

@@ -52,15 +52,61 @@ jobs:
       - name: Install EF CLI
         run: dotnet tool install --global dotnet-ef --version 8.*
 
-      - name: Validate EF migrations
-        # The shared context remains the compatibility context until #174/#175/#166 cut over
-        # resolver/provisioning. The isolated contexts have their own migration assemblies and
-        # are validated by DbContextOwnershipTests in the same job.
-        run: dotnet ef migrations script --idempotent --configuration Release --project LogicFit.Infrastructure --startup-project LogicFit.API --context LogicFit.Infrastructure.Persistence.ApplicationDbContext --output /tmp/logicfit-migrations.sql
+      - name: Validate EF migration topology
+        shell: pwsh
+        run: ./Scripts/Validate-EfMigrationTopology.ps1 -Configuration Release -OutputDirectory "$env:RUNNER_TEMP/logicfit-migrations" -NoBuild
+
+      - name: Retain migration topology manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: logicfit-ci-migration-topology
+          path: ${{ runner.temp }}/logicfit-migrations
+          if-no-files-found: error
+          retention-days: 7
+
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore LogicFit.sln
+
+      - name: Assert tracked secret policy
+        shell: pwsh
+        run: ./Scripts/Assert-NoTrackedSecrets.ps1
+
+      - name: Block high and critical NuGet vulnerabilities
+        shell: pwsh
+        run: |
+          $report = (dotnet list LogicFit.sln package --vulnerable --include-transitive --format json | Out-String) | ConvertFrom-Json
+          $blocking = [System.Collections.Generic.List[string]]::new()
+          foreach ($project in @($report.projects)) {
+            foreach ($framework in @($project.frameworks)) {
+              foreach ($package in @($framework.topLevelPackages) + @($framework.transitivePackages)) {
+                foreach ($vulnerability in @($package.vulnerabilities)) {
+                  $severity = [string]$vulnerability.severity
+                  if ($severity -in @('High', 'Critical')) {
+                    $blocking.Add("$($package.id) $($package.resolvedVersion) $severity")
+                  }
+                }
+              }
+            }
+          }
+          if ($blocking.Count -gt 0) {
+            throw "High or critical NuGet vulnerabilities remain: $($blocking -join '; ')"
+          }
+          Write-Host 'NuGet vulnerability gate passed.'
 
   docker:
     runs-on: ubuntu-latest
-    needs: verify
+    needs: [verify, security]
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4

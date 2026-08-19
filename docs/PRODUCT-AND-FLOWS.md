@@ -158,3 +158,18 @@ The member can record one daily readiness check-in with sleep, recovery, sorenes
 vitals, bodyweight, and notes. The client training overview reads plans, sessions, meals, logs,
 measurements, and check-ins from the server and returns clear loading, empty, blocked, and error
 states in the UI.
+
+### Financial report source of truth
+
+Revenue fields in the financial, subscription, and dashboard reports represent collected cash from
+`ClientSubscription.AmountPaid`, less refund transactions recorded in the tenant wallet ledger
+with `Type=Refund`, `ReferenceType=Subscription`, and the subscription id as `ReferenceId`.
+`SubscriptionPlan.Price` and `ClientSubscription.TotalAmount` remain expected/contract values and
+must not be counted as paid revenue when a subscription is unpaid or partially paid.
+
+The clients report uses the same net-collected calculation for its per-client total. Refunds that
+are not recorded in this wallet ledger (for example an external payment-provider reversal) remain
+outside the current source of truth and require a reviewed immutable payment-reversal ledger.
+
+All subscription payment entry points reject amounts above the remaining balance, and a later
+discount cannot lower the contract total below already-collected cash.
