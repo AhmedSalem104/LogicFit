@@ -7,6 +7,7 @@ public class Payment : TenantAuditableEntity
 {
     public Guid? InvoiceId { get; set; }
     public Guid? SubscriptionId { get; set; }
+    public Guid? DayPassSaleId { get; set; }
     public Guid? BranchId { get; set; }
     public Guid? ClientId { get; set; }
     public decimal Amount { get; set; }
@@ -19,6 +20,7 @@ public class Payment : TenantAuditableEntity
 
     public virtual Invoice? Invoice { get; set; }
     public virtual ClientSubscription? Subscription { get; set; }
+    public virtual DayPassSale? DayPassSale { get; set; }
     public virtual Branch? Branch { get; set; }
     public virtual User? Client { get; set; }
     public virtual User? ReceivedBy { get; set; }

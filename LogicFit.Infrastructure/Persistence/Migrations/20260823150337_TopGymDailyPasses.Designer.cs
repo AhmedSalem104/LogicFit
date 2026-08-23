@@ -4,16 +4,19 @@ using LogicFit.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace LogicFit.TenantDatabase.Migrations
+namespace LogicFit.Infrastructure.Persistence.Migrations
 {
-    [DbContext(typeof(TenantDbContext))]
-    partial class TenantDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(ApplicationDbContext))]
+    [Migration("20260823150337_TopGymDailyPasses")]
+    partial class TopGymDailyPasses
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,6 +24,194 @@ namespace LogicFit.TenantDatabase.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.ApplicationRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ApplicationType")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("BillingCycle")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("IdentityAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("InformationRequest")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("PlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("PlanSnapshotAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PlanSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("PreviousApplicationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ProvisionedWorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RequestedFieldsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("RequestedRole")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReservedWorkspaceIdentifier")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("ResubmissionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid?>("SponsoredByMembershipId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TargetScopeKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("TargetWorkspaceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("ProvisionedWorkspaceId");
+
+                    b.HasIndex("ReservedWorkspaceIdentifier")
+                        .IsUnique()
+                        .HasFilter("[ReservedWorkspaceIdentifier] IS NOT NULL AND [Status] IN (1, 2, 3, 4)");
+
+                    b.HasIndex("SponsoredByMembershipId");
+
+                    b.HasIndex("TargetWorkspaceId");
+
+                    b.HasIndex("IdentityAccountId", "TargetScopeKey", "ApplicationType")
+                        .IsUnique()
+                        .HasFilter("[Status] IN (1, 2, 3, 4)");
+
+                    b.HasIndex("IdentityAccountId", "TargetWorkspaceId", "ApplicationType", "Status");
+
+                    b.ToTable("ApplicationRequests", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.ApplicationRequestRevision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ApplicationRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("RevisionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SubmittedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationRequestId", "RevisionNumber")
+                        .IsUnique();
+
+                    b.ToTable("ApplicationRequestRevisions", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.ApplicationTrackingSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ApplicationRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("ApplicationRequestId", "ExpiresAt");
+
+                    b.ToTable("ApplicationTrackingSessions", (string)null);
+                });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Appointment", b =>
                 {
@@ -290,6 +481,65 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("AuditLogs", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.BackupBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ManifestStorageKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Scope")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "StartedAtUtc");
+
+                    b.ToTable("BackupBatches", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.BodyMeasurement", b =>
@@ -950,81 +1200,6 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.ToTable("ClientChallenges", (string)null);
                 });
 
-            modelBuilder.Entity("LogicFit.Domain.Entities.ClientFeedback", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("ClientId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<string>("NoteType")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<int>("Rating")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("ReviewedById")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
-
-                    b.Property<DateTime>("SubmittedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClientId");
-
-                    b.HasIndex("ReviewedById");
-
-                    b.HasIndex("TenantId", "ClientId");
-
-                    b.HasIndex("TenantId", "Status");
-
-                    b.HasIndex("TenantId", "SubmittedAt");
-
-                    b.ToTable("ClientFeedback", (string)null);
-                });
-
             modelBuilder.Entity("LogicFit.Domain.Entities.ClientSubscription", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1545,6 +1720,181 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.ToTable("DailyMeals", (string)null);
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.DatabaseBackup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BackupBatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DatabaseName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid?>("DatabaseResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Sha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StorageKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BackupBatchId", "TenantId");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("DatabaseBackups", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.DatabaseResource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AssignedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DatabaseName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("EncryptedConnectionString")
+                        .HasMaxLength(4096)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LastConnectionErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("LastConnectionErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("LastConnectionTestAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("LastConnectionTestDurationMs")
+                        .HasColumnType("int");
+
+                    b.Property<bool?>("LastConnectionTestSucceeded")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("LastHealthCheckAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("ReservedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ReservedForTenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SchemaVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ServerHost")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ServerKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("ServerPort")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReservedForTenantId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("Provider", "DatabaseName")
+                        .IsUnique();
+
+                    b.ToTable("DatabaseResources", (string)null);
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.DayPassSale", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1926,7 +2276,7 @@ namespace LogicFit.TenantDatabase.Migrations
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<string>("QrCode")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("QrGeneratedAt")
                         .HasColumnType("datetime2");
@@ -1967,6 +2317,10 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.HasIndex("TenantId", "EmployeeCode")
                         .IsUnique()
                         .HasFilter("[EmployeeCode] IS NOT NULL AND [IsDeleted] = 0");
+
+                    b.HasIndex("TenantId", "QrCode")
+                        .IsUnique()
+                        .HasFilter("[QrCode] IS NOT NULL");
 
                     b.ToTable("EmployeeProfiles", (string)null);
                 });
@@ -2329,6 +2683,120 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.ToTable("ExpenseCategories", (string)null);
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.Feature", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFree")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Module")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("NameAr")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NameEn")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("SupportsQuota")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Features", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.FeatureDependency", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DependsOnFeatureId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FeatureId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DependsOnFeatureId");
+
+                    b.HasIndex("FeatureId", "DependsOnFeatureId")
+                        .IsUnique();
+
+                    b.ToTable("FeatureDependencies");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.FeatureQuotaDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("DefaultLimit")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("FeatureId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ResourceKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeatureId", "ResourceKey")
+                        .IsUnique();
+
+                    b.ToTable("FeatureQuotaDefinitions");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.Food", b =>
                 {
                     b.Property<int>("Id")
@@ -2422,6 +2890,36 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.HasIndex("NutrientId");
 
                     b.ToTable("FoodMicronutrients", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.FreelanceWorkspaceProfile", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Bio")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("BookingSettingsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CertificationsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SocialLinksJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SpecialtiesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WelcomeMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("TenantId");
+
+                    b.ToTable("FreelanceWorkspaceProfiles", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.GateAccessLog", b =>
@@ -2578,6 +3076,183 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("GroupClasses", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("EmailVerifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FailedLoginAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastLoginAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LockoutEndUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedPhoneNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime?>("PhoneVerifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedEmail")
+                        .IsUnique();
+
+                    b.HasIndex("NormalizedPhoneNumber")
+                        .IsUnique()
+                        .HasFilter("[NormalizedPhoneNumber] IS NOT NULL");
+
+                    b.ToTable("IdentityAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityEmailActionToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("IdentityAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Purpose")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("IdentityAccountId", "Purpose", "ExpiresAt");
+
+                    b.ToTable("IdentityEmailActionTokens", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityWorkspaceSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("IdentityAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("IdentityAccountId", "ExpiresAt");
+
+                    b.ToTable("IdentityWorkspaceSessions", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Invoice", b =>
@@ -3458,6 +4133,188 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.ToTable("Payments", (string)null);
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.PaymentProof", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsCurrent")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid>("PaymentRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("UploadedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UploadedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentRequestId", "IsCurrent");
+
+                    b.HasIndex("PaymentRequestId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("PaymentProofs", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.PaymentRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("ApplicationRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("BillingCycle")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ExtensionDays")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("IdentityAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("Operation")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("PaymentMethodId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PlanSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProofFileUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("TenantSubscriptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TransactionNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationRequestId")
+                        .IsUnique()
+                        .HasFilter("[ApplicationRequestId] IS NOT NULL");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("[IdempotencyKey] IS NOT NULL");
+
+                    b.HasIndex("PaymentMethodId");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantSubscriptionId");
+
+                    b.ToTable("PaymentRequests", (string)null);
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.PayrollItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3645,6 +4502,112 @@ namespace LogicFit.TenantDatabase.Migrations
                         .IsUnique();
 
                     b.ToTable("Permissions", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.Plan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("BillingCycle")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DurationInDays")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("MaxBranches")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxCoaches")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxEmployees")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxMembers")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxStorageMB")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("Plans", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.PlanFeature", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FeatureId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("LimitValue")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeatureId");
+
+                    b.HasIndex("PlanId", "FeatureId")
+                        .IsUnique();
+
+                    b.ToTable("PlanFeatures", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Product", b =>
@@ -3853,6 +4816,79 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("ProgramRoutines", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.ProvisioningJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ApplicationRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("DatabaseResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("NextAttemptAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("NextAttemptAtUtc");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("ProvisioningJobs", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.PurchaseOrder", b =>
@@ -4072,6 +5108,139 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.HasIndex("FoodId");
 
                     b.ToTable("RecipeIngredients", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReplacedByToken")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RevokedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Surface")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.RestoreJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("PreviousMappingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("SourceDatabaseBackupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("TargetDatabaseResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WorkspaceNameConfirmation")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Status", "CreatedAt");
+
+                    b.ToTable("RestoreJobs", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Role", b =>
@@ -4466,6 +5635,69 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("SaleItems", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.SensitiveActionGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ConsumedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "TenantId", "Scope", "ExpiresAtUtc");
+
+                    b.ToTable("SensitiveActionGrants", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.SessionSet", b =>
@@ -4867,6 +6099,36 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.ToTable("StockMovements", (string)null);
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.SubscriptionFeatureSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CapturedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FeatureKey")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("LimitValue")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantSubscriptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantSubscriptionId", "FeatureKey")
+                        .IsUnique();
+
+                    b.ToTable("SubscriptionFeatureSnapshots");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.SubscriptionFreeze", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4922,6 +6184,145 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("SubscriptionFreezes", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.SubscriptionInvoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("IssueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantSubscriptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceNumber")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("SubscriptionInvoices", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.SubscriptionPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("PaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("PaymentMethodId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PaymentRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReceiptNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantSubscriptionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TransactionNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentRequestId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("SubscriptionPayments", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.SubscriptionPlan", b =>
@@ -5134,6 +6535,616 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.ToTable("TaxSettings", (string)null);
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.Tenant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Address")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BrandingSettings")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CoverImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CustomDomain")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GalleryImagesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Subdomain")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("SuspensionReason")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("WorkspaceType")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomDomain")
+                        .IsUnique()
+                        .HasFilter("[CustomDomain] IS NOT NULL");
+
+                    b.HasIndex("Subdomain")
+                        .IsUnique()
+                        .HasFilter("[Subdomain] IS NOT NULL");
+
+                    b.ToTable("Tenants", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantBackupDownloadGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ConsumedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ConsumedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("TenantBackupExportId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("TenantBackupExportId", "UserId", "ExpiresAtUtc");
+
+                    b.ToTable("TenantBackupDownloadGrants", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantBackupExport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("BackupBatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("DatabaseBackupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DownloadedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BackupBatchId");
+
+                    b.HasIndex("DatabaseBackupId");
+
+                    b.HasIndex("TenantId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "Status", "CreatedAt");
+
+                    b.ToTable("TenantBackupExports", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantBrandAsset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AltText")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AssetType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CropPosition")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DesktopImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("FocalPointX")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<decimal>("FocalPointY")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MobileImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TabletImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "AssetType", "SortOrder");
+
+                    b.ToTable("TenantBrandAssets");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantDatabaseMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("DatabaseResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EncryptedConnectionString")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastValidatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SchemaVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DatabaseResourceId", "IsActive")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.HasIndex("TenantId", "IsActive")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.ToTable("TenantDatabaseMappings", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantFeature", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("EndsAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("FeatureId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("GrantedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("LimitOverride")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeatureId");
+
+                    b.HasIndex("TenantId", "FeatureId")
+                        .IsUnique();
+
+                    b.ToTable("TenantFeatures", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantPaymentMethod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AccountName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("AccountNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IBAN")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Instructions")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("QRImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Type")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("WalletNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("TenantPaymentMethods", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("AutoRenew")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("BillingCycle")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ReminderSentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RenewDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SuspendedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("TrialEndsAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("TenantSubscriptions", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantUsage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("BranchesCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CoachesCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EmployeesCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("LastCalculatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MembersCount")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StorageUsedMB")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("TenantUsages", (string)null);
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5205,7 +7216,7 @@ namespace LogicFit.TenantDatabase.Migrations
                         .HasColumnType("rowversion");
 
                     b.Property<string>("StaffQrCode")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("StaffQrGeneratedAt")
                         .HasColumnType("datetime2");
@@ -5236,6 +7247,10 @@ namespace LogicFit.TenantDatabase.Migrations
 
                     b.HasIndex("TenantId", "Email")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "StaffQrCode")
+                        .IsUnique()
+                        .HasFilter("[StaffQrCode] IS NOT NULL");
 
                     b.ToTable("DomainUsers", (string)null);
                 });
@@ -5573,6 +7588,520 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.ToTable("WorkoutSessions", (string)null);
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.WorkspaceClientJoinCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AutoApproveClients")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "RevokedAt")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WorkspaceClientJoinCodes_OneActivePerWorkspace")
+                        .HasFilter("[RevokedAt] IS NULL");
+
+                    b.ToTable("WorkspaceClientJoinCodes", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.WorkspaceInvite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("AcceptedIdentityAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("InvitedByMembershipId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvitedByMembershipId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "NormalizedEmail", "Role", "Status")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WorkspaceInvites_ActiveEmailRole")
+                        .HasFilter("[Status] = 1");
+
+                    b.ToTable("WorkspaceInvites", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.WorkspaceMembership", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("IdentityAccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RejectedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<Guid?>("SponsoredByMembershipId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SponsoredByMembershipId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.HasIndex("IdentityAccountId", "TenantId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("WorkspaceMemberships", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Infrastructure.Identity.ApplicationUser", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AccessFailedCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("LockoutEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("NormalizedEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedUserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("PhoneNumberConfirmed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("RefreshTokenExpiryTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SecurityStamp")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal>("WalletBalance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedEmail")
+                        .HasDatabaseName("EmailIndex");
+
+                    b.HasIndex("NormalizedUserName")
+                        .IsUnique()
+                        .HasDatabaseName("UserNameIndex")
+                        .HasFilter("[NormalizedUserName] IS NOT NULL");
+
+                    b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("RoleNameIndex")
+                        .HasFilter("[NormalizedName] IS NOT NULL");
+
+                    b.ToTable("AspNetRoles", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClaimType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClaimValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("AspNetRoleClaims", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClaimType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClaimValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AspNetUserClaims", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
+                {
+                    b.Property<string>("LoginProvider")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ProviderKey")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ProviderDisplayName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("LoginProvider", "ProviderKey");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AspNetUserLogins", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("UserId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("AspNetUserRoles", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("LoginProvider")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("UserId", "LoginProvider", "Name");
+
+                    b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.ApplicationRequest", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
+                        .WithMany("Applications")
+                        .HasForeignKey("IdentityAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LogicFit.Domain.Entities.Plan", "Plan")
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("ProvisionedWorkspaceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LogicFit.Domain.Entities.WorkspaceMembership", null)
+                        .WithMany()
+                        .HasForeignKey("SponsoredByMembershipId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "TargetWorkspace")
+                        .WithMany()
+                        .HasForeignKey("TargetWorkspaceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("IdentityAccount");
+
+                    b.Navigation("Plan");
+
+                    b.Navigation("TargetWorkspace");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.ApplicationRequestRevision", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.ApplicationRequest", "ApplicationRequest")
+                        .WithMany("Revisions")
+                        .HasForeignKey("ApplicationRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApplicationRequest");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.ApplicationTrackingSession", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.ApplicationRequest", "ApplicationRequest")
+                        .WithMany()
+                        .HasForeignKey("ApplicationRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApplicationRequest");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.Appointment", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.Branch", "Branch")
@@ -5653,7 +8182,15 @@ namespace LogicFit.TenantDatabase.Migrations
                         .HasForeignKey("ManagerId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Branches")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Manager");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.BranchOperatingHours", b =>
@@ -5777,24 +8314,6 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("Challenge");
 
                     b.Navigation("Client");
-                });
-
-            modelBuilder.Entity("LogicFit.Domain.Entities.ClientFeedback", b =>
-                {
-                    b.HasOne("LogicFit.Domain.Entities.User", "Client")
-                        .WithMany()
-                        .HasForeignKey("ClientId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("LogicFit.Domain.Entities.User", "ReviewedBy")
-                        .WithMany()
-                        .HasForeignKey("ReviewedById")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Client");
-
-                    b.Navigation("ReviewedBy");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.ClientSubscription", b =>
@@ -5934,6 +8453,17 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("Plan");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.DatabaseBackup", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.BackupBatch", "BackupBatch")
+                        .WithMany("Artifacts")
+                        .HasForeignKey("BackupBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BackupBatch");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.DayPassSale", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.DayPassType", "DayPassType")
@@ -5959,9 +8489,17 @@ namespace LogicFit.TenantDatabase.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("DietPlans")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Client");
 
                     b.Navigation("Coach");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.EmployeeBranch", b =>
@@ -6020,7 +8558,14 @@ namespace LogicFit.TenantDatabase.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Exercises")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("TargetMuscle");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.ExerciseSecondaryMuscle", b =>
@@ -6077,6 +8622,46 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("ParentCategory");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.FeatureDependency", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.Feature", "DependsOnFeature")
+                        .WithMany()
+                        .HasForeignKey("DependsOnFeatureId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LogicFit.Domain.Entities.Feature", "Feature")
+                        .WithMany()
+                        .HasForeignKey("FeatureId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DependsOnFeature");
+
+                    b.Navigation("Feature");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.FeatureQuotaDefinition", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.Feature", "Feature")
+                        .WithMany()
+                        .HasForeignKey("FeatureId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Feature");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.Food", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Foods")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.FoodMicronutrient", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.Food", "Food")
@@ -6094,6 +8679,17 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("Food");
 
                     b.Navigation("Nutrient");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.FreelanceWorkspaceProfile", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithOne()
+                        .HasForeignKey("LogicFit.Domain.Entities.FreelanceWorkspaceProfile", "TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.GateAccessLog", b =>
@@ -6128,6 +8724,28 @@ namespace LogicFit.TenantDatabase.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityEmailActionToken", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
+                        .WithMany("EmailActionTokens")
+                        .HasForeignKey("IdentityAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdentityAccount");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityWorkspaceSession", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
+                        .WithMany()
+                        .HasForeignKey("IdentityAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdentityAccount");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Invoice", b =>
@@ -6314,6 +8932,57 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("Subscription");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.PaymentProof", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.PaymentRequest", "PaymentRequest")
+                        .WithMany("Proofs")
+                        .HasForeignKey("PaymentRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PaymentRequest");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.PaymentRequest", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.ApplicationRequest", "ApplicationRequest")
+                        .WithMany()
+                        .HasForeignKey("ApplicationRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LogicFit.Domain.Entities.TenantPaymentMethod", "PaymentMethod")
+                        .WithMany()
+                        .HasForeignKey("PaymentMethodId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LogicFit.Domain.Entities.Plan", "Plan")
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LogicFit.Domain.Entities.TenantSubscription", "TenantSubscription")
+                        .WithMany()
+                        .HasForeignKey("TenantSubscriptionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ApplicationRequest");
+
+                    b.Navigation("PaymentMethod");
+
+                    b.Navigation("Plan");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("TenantSubscription");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.PayrollItem", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.EmployeeProfile", "Employee")
@@ -6341,6 +9010,25 @@ namespace LogicFit.TenantDatabase.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.PlanFeature", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.Feature", "Feature")
+                        .WithMany("PlanFeatures")
+                        .HasForeignKey("FeatureId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LogicFit.Domain.Entities.Plan", "Plan")
+                        .WithMany("PlanFeatures")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Feature");
+
+                    b.Navigation("Plan");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Product", b =>
@@ -6412,6 +9100,17 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("PurchaseOrder");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.Recipe", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Recipes")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.RecipeIngredient", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.Food", "Food")
@@ -6429,6 +9128,17 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("Food");
 
                     b.Navigation("Recipe");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.User", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.RolePermission", b =>
@@ -6663,6 +9373,17 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("TargetBranch");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.SubscriptionFeatureSnapshot", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.TenantSubscription", "TenantSubscription")
+                        .WithMany("FeatureSnapshots")
+                        .HasForeignKey("TenantSubscriptionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("TenantSubscription");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.SubscriptionFreeze", b =>
                 {
                     b.HasOne("LogicFit.Domain.Entities.ClientSubscription", "Subscription")
@@ -6674,14 +9395,107 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("Subscription");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.SubscriptionPlan", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("SubscriptionPlans")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantBackupDownloadGrant", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.TenantBackupExport", "TenantBackupExport")
+                        .WithMany("DownloadGrants")
+                        .HasForeignKey("TenantBackupExportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TenantBackupExport");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantBackupExport", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.BackupBatch", "BackupBatch")
+                        .WithMany()
+                        .HasForeignKey("BackupBatchId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LogicFit.Domain.Entities.DatabaseBackup", "DatabaseBackup")
+                        .WithMany()
+                        .HasForeignKey("DatabaseBackupId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("BackupBatch");
+
+                    b.Navigation("DatabaseBackup");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantDatabaseMapping", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.DatabaseResource", null)
+                        .WithMany()
+                        .HasForeignKey("DatabaseResourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantFeature", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.Feature", "Feature")
+                        .WithMany()
+                        .HasForeignKey("FeatureId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Feature");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantSubscription", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.Plan", "Plan")
+                        .WithMany("TenantSubscriptions")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Plan");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.User", b =>
                 {
+                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
+                        .WithMany()
+                        .HasForeignKey("IdentityAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("LogicFit.Domain.Entities.Branch", "PrimaryBranch")
                         .WithMany()
                         .HasForeignKey("PrimaryBranchId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("Users")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdentityAccount");
+
                     b.Navigation("PrimaryBranch");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.UserBranchAccess", b =>
@@ -6740,6 +9554,12 @@ namespace LogicFit.TenantDatabase.Migrations
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("LogicFit.Domain.Entities.User", "User")
                         .WithMany("WalletTransactions")
                         .HasForeignKey("UserId")
@@ -6747,6 +9567,8 @@ namespace LogicFit.TenantDatabase.Migrations
                         .IsRequired();
 
                     b.Navigation("Branch");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("User");
                 });
@@ -6787,6 +9609,131 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("Client");
 
                     b.Navigation("Routine");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.WorkspaceClientJoinCode", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.WorkspaceInvite", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.WorkspaceMembership", "InvitedByMembership")
+                        .WithMany()
+                        .HasForeignKey("InvitedByMembershipId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("InvitedByMembership");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.WorkspaceMembership", b =>
+                {
+                    b.HasOne("LogicFit.Domain.Entities.IdentityAccount", "IdentityAccount")
+                        .WithMany("Memberships")
+                        .HasForeignKey("IdentityAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LogicFit.Domain.Entities.WorkspaceMembership", "SponsoredByMembership")
+                        .WithMany()
+                        .HasForeignKey("SponsoredByMembershipId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LogicFit.Domain.Entities.Tenant", "Tenant")
+                        .WithMany("WorkspaceMemberships")
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LogicFit.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("IdentityAccount");
+
+                    b.Navigation("SponsoredByMembership");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
+                {
+                    b.HasOne("LogicFit.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
+                {
+                    b.HasOne("LogicFit.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LogicFit.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
+                {
+                    b.HasOne("LogicFit.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.ApplicationRequest", b =>
+                {
+                    b.Navigation("Revisions");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.BackupBatch", b =>
+                {
+                    b.Navigation("Artifacts");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Branch", b =>
@@ -6867,6 +9814,11 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("Expenses");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.Feature", b =>
+                {
+                    b.Navigation("PlanFeatures");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.Food", b =>
                 {
                     b.Navigation("AlternativeMealLogs");
@@ -6881,6 +9833,15 @@ namespace LogicFit.TenantDatabase.Migrations
             modelBuilder.Entity("LogicFit.Domain.Entities.GroupClass", b =>
                 {
                     b.Navigation("Schedules");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.IdentityAccount", b =>
+                {
+                    b.Navigation("Applications");
+
+                    b.Navigation("EmailActionTokens");
+
+                    b.Navigation("Memberships");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Invoice", b =>
@@ -6907,6 +9868,11 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("FoodMicronutrients");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.PaymentRequest", b =>
+                {
+                    b.Navigation("Proofs");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.PayrollItem", b =>
                 {
                     b.Navigation("Commissions");
@@ -6920,6 +9886,13 @@ namespace LogicFit.TenantDatabase.Migrations
             modelBuilder.Entity("LogicFit.Domain.Entities.Permission", b =>
                 {
                     b.Navigation("RolePermissions");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.Plan", b =>
+                {
+                    b.Navigation("PlanFeatures");
+
+                    b.Navigation("TenantSubscriptions");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.Product", b =>
@@ -6978,6 +9951,35 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("PurchaseOrders");
                 });
 
+            modelBuilder.Entity("LogicFit.Domain.Entities.Tenant", b =>
+                {
+                    b.Navigation("Branches");
+
+                    b.Navigation("DietPlans");
+
+                    b.Navigation("Exercises");
+
+                    b.Navigation("Foods");
+
+                    b.Navigation("Recipes");
+
+                    b.Navigation("SubscriptionPlans");
+
+                    b.Navigation("Users");
+
+                    b.Navigation("WorkspaceMemberships");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantBackupExport", b =>
+                {
+                    b.Navigation("DownloadGrants");
+                });
+
+            modelBuilder.Entity("LogicFit.Domain.Entities.TenantSubscription", b =>
+                {
+                    b.Navigation("FeatureSnapshots");
+                });
+
             modelBuilder.Entity("LogicFit.Domain.Entities.User", b =>
                 {
                     b.Navigation("AssignedCoaches");
@@ -6997,6 +9999,8 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("MealLogs");
 
                     b.Navigation("Profile");
+
+                    b.Navigation("RefreshTokens");
 
                     b.Navigation("SalesSubscriptions");
 

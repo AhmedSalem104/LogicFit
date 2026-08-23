@@ -82,4 +82,14 @@ public sealed class FinancialReportRevenueSourceTests
         Assert.Contains("SubscriptionRevenueCalculator.CanApplyPayment", recordPaymentSource, StringComparison.Ordinal);
         Assert.Contains("ClientSubscription", recordPaymentSource, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Dashboard_revenue_includes_completed_daily_passes_as_collected_cash()
+    {
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
+        var source = File.ReadAllText(Path.Combine(root, "LogicFit.Application", "Features", "Reports", "Queries", "GetDashboardReport", "GetDashboardReportQueryHandler.cs"));
+        Assert.Contains("DayPassStatus.Completed", source, StringComparison.Ordinal);
+        Assert.Contains("DayPassSales", source, StringComparison.Ordinal);
+        Assert.Contains("AmountPaid", source, StringComparison.Ordinal);
+    }
 }

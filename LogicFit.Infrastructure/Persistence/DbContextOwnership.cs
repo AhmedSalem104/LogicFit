@@ -39,6 +39,7 @@ public static class DbContextOwnership
         typeof(SubscriptionPlan), typeof(ClientSubscription), typeof(SubscriptionFreeze),
         typeof(CoachClient), typeof(ExerciseSecondaryMuscle), typeof(Notification),
         typeof(Attendance), typeof(StaffAttendance), typeof(Appointment),
+        typeof(DayPassType), typeof(DayPassSale), typeof(ClientFeedback),
         typeof(ChatConversation), typeof(ChatMessage), typeof(Challenge), typeof(ClientChallenge),
         typeof(Branch), typeof(BranchOperatingHours), typeof(UserBranchAccess),
         typeof(MembershipCard), typeof(GateAccessLog), typeof(Room), typeof(Equipment),

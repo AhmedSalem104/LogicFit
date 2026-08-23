@@ -4,16 +4,19 @@ using LogicFit.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace LogicFit.TenantDatabase.Migrations
+namespace LogicFit.Tenant.Migrations.Migrations
 {
     [DbContext(typeof(TenantDbContext))]
-    partial class TenantDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260823150023_TopGymDailyPasses")]
+    partial class TopGymDailyPasses
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -948,81 +951,6 @@ namespace LogicFit.TenantDatabase.Migrations
                         .IsUnique();
 
                     b.ToTable("ClientChallenges", (string)null);
-                });
-
-            modelBuilder.Entity("LogicFit.Domain.Entities.ClientFeedback", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("ClientId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<string>("NoteType")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<int>("Rating")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("ReviewedById")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
-
-                    b.Property<DateTime>("SubmittedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClientId");
-
-                    b.HasIndex("ReviewedById");
-
-                    b.HasIndex("TenantId", "ClientId");
-
-                    b.HasIndex("TenantId", "Status");
-
-                    b.HasIndex("TenantId", "SubmittedAt");
-
-                    b.ToTable("ClientFeedback", (string)null);
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.ClientSubscription", b =>
@@ -5777,24 +5705,6 @@ namespace LogicFit.TenantDatabase.Migrations
                     b.Navigation("Challenge");
 
                     b.Navigation("Client");
-                });
-
-            modelBuilder.Entity("LogicFit.Domain.Entities.ClientFeedback", b =>
-                {
-                    b.HasOne("LogicFit.Domain.Entities.User", "Client")
-                        .WithMany()
-                        .HasForeignKey("ClientId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("LogicFit.Domain.Entities.User", "ReviewedBy")
-                        .WithMany()
-                        .HasForeignKey("ReviewedById")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("Client");
-
-                    b.Navigation("ReviewedBy");
                 });
 
             modelBuilder.Entity("LogicFit.Domain.Entities.ClientSubscription", b =>

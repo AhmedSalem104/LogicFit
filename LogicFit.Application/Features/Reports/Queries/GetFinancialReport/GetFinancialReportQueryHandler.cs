@@ -54,12 +54,26 @@ public class GetFinancialReportQueryHandler : IRequestHandler<GetFinancialReport
         var subscriptionsLastMonth = allSubscriptions.Where(cs => cs.StartDate >= startOfLastMonth && cs.StartDate < startOfMonth).ToList();
         var revenueLastMonth = subscriptionsLastMonth.Sum(GetRevenue);
 
+        // TOP GYM's daily visitors are completed sales, not subscriptions. Keep their
+        // source explicit and add them to collected revenue only after the sale is completed.
+        var dayPasses = await _context.DayPassSales
+            .AsNoTracking()
+            .Where(x => x.TenantId == tenantId && !x.IsDeleted && x.Status == DayPassStatus.Completed)
+            .Select(x => new { x.VisitDate, x.AmountPaid })
+            .ToListAsync(cancellationToken);
+        var dayPassRevenue = dayPasses.Sum(x => x.AmountPaid);
+        totalRevenue += dayPassRevenue;
+        var dayPassesThisMonth = dayPasses.Where(x => x.VisitDate >= startOfMonth && x.VisitDate < startOfMonth.AddMonths(1)).ToList();
+        var dayPassesLastMonth = dayPasses.Where(x => x.VisitDate >= startOfLastMonth && x.VisitDate < startOfMonth).ToList();
+        revenueThisMonth += dayPassesThisMonth.Sum(x => x.AmountPaid);
+        revenueLastMonth += dayPassesLastMonth.Sum(x => x.AmountPaid);
+
         var growthPercentage = revenueLastMonth > 0
             ? ((revenueThisMonth - revenueLastMonth) / revenueLastMonth) * 100
             : 0;
 
         var subscriptionCount = allSubscriptions.Count;
-        var averageSubscriptionValue = subscriptionCount > 0 ? totalRevenue / subscriptionCount : 0;
+        var averageSubscriptionValue = subscriptionCount > 0 ? (totalRevenue - dayPassRevenue) / subscriptionCount : 0;
 
         var totalWalletBalance = await _context.Users
             .Where(u => u.TenantId == tenantId && u.Role == UserRole.Client && !u.IsDeleted)
@@ -75,12 +89,15 @@ public class GetFinancialReportQueryHandler : IRequestHandler<GetFinancialReport
             var monthSubs = allSubscriptions.Where(cs => cs.StartDate >= monthStart && cs.StartDate < monthEnd).ToList();
             var revenue = monthSubs.Sum(GetRevenue);
             var count = monthSubs.Count;
+            var monthDayPasses = dayPasses.Where(x => x.VisitDate >= monthStart && x.VisitDate < monthEnd).ToList();
+            revenue += monthDayPasses.Sum(x => x.AmountPaid);
 
             monthlyRevenue.Add(new MonthlyRevenueDto
             {
                 Month = monthStart.ToString("MMM yyyy"),
                 Revenue = revenue,
-                SubscriptionCount = count
+                SubscriptionCount = count,
+                DayPassCount = monthDayPasses.Count
             });
         }
 
@@ -103,6 +120,8 @@ public class GetFinancialReportQueryHandler : IRequestHandler<GetFinancialReport
             GrowthPercentage = growthPercentage,
             AverageSubscriptionValue = averageSubscriptionValue,
             TotalWalletBalance = totalWalletBalance,
+            DayPassRevenue = dayPassRevenue,
+            DayPassCount = dayPasses.Count,
             MonthlyRevenue = monthlyRevenue,
             PaymentMethods = paymentMethods
         };

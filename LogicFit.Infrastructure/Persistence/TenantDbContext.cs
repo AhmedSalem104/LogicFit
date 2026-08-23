@@ -51,6 +51,9 @@ public class TenantDbContext : DbContext
     public DbSet<ExerciseSecondaryMuscle> ExerciseSecondaryMuscles => Set<ExerciseSecondaryMuscle>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
+    public DbSet<DayPassType> DayPassTypes => Set<DayPassType>();
+    public DbSet<DayPassSale> DayPassSales => Set<DayPassSale>();
+    public DbSet<ClientFeedback> ClientFeedback => Set<ClientFeedback>();
     public DbSet<StaffAttendance> StaffAttendances => Set<StaffAttendance>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<ChatConversation> ChatConversations => Set<ChatConversation>();

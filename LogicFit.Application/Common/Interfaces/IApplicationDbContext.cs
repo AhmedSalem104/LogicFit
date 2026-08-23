@@ -51,6 +51,9 @@ public interface IApplicationDbContext
     DbSet<WalletTransaction> WalletTransactions { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<Attendance> Attendances { get; }
+    DbSet<DayPassType> DayPassTypes { get; }
+    DbSet<DayPassSale> DayPassSales { get; }
+    DbSet<ClientFeedback> ClientFeedback { get; }
     DbSet<StaffAttendance> StaffAttendances { get; }
     DbSet<Appointment> Appointments { get; }
     DbSet<ChatConversation> ChatConversations { get; }

@@ -73,6 +73,15 @@ public class GetDashboardReportQueryHandler : IRequestHandler<GetDashboardReport
         var revenueThisMonth = subscriptionsThisMonth.Sum(GetRevenue);
         var revenueLastMonth = subscriptionsLastMonth.Sum(GetRevenue);
 
+        var dayPasses = await _context.DayPassSales
+            .AsNoTracking()
+            .Where(x => x.TenantId == tenantId && !x.IsDeleted && x.Status == DayPassStatus.Completed
+                && x.VisitDate >= startOfLastMonth && x.VisitDate < startOfMonth.AddMonths(1))
+            .Select(x => new { x.VisitDate, x.AmountPaid })
+            .ToListAsync(cancellationToken);
+        revenueThisMonth += dayPasses.Where(x => x.VisitDate >= startOfMonth).Sum(x => x.AmountPaid);
+        revenueLastMonth += dayPasses.Where(x => x.VisitDate < startOfMonth).Sum(x => x.AmountPaid);
+
         var workoutsThisMonth = await _context.WorkoutSessions
             .CountAsync(ws => ws.TenantId == tenantId && ws.StartedAt >= startOfMonth && !ws.IsDeleted, cancellationToken);
 
