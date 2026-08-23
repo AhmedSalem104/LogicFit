@@ -25,7 +25,7 @@ backend authorization, Tenant database routing, and existing API contracts.
 | Member QR card | `/owner/membership-cards`, QR issue/revoke/scan | Complete |
 | Workspace backup | Tenant backup export plus platform backup controls | Complete; storage configuration is required for runtime |
 | Print/PDF/export | Shared export/PDF services and print actions | Complete |
-| WhatsApp visit message | Daily-pass WhatsApp action with server-side audit timestamp | Available for daily passes |
+| WhatsApp manual click-to-chat messages | Shared LogicFit message service for member onboarding, renewal/expiry/debt/freeze alerts, and daily passes; opens `wa.me` with a prefilled message and leaves Send to the operator | Complete for the manual TOP GYM flow |
 
 ## Screen flow
 
@@ -37,11 +37,14 @@ backend authorization, Tenant database routing, and existing API contracts.
 3. The owner registers a member from **المشتركون**. The onboarding form keeps member,
    membership, discount, payment, and review in one flow.
 4. A daily visitor is registered from **الحصص اليومية**. The server resolves the active
-   pass type, creates the sale and its payment in one save operation, and returns a
-   reference/WhatsApp message.
+   pass type, creates the sale and its payment in one save operation, and the UI can
+   open the visitor's WhatsApp chat with the TOP GYM-style prefilled visit message.
 5. The owner uses **الحضور والبوابة** for attendance and QR checks, and **التقارير**
    for collected revenue, expenses, subscriptions, and daily-pass revenue.
-6. Member feedback is submitted by the authenticated client from **رأيي في الجيم**;
+6. Member onboarding can open a prefilled membership message after the transaction;
+   subscription rows and client rows expose the same manual click-to-chat alerts for
+   expiry, freeze, debt, and renewal follow-up. No provider/API send is performed.
+7. Member feedback is submitted by the authenticated client from **رأيي في الجيم**;
    staff review it from **تقييمات المشتركين** without leaving the tenant.
 
 ### Client experience
@@ -79,5 +82,6 @@ new menu items.
 
 TOP GYM's Smart Assistant is not copied as a fake/mock feature. LogicFit needs the chosen
 AI provider, model, retention policy, and allowed data fields before it can be enabled
-safely. Generic WhatsApp automation likewise needs the provider/template configuration;
-the daily-pass `wa.me` action is intentionally a no-credential fallback.
+safely. WhatsApp is intentionally not part of this boundary: the required behavior is
+manual click-to-chat with a prepared message, not provider automation or background
+sending.
