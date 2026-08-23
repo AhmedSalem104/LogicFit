@@ -62,7 +62,7 @@ function Get-AuthorizationLabel {
     param([string]$ClassAttributes, [string]$MethodAttributes)
 
     $all = "$ClassAttributes`n$MethodAttributes"
-    if ($MethodAttributes -match 'AllowAnonymous') { return 'Anonymous (no token required)' }
+    if ($all -match '\[AllowAnonymous\]') { return 'Anonymous (no token required)' }
 
     $authorizations = @([regex]::Matches($all, '\[Authorize(?<args>\([^\]]*\))?\]'))
     if ($authorizations.Count -eq 0) { return 'Server default (not declared explicitly)' }

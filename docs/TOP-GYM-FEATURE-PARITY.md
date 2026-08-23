@@ -85,3 +85,12 @@ AI provider, model, retention policy, and allowed data fields before it can be e
 safely. WhatsApp is intentionally not part of this boundary: the required behavior is
 manual click-to-chat with a prepared message, not provider automation or background
 sending.
+
+## Member portal parity (Issue #329)
+
+The TOP GYM membership-code portal is now implemented as `/member-portal` in the Tenant UI.
+It uses the existing opaque `MembershipCard.QrCode`, resolves the tenant before database routing,
+and exposes only safe read-only member data plus tenant feedback. The admin membership-card screen
+opens the portal for active cards; expired/revoked cards cannot open it. See
+[TOP-GYM-MEMBER-PORTAL.md](TOP-GYM-MEMBER-PORTAL.md) for the endpoint contract, privacy boundary,
+rate limit, and verification details.

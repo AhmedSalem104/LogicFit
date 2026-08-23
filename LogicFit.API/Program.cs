@@ -125,6 +125,11 @@ if (!rateLimitingManagedByGateway)
             SecurityPartition(context),
             partitionKey => CreateFixedWindowLimiter(
                 "sensitive-action", partitionKey, 5, TimeSpan.FromMinutes(15))));
+    options.AddPolicy("member-public-portal", context =>
+        RateLimitPartition.Get(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            partitionKey => CreateFixedWindowLimiter(
+                "member-public-portal", partitionKey, 30, TimeSpan.FromMinutes(15))));
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         RateLimitPartition.Get(
             context.User?.Identity?.IsAuthenticated == true

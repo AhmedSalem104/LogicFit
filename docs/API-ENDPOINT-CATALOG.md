@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-17 13:53 UTC`  |  Total endpoints: **412**
+Generated: `2026-08-23 16:26 UTC`  |  Total endpoints: **427**
 
 ## Contract rules
 
@@ -979,6 +979,32 @@ Generated: `2026-08-17 13:53 UTC`  |  Total endpoints: **412**
 - **Inputs:** No request input.
 - **Declared response:** Task<ActionResult<List<MySubscriptionSummaryDto>>>
 
+### ClientFeedback
+
+#### `GET /api/member-feedback` - `List`
+
+- **Access:** JWT + Policies: `Permissions.ViewMembers` AND `WorkspaceCapabilities.GymExperience`
+- **Inputs:** Query `rating`: `int?`<br>Query `noteType`: `string?`<br>Query `status`: `string?`<br>Query `search`: `string?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] int? rating, [FromQuery] string? noteType, [FromQuery] string? status, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20`
+- **Declared response:** Task<ActionResult<ClientFeedbackListResponse>>
+
+#### `POST /api/member-feedback` - `Submit`
+
+- **Access:** JWT required
+- **Inputs:** Handler signature: `SubmitClientFeedbackRequest request`
+- **Declared response:** Task<ActionResult<ClientFeedbackDto>>
+
+#### `POST /api/member-feedback/{id:guid}/review` - `Review`
+
+- **Access:** JWT + Policies: `Permissions.ManageMembers` AND `WorkspaceCapabilities.GymExperience`
+- **Inputs:** Handler signature: `Guid id, ReviewClientFeedbackRequest request`
+- **Declared response:** Task<ActionResult<ClientFeedbackDto>>
+
+#### `GET /api/member-feedback/summary` - `Summary`
+
+- **Access:** JWT + Policies: `Permissions.ViewMembers` AND `WorkspaceCapabilities.GymExperience`
+- **Inputs:** No request input.
+- **Declared response:** Task<ActionResult<ClientFeedbackSummaryDto>>
+
 ### Clients
 
 #### `GET /api/Clients` - `GetClients`
@@ -1156,6 +1182,62 @@ Generated: `2026-08-17 13:53 UTC`  |  Total endpoints: **412**
 - **Access:** JWT + Policy: `Permissions.ManageFinance`
 - **Inputs:** Query `code`: `string`<br>Query `amount`: `decimal`<br>Query `context`: `CouponApplicability?`<br>Query `clientId`: `Guid?`<br>Handler signature: `[FromQuery] string code, [FromQuery] decimal amount, [FromQuery] CouponApplicability? context, [FromQuery] Guid? clientId`
 - **Declared response:** Task<ActionResult<ValidateCouponResultDto>>
+
+### DayPasses
+
+#### `GET /api/day-passes` - `GetDayPasses`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Inputs:** Query `from`: `DateTime?`<br>Query `to`: `DateTime?`<br>Query `typeCode`: `string?`<br>Query `paymentMethod`: `PaymentMethod?`<br>Query `search`: `string?`<br>Query `includeVoided`: `bool`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] string? typeCode, [FromQuery] PaymentMethod? paymentMethod, [FromQuery] string? search, [FromQuery] bool includeVoided = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 20`
+- **Declared response:** Task<ActionResult<DayPassListResponse>>
+
+#### `POST /api/day-passes` - `Create`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Inputs:** Handler signature: `CreateDayPassRequest request`
+- **Declared response:** Task<ActionResult<DayPassDto>>
+
+#### `DELETE /api/day-passes/{id:guid}` - `Delete`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult>
+
+#### `PUT /api/day-passes/{id:guid}` - `Update`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Inputs:** Handler signature: `Guid id, UpdateDayPassRequest request`
+- **Declared response:** Task<ActionResult<DayPassDto>>
+
+#### `POST /api/day-passes/{id:guid}/void` - `Void`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult>
+
+#### `POST /api/day-passes/{id:guid}/whatsapp-opened` - `MarkWhatsappOpened`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult>
+
+#### `GET /api/day-passes/pricing` - `GetPricing`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Inputs:** No request input.
+- **Declared response:** Task<ActionResult<IReadOnlyList<DayPassTypeDto>>>
+
+#### `PUT /api/day-passes/pricing` - `UpdatePricing`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Inputs:** Handler signature: `UpdateDayPassPricingRequest request`
+- **Declared response:** Task<ActionResult<IReadOnlyList<DayPassTypeDto>>>
+
+#### `GET /api/day-passes/summary` - `GetSummary`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Inputs:** Query `from`: `DateTime?`<br>Query `to`: `DateTime?`<br>Handler signature: `[FromQuery] DateTime? from, [FromQuery] DateTime? to`
+- **Declared response:** Task<ActionResult<DayPassSummaryDto>>
 
 ### DietPlans
 
@@ -1670,6 +1752,20 @@ Generated: `2026-08-17 13:53 UTC`  |  Total endpoints: **412**
 - **Access:** JWT required
 - **Inputs:** Query `key`: `string`<br>Handler signature: `[FromQuery] string key`
 - **Declared response:** Task<IActionResult>
+
+### MemberPortal
+
+#### `POST /api/member-portal/feedback` - `SubmitFeedback`
+
+- **Access:** Anonymous (no token required)
+- **Inputs:** Body `request`: `MemberPortalFeedbackRequest`<br>Handler signature: `[FromBody] MemberPortalFeedbackRequest request`
+- **Declared response:** typeof(MemberPortalFeedbackResponse), StatusCodes.Status201Created
+
+#### `POST /api/member-portal/lookup` - `Lookup`
+
+- **Access:** Anonymous (no token required)
+- **Inputs:** Body `request`: `MemberPortalLookupRequest`<br>Handler signature: `[FromBody] MemberPortalLookupRequest request`
+- **Declared response:** typeof(MemberPortalReport), StatusCodes.Status200OK
 
 ### MembershipCards
 
@@ -2535,43 +2631,43 @@ Generated: `2026-08-17 13:53 UTC`  |  Total endpoints: **412**
 
 #### `POST /api/workspace-applications` - `Submit`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Inputs:** Form `form`: `SubmitWorkspaceApplicationForm`<br>Handler signature: `[FromForm] SubmitWorkspaceApplicationForm form, [FromForm(Name = "proof")] IFormFile? proof`
 - **Declared response:** typeof(ApplicationTrackingSessionDto), StatusCodes.Status201Created
 
 #### `POST /api/workspace-applications/freelance` - `SubmitFreelance`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Inputs:** Body `command`: `SubmitFreelanceWorkspaceApplicationCommand` { `WorkspaceType`: WorkspaceType; `Email`: string; `PhoneNumber`: string?; `Password`: string; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `DeliveryMode`: string?; `Specialties`: IReadOnlyList<string>?; `Certifications`: IReadOnlyList<string>?; `WelcomeMessage`: string?; `BookingSettings`: System.Text.Json.JsonElement?; `PlanId`: Guid; `BillingCycle`: BillingCycle?; `PaymentAmount`: decimal?; `PaymentTransactionNumber`: string? }<br>Handler signature: `[FromBody] SubmitFreelanceWorkspaceApplicationCommand command`
 - **Declared response:** typeof(ApplicationTrackingSessionDto), StatusCodes.Status201Created
 
 #### `GET /api/workspace-applications/plans` - `GetPlans`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Inputs:** No request input.
 - **Declared response:** typeof(List<PlanDto>), StatusCodes.Status200OK
 
 #### `GET /api/workspace-applications/tracking` - `GetTrackingStatus`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Inputs:** No request input.
 - **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status200OK
 
 #### `PATCH /api/workspace-applications/tracking/fields` - `UpdateRequestedFields`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Inputs:** Body `System`: `IReadOnlyDictionary<string,`<br>Handler signature: `[FromBody] IReadOnlyDictionary<string, System.Text.Json.JsonElement> fields`
 - **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status200OK
 
 #### `POST /api/workspace-applications/tracking/payment-proof` - `UploadTrackingPaymentProof`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Inputs:** Handler signature: `[FromForm(Name = "proof")] IFormFile? proof`
 - **Declared response:** typeof(ApplicationPaymentProofUploadedDto), StatusCodes.Status200OK
 
 #### `POST /api/workspace-applications/tracking/resubmit` - `Resubmit`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Inputs:** No request input.
 - **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status200OK
 

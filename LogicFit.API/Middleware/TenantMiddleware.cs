@@ -51,6 +51,43 @@ public class TenantMiddleware
             return;
         }
 
+        // The member portal is anonymous by design, but it still needs an explicit
+        // tenant context before TenantDatabaseRoutingMiddleware can select the
+        // server-side database mapping. The workspace identifier is only accepted on
+        // these two public endpoints and the membership code remains the second factor
+        // checked by the controller. A tenant GUID is accepted for generated links;
+        // it does not grant access on its own.
+        if (isAnonymous && IsMemberPortalRoute(path))
+        {
+            var workspace = context.Request.Query["workspace"].ToString().Trim();
+            if (string.IsNullOrWhiteSpace(workspace) || workspace.Length > 200)
+            {
+                await RejectAsync(context, StatusCodes.Status400BadRequest, "A workspace identifier is required.");
+                return;
+            }
+
+            Guid? resolvedTenantId = null;
+            if (Guid.TryParse(workspace, out var explicitTenantId) && explicitTenantId != Guid.Empty)
+            {
+                if (await tenantService.TenantExistsAsync(explicitTenantId))
+                    resolvedTenantId = explicitTenantId;
+            }
+            else
+            {
+                resolvedTenantId = await tenantService.ResolveTenantIdAsync(workspace);
+            }
+
+            if (resolvedTenantId is not { } memberPortalTenantId)
+            {
+                await RejectAsync(context, StatusCodes.Status404NotFound, "Workspace was not found.");
+                return;
+            }
+
+            await tenantService.SetTenantAsync(memberPortalTenantId);
+            await _next(context);
+            return;
+        }
+
         // An authenticated request to a non-platform API is a tenant request. It must use a
         // tenant-audience token with a signed TenantId claim. Header/host resolution is only
         // retained for anonymous public flows; accepting X-Tenant-Id for an authenticated token
@@ -139,6 +176,13 @@ public class TenantMiddleware
     {
         return string.Equals(path, "/api/platform", StringComparison.OrdinalIgnoreCase)
             || (path?.StartsWith("/api/platform/", StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    private static bool IsMemberPortalRoute(string? path)
+    {
+        var normalized = path?.TrimEnd('/');
+        return string.Equals(normalized, "/api/member-portal/lookup", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalized, "/api/member-portal/feedback", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task RejectAsync(HttpContext context, int statusCode, string message)
