@@ -553,12 +553,13 @@ jobs:
           EXPECTED_SITE: ${{ inputs.recovery_expected_site }}
           MANAGEMENT_HOST_OVERRIDE: ${{ inputs.recovery_management_host_override }}
           ALLOW_UNTRUSTED: ${{ inputs.recovery_allow_untrusted_certificate }}
+          DIAGNOSTIC_FAST_CAPTURE: ${{ inputs.image_tag == 'diagnostic-stage-capture' && 'true' || 'false' }}
         run: |
           $arguments = @{
             PublishSettingsPath = $env:MONSTER_LOG_PROFILE_PATH
             ExpectedSite = $env:EXPECTED_SITE
             HealthCheckUrl = $env:MONSTER_LOG_HEALTH_URL
-            CaptureAttempts = 36
+            CaptureAttempts = if ($env:DIAGNOSTIC_FAST_CAPTURE -eq 'true') { 8 } else { 36 }
           }
           if (-not [string]::IsNullOrWhiteSpace($env:MANAGEMENT_HOST_OVERRIDE)) {
             $arguments.ManagementHostOverride = $env:MANAGEMENT_HOST_OVERRIDE
