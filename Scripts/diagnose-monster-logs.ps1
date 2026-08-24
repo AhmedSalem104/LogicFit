@@ -269,10 +269,14 @@ try {
     $hasRedisOverride = @($environmentVariables | Where-Object {
         [string]$_.GetAttribute('name') -match '^Redis(__|:)?'
     }).Count -gt 0
+    $hasResetFoodsOverride = @($environmentVariables | Where-Object {
+        [string]::Equals([string]$_.GetAttribute('name'), 'RESET_FOODS', [StringComparison]::OrdinalIgnoreCase)
+    }).Count -gt 0
     $hasProcessTarget = -not [string]::IsNullOrWhiteSpace([string]$aspNetCore.GetAttribute('processPath')) -and
         -not [string]::IsNullOrWhiteSpace([string]$aspNetCore.GetAttribute('arguments'))
     Write-Host "Remote IIS connection-string environment override present: $hasConnectionOverride."
     Write-Host "Remote IIS Redis environment override present: $hasRedisOverride."
+    Write-Host "Remote IIS RESET_FOODS environment override present: $hasResetFoodsOverride."
     Write-Host "Remote IIS process target metadata present: $hasProcessTarget."
 
     $logDirectory = Resolve-LogDirectory ([string]$aspNetCore.GetAttribute('stdoutLogFile'))
