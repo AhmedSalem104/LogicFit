@@ -47,7 +47,7 @@ FROM (
     Invoke-SafeCount 'PlatformOwnerRows' @'
 SELECT COUNT_BIG(*)
 FROM [dbo].[DomainUsers]
-WHERE [TenantId] = ''00000000-0000-0000-0000-0000000000A1''
+WHERE [TenantId] = '00000000-0000-0000-0000-0000000000A1'
   AND [Role] = 8
   AND [IsDeleted] = 0
 '@
@@ -56,10 +56,45 @@ SELECT COUNT_BIG(*)
 FROM (
     SELECT [TenantId]
     FROM [dbo].[DomainUsers]
-    WHERE [TenantId] = ''00000000-0000-0000-0000-0000000000A1''
+    WHERE [TenantId] = '00000000-0000-0000-0000-0000000000A1'
       AND [Role] = 8
       AND [IsDeleted] = 0
     GROUP BY [TenantId]
+    HAVING COUNT_BIG(*) > 1
+) AS duplicates
+'@
+    Invoke-SafeCount 'IdentityAccountDuplicateEmails' @'
+SELECT COUNT_BIG(*)
+FROM (
+    SELECT [NormalizedEmail]
+    FROM [dbo].[IdentityAccounts]
+    WHERE [NormalizedEmail] IS NOT NULL AND [IsDeleted] = 0
+    GROUP BY [NormalizedEmail]
+    HAVING COUNT_BIG(*) > 1
+) AS duplicates
+'@
+    Invoke-SafeCount 'IdentityAccountDuplicatePhones' @'
+SELECT COUNT_BIG(*)
+FROM (
+    SELECT [NormalizedPhoneNumber]
+    FROM [dbo].[IdentityAccounts]
+    WHERE [NormalizedPhoneNumber] IS NOT NULL AND [IsDeleted] = 0
+    GROUP BY [NormalizedPhoneNumber]
+    HAVING COUNT_BIG(*) > 1
+) AS duplicates
+'@
+    Invoke-SafeCount 'EmptyDataProtectionKeyXmlRows' @'
+SELECT COUNT_BIG(*)
+FROM [dbo].[DataProtectionKeys]
+WHERE [Xml] IS NULL OR LTRIM(RTRIM([Xml])) = ''
+'@
+    Invoke-SafeCount 'DuplicateUserProfileUserIds' @'
+SELECT COUNT_BIG(*)
+FROM (
+    SELECT [UserId]
+    FROM [dbo].[UserProfiles]
+    WHERE [IsDeleted] = 0
+    GROUP BY [UserId]
     HAVING COUNT_BIG(*) > 1
 ) AS duplicates
 '@
