@@ -195,6 +195,16 @@ function Write-SafeLogCategories(
         TimeoutException = '(?i)\bTimeoutException\b|timed out|timeout'
         InvalidOperationException = '(?i)\bInvalidOperationException\b'
     }
+    $startupReasonPatterns = [ordered]@{
+        MissingJwtSecret = '(?i)JWT Secret not configured|JwtSettings.*Secret.*(missing|required|not configured)'
+        MissingRequiredService = '(?i)Unable to resolve service for type|No service for type.*registered|Cannot consume scoped service'
+        MigrationVerificationFailure = '(?i)Database migration verification failed|pending migrations.*verification'
+        MigrationApplyFailure = '(?i)Database startup migration failed|MigrateAsync|migration.*(failed|exception)'
+        DataProtectionKeyStoreFailure = '(?i)Data Protection key store|empty XML key|PersistKeysToDbContext|DataProtectionKeyRingBootstrapper'
+        DataProtectionDirectoryFailure = '(?i)Data Protection.*(directory|folder|path)|FileSystemXmlRepository.*(access|permission|failed)'
+        SeederFailure = '(?i)Data seeding|seeder|An error occurred while seeding the database'
+        HostingConfigurationFailure = '(?i)options validation|configuration.*(missing|required|invalid)|not configured'
+    }
     $text = ($Files | ForEach-Object {
         try { Get-Content -LiteralPath $_.FullName -Tail 10000 -ErrorAction SilentlyContinue } catch { }
     }) -join "`n"
@@ -204,6 +214,8 @@ function Write-SafeLogCategories(
     if ($signatures.Count -eq 0) { $signatures = @('NoKnownSafeSignature') }
     $exceptionTypes = @($exceptionPatterns.Keys | Where-Object { $text -match $exceptionPatterns[$_] })
     if ($exceptionTypes.Count -eq 0) { $exceptionTypes = @('NoKnownExceptionType') }
+    $startupReasons = @($startupReasonPatterns.Keys | Where-Object { $text -match $startupReasonPatterns[$_] })
+    if ($startupReasons.Count -eq 0) { $startupReasons = @('NoKnownStartupReason') }
     $safeSqlDetails = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($line in ($text -split "`r?`n")) {
         $trimmed = $line.Trim()
@@ -248,6 +260,7 @@ function Write-SafeLogCategories(
     Write-Host "Safe log categories: $($categories -join ', ')."
     Write-Host "Safe log signatures: $($signatures -join ', ')."
     Write-Host "Safe exception types: $($exceptionTypes -join ', ')."
+    Write-Host "Safe startup reason ids: $($startupReasons -join ', ')."
     Write-Host "Safe SQL details: $($safeSqlDetails -join ', ')."
 }
 
