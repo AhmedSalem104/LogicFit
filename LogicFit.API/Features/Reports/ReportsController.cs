@@ -9,6 +9,7 @@ using LogicFit.Application.Features.Reports.Queries.GetDashboardReport;
 using LogicFit.Application.Features.Reports.Queries.GetEquipmentUtilizationReport;
 using LogicFit.Application.Features.Reports.Queries.GetExpensesReport;
 using LogicFit.Application.Features.Reports.Queries.GetFinancialReport;
+using LogicFit.Application.Features.Reports.Queries.GetFollowUpAlerts;
 using LogicFit.Application.Features.Reports.Queries.GetOperationsDashboard;
 using LogicFit.Application.Features.Reports.Queries.GetPayrollSummaryReport;
 using LogicFit.Application.Features.Reports.Queries.GetPosSalesReport;
@@ -96,6 +97,27 @@ public class ReportsController : ControllerBase
         {
             FromDate = fromDate,
             ToDate = toDate
+        });
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Get the read-only member follow-up list used by the Gym dashboard.
+    /// </summary>
+    [HttpGet("follow-up")]
+    [Authorize(Policy = WorkspaceCapabilities.GymReports)]
+    [Authorize(Policy = Permissions.ViewMembers)]
+    [ProducesResponseType(typeof(FollowUpAlertsDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<FollowUpAlertsDto>> GetFollowUpAlerts(
+        [FromQuery] int expiringWithinDays = 7,
+        [FromQuery] int inactiveAfterDays = 7,
+        [FromQuery] int limit = 100)
+    {
+        var result = await _mediator.Send(new GetFollowUpAlertsQuery
+        {
+            ExpiringWithinDays = expiringWithinDays,
+            InactiveAfterDays = inactiveAfterDays,
+            Limit = limit
         });
         return Ok(result);
     }

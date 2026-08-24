@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-23 16:26 UTC`  |  Total endpoints: **427**
+Generated: `2026-08-24 09:21 UTC`  |  Total endpoints: **429**
 
 ## Contract rules
 
@@ -2049,6 +2049,12 @@ Generated: `2026-08-23 16:26 UTC`  |  Total endpoints: **427**
 - **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** typeof(FinancialReportDto), StatusCodes.Status200OK
 
+#### `GET /api/Reports/follow-up` - `GetFollowUpAlerts`
+
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports` AND `Permissions.ViewMembers`
+- **Inputs:** Query `expiringWithinDays`: `int`<br>Query `inactiveAfterDays`: `int`<br>Query `limit`: `int`<br>Handler signature: `[FromQuery] int expiringWithinDays = 7, [FromQuery] int inactiveAfterDays = 7, [FromQuery] int limit = 100`
+- **Declared response:** typeof(FollowUpAlertsDto), StatusCodes.Status200OK
+
 #### `GET /api/Reports/operations-dashboard` - `GetOperationsDashboard`
 
 - **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
@@ -2366,6 +2372,12 @@ Generated: `2026-08-23 16:26 UTC`  |  Total endpoints: **427**
 - **Access:** JWT + Policy: `Permissions.CreateAndDownloadTenantBackup`
 - **Inputs:** Body `request`: `SensitiveGrantRequest`<br>Handler signature: `Guid exportId, [FromBody] SensitiveGrantRequest request`
 - **Declared response:** Task<ActionResult<TenantBackupDownloadGrantDto>>
+
+#### `GET /api/tenant/backups/exports/{exportId:guid}/inspect` - `Inspect`
+
+- **Access:** JWT + Policy: `Permissions.CreateAndDownloadTenantBackup`
+- **Inputs:** Handler signature: `Guid exportId`
+- **Declared response:** Task<ActionResult<TenantBackupInspectionDto>>
 
 #### `POST /api/tenant/backups/reauthenticate` - `Reauthenticate`
 

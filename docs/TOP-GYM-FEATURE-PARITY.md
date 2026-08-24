@@ -9,7 +9,7 @@ backend authorization, Tenant database routing, and existing API contracts.
 | TOP GYM area | LogicFit implementation | Status |
 |---|---|---|
 | Login, Owner/Assistant access | Identity login, workspace selection, RBAC, workspace members | Complete |
-| Dashboard and KPIs | `/owner/dashboard`, reports and operations dashboard | Complete |
+| Dashboard and KPIs | `/owner/dashboard`, reports and operations dashboard, plus read-only `GET /api/reports/follow-up` alerts for expiring, expired, debt, and inactive members | Complete |
 | Members and profiles | `/owner/clients`, onboarding, client details, self-service client area | Complete |
 | Membership plans, renewals, freeze and arrears | `/owner/subscription-plans`, `/owner/subscriptions`, invoices/payments | Complete |
 | Payments, receipts and ledger | Payments, invoices, wallet/refund source-of-truth services | Complete |
@@ -23,7 +23,7 @@ backend authorization, Tenant database routing, and existing API contracts.
 | Expenses and finance reports | Expenses, categories, financial and operations reports | Complete; daily-pass revenue included |
 | Member feedback | `/client/feedback`, `/owner/member-feedback`, `api/member-feedback` | Complete in this parity change |
 | Member QR card | `/owner/membership-cards`, QR issue/revoke/scan | Complete |
-| Workspace backup | Tenant backup export plus platform backup controls | Complete; storage configuration is required for runtime |
+| Workspace backup | Tenant backup export, checksum/history, safe BACPAC inspection, plus platform backup controls | Complete; storage configuration is required for runtime |
 | Print/PDF/export | Shared export/PDF services and print actions | Complete |
 | WhatsApp manual click-to-chat messages | Shared LogicFit message service for member onboarding, renewal/expiry/debt/freeze alerts, and daily passes; opens `wa.me` with a prefilled message and leaves Send to the operator | Complete for the manual TOP GYM flow |
 
@@ -78,6 +78,15 @@ new migrations named `TopGymDailyPasses` and `TopGymMemberFeedback`. Production 
 must apply the Tenant migration to every assigned workspace database before exposing the
 new menu items.
 
+## Dashboard follow-up parity
+
+The Gym dashboard now loads `GET /api/reports/follow-up` as a read-only, tenant-scoped
+follow-up list. It prioritizes outstanding debt, then urgent expiry/expired memberships, and
+then inactive members. Each item contains only the contact and subscription fields required
+for the next operator action, links to the member profile, and supports manual WhatsApp
+click-to-chat. The endpoint requires both `GymReports` and `ViewMembers`; it never sends a
+message automatically and does not expose medical data or connection material.
+
 ## Deliberate integration boundary
 
 TOP GYM's current Smart Assistant is a deterministic, permission-aware help and navigation
@@ -87,6 +96,11 @@ topics by role, `workspaceType`, and `WorkspaceCapability`. Any future external 
 tenant-data access, retention policy, or write-capable action remains a separate product decision.
 WhatsApp is intentionally not part of this boundary: the required behavior is manual click-to-chat
 with a prepared message, not provider automation or background sending.
+
+The TOP GYM backup screen exposes inspect/history/restore actions. LogicFit implements the
+non-destructive inspect and history behavior for the current Tenant. Restore and archive deletion
+are intentionally not Tenant-owner actions: restore changes a database mapping and therefore stays
+behind the Platform operator restore workflow with pre-backup and provider capability gates.
 
 ## Member portal parity (Issue #329)
 
