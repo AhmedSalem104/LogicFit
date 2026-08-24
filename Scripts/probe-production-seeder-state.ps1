@@ -126,6 +126,7 @@ FROM (
 ) AS duplicates
 '@
     Invoke-SafeCount 'ApplicationMigrationRows' 'SELECT COUNT_BIG(*) FROM [dbo].[__EFMigrationsHistory]'
+}
 finally {
     $connection.Dispose()
 }
