@@ -40,7 +40,7 @@ FROM (
 '@
     Invoke-SafeCount 'PlatformOwnerRows' @'
 SELECT COUNT_BIG(*)
-FROM [dbo].[Users]
+FROM [dbo].[DomainUsers]
 WHERE [TenantId] = ''00000000-0000-0000-0000-0000000000A1''
   AND [Role] = 8
   AND [IsDeleted] = 0
@@ -49,7 +49,7 @@ WHERE [TenantId] = ''00000000-0000-0000-0000-0000000000A1''
 SELECT COUNT_BIG(*)
 FROM (
     SELECT [TenantId]
-    FROM [dbo].[Users]
+    FROM [dbo].[DomainUsers]
     WHERE [TenantId] = ''00000000-0000-0000-0000-0000000000A1''
       AND [Role] = 8
       AND [IsDeleted] = 0
@@ -100,7 +100,7 @@ FROM (
 SELECT COUNT_BIG(*)
 FROM (
     SELECT [Name]
-    FROM [dbo].[AppRoles]
+    FROM [dbo].[Roles]
     WHERE [TenantId] IS NULL AND [IsDeleted] = 0
     GROUP BY [Name]
     HAVING COUNT_BIG(*) > 1
