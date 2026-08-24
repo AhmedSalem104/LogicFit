@@ -1,5 +1,12 @@
 # LogicFit Project Status
 
+> **Issue #332 - production startup hardening:** the unified API now serializes the startup
+> platform seed separately from the migration lock so concurrent IIS workers cannot run the
+> idempotent seed pipeline at the same time. The destructive `RESET_FOODS` startup hook was
+> removed. Production was observed returning `/health` HTTP 200 `Healthy` after a protected
+> recycle; the application change remains subject to CI, protected deployment, and a post-deploy
+> health check before it is called production-verified.
+
 > **Issue #330 - production hotfix:** the latest master release had regressed the durable ASP.NET
 > Data Protection registration, leaving the deployed process on an ephemeral key repository even
 > though `DataProtectionKeys` exists in the Platform database. The hotfix restores the stable

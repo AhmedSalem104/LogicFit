@@ -11,6 +11,12 @@ Server execution is serialized with an application lock, uses bounded timeouts, 
 a second pending check. This is an apply operation only: the server never creates or edits
 migration source files.
 
+Startup `DataSeeder` execution is serialized separately with the SQL application-lock resource
+`LogicFit:PlatformDataSeeder`. The migration lock is released before seeding and IIS may start
+multiple workers during a recycle; a worker that cannot obtain the seed lease skips the duplicate
+seed pass and continues. The destructive `RESET_FOODS` environment hook is not part of the
+production startup path; food identity repair is an explicit maintenance operation.
+
 The runtime now has three explicit migration histories: `ApplicationDbContext` for the temporary
 compatibility schema, `PlatformDbContext` for central identity/workspace/billing data, and
 `TenantDbContext` for one isolated workspace database. CI and the protected preflight generate
