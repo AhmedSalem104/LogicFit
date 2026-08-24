@@ -284,6 +284,13 @@ with `Database__StartupMigrations__Enabled`,
 startup fails clearly; grant only the reviewed permission window or pre-apply through the protected
 operator flow. Never disable startup migration merely to bypass a pending schema.
 
+Startup seeding has its own SQL application lock (`LogicFit:PlatformDataSeeder`) because IIS can
+start multiple workers during a recycle after the migration lock is released. Only one worker
+performs the idempotent platform seed; another worker records a bounded informational message and
+continues without a duplicate seed pass. The production startup path does not honor the
+destructive `RESET_FOODS` environment variable. Any food identity repair must be run as a
+reviewed maintenance operation with a backup and rollback plan.
+
 3. خذ Backup وراجع Migration Dry Run وتقرير المخالفات لأي تغيير بيانات كبير.
 4. طبّق migrations في خطوة مراجعة منفصلة، ثم انشر الـAPI الصحيح، ثم نفّذ health check.
 5. انشر Dashboard المبني من البيئة التي تشير إلى API الصحيح.
