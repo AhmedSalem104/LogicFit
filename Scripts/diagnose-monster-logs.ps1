@@ -202,7 +202,14 @@ function Write-SafeLogCategories(
         MigrationApplyFailure = '(?i)Database startup migration failed|MigrateAsync|migration.*(failed|exception)'
         DataProtectionKeyStoreFailure = '(?i)Data Protection key store|empty XML key|PersistKeysToDbContext|DataProtectionKeyRingBootstrapper'
         DataProtectionDirectoryFailure = '(?i)Data Protection.*(directory|folder|path)|FileSystemXmlRepository.*(access|permission|failed)'
-        SeederFailure = '(?i)Data seeding|seeder|An error occurred while seeding the database'
+        DatabaseResourceSeederFailure = '(?i)(?:DatabaseResourceSeeder|database resource).{0,160}(?:failed|error|exception|invalid)|(?:failed|error|exception|invalid).{0,160}(?:DatabaseResourceSeeder|database resource)'
+        TenantSeedFailure = '(?i)(?:SeedTenants|tenants\.json).{0,160}(?:failed|error|exception|not found)|(?:failed|error|exception).{0,160}(?:SeedTenants|tenants\.json)'
+        MuscleSeedFailure = '(?i)(?:SeedMuscles|muscles\.json).{0,160}(?:failed|error|exception|not found)|(?:failed|error|exception).{0,160}(?:SeedMuscles|muscles\.json)'
+        ExerciseSeedFailure = '(?i)(?:SeedExercises|exercises\.json).{0,160}(?:failed|error|exception|not found)|(?:failed|error|exception).{0,160}(?:SeedExercises|exercises\.json)'
+        FoodSeedFailure = '(?i)(?:SeedFoods|foods\.json).{0,160}(?:failed|error|exception|not found)|(?:failed|error|exception).{0,160}(?:SeedFoods|foods\.json)'
+        RbacSeedFailure = '(?i)(?:RbacSeeder|RBAC|system role|Platform Owner).{0,160}(?:failed|error|exception|missing)|(?:failed|error|exception|missing).{0,160}(?:RbacSeeder|RBAC|system role|Platform Owner)'
+        PlanSeedFailure = '(?i)(?:PlanSeeder|Plan/Feature|plan.*feature).{0,160}(?:failed|error|exception)|(?:failed|error|exception).{0,160}(?:PlanSeeder|Plan/Feature|plan.*feature)'
+        SeederFailure = '(?i)Data seeding|An error occurred while seeding the database'
         HostingConfigurationFailure = '(?i)options validation|configuration.*(missing|required|invalid)|not configured'
     }
     $text = ($Files | ForEach-Object {
