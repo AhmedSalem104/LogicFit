@@ -268,6 +268,23 @@ function Write-SafeLogCategories(
     } else {
         'NoKnownSeederProgress'
     }
+    $seedFailureMatches = [regex]::Matches($text, '(?i)An error occurred while seeding the database|Data seeding.*(failed|error)')
+    $seedCompletionMatches = [regex]::Matches($text, '(?i)Data seeding completed successfully')
+    $lastSeedFailureIndex = if ($seedFailureMatches.Count -gt 0) {
+        $seedFailureMatches[$seedFailureMatches.Count - 1].Index
+    } else { -1 }
+    $lastSeedCompletionIndex = if ($seedCompletionMatches.Count -gt 0) {
+        $seedCompletionMatches[$seedCompletionMatches.Count - 1].Index
+    } else { -1 }
+    $seedEventOrder = if ($lastSeedFailureIndex -lt 0 -and $lastSeedCompletionIndex -lt 0) {
+        'NoSeedOutcome'
+    } elseif ($lastSeedFailureIndex -gt $lastSeedCompletionIndex) {
+        'SeederFailureAfterLastCompletion'
+    } elseif ($lastSeedCompletionIndex -gt $lastSeedFailureIndex) {
+        'SeederCompletionAfterLastFailure'
+    } else {
+        'SeederFailureAndCompletionSamePosition'
+    }
     $safeSqlDetails = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($line in ($text -split "`r?`n")) {
         $trimmed = $line.Trim()
@@ -315,6 +332,7 @@ function Write-SafeLogCategories(
     Write-Host "Safe startup stages: $($startupStages -join ', ')."
     Write-Host "Safe startup failure ids: $($startupFailures -join ', ')."
     Write-Host "Safe last seeder progress id: $lastSeederProgress."
+    Write-Host "Safe seeder event order: $seedEventOrder."
     Write-Host "Safe SQL details: $($safeSqlDetails -join ', ')."
 }
 
