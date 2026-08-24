@@ -410,6 +410,19 @@ jobs:
           }
           Write-Host "Production readiness endpoint passed."
 
+  diagnose-seeder-state:
+    if: ${{ inputs.confirm == 'DIAGNOSE-PRODUCTION-HEALTH' && inputs.image_tag == 'diagnostic-seeder-state' }}
+    runs-on: windows-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read production seeder state without writing
+        shell: powershell
+        env:
+          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+        run: .\Scripts\probe-production-seeder-state.ps1
+
   diagnose-monster-logs:
     if: ${{ inputs.confirm == 'DIAGNOSE-MONSTER-LOGS' }}
     runs-on: windows-latest
