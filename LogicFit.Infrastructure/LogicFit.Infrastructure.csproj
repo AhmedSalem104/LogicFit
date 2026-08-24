@@ -20,6 +20,8 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.SqlServer.DacFx" Version="170.4.83" />
+    <!-- Pin the transitive XML crypto dependency to the patched 8.0 servicing release. -->
+    <PackageReference Include="System.Security.Cryptography.Xml" Version="8.0.4" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.7.1" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.305.15" />
   </ItemGroup>
