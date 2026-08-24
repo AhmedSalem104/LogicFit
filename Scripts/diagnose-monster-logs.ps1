@@ -223,6 +223,28 @@ function Write-SafeLogCategories(
     if ($exceptionTypes.Count -eq 0) { $exceptionTypes = @('NoKnownExceptionType') }
     $startupReasons = @($startupReasonPatterns.Keys | Where-Object { $text -match $startupReasonPatterns[$_] })
     if ($startupReasons.Count -eq 0) { $startupReasons = @('NoKnownStartupReason') }
+    $seederProgressPatterns = [ordered]@{
+        SeedStarted = '(?i)Seed data path:'
+        TenantsCompleted = '(?i)Tenants already seeded|Seeded \d+ tenants'
+        MusclesCompleted = '(?i)Muscles:\s+\d+ added,\s+\d+ updated'
+        ExercisesCompleted = '(?i)Exercises:\s+\d+ added,\s+\d+ updated'
+        FoodsCompleted = '(?i)Foods:\s+\d+ added,\s+\d+ updated'
+        UsersCompleted = '(?i)Users already seeded|Seeded \d+ users'
+        RbacCompleted = '(?i)RBAC seeding completed'
+        PlansCompleted = '(?i)Plan/Feature seeding completed'
+        SeedCompleted = '(?i)Data seeding completed successfully'
+    }
+    $seederProgressHits = foreach ($name in $seederProgressPatterns.Keys) {
+        $matches = [regex]::Matches($text, $seederProgressPatterns[$name])
+        if ($matches.Count -gt 0) {
+            [pscustomobject]@{ Name = $name; Index = $matches[$matches.Count - 1].Index }
+        }
+    }
+    $lastSeederProgress = if (@($seederProgressHits).Count -gt 0) {
+        (@($seederProgressHits) | Sort-Object Index | Select-Object -Last 1).Name
+    } else {
+        'NoKnownSeederProgress'
+    }
     $safeSqlDetails = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($line in ($text -split "`r?`n")) {
         $trimmed = $line.Trim()
@@ -268,6 +290,7 @@ function Write-SafeLogCategories(
     Write-Host "Safe log signatures: $($signatures -join ', ')."
     Write-Host "Safe exception types: $($exceptionTypes -join ', ')."
     Write-Host "Safe startup reason ids: $($startupReasons -join ', ')."
+    Write-Host "Safe last seeder progress id: $lastSeederProgress."
     Write-Host "Safe SQL details: $($safeSqlDetails -join ', ')."
 }
 
