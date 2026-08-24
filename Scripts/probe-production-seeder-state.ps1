@@ -40,13 +40,10 @@ FROM (
 '@
     Invoke-SafeCount 'DomainUserRows' 'SELECT COUNT_BIG(*) FROM [dbo].[DomainUsers]'
     Invoke-SafeCount 'DomainUserRoleEightRows' 'SELECT COUNT_BIG(*) FROM [dbo].[DomainUsers] WHERE [Role] = 8'
-    Invoke-SafeCount 'DomainUserExpectedColumns' @'
-SELECT COUNT_BIG(*)
-FROM [INFORMATION_SCHEMA].[COLUMNS]
-WHERE [TABLE_SCHEMA] = ''dbo''
-  AND [TABLE_NAME] = ''DomainUsers''
-  AND [COLUMN_NAME] IN (''TenantId'', ''Role'', ''IsDeleted'')
-'@
+    Invoke-SafeCount 'DomainUserTenantIdColumns' 'SELECT COUNT_BIG(*) FROM [sys].[columns] WHERE [object_id] = OBJECT_ID(''dbo.DomainUsers'') AND [name] = ''TenantId'''
+    Invoke-SafeCount 'DomainUserRoleColumns' 'SELECT COUNT_BIG(*) FROM [sys].[columns] WHERE [object_id] = OBJECT_ID(''dbo.DomainUsers'') AND [name] = ''Role'''
+    Invoke-SafeCount 'DomainUserIsDeletedColumns' 'SELECT COUNT_BIG(*) FROM [sys].[columns] WHERE [object_id] = OBJECT_ID(''dbo.DomainUsers'') AND [name] = ''IsDeleted'''
+    Invoke-SafeCount 'DomainUserRowsWithIsDeletedFalse' 'SELECT COUNT_BIG(*) FROM [dbo].[DomainUsers] WHERE [IsDeleted] = 0'
     Invoke-SafeCount 'PlatformOwnerRows' @'
 SELECT COUNT_BIG(*)
 FROM [dbo].[DomainUsers]
