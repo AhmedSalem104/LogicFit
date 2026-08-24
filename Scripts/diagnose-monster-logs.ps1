@@ -215,6 +215,15 @@ function Write-SafeLogCategories(
     $text = ($Files | ForEach-Object {
         try { Get-Content -LiteralPath $_.FullName -Tail 10000 -ErrorAction SilentlyContinue } catch { }
     }) -join "`n"
+    function Redact-SafeLogLine([string]$Line) {
+        $safe = $Line
+        $safe = $safe -replace '(?i)(password|pwd|secret|token|connectionstring|connection string|api[- ]?key|authorization)\s*[:=]\s*[^,;\s]+', '$1=[REDACTED]'
+        $safe = $safe -replace '(?i)(data source|server|initial catalog|user id|uid|integrated security)\s*=\s*[^;]+;?', '$1=[REDACTED]'
+        $safe = $safe -replace '(?i)Bearer\s+[^\s,;]+', 'Bearer [REDACTED]'
+        $safe = $safe -replace '(?i)https?://[^\s"'']+', '[URL-REDACTED]'
+        if ($safe.Length -gt 360) { $safe = $safe.Substring(0, 360) + '...' }
+        return $safe
+    }
     $categories = @($patterns.Keys | Where-Object { $text -match $patterns[$_] })
     if ($categories.Count -eq 0) { $categories = @('NoKnownRootCategory') }
     $signatures = @($signaturePatterns.Keys | Where-Object { $text -match $signaturePatterns[$_] })
@@ -291,6 +300,16 @@ function Write-SafeLogCategories(
     Write-Host "Safe exception types: $($exceptionTypes -join ', ')."
     Write-Host "Safe startup reason ids: $($startupReasons -join ', ')."
     Write-Host "Safe last seeder progress id: $lastSeederProgress."
+    $errorLines = @($text -split "`r?`n" |
+        Where-Object { $_ -match '(?i)InvalidOperationException|An error occurred while seeding|seeding.*(failed|error)|(?:failed|error|exception).*(?:seed|RBAC|Plan/Feature|DatabaseResource)' } |
+        Select-Object -Last 8 |
+        ForEach-Object { Redact-SafeLogLine $_ })
+    if ($errorLines.Count -eq 0) {
+        Write-Host 'Safe seeder error lines: NoneCaptured.'
+    } else {
+        Write-Host 'Safe seeder error lines:'
+        $errorLines | ForEach-Object { Write-Host "  $_" }
+    }
     Write-Host "Safe SQL details: $($safeSqlDetails -join ', ')."
 }
 
@@ -320,7 +339,9 @@ try {
 
     $logDirectory = Resolve-LogDirectory ([string]$aspNetCore.GetAttribute('stdoutLogFile'))
     $remoteLogPath = "$ExpectedSite/$logDirectory"
-    $diagnosticStdoutPath = ".\$($logDirectory.Replace('/', '\'))\stdout"
+    # Use a unique filename so stale stdout files from earlier IIS recycles cannot be
+    # mistaken for the current startup attempt.
+    $diagnosticStdoutPath = ".\$($logDirectory.Replace('/', '\'))\stdout-diagnostic-$([Guid]::NewGuid().ToString('N'))"
     $baselineFiles = @(Get-LogFiles $remoteLogPath $baselineLogRoot)
     $baselineSnapshot = Get-LogSnapshot $baselineFiles $baselineLogRoot
     $aspNetCore.SetAttribute('stdoutLogEnabled', 'true')
