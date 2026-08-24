@@ -21,7 +21,7 @@ function Invoke-SafeCount([string] $id, [string] $sql) {
         Write-Host "Seeder state $id=$value."
     }
     catch {
-        Write-Host "Seeder state $id=QueryFailed."
+        Write-Host "Seeder state $id=QueryFailed:$($_.Exception.GetType().Name)."
     }
 }
 
