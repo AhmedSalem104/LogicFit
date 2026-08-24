@@ -24,6 +24,17 @@ registration recovery.
 No database was deleted, truncated, or directly edited as part of this documentation/release
 verification.
 
+## Issue #330 - release regression correction
+
+The current master release had regressed the durable Data Protection registration even though the
+`DataProtectionKeys` migration and table were present. The correction restores the stable
+application name, database-backed key ring, and legacy-key synchronization before seeding. It
+also adds the guarded `20260824130000_ReconcileProductionSchemaIndexes` migration for the missing
+`WorkspaceInvites.InvitedByMembershipId` index. The legacy `ApplicationRequests` unique index is
+preserved until its business rule is separately reviewed. This correction is not a Production
+deployment claim until the protected release, recycle, `/health` 200, and authenticated smoke
+checks pass.
+
 ## Repositories and released commits
 
 | Area | Repository branch | Released commit / PR | Result |

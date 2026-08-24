@@ -1,5 +1,15 @@
 # LogicFit Project Status
 
+> **Issue #330 - production hotfix:** the latest master release had regressed the durable ASP.NET
+> Data Protection registration, leaving the deployed process on an ephemeral key repository even
+> though `DataProtectionKeys` exists in the Platform database. The hotfix restores the stable
+> `LogicFit` application name, database-backed key ring, and legacy-key synchronization, and adds
+> the guarded `20260824130000_ReconcileProductionSchemaIndexes` migration for the missing
+> `WorkspaceInvites.InvitedByMembershipId` index. The legacy
+> `ApplicationRequests.TargetScopeKey_ApplicationType` unique index is intentionally preserved
+> pending a separate business-rule decision. This is unreleased until CI, protected migration,
+> Monster deployment, `/health` 200, and post-deploy smoke verification pass.
+
 > **Issue #292 — task branch:** Tenant-platform identity login returned `500` only after valid
 > credentials because the session issuer included the tenant-owned `User` navigation while
 > querying Platform-owned memberships. The implementation now queries only Platform-owned

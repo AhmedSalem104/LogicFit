@@ -29,7 +29,19 @@ drop and does not change tenant business data.
 
 Migration `20260730143000_AddIdentityEmailSecurity` is additive and guards for existing production schemas. It marks existing identities verified during backfill so deployed identity users are not locked out, then adds the token table. It is applied separately through the reviewed migration procedure; its `Down` path is intentionally non-destructive.
 
-Production schema state is advanced only by the explicit deployment migration stage. The stage compares the released migration plan with the target database, requires a verified BACPAC reference, applies the EF lineage before publishing the API, and verifies that no migration remains pending. Application startup never mutates the schema.
+Production schema state is advanced preferably by the explicit deployment migration stage. The stage compares the released migration plan with the target database, requires a verified BACPAC reference, applies the EF lineage before publishing the API, and verifies that no migration remains pending. The unified API retains a serialized startup-migration safety net for an approved emergency/manual publish path; it does not generate migrations or replace backup and rollback review.
+
+## Production key ring and schema reconciliation (Issue #330)
+
+The Platform database is the authoritative ASP.NET Data Protection key store. The API uses the
+stable `LogicFit` application name, persists keys through `ApplicationDbContext`, and synchronizes
+legacy `App_Data` keys before seeding. A deployment must preserve the server-only database
+connection and the private key directory; an ephemeral key repository is a release blocker
+because protected tenant database mappings and links may become undecryptable after an IIS recycle.
+
+Migration `20260824130000_ReconcileProductionSchemaIndexes` is additive and guarded. It creates
+only the missing `WorkspaceInvites(InvitedByMembershipId)` index when the table exists and does
+not remove the legacy `ApplicationRequests` uniqueness index until its business rule is reviewed.
 
 Identity login is also a data-consistency boundary for Gym ownership: when a Gym is already
 `Active` but its owner `WorkspaceMembership` still has `PendingPlatformApproval` from an older
