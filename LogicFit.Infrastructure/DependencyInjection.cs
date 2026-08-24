@@ -25,7 +25,16 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton(TimeProvider.System);
-        services.AddDataProtection();
+
+        // DatabaseResource connection strings are protected with ASP.NET Data Protection. The
+        // central Platform database is authoritative for the key ring so deployments and IIS
+        // recycles cannot orphan encrypted tenant mappings. App_Data remains a mirrored recovery
+        // copy and is explicitly excluded from Web Deploy synchronization.
+        var dataProtectionKeyDirectory = DataProtectionKeyDirectory.Resolve(configuration);
+        Directory.CreateDirectory(dataProtectionKeyDirectory);
+        services.AddDataProtection()
+            .SetApplicationName("LogicFit")
+            .PersistKeysToDbContext<ApplicationDbContext>();
 
         // Platform DB remains the source of identity, workspace metadata, billing and mappings.
         // Tenant-owned operational sets are routed separately after the tenant mapping is resolved.
@@ -42,6 +51,7 @@ public static class DependencyInjection
 
         services.AddScoped<TenantDatabaseRequestScope>();
         services.AddScoped<TenantDatabaseContextAccessor>();
+        services.AddScoped<DataProtectionKeyRingBootstrapper>();
         services.AddOptions<TenantDatabaseRoutingOptions>()
             .Bind(configuration.GetSection(TenantDatabaseRoutingOptions.SectionName))
             .ValidateOnStart();
@@ -54,6 +64,14 @@ public static class DependencyInjection
                 provider.GetRequiredService<ITenantService>()));
         services.AddSingleton<IDistributedLockProvider, SqlServerDistributedLockProvider>();
         services.AddScoped<IDatabaseResourcePool, DatabaseResourcePoolService>();
+        services.AddOptions<DatabaseResourcePoolOptions>()
+            .Bind(configuration.GetSection(DatabaseResourcePoolOptions.SectionName))
+            .Validate(
+                DatabaseResourcePoolOptions.IsValid,
+                "Database resource pool configuration is invalid.");
+        services.AddScoped<DatabaseResourceSeeder>();
+        services.AddScoped<TenantDatabaseSeeder>();
+        services.AddScoped<TenantReferenceCatalogSeeder>();
         services.AddScoped<LocalSqlTenantDatabasePurgeProvider>();
         services.AddScoped<ManualMonsterTenantDatabasePurgeProvider>();
         services.AddScoped<ITenantDatabasePurgeProvider>(provider =>

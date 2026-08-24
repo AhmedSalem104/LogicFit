@@ -93,4 +93,39 @@ public sealed class ProductionRemediationContractTests
         Assert.Contains("SELECT @result", providerSource, StringComparison.Ordinal);
         Assert.Contains("ExecuteScalarAsync", providerSource, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Production_data_protection_uses_the_platform_database_key_ring()
+    {
+        var infrastructureSource = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "LogicFit.Infrastructure",
+            "DependencyInjection.cs"));
+        var apiSource = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "LogicFit.API",
+            "Program.cs"));
+
+        Assert.Contains("SetApplicationName(\"LogicFit\")", infrastructureSource, StringComparison.Ordinal);
+        Assert.Contains("PersistKeysToDbContext<ApplicationDbContext>()", infrastructureSource, StringComparison.Ordinal);
+        Assert.Contains("AddScoped<DataProtectionKeyRingBootstrapper>()", infrastructureSource, StringComparison.Ordinal);
+        Assert.Contains("AddScoped<DatabaseResourceSeeder>()", infrastructureSource, StringComparison.Ordinal);
+        Assert.Contains("SynchronizeAsync", apiSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Production_schema_reconciliation_adds_only_the_missing_invite_index()
+    {
+        var migration = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "LogicFit.Infrastructure",
+            "Persistence",
+            "Migrations",
+            "20260824130000_ReconcileProductionSchemaIndexes.cs"));
+
+        Assert.Contains("IX_WorkspaceInvites_InvitedByMembershipId", migration, StringComparison.Ordinal);
+        Assert.Contains("CREATE INDEX", migration, StringComparison.Ordinal);
+        Assert.Contains("IF OBJECT_ID", migration, StringComparison.Ordinal);
+        Assert.DoesNotContain("DROP INDEX IX_ApplicationRequests_TargetScopeKey_ApplicationType", migration, StringComparison.Ordinal);
+    }
 }

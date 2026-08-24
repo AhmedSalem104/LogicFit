@@ -138,6 +138,17 @@ explicitly at the destination. `DoNotDeleteRule` alone prevents deletion but sti
 existing file to be overwritten. لا تُسجّل محتويات الملف
 أو كلمات المرور في التذاكر أو السجلات.
 
+### Issue #330 - Data Protection and schema reconciliation
+
+The Platform database is the authoritative Data Protection key ring. The released API must log
+neither `Using an in-memory repository` nor `ephemeral key repository`; those messages indicate
+that durable key registration was lost and are a deployment blocker. Before recycling Monster,
+verify that `DataProtectionKeys` is available and that the server-only key directory is writable.
+The guarded migration `20260824130000_ReconcileProductionSchemaIndexes` adds only the missing
+`WorkspaceInvites.InvitedByMembershipId` index. Do not drop the legacy
+`ApplicationRequests.TargetScopeKey_ApplicationType` unique index without a separate backup,
+business-rule review, and rollback plan.
+
 ## فحص ما قبل النشر
 
 1. راجع `git status` وتأكد أن النسخة المنشورة هي commit/branch المقصود؛ لا تخلط مجلد
