@@ -195,6 +195,21 @@ function Write-SafeLogCategories(
         TimeoutException = '(?i)\bTimeoutException\b|timed out|timeout'
         InvalidOperationException = '(?i)\bInvalidOperationException\b'
     }
+    # Keep startup diagnosis actionable without emitting exception messages, SQL, emails,
+    # connection strings, or other production data. These identifiers are source-level stage
+    # names only and are safe to publish as bounded diagnostic output.
+    $startupStagePatterns = [ordered]@{
+        DatabaseResourceSeeder = '(?i)DatabaseResourceSeeder'
+        TenantSeed = '(?i)SeedTenantsAsync|TenantDatabaseSeeder|TenantReferenceCatalogSeeder'
+        MuscleSeed = '(?i)SeedMusclesAsync'
+        ExerciseSeed = '(?i)SeedExercisesAsync'
+        FoodSeed = '(?i)SeedFoodsAsync|ForceResetFoodsAsync'
+        UserSeed = '(?i)SeedUsersAsync'
+        RbacSeed = '(?i)RbacSeeder|SeedPermissionsAsync|SeedRolesAndMappingsAsync|BackfillUserRolesAsync'
+        PlatformOwnerBootstrap = '(?i)SeedPlatformAsync|PlatformOwnerBootstrap'
+        PlanSeed = '(?i)PlanSeeder|SeedFeaturesAsync|SeedPlansAsync'
+        DataProtectionKeyRing = '(?i)DataProtectionKeyRingBootstrapper'
+    }
     $text = ($Files | ForEach-Object {
         try { Get-Content -LiteralPath $_.FullName -Tail 10000 -ErrorAction SilentlyContinue } catch { }
     }) -join "`n"
@@ -204,6 +219,8 @@ function Write-SafeLogCategories(
     if ($signatures.Count -eq 0) { $signatures = @('NoKnownSafeSignature') }
     $exceptionTypes = @($exceptionPatterns.Keys | Where-Object { $text -match $exceptionPatterns[$_] })
     if ($exceptionTypes.Count -eq 0) { $exceptionTypes = @('NoKnownExceptionType') }
+    $startupStages = @($startupStagePatterns.Keys | Where-Object { $text -match $startupStagePatterns[$_] })
+    if ($startupStages.Count -eq 0) { $startupStages = @('NoKnownStartupStage') }
     $safeSqlDetails = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($line in ($text -split "`r?`n")) {
         $trimmed = $line.Trim()
@@ -248,6 +265,7 @@ function Write-SafeLogCategories(
     Write-Host "Safe log categories: $($categories -join ', ')."
     Write-Host "Safe log signatures: $($signatures -join ', ')."
     Write-Host "Safe exception types: $($exceptionTypes -join ', ')."
+    Write-Host "Safe startup stages: $($startupStages -join ', ')."
     Write-Host "Safe SQL details: $($safeSqlDetails -join ', ')."
 }
 
