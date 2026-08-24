@@ -80,11 +80,13 @@ new menu items.
 
 ## Deliberate integration boundary
 
-TOP GYM's Smart Assistant is not copied as a fake/mock feature. LogicFit needs the chosen
-AI provider, model, retention policy, and allowed data fields before it can be enabled
-safely. WhatsApp is intentionally not part of this boundary: the required behavior is
-manual click-to-chat with a prepared message, not provider automation or background
-sending.
+TOP GYM's current Smart Assistant is a deterministic, permission-aware help and navigation
+surface, not an external model call. LogicFit implements the equivalent local assistant in the
+Angular tenant UI: it provides screen help, guided journeys, and safe navigation only, and filters
+topics by role, `workspaceType`, and `WorkspaceCapability`. Any future external AI provider,
+tenant-data access, retention policy, or write-capable action remains a separate product decision.
+WhatsApp is intentionally not part of this boundary: the required behavior is manual click-to-chat
+with a prepared message, not provider automation or background sending.
 
 ## Member portal parity (Issue #329)
 
