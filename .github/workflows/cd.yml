@@ -423,6 +423,45 @@ jobs:
           LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
         run: .\Scripts\probe-production-seeder-state.ps1
 
+  diagnose-webconfig-state:
+    if: ${{ inputs.confirm == 'DIAGNOSE-PRODUCTION-HEALTH' && inputs.image_tag == 'diagnostic-webconfig-state' }}
+    runs-on: windows-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select protected unified profile
+        shell: powershell
+        env:
+          UNIFIED_PROFILE_B64: ${{ secrets.RUNASP_UNIFIED_PUBLISH_SETTINGS_B64 }}
+          HEALTH_URL: ${{ secrets.RUNASP_UNIFIED_HEALTHCHECK_URL }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:UNIFIED_PROFILE_B64) -or [string]::IsNullOrWhiteSpace($env:HEALTH_URL)) {
+            throw 'Protected unified diagnostic inputs are missing.'
+          }
+          $profilePath = "$env:RUNNER_TEMP/webconfig-diagnostic.publishSettings"
+          $payload = $env:UNIFIED_PROFILE_B64.Trim()
+          $xmlStart = $payload.IndexOf('<')
+          if ($xmlStart -ge 0) {
+            [IO.File]::WriteAllText($profilePath, $payload.Substring($xmlStart), [Text.UTF8Encoding]::new($false))
+          }
+          else {
+            [IO.File]::WriteAllBytes($profilePath, [Convert]::FromBase64String($payload))
+          }
+          "WEBCONFIG_PROFILE_PATH=$profilePath" >> $env:GITHUB_ENV
+          "WEBCONFIG_HEALTH_URL=$env:HEALTH_URL" >> $env:GITHUB_ENV
+
+      - name: Read web.config and server config safely
+        shell: powershell
+        env:
+          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
+        run: |
+          .\Scripts\diagnose-webdeploy-health.ps1 `
+            -PublishSettingsPath $env:WEBCONFIG_PROFILE_PATH `
+            -ExpectedSite ${{ inputs.recovery_expected_site }} `
+            -ExpectedConnectionString $env:LOGICFIT_PRODUCTION_DB_CONNECTION `
+            -HealthCheckUrl $env:WEBCONFIG_HEALTH_URL
+
   diagnose-monster-logs:
     if: ${{ inputs.confirm == 'DIAGNOSE-MONSTER-LOGS' }}
     runs-on: windows-latest
