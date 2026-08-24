@@ -210,6 +210,17 @@ function Write-SafeLogCategories(
         PlanSeed = '(?i)PlanSeeder|SeedFeaturesAsync|SeedPlansAsync'
         DataProtectionKeyRing = '(?i)DataProtectionKeyRingBootstrapper'
     }
+    $startupFailurePatterns = [ordered]@{
+        MissingPlatformOwnerIdentity = '(?i)Platform Owner references a missing IdentityAccount'
+        ConflictingPlatformOwnerIdentity = '(?i)Platform bootstrap email and phone belong to different identities'
+        EmptyDataProtectionKey = '(?i)central Data Protection key store contains an empty XML key'
+        InvalidDatabaseResourceDefinition = '(?i)Every DatabaseResourcePool resource requires DatabaseName and ConnectionString'
+        DatabaseNameMismatch = '(?i)configured connection string database does not match'
+        InvalidDatabaseResourceConnection = '(?i)configured connection string .* is invalid'
+        MigrationVerificationFailure = '(?i)Database migration verification failed'
+        StartupMigrationFailure = '(?i)Database startup migration failed'
+        RedisConfigurationFailure = '(?i)Redis.*(required|configured|invalid)|Redis connection'
+    }
     $text = ($Files | ForEach-Object {
         try { Get-Content -LiteralPath $_.FullName -Tail 10000 -ErrorAction SilentlyContinue } catch { }
     }) -join "`n"
@@ -221,6 +232,8 @@ function Write-SafeLogCategories(
     if ($exceptionTypes.Count -eq 0) { $exceptionTypes = @('NoKnownExceptionType') }
     $startupStages = @($startupStagePatterns.Keys | Where-Object { $text -match $startupStagePatterns[$_] })
     if ($startupStages.Count -eq 0) { $startupStages = @('NoKnownStartupStage') }
+    $startupFailures = @($startupFailurePatterns.Keys | Where-Object { $text -match $startupFailurePatterns[$_] })
+    if ($startupFailures.Count -eq 0) { $startupFailures = @('NoKnownStartupFailure') }
     $safeSqlDetails = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($line in ($text -split "`r?`n")) {
         $trimmed = $line.Trim()
@@ -266,6 +279,7 @@ function Write-SafeLogCategories(
     Write-Host "Safe log signatures: $($signatures -join ', ')."
     Write-Host "Safe exception types: $($exceptionTypes -join ', ')."
     Write-Host "Safe startup stages: $($startupStages -join ', ')."
+    Write-Host "Safe startup failure ids: $($startupFailures -join ', ')."
     Write-Host "Safe SQL details: $($safeSqlDetails -join ', ')."
 }
 
