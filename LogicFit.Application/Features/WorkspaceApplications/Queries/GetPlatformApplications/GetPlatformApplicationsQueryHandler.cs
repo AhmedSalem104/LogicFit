@@ -65,6 +65,8 @@ public sealed class GetPlatformApplicationsQueryHandler
                 x.TenantId,
                 x.TenantSubscriptionId,
                 x.Status,
+                x.ProofFileUrl,
+                x.Proofs.Where(proof => proof.IsCurrent).Select(proof => proof.Version).FirstOrDefault(),
                 x.UpdatedAt,
                 x.CreatedAt))
             .ToListAsync(cancellationToken);
@@ -261,6 +263,9 @@ public sealed class GetPlatformApplicationsQueryHandler
             WorkspaceType = workspaceType,
             PaymentRequestId = payment?.Id,
             PaymentStatus = payment?.Status,
+            HasPaymentProof = payment is not null &&
+                (!string.IsNullOrWhiteSpace(payment.ProofFileUrl) || payment.ProofVersion > 0),
+            PaymentProofVersion = payment?.ProofVersion ?? 0,
             WorkspaceStatus = workspaceStatus,
             SubscriptionStatus = subscriptionStatus,
             DatabaseStatus = databaseStatus,
@@ -282,6 +287,8 @@ public sealed class GetPlatformApplicationsQueryHandler
         Guid TenantId,
         Guid? TenantSubscriptionId,
         PaymentRequestStatus Status,
+        string? ProofFileUrl,
+        int ProofVersion,
         DateTime? UpdatedAt,
         DateTime CreatedAt);
 

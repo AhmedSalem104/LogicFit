@@ -1,8 +1,9 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.Auth.DTOs;
-using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Exceptions;
+using LogicFit.Domain.Enums;
+using LogicFit.Domain.Authorization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -50,7 +51,19 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        var auth = await _rbacService.GetUserAuthorizationAsync(user.Id, cancellationToken);
+        WorkspaceType? workspaceType = null;
+        if (user.TenantId != PlatformConstants.PlatformTenantId)
+        {
+            workspaceType = await _context.Tenants
+                .IgnoreQueryFilters()
+                .Where(x => x.Id == user.TenantId && !x.IsDeleted)
+                .Select(x => (WorkspaceType?)x.WorkspaceType)
+                .SingleOrDefaultAsync(cancellationToken);
+        }
+
+        var auth = workspaceType.HasValue
+            ? await _rbacService.GetUserAuthorizationForTenantAsync(user.Id, user.TenantId, cancellationToken)
+            : await _rbacService.GetUserAuthorizationAsync(user.Id, cancellationToken);
         var profile = await _context.UserProfiles
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.UserId == user.Id, cancellationToken);
@@ -71,6 +84,8 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
             Roles = auth.Roles,
             Permissions = auth.Permissions,
             TenantId = user.TenantId,
+            WorkspaceType = workspaceType,
+            Capabilities = workspaceType.HasValue ? WorkspaceCapabilities.For(workspaceType.Value) : Array.Empty<string>(),
             AccessToken = accessToken.Token,
             RefreshToken = newToken.Token,
             ExpiresAt = accessToken.ExpiresAt

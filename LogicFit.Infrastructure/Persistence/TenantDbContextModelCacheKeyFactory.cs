@@ -4,9 +4,8 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 namespace LogicFit.Infrastructure.Persistence;
 
 /// <summary>
-/// TenantId participates in the EF model cache key because the TenantDbContext query boundary
-/// is built from the context's explicit tenant scope. Without this, the first workspace model
-/// created in a process could reuse its filter for a different workspace.
+/// Keeps the explicit TenantId in EF's model cache key so a query filter for one workspace can
+/// never be reused for another workspace in the same process.
 /// </summary>
 public sealed class TenantDbContextModelCacheKeyFactory : IModelCacheKeyFactory
 {

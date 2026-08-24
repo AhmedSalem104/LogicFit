@@ -1,5 +1,6 @@
 using LogicFit.Application.Features.BodyMeasurements.Commands.CreateBodyMeasurement;
 using LogicFit.Application.Features.BodyMeasurements.Commands.DeleteBodyMeasurement;
+using LogicFit.Application.Features.BodyMeasurements.Commands.UpdateBodyMeasurement;
 using LogicFit.Application.Features.BodyMeasurements.DTOs;
 using LogicFit.Application.Features.BodyMeasurements.Queries.GetBodyMeasurements;
 using MediatR;
@@ -60,6 +61,14 @@ public class BodyMeasurementsController : ControllerBase
     public async Task<ActionResult> DeleteBodyMeasurement(Guid id)
     {
         await _mediator.Send(new DeleteBodyMeasurementCommand { Id = id });
+        return NoContent();
+    }
+
+    [HttpPut("{id}")]
+    public async Task<ActionResult> UpdateBodyMeasurement(Guid id, [FromBody] UpdateBodyMeasurementCommand command)
+    {
+        command.Id = id;
+        await _mediator.Send(command);
         return NoContent();
     }
 }

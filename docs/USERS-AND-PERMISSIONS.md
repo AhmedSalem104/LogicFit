@@ -140,3 +140,47 @@ plan items. Tenant filters are always applied in addition to these role/assignme
 The UI may hide an action, but a missing action is never a security control. Unauthorized, inactive,
 cross-tenant, or unassigned identifiers are rejected by the API and must render a clear blocked/error
 state rather than an empty successful screen.
+
+## Workspace capabilities (Issue #296)
+
+RBAC and workspace type are separate checks. The `FreelanceOwner` role no longer inherits the
+complete `TenantPermissions` set. Its seeded permissions cover clients, coaching, finance,
+reports, settings, billing, and the limited assistant-team workflow; Gym-only permissions such
+as branches, inventory, POS, and gym membership plans are not granted. Stale grants are removed
+by the idempotent seeder and the permission version is incremented to invalidate old sessions.
+
+The `WorkspaceCapabilityAuthorizationHandler` resolves `TenantId` from the authenticated claims,
+loads the tenant's persisted `WorkspaceType`, and evaluates the capability policy. It never
+accepts the workspace type from the request. A valid identity with a valid RBAC permission still
+gets `403 WORKSPACE_CAPABILITY_NOT_AVAILABLE` when the feature is outside the selected workspace
+surface. Tenant filters and ownership rules continue to apply after the capability check.
+
+For Issue #298, a session without a selected workspace type is fail-closed. It cannot receive
+the Gym capability set merely because the browser has an old token or incomplete local user
+record. The client must refresh the tenant session and use the server-returned type; if the
+server cannot provide one, the session is cleared and the user returns to identity login.
+
+## Subscriber, training and nutrition access (Issue #313)
+
+- Owners and managers may manage active members, memberships, plans, payments, measurements, and
+  check-ins inside their selected tenant.
+- Coaches and trainers may manage only members with an active coach-client assignment. The same
+  assignment boundary applies to workout/nutrition aggregates, sessions, measurements, and check-ins.
+- A client may read and execute only their own active plans, sessions, meal logs, measurements, and
+  daily check-ins. A client cannot submit another member's identifier to widen access.
+- Payment history is read-only after creation. Editing a subscription can append an immutable
+  adjustment payment but cannot reduce a previously recorded amount.
+- Aggregate updates require the current `Version`; a stale client receives a conflict instead of
+  silently overwriting another coach's plan.
+- UI hiding is not authorization. Every handler verifies tenant, membership/assignment, ownership,
+  and active subscription rules before changing or returning data.
+
+## Production tenant request boundary (Issue #321)
+
+Authenticated requests to non-platform APIs must carry a server-issued `LogicFitUsers` audience and
+the signed `TenantId` claim. `X-Tenant-Id` is accepted only when it matches that claim; it cannot
+select or replace the tenant for an authenticated request. A `LogicFitPlatform` token is rejected
+from tenant routes, while `/api/platform/*` remains tenantless and accepts only the platform
+audience. Missing, invalid, unknown, or mismatched tenant context fails closed with `403` before
+the request reaches authorization or a tenant query. Anonymous public flows retain their explicit
+tenant-header/host resolution for public endpoints only.

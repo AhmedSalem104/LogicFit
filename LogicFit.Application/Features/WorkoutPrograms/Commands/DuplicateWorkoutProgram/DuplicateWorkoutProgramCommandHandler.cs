@@ -57,7 +57,8 @@ public class DuplicateWorkoutProgramCommandHandler : IRequestHandler<DuplicateWo
             StartDate = DateTime.UtcNow.Date,
             EndDate = originalProgram.EndDate.HasValue
                 ? DateTime.UtcNow.Date.AddDays((originalProgram.EndDate.Value - originalProgram.StartDate).Days)
-                : null
+                : null,
+            Notes = originalProgram.Notes
         };
 
         // Clone routines
@@ -69,7 +70,8 @@ public class DuplicateWorkoutProgramCommandHandler : IRequestHandler<DuplicateWo
                 TenantId = tenantId,
                 ProgramId = newProgram.Id,
                 Name = originalRoutine.Name,
-                DayOfWeek = originalRoutine.DayOfWeek
+                DayOfWeek = originalRoutine.DayOfWeek,
+                Notes = originalRoutine.Notes
             };
 
             // Clone routine exercises

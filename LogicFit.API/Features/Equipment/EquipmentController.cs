@@ -15,6 +15,7 @@ namespace LogicFit.API.Features.Equipment;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageBranches)]
+[Authorize(Policy = WorkspaceCapabilities.GymFacilities)]
 public class EquipmentController : ControllerBase
 {
     private readonly IMediator _mediator;

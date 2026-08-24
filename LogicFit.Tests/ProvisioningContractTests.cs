@@ -77,7 +77,7 @@ public sealed class ProvisioningContractTests
     public void Explicit_key_reuse_requires_the_same_request_shape()
     {
         var request = CreateRequest();
-        var tenant = new Tenant
+        var tenant = new LogicFit.Domain.Entities.Tenant
         {
             Name = request.Name,
             Subdomain = request.Subdomain,

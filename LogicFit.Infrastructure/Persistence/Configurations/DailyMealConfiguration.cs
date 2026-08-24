@@ -15,6 +15,7 @@ public class DailyMealConfiguration : IEntityTypeConfiguration<DailyMeal>
         builder.Property(e => e.Name)
             .HasMaxLength(100)
             .IsRequired();
+        builder.Property(e => e.Notes).HasMaxLength(1000);
 
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => e.PlanId);

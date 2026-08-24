@@ -23,6 +23,8 @@ public class DeleteDietPlanCommandHandler : IRequestHandler<DeleteDietPlanComman
         var tenantId = _tenantService.GetCurrentTenantId();
 
         var plan = await _context.DietPlans
+            .Include(p => p.Meals)
+                .ThenInclude(m => m.Items)
             .FirstOrDefaultAsync(p => p.Id == request.Id && p.TenantId == tenantId, cancellationToken);
 
         if (plan == null)
@@ -30,7 +32,18 @@ public class DeleteDietPlanCommandHandler : IRequestHandler<DeleteDietPlanComman
 
         await _accessService.EnsureCanManageDietPlanAsync(request.Id, cancellationToken);
 
-        _context.DietPlans.Remove(plan);
+        plan.IsDeleted = true;
+        plan.DeletedAt = DateTime.UtcNow;
+        foreach (var meal in plan.Meals)
+        {
+            meal.IsDeleted = true;
+            meal.DeletedAt = DateTime.UtcNow;
+            foreach (var item in meal.Items)
+            {
+                item.IsDeleted = true;
+                item.DeletedAt = DateTime.UtcNow;
+            }
+        }
         await _context.SaveChangesAsync(cancellationToken);
 
         return true;

@@ -5,6 +5,7 @@ using LogicFit.Application.Features.Platform.Plans.Queries.GetPlans;
 using LogicFit.Application.Features.WorkspaceApplications.Commands.ResubmitApplication;
 using LogicFit.Application.Features.WorkspaceApplications.Commands.SubmitFreelanceWorkspaceApplication;
 using LogicFit.Application.Features.WorkspaceApplications.Commands.UpdateApplicationRequestedFields;
+using LogicFit.Application.Features.WorkspaceApplications.Commands.UploadApplicationPaymentProof;
 using LogicFit.Application.Features.WorkspaceApplications.DTOs;
 using LogicFit.Application.Features.WorkspaceApplications.Queries.GetApplicationTrackingStatus;
 using LogicFit.Domain.Enums;
@@ -133,6 +134,48 @@ public sealed class WorkspaceApplicationsController : ControllerBase
     {
         var result = await _mediator.Send(new ResubmitApplicationCommand(GetTrackingToken()), cancellationToken);
         return Ok(result);
+    }
+
+    /// <summary>Stores a private payment-proof version for the application addressed by the tracking token.</summary>
+    [HttpPost("tracking/payment-proof")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(ApplicationPaymentProofUploadedDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApplicationPaymentProofUploadedDto>> UploadTrackingPaymentProof(
+        [FromForm(Name = "proof")] IFormFile? proof,
+        CancellationToken cancellationToken)
+    {
+        ValidateProofFile(proof);
+        var proofUrl = await _fileUploadService.UploadDocumentAsync(proof!, "payment-proofs");
+        try
+        {
+            await using var proofStream = proof!.OpenReadStream();
+            var hash = await SHA256.HashDataAsync(proofStream, cancellationToken);
+            var result = await _mediator.Send(new UploadApplicationPaymentProofCommand
+            {
+                TrackingToken = GetTrackingToken(),
+                ProofStorageKey = proofUrl,
+                OriginalFileName = proof.FileName,
+                ContentType = proof.ContentType,
+                SizeBytes = proof.Length,
+                Sha256 = Convert.ToHexString(hash)
+            }, cancellationToken);
+            return Ok(result);
+        }
+        catch
+        {
+            await _fileUploadService.DeleteFileAsync(proofUrl);
+            throw;
+        }
+    }
+
+    private static void ValidateProofFile(IFormFile? proof)
+    {
+        if (proof is null)
+            throw new ValidationException("PaymentProof", "A payment proof file is required.");
+        if (proof.Length <= 0 || proof.Length > 10 * 1024 * 1024)
+            throw new ValidationException("PaymentProof", "The payment proof must be between 1 byte and 10 MB.");
+        if (proof.ContentType is not ("image/jpeg" or "image/png" or "application/pdf"))
+            throw new ValidationException("PaymentProof", "Payment proof must be a JPEG, PNG, or PDF.");
     }
 
     private string GetTrackingToken() => Request.Headers[TrackingTokenHeader].ToString();

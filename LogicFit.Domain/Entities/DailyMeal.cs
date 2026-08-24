@@ -8,6 +8,7 @@ public class DailyMeal : TenantAuditableEntity
     public string Name { get; set; } = string.Empty;
     public int OrderIndex { get; set; }
     public string? Time { get; set; }
+    public string? Notes { get; set; }
 
     // Navigation Properties
     public virtual DietPlan Plan { get; set; } = null!;

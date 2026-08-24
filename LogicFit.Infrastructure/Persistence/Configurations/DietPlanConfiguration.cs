@@ -15,6 +15,10 @@ public class DietPlanConfiguration : IEntityTypeConfiguration<DietPlan>
         builder.Property(e => e.Name)
             .HasMaxLength(200)
             .IsRequired();
+        builder.Property(e => e.CalorieGoal).HasMaxLength(30);
+        builder.Property(e => e.CalculatorMetadata).HasMaxLength(2000);
+        builder.Property(e => e.Notes).HasMaxLength(1000);
+        builder.Property(e => e.Version).HasDefaultValue(1);
 
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => e.CoachId);

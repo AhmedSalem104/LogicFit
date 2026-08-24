@@ -42,6 +42,7 @@ public interface IApplicationDbContext
     DbSet<WorkoutSession> WorkoutSessions { get; }
     DbSet<SessionSet> SessionSets { get; }
     DbSet<BodyMeasurement> BodyMeasurements { get; }
+    DbSet<AthleteCheckin> AthleteCheckins { get; }
     DbSet<SubscriptionPlan> SubscriptionPlans { get; }
     DbSet<ClientSubscription> ClientSubscriptions { get; }
     DbSet<SubscriptionFreeze> SubscriptionFreezes { get; }
@@ -50,6 +51,9 @@ public interface IApplicationDbContext
     DbSet<WalletTransaction> WalletTransactions { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<Attendance> Attendances { get; }
+    DbSet<DayPassType> DayPassTypes { get; }
+    DbSet<DayPassSale> DayPassSales { get; }
+    DbSet<ClientFeedback> ClientFeedback { get; }
     DbSet<StaffAttendance> StaffAttendances { get; }
     DbSet<Appointment> Appointments { get; }
     DbSet<ChatConversation> ChatConversations { get; }

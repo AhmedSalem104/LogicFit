@@ -34,7 +34,7 @@ public sealed class RequestApplicationInformationCommandHandler
             throw new ConflictException("This application cannot be returned for more information.");
 
         var fields = request.RequestedFields.Distinct(StringComparer.Ordinal).ToArray();
-        var fieldsAreValid = application.ApplicationType == ApplicationType.FreelanceWorkspaceCreation
+        var fieldsAreValid = application.ApplicationType is ApplicationType.FreelanceWorkspaceCreation or ApplicationType.GymWorkspaceCreation
             ? FreelanceWorkspaceApplicationFields.AreAllowed(fields)
             : fields.All(x => x == "FullName");
         if (!fieldsAreValid)

@@ -77,6 +77,10 @@ memberships in `PendingWorkspaceApproval` remain unchanged.
 Tenant أو Subscription أو Identity أو Mapping جديدة. `FreelanceCoach` يستخدم نفس الكيانات مع
 `WorkspaceType=FreelanceCoach` وعضوية `FreelanceOwner` مستقلة عن أي Gym.
 
+طلبات استكمال بيانات إنشاء مساحة Gym أو FreelanceCoach تستخدم whitelist الـpayload المشتركة، مثل
+`WorkspaceName` و`BrandName` و`Bio`، بينما طلبات العضوية تستخدم `FullName` فقط. لا تسمح هذه العملية
+بتعديل `WorkspaceIdentifier` أو بيانات الاتصال أو أي حقل غير معتمد، ولا تحتاج إلى migration.
+
 كيانات الصالة ترث في الغالب من `TenantAuditableEntity`: العملاء، الفروع، الحضور،
 البرامج، التغذية، المدفوعات، المخزون، الموظفون وغيرها. هذا يجعل `TenantId` وحد
 العزل جزءاً من البيانات لا اتفاقاً بين الواجهات.
@@ -156,3 +160,38 @@ item and client; its response includes the meal name, food/unit, consumed quanti
 server-calculated macros. Cross-tenant food/exercise references are rejected before an aggregate is
 written. The migration is task-branch only until reviewed, merged, applied with a backup/rollback
 plan, and verified by health and schema checks.
+
+## Workspace type and capabilities (Issue #296)
+
+`Tenant.WorkspaceType` remains the persisted discriminator for the shared platform. It does not
+create a second tenant model or database model. The API derives an immutable capability set for
+the selected tenant at authorization time: a Gym has the complete gym operational surface, while
+a FreelanceCoach has coaching, client, finance, reporting, and assistant-team capabilities without
+branches, staff/payroll, inventory, POS, gate access, membership cards, group classes, or gym
+membership plans.
+
+Capabilities are an access contract, not a data isolation shortcut. Tenant query filters,
+membership checks, subscription checks, and ownership checks continue to apply to every aggregate.
+Switching workspaces recalculates both tenant-scoped permissions and capabilities, so one identity
+may safely manage multiple workspaces without carrying grants from one tenant into another.
+
+## Subscriber, membership and coaching data (Issue #313)
+
+The platform keeps the member identity separate from the membership record. A client may have
+multiple tenant subscriptions over time or across workspaces; membership state does not delete
+the client-owned coaching history. Subscription payment rows are an immutable ledger and include
+the generated receipt number, amount, payment date, and receiver/audit context.
+
+`WorkoutProgram` and `DietPlan` are tenant-owned aggregates. Their nested rows are reconciled
+inside the same transaction and carry plan metadata, notes, and optimistic versioning. Removing
+a routine, exercise, meal, or item is a soft delete so `WorkoutSession` and `MealLog` history
+continues to resolve. Meal logs retain food, meal, quantity, unit, serving-size, and calculated
+macro snapshots; later food or plan edits do not rewrite the member's history.
+
+`BodyMeasurement` stores the extended body profile and circumference fields. `AthleteCheckin`
+stores sleep, recovery, soreness, stress, mood, vitals, bodyweight, and notes with a unique
+(`TenantId`, `ClientId`, `CheckinDate`) constraint. The training overview is a read model assembled
+from these tenant-scoped aggregates; it is not a second source of truth.
+
+The parity migrations are additive and must be applied to both the platform/shared schema and
+tenant schemas using an idempotent release script after backup and before enabling the new UI.

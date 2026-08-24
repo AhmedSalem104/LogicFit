@@ -63,6 +63,22 @@ public sealed class TenantBackupExportContractTests
         Assert.IsType<TenantBackupExportDto>(ok.Value);
     }
 
+    [Fact]
+    public async Task Controller_inspect_derives_tenant_from_server_context()
+    {
+        var tenantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var service = new StubExportService();
+        var controller = new TenantBackupsController(service, new StubTenantService(tenantId), new StubCurrentUser(userId));
+
+        var response = await controller.Inspect(Guid.NewGuid(), CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(response.Result);
+        Assert.Equal(tenantId, service.LastTenantId);
+        Assert.Equal(userId, service.LastUserId);
+        Assert.IsType<TenantBackupInspectionDto>(ok.Value);
+    }
+
     private sealed class StubExportService : ITenantBackupExportService
     {
         public Guid LastTenantId { get; private set; }
@@ -88,6 +104,13 @@ public sealed class TenantBackupExportContractTests
 
         public Task<TenantBackupExportDto> GetAsync(Guid userId, Guid tenantId, Guid exportId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+
+        public Task<TenantBackupInspectionDto> InspectAsync(Guid userId, Guid tenantId, Guid exportId, CancellationToken cancellationToken = default)
+        {
+            LastUserId = userId;
+            LastTenantId = tenantId;
+            return Task.FromResult(new TenantBackupInspectionDto(exportId, true, "BACPAC", 3, 1, 2, true, true, 10, "hash", DateTime.UtcNow, null));
+        }
 
         public Task<TenantBackupDownloadGrantDto> CreateDownloadGrantAsync(Guid userId, Guid tenantId, Guid exportId, string grantToken, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();

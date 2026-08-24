@@ -43,6 +43,7 @@ public class TenantDbContext : DbContext
     public DbSet<WorkoutSession> WorkoutSessions => Set<WorkoutSession>();
     public DbSet<SessionSet> SessionSets => Set<SessionSet>();
     public DbSet<BodyMeasurement> BodyMeasurements => Set<BodyMeasurement>();
+    public DbSet<AthleteCheckin> AthleteCheckins => Set<AthleteCheckin>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
     public DbSet<ClientSubscription> ClientSubscriptions => Set<ClientSubscription>();
     public DbSet<SubscriptionFreeze> SubscriptionFreezes => Set<SubscriptionFreeze>();
@@ -50,6 +51,9 @@ public class TenantDbContext : DbContext
     public DbSet<ExerciseSecondaryMuscle> ExerciseSecondaryMuscles => Set<ExerciseSecondaryMuscle>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
+    public DbSet<DayPassType> DayPassTypes => Set<DayPassType>();
+    public DbSet<DayPassSale> DayPassSales => Set<DayPassSale>();
+    public DbSet<ClientFeedback> ClientFeedback => Set<ClientFeedback>();
     public DbSet<StaffAttendance> StaffAttendances => Set<StaffAttendance>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<ChatConversation> ChatConversations => Set<ChatConversation>();
@@ -153,8 +157,6 @@ public class TenantDbContext : DbContext
             if (value is Guid otherTenantId && otherTenantId != TenantId)
                 throw new InvalidOperationException("The entity TenantId does not match the TenantDbContext scope.");
 
-            // UserRoleAssignment is tenant-local even though its legacy property is nullable;
-            // a null assignment must never be created in an isolated workspace database.
             if (entry.Metadata.ClrType == typeof(UserRoleAssignment) && value is not Guid)
                 throw new InvalidOperationException("A tenant-local user role assignment requires the TenantDbContext scope.");
         }

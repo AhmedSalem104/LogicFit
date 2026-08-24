@@ -51,7 +51,11 @@ public class CreateDietPlanCommandHandler : IRequestHandler<CreateDietPlanComman
             TargetCalories = request.TargetCalories,
             TargetProtein = request.TargetProtein,
             TargetCarbs = request.TargetCarbs,
-            TargetFats = request.TargetFats
+            TargetFats = request.TargetFats,
+            CalorieGoal = request.CalorieGoal,
+            CalorieAdjustment = request.CalorieAdjustment,
+            CalculatorMetadata = request.CalculatorMetadata,
+            Notes = request.Notes?.Trim()
         };
 
         foreach (var mealInput in request.Meals)
@@ -62,7 +66,8 @@ public class CreateDietPlanCommandHandler : IRequestHandler<CreateDietPlanComman
                 TenantId = tenantId,
                 Name = mealInput.Name,
                 OrderIndex = mealInput.OrderIndex,
-                Time = mealInput.Time
+                Time = mealInput.Time,
+                Notes = mealInput.Notes?.Trim()
             };
 
             foreach (var itemInput in mealInput.Items)
@@ -103,13 +108,17 @@ public class CreateDietPlanCommandHandler : IRequestHandler<CreateDietPlanComman
 
     private static MealItem CreateMealItem(Guid tenantId, DietMealItemInputDto input, Food food)
     {
-        var ratio = input.AssignedQuantity / 100.0;
+        var servingSize = food.ServingSize is > 0 ? food.ServingSize.Value : 100d;
+        var ratio = input.AssignedQuantity / servingSize;
         return new MealItem
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             FoodId = input.FoodId,
             AssignedQuantity = input.AssignedQuantity,
+            ServingUnit = input.ServingUnit ?? food.ServingUnit,
+            Notes = input.Notes?.Trim(),
+            FoodServingSizeSnapshot = servingSize,
             CalcCalories = food.CaloriesPer100g * ratio,
             CalcProtein = food.ProteinPer100g * ratio,
             CalcCarbs = food.CarbsPer100g * ratio,

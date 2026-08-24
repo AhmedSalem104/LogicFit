@@ -12,12 +12,20 @@ public sealed class DatabaseResource : AuditableEntity
     public string Provider { get; set; } = "ManualMonster";
     public string DatabaseName { get; set; } = string.Empty;
     public string? ServerKey { get; set; }
+    /// <summary>Safe, non-secret server metadata parsed on the server at registration/test time.</summary>
+    public string? ServerHost { get; set; }
+    public int? ServerPort { get; set; }
     public string? EncryptedConnectionString { get; set; }
     public DatabaseResourceStatus Status { get; set; } = DatabaseResourceStatus.Available;
     public Guid? ReservedForTenantId { get; set; }
     public DateTime? ReservedAtUtc { get; set; }
     public DateTime? AssignedAtUtc { get; set; }
     public DateTime? LastHealthCheckAtUtc { get; set; }
+    public DateTime? LastConnectionTestAtUtc { get; set; }
+    public bool? LastConnectionTestSucceeded { get; set; }
+    public int? LastConnectionTestDurationMs { get; set; }
+    public string? LastConnectionErrorCode { get; set; }
+    public string? LastConnectionErrorMessage { get; set; }
     public long? SizeBytes { get; set; }
     public string? SchemaVersion { get; set; }
     public string? LastError { get; set; }

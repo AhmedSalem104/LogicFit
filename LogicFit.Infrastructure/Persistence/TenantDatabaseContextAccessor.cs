@@ -1,19 +1,17 @@
 namespace LogicFit.Infrastructure.Persistence;
 
 /// <summary>
-/// Creates exactly one TenantDbContext for the resolved workspace during a request.  The
-/// connection string comes exclusively from the server-side mapping resolver.
+/// Creates exactly one TenantDbContext for the resolved workspace during a request. The
+/// connection string is supplied only by the server-side mapping resolver.
 /// </summary>
-public sealed class TenantDatabaseContextAccessor(
-    TenantDatabaseRequestScope requestScope) : IDisposable, IAsyncDisposable
+public sealed class TenantDatabaseContextAccessor(TenantDatabaseRequestScope requestScope) : IDisposable, IAsyncDisposable
 {
     private TenantDbContext? _context;
 
     public TenantDbContext GetRequiredContext()
     {
         var resolution = requestScope.Resolution
-            ?? throw new InvalidOperationException(
-                "The tenant database has not been resolved for this request.");
+            ?? throw new InvalidOperationException("The tenant database has not been resolved for this request.");
 
         if (_context is not null)
         {

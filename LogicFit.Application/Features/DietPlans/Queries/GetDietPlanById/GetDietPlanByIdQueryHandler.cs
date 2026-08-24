@@ -63,6 +63,11 @@ public class GetDietPlanByIdQueryHandler : IRequestHandler<GetDietPlanByIdQuery,
                 TargetProtein = p.TargetProtein,
                 TargetCarbs = p.TargetCarbs,
                 TargetFats = p.TargetFats,
+                CalorieGoal = p.CalorieGoal,
+                CalorieAdjustment = p.CalorieAdjustment,
+                CalculatorMetadata = p.CalculatorMetadata,
+                Notes = p.Notes,
+                Version = p.Version,
                 Meals = p.Meals.Select(m => new DailyMealDto
                 {
                     Id = m.Id,
@@ -70,6 +75,7 @@ public class GetDietPlanByIdQueryHandler : IRequestHandler<GetDietPlanByIdQuery,
                     Name = m.Name,
                     OrderIndex = m.OrderIndex,
                     Time = m.Time,
+                    Notes = m.Notes,
                     Items = m.Items.Select(i => new MealItemDto
                     {
                         Id = i.Id,
@@ -80,7 +86,10 @@ public class GetDietPlanByIdQueryHandler : IRequestHandler<GetDietPlanByIdQuery,
                         CalcCalories = i.CalcCalories,
                         CalcProtein = i.CalcProtein,
                         CalcCarbs = i.CalcCarbs,
-                        CalcFats = i.CalcFats
+                        CalcFats = i.CalcFats,
+                        ServingUnit = i.ServingUnit,
+                        Notes = i.Notes,
+                        FoodServingSizeSnapshot = i.FoodServingSizeSnapshot
                     }).ToList()
                 }).ToList()
             })

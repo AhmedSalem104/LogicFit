@@ -71,6 +71,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<WorkoutSession> WorkoutSessions => Set<WorkoutSession>();
     public DbSet<SessionSet> SessionSets => Set<SessionSet>();
     public DbSet<BodyMeasurement> BodyMeasurements => Set<BodyMeasurement>();
+    public DbSet<AthleteCheckin> AthleteCheckins => Set<AthleteCheckin>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
     public DbSet<ClientSubscription> ClientSubscriptions => Set<ClientSubscription>();
     public DbSet<SubscriptionFreeze> SubscriptionFreezes => Set<SubscriptionFreeze>();
@@ -80,6 +81,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
+    public DbSet<DayPassType> DayPassTypes => Set<DayPassType>();
+    public DbSet<DayPassSale> DayPassSales => Set<DayPassSale>();
+    public DbSet<ClientFeedback> ClientFeedback => Set<ClientFeedback>();
     public DbSet<StaffAttendance> StaffAttendances => Set<StaffAttendance>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<ChatConversation> ChatConversations => Set<ChatConversation>();
@@ -227,12 +231,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         builder.Entity<WorkoutSession>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<SessionSet>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<BodyMeasurement>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<AthleteCheckin>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<SubscriptionPlan>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<ClientSubscription>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<SubscriptionFreeze>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<CoachClient>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<Attendance>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<DayPassType>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<DayPassSale>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
+        builder.Entity<ClientFeedback>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<StaffAttendance>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<Appointment>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));
         builder.Entity<ChatConversation>().HasQueryFilter(e => !e.IsDeleted && (_tenantService.CurrentTenantId == null || e.TenantId == _tenantService.CurrentTenantId));

@@ -33,6 +33,8 @@ internal static class PlatformApplicationMapper
         WorkspaceType = lifecycle?.WorkspaceType,
         PaymentRequestId = lifecycle?.PaymentRequestId,
         PaymentStatus = lifecycle?.PaymentStatus,
+        HasPaymentProof = lifecycle?.HasPaymentProof ?? false,
+        PaymentProofVersion = lifecycle?.PaymentProofVersion ?? 0,
         WorkspaceStatus = lifecycle?.WorkspaceStatus,
         SubscriptionStatus = lifecycle?.SubscriptionStatus,
         DatabaseStatus = lifecycle?.DatabaseStatus,
@@ -54,6 +56,8 @@ public sealed class PlatformApplicationLifecycleDto
     public WorkspaceType? WorkspaceType { get; init; }
     public Guid? PaymentRequestId { get; init; }
     public PaymentRequestStatus? PaymentStatus { get; init; }
+    public bool HasPaymentProof { get; init; }
+    public int PaymentProofVersion { get; init; }
     public TenantStatus? WorkspaceStatus { get; init; }
     public TenantSubscriptionStatus? SubscriptionStatus { get; init; }
     public DatabaseResourceStatus? DatabaseStatus { get; init; }

@@ -5,8 +5,8 @@ using Microsoft.Extensions.Options;
 namespace LogicFit.API.Middleware;
 
 /// <summary>
-/// Resolves the workspace database after TenantMiddleware has established TenantId and before
-/// any authorization/handler code can access a tenant-owned DbSet.
+/// Resolves a tenant database after TenantMiddleware and before authorization/handlers can access
+/// tenant-owned DbSets. Missing or invalid mappings fail closed.
 /// </summary>
 public sealed class TenantDatabaseRoutingMiddleware(
     RequestDelegate next,
@@ -21,13 +21,12 @@ public sealed class TenantDatabaseRoutingMiddleware(
         ITenantDatabaseResolver resolver,
         TenantDatabaseRequestScope requestScope)
     {
-        if (!_options.Enabled || !tenantService.CurrentTenantId.HasValue)
+        if (!_options.Enabled || tenantService.CurrentTenantId is not { } tenantId)
         {
             await next(context);
             return;
         }
 
-        var tenantId = tenantService.CurrentTenantId.Value;
         TenantDatabaseResolution? resolution;
         try
         {
@@ -39,10 +38,7 @@ public sealed class TenantDatabaseRoutingMiddleware(
         }
         catch (Exception exception)
         {
-            logger.LogError(
-                exception,
-                "Tenant database resolution failed for TenantId {TenantId}; request was stopped.",
-                tenantId);
+            logger.LogError(exception, "Tenant database resolution failed for TenantId {TenantId}; request was stopped.", tenantId);
             resolution = null;
         }
 
@@ -50,21 +46,17 @@ public sealed class TenantDatabaseRoutingMiddleware(
         {
             if (!_options.FailClosedWithoutMapping)
             {
-                logger.LogWarning(
-                    "Tenant database routing is enabled but no valid mapping exists for TenantId {TenantId}; fail-open was explicitly configured.",
-                    tenantId);
+                logger.LogWarning("Tenant database routing is enabled but no valid mapping exists for TenantId {TenantId}; fail-open was explicitly configured.", tenantId);
                 await next(context);
                 return;
             }
 
             context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-            await context.Response.WriteAsJsonAsync(
-                new
-                {
-                    errorCode = "TENANT_DATABASE_UNAVAILABLE",
-                    message = "Workspace database is not ready. Contact the platform administrator."
-                },
-                context.RequestAborted);
+            await context.Response.WriteAsJsonAsync(new
+            {
+                errorCode = "TENANT_DATABASE_UNAVAILABLE",
+                message = "Workspace database is not ready. Contact the platform administrator."
+            }, context.RequestAborted);
             return;
         }
 

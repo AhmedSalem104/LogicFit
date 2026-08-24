@@ -7,6 +7,7 @@ public class PlatformTenantDto
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Subdomain { get; set; }
+    public WorkspaceType WorkspaceType { get; set; }
     public TenantStatus Status { get; set; }
     public string? Email { get; set; }
     public string? PhoneNumber { get; set; }

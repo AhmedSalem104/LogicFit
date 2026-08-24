@@ -9,12 +9,19 @@ public class CreateBodyMeasurementCommand : IRequest<Guid>
     public Guid ClientId { get; set; }
     public DateTime DateRecorded { get; set; }
     public double WeightKg { get; set; }
+    public double? HeightCm { get; set; }
+    public double? ChestCm { get; set; }
+    public double? WaistCm { get; set; }
+    public double? HipsCm { get; set; }
+    public double? ArmsCm { get; set; }
+    public double? ThighsCm { get; set; }
     public double? SkeletalMuscleMass { get; set; }
     public double? BodyFatMass { get; set; }
     public double? BodyFatPercent { get; set; }
     public double? TotalBodyWater { get; set; }
     public double? Bmr { get; set; }
     public int? VisceralFatLevel { get; set; }
+    public string? Notes { get; set; }
 
     [JsonIgnore]
     public IFormFile? InbodyImage { get; set; }

@@ -59,7 +59,7 @@ public sealed class WalletStockConcurrencyTests
     public async Task Concurrent_wallet_debits_cannot_overspend_or_lose_a_balance_update()
     {
         await using var fixture = await SqlFixture.CreateAsync();
-        var tenant = new Tenant
+        var tenant = new LogicFit.Domain.Entities.Tenant
         {
             Name = "Wallet concurrency test",
             Subdomain = $"wallet-{Guid.NewGuid():N}",
@@ -97,7 +97,7 @@ public sealed class WalletStockConcurrencyTests
     public async Task Concurrent_stock_decrements_cannot_oversell_or_lose_quantity()
     {
         await using var fixture = await SqlFixture.CreateAsync();
-        var tenant = new Tenant
+        var tenant = new LogicFit.Domain.Entities.Tenant
         {
             Name = "Stock concurrency test",
             Subdomain = $"stock-{Guid.NewGuid():N}",

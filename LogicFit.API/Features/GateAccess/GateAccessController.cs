@@ -15,6 +15,7 @@ namespace LogicFit.API.Features.GateAccess;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageAttendance)]
+[Authorize(Policy = WorkspaceCapabilities.GymGateAccess)]
 public class GateAccessController : ControllerBase
 {
     private readonly IMediator _mediator;

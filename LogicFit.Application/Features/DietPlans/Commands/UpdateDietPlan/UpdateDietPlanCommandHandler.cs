@@ -35,12 +35,12 @@ public class UpdateDietPlanCommandHandler : IRequestHandler<UpdateDietPlanComman
         if (plan == null)
             throw new NotFoundException("DietPlan", request.Id);
 
+        if (request.ExpectedVersion.HasValue && request.ExpectedVersion.Value != plan.Version)
+            throw new ConflictException("This nutrition plan was changed by another user. Reload it before saving.");
+
         await _accessService.EnsureCanManageDietPlanAsync(request.Id, cancellationToken);
         if (request.ClientId.HasValue && request.ClientId.Value != plan.ClientId)
-        {
-            await _accessService.EnsureCanManageClientAsync(request.ClientId.Value, cancellationToken);
-            plan.ClientId = request.ClientId.Value;
-        }
+            throw new ConflictException("A nutrition plan cannot be moved to another client. Duplicate it instead.");
         if (request.Meals != null)
         {
             await EnsureFoodsBelongToTenantAsync(request.Meals, tenantId, cancellationToken);
@@ -57,6 +57,11 @@ public class UpdateDietPlanCommandHandler : IRequestHandler<UpdateDietPlanComman
         plan.TargetProtein = request.TargetProtein;
         plan.TargetCarbs = request.TargetCarbs;
         plan.TargetFats = request.TargetFats;
+        plan.CalorieGoal = request.CalorieGoal;
+        plan.CalorieAdjustment = request.CalorieAdjustment;
+        plan.CalculatorMetadata = request.CalculatorMetadata;
+        plan.Notes = request.Notes?.Trim();
+        plan.Version++;
         if (request.Status.HasValue)
             plan.Status = request.Status.Value;
 
@@ -72,8 +77,15 @@ public class UpdateDietPlanCommandHandler : IRequestHandler<UpdateDietPlanComman
         var requestedMealIds = requested.Where(m => m.Id.HasValue).Select(m => m.Id!.Value).ToHashSet();
         foreach (var existingMeal in plan.Meals.Where(m => !requestedMealIds.Contains(m.Id)).ToList())
         {
-            _context.MealItems.RemoveRange(existingMeal.Items);
-            _context.DailyMeals.Remove(existingMeal);
+            // Meal logs reference the planned item. Soft-delete omitted children so the
+            // historical log remains readable after a plan revision.
+            existingMeal.IsDeleted = true;
+            existingMeal.DeletedAt = DateTime.UtcNow;
+            foreach (var item in existingMeal.Items)
+            {
+                item.IsDeleted = true;
+                item.DeletedAt = DateTime.UtcNow;
+            }
         }
 
         foreach (var mealInput in requested)
@@ -83,9 +95,12 @@ public class UpdateDietPlanCommandHandler : IRequestHandler<UpdateDietPlanComman
             {
                 meal = plan.Meals.FirstOrDefault(m => m.Id == mealInput.Id.Value)
                     ?? throw new NotFoundException("DailyMeal", mealInput.Id.Value);
+                meal.IsDeleted = false;
+                meal.DeletedAt = null;
                 meal.Name = mealInput.Name;
                 meal.OrderIndex = mealInput.OrderIndex;
                 meal.Time = mealInput.Time;
+                meal.Notes = mealInput.Notes?.Trim();
             }
             else
             {
@@ -96,14 +111,18 @@ public class UpdateDietPlanCommandHandler : IRequestHandler<UpdateDietPlanComman
                     PlanId = plan.Id,
                     Name = mealInput.Name,
                     OrderIndex = mealInput.OrderIndex,
-                    Time = mealInput.Time
+                    Time = mealInput.Time,
+                    Notes = mealInput.Notes?.Trim()
                 };
                 plan.Meals.Add(meal);
             }
 
             var requestedItemIds = mealInput.Items.Where(i => i.Id.HasValue).Select(i => i.Id!.Value).ToHashSet();
             foreach (var existingItem in meal.Items.Where(i => !requestedItemIds.Contains(i.Id)).ToList())
-                _context.MealItems.Remove(existingItem);
+            {
+                existingItem.IsDeleted = true;
+                existingItem.DeletedAt = DateTime.UtcNow;
+            }
 
             foreach (var itemInput in mealInput.Items)
             {
@@ -112,6 +131,8 @@ public class UpdateDietPlanCommandHandler : IRequestHandler<UpdateDietPlanComman
                 {
                     item = meal.Items.FirstOrDefault(i => i.Id == itemInput.Id.Value)
                         ?? throw new NotFoundException("MealItem", itemInput.Id.Value);
+                    item.IsDeleted = false;
+                    item.DeletedAt = null;
                 }
                 else
                 {
@@ -126,9 +147,13 @@ public class UpdateDietPlanCommandHandler : IRequestHandler<UpdateDietPlanComman
 
                 var food = _context.Foods.Local.FirstOrDefault(f => f.Id == itemInput.FoodId)
                     ?? _context.Foods.First(f => f.Id == itemInput.FoodId);
-                var ratio = itemInput.AssignedQuantity / 100.0;
+                var servingSize = food.ServingSize is > 0 ? food.ServingSize.Value : 100d;
+                var ratio = itemInput.AssignedQuantity / servingSize;
                 item.FoodId = itemInput.FoodId;
                 item.AssignedQuantity = itemInput.AssignedQuantity;
+                item.ServingUnit = itemInput.ServingUnit ?? food.ServingUnit;
+                item.Notes = itemInput.Notes?.Trim();
+                item.FoodServingSizeSnapshot = servingSize;
                 item.CalcCalories = food.CaloriesPer100g * ratio;
                 item.CalcProtein = food.ProteinPer100g * ratio;
                 item.CalcCarbs = food.CarbsPer100g * ratio;

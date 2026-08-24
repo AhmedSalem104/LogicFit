@@ -1,5 +1,6 @@
 using System.Text.Json;
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Application.Features.Payments.DTOs;
 using LogicFit.Application.Features.Subscriptions.DTOs;
 using LogicFit.Domain.Enums;
 using MediatR;
@@ -23,7 +24,8 @@ public class GetSubscriptionByIdQueryHandler : IRequestHandler<GetSubscriptionBy
     public async Task<ClientSubscriptionDetailDto?> Handle(GetSubscriptionByIdQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
-        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        if (!Guid.TryParse(_currentUserService.UserId, out var currentUserId))
+            return null;
         var role = await _context.Users.Where(u => u.Id == currentUserId && u.TenantId == tenantId)
             .Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
 
@@ -36,6 +38,12 @@ public class GetSubscriptionByIdQueryHandler : IRequestHandler<GetSubscriptionBy
                 && (role != UserRole.Client || s.ClientId == currentUserId), cancellationToken);
 
         if (subscription == null) return null;
+
+        var payments = await _context.Payments
+            .Include(p => p.ReceivedBy)
+            .Where(p => p.TenantId == tenantId && p.SubscriptionId == subscription.Id)
+            .OrderByDescending(p => p.ReceivedAt)
+            .ToListAsync(cancellationToken);
 
         // Get renewal history
         var renewalHistory = new List<RenewalHistoryDto>();
@@ -117,7 +125,22 @@ public class GetSubscriptionByIdQueryHandler : IRequestHandler<GetSubscriptionBy
                 PrivateCoach = subscription.Plan.PrivateCoach,
                 ActiveSubscribersCount = subscription.Plan.Subscriptions.Count(s => s.Status == SubscriptionStatus.Active && !s.IsDeleted)
             },
-            RenewalHistory = renewalHistory
+            RenewalHistory = renewalHistory,
+            Payments = payments.Select(p => new PaymentDto
+            {
+                Id = p.Id,
+                TenantId = p.TenantId,
+                SubscriptionId = p.SubscriptionId,
+                BranchId = p.BranchId,
+                ClientId = p.ClientId,
+                Amount = p.Amount,
+                Method = p.Method,
+                ReceivedAt = p.ReceivedAt,
+                ReceivedByName = p.ReceivedBy?.Email,
+                ReceiptNumber = p.ReceiptNumber,
+                Notes = p.Notes,
+                ReferenceNumber = p.ReferenceNumber
+            }).ToList()
         };
     }
 }

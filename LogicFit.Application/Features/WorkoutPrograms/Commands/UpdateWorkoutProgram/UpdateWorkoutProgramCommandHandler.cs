@@ -36,12 +36,12 @@ public class UpdateWorkoutProgramCommandHandler : IRequestHandler<UpdateWorkoutP
         if (program == null)
             throw new NotFoundException("WorkoutProgram", request.Id);
 
+        if (request.ExpectedVersion.HasValue && request.ExpectedVersion.Value != program.Version)
+            throw new ConflictException("This workout program was changed by another user. Reload it before saving.");
+
         await _accessService.EnsureCanManageWorkoutProgramAsync(request.Id, cancellationToken);
         if (request.ClientId.HasValue && request.ClientId.Value != program.ClientId)
-        {
-            await _accessService.EnsureCanManageClientAsync(request.ClientId.Value, cancellationToken);
-            program.ClientId = request.ClientId.Value;
-        }
+            throw new ConflictException("A workout program cannot be moved to another client. Duplicate it instead.");
         if (request.Routines != null)
         {
             await EnsureExercisesBelongToTenantAsync(request.Routines, tenantId, cancellationToken);
@@ -57,6 +57,8 @@ public class UpdateWorkoutProgramCommandHandler : IRequestHandler<UpdateWorkoutP
             program.Status = request.Status.Value;
         program.StartDate = request.StartDate;
         program.EndDate = request.EndDate;
+        program.Notes = request.Notes?.Trim();
+        program.Version++;
 
         await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
@@ -70,8 +72,15 @@ public class UpdateWorkoutProgramCommandHandler : IRequestHandler<UpdateWorkoutP
         var requestedIds = requested.Where(r => r.Id.HasValue).Select(r => r.Id!.Value).ToHashSet();
         foreach (var existingRoutine in program.Routines.Where(r => !requestedIds.Contains(r.Id)).ToList())
         {
-            _context.RoutineExercises.RemoveRange(existingRoutine.Exercises);
-            _context.ProgramRoutines.Remove(existingRoutine);
+            // Keep historical routine/session references intact. Removing a routine here can
+            // either fail on the FK or make old workout logs impossible to audit.
+            existingRoutine.IsDeleted = true;
+            existingRoutine.DeletedAt = DateTime.UtcNow;
+            foreach (var exercise in existingRoutine.Exercises)
+            {
+                exercise.IsDeleted = true;
+                exercise.DeletedAt = DateTime.UtcNow;
+            }
         }
 
         foreach (var routineInput in requested)
@@ -81,8 +90,11 @@ public class UpdateWorkoutProgramCommandHandler : IRequestHandler<UpdateWorkoutP
             {
                 routine = program.Routines.FirstOrDefault(r => r.Id == routineInput.Id.Value)
                     ?? throw new NotFoundException("ProgramRoutine", routineInput.Id.Value);
+                routine.IsDeleted = false;
+                routine.DeletedAt = null;
                 routine.Name = routineInput.Name;
                 routine.DayOfWeek = routineInput.DayOfWeek;
+                routine.Notes = routineInput.Notes?.Trim();
             }
             else
             {
@@ -92,7 +104,8 @@ public class UpdateWorkoutProgramCommandHandler : IRequestHandler<UpdateWorkoutP
                     TenantId = tenantId,
                     ProgramId = program.Id,
                     Name = routineInput.Name,
-                    DayOfWeek = routineInput.DayOfWeek
+                    DayOfWeek = routineInput.DayOfWeek,
+                    Notes = routineInput.Notes?.Trim()
                 };
                 program.Routines.Add(routine);
             }
@@ -105,7 +118,8 @@ public class UpdateWorkoutProgramCommandHandler : IRequestHandler<UpdateWorkoutP
                 .Where(e => !requestedExerciseIds.Contains(e.Id))
                 .ToList())
             {
-                _context.RoutineExercises.Remove(existingExercise);
+                existingExercise.IsDeleted = true;
+                existingExercise.DeletedAt = DateTime.UtcNow;
             }
 
             foreach (var exerciseInput in routineInput.Exercises)
@@ -115,6 +129,8 @@ public class UpdateWorkoutProgramCommandHandler : IRequestHandler<UpdateWorkoutP
                 {
                     exercise = routine.Exercises.FirstOrDefault(e => e.Id == exerciseInput.Id.Value)
                         ?? throw new NotFoundException("RoutineExercise", exerciseInput.Id.Value);
+                    exercise.IsDeleted = false;
+                    exercise.DeletedAt = null;
                 }
                 else
                 {

@@ -15,6 +15,8 @@ public class WorkoutProgramConfiguration : IEntityTypeConfiguration<WorkoutProgr
         builder.Property(e => e.Name)
             .HasMaxLength(200)
             .IsRequired();
+        builder.Property(e => e.Notes).HasMaxLength(1000);
+        builder.Property(e => e.Version).HasDefaultValue(1);
 
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => e.CoachId);

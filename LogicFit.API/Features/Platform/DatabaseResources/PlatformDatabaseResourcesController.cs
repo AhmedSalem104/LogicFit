@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Security.Cryptography;
 using LogicFit.API.Features.Platform.Common;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Authorization;
@@ -123,6 +124,86 @@ public sealed class PlatformDatabaseResourcesController(
 
         var result = await TestSqlConnectionAsync(normalized, resolvedDatabaseName, cancellationToken);
         return result.Succeeded ? Ok(result) : UnprocessableEntity(result);
+    }
+
+    [HttpPost("{id:guid}/test-connection")]
+    public async Task<ActionResult<DatabaseConnectionTestDto>> TestStoredConnection(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var resource = await context.DatabaseResources
+            .IgnoreQueryFilters()
+            .SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+        if (resource is null)
+            return NotFound();
+
+        if (string.IsNullOrWhiteSpace(resource.EncryptedConnectionString))
+        {
+            resource.LastConnectionTestAtUtc = timeProvider.GetUtcNow().UtcDateTime;
+            resource.LastConnectionTestSucceeded = false;
+            resource.LastConnectionErrorCode = "DATABASE_CONNECTION_NOT_CONFIGURED";
+            resource.LastConnectionErrorMessage = "This resource has no protected connection string.";
+            resource.LastError = resource.LastConnectionErrorCode;
+            await context.SaveChangesAsync(cancellationToken);
+            return Ok(new DatabaseConnectionTestDto(
+                false,
+                resource.DatabaseName,
+                resource.ServerKey,
+                resource.LastConnectionErrorCode,
+                resource.LastConnectionErrorMessage));
+        }
+
+        try
+        {
+            var connectionString = connectionStringProtector.Unprotect(resource.EncryptedConnectionString);
+            var result = await TestSqlConnectionAsync(connectionString, resource.DatabaseName, cancellationToken);
+            resource.LastConnectionTestAtUtc = timeProvider.GetUtcNow().UtcDateTime;
+            resource.LastConnectionTestSucceeded = result.Succeeded;
+            resource.LastConnectionErrorCode = result.ErrorCode;
+            resource.LastConnectionErrorMessage = result.Message;
+            resource.LastHealthCheckAtUtc = resource.LastConnectionTestAtUtc;
+            resource.ServerHost ??= result.ServerKey;
+
+            if (result.Succeeded)
+            {
+                resource.LastError = null;
+                if (resource.Status is DatabaseResourceStatus.Faulted or DatabaseResourceStatus.Maintenance)
+                {
+                    var hasActiveMapping = await context.TenantDatabaseMappings
+                        .IgnoreQueryFilters()
+                        .AnyAsync(x => x.DatabaseResourceId == resource.Id && x.IsActive, cancellationToken);
+                    resource.Status = hasActiveMapping
+                        ? DatabaseResourceStatus.Assigned
+                        : resource.ReservedForTenantId.HasValue
+                            ? DatabaseResourceStatus.Reserved
+                            : DatabaseResourceStatus.Available;
+                }
+            }
+            else
+            {
+                resource.LastError = result.ErrorCode;
+                if (!resource.ReservedForTenantId.HasValue)
+                    resource.Status = DatabaseResourceStatus.Faulted;
+            }
+
+            await context.SaveChangesAsync(cancellationToken);
+            return Ok(result);
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or CryptographicException)
+        {
+            resource.LastConnectionTestAtUtc = timeProvider.GetUtcNow().UtcDateTime;
+            resource.LastConnectionTestSucceeded = false;
+            resource.LastConnectionErrorCode = "DATABASE_CONNECTION_UNPROTECT_FAILED";
+            resource.LastConnectionErrorMessage = "The protected connection could not be read on the server.";
+            resource.LastError = resource.LastConnectionErrorCode;
+            await context.SaveChangesAsync(cancellationToken);
+            return Ok(new DatabaseConnectionTestDto(
+                false,
+                resource.DatabaseName,
+                resource.ServerKey,
+                resource.LastConnectionErrorCode,
+                resource.LastConnectionErrorMessage));
+        }
     }
 
     [HttpPost]
@@ -403,7 +484,7 @@ public sealed class PlatformDatabaseResourcesController(
     }
 
     [HttpPost("{id:guid}/backup")]
-    public async Task<ActionResult<BackupBatchDto>> Backup(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<BackupBatchDto>> CreateBackup(Guid id, CancellationToken cancellationToken)
     {
         var resource = await context.DatabaseResources.AsNoTracking().IgnoreQueryFilters()
             .SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -474,7 +555,7 @@ public sealed class PlatformDatabaseResourcesController(
 
     private static PlatformDatabaseResourceDto ToDto(
         DatabaseResource resource,
-        Tenant? tenant,
+        LogicFit.Domain.Entities.Tenant? tenant,
         TenantDatabaseMapping? mapping,
         TenantSubscription? subscription,
         ProvisioningJob? job,
@@ -483,7 +564,11 @@ public sealed class PlatformDatabaseResourcesController(
     {
         Id = resource.Id,
         ResourceCode = $"DB-{resource.Id.ToString("N")[..8].ToUpperInvariant()}",
+        DatabaseName = resource.DatabaseName,
         Provider = resource.Provider,
+        ServerKey = resource.ServerKey,
+        ServerHost = resource.ServerHost ?? resource.ServerKey,
+        ServerPort = resource.ServerPort,
         Status = resource.Status,
         LifecycleStatus = ToAdminStatus(resource.Status),
         TenantId = mapping?.TenantId ?? resource.ReservedForTenantId,
@@ -503,7 +588,27 @@ public sealed class PlatformDatabaseResourcesController(
         BackupCount = backupCount,
         LastBackupStatus = lastBackup?.Status.ToString(),
         LastBackupCompletedAtUtc = lastBackup?.CompletedAtUtc,
-            HasProtectedConnection = !string.IsNullOrWhiteSpace(resource.EncryptedConnectionString)
+        LastConnectionTestAtUtc = resource.LastConnectionTestAtUtc,
+        LastConnectionTestSucceeded = resource.LastConnectionTestSucceeded,
+        LastConnectionTestDurationMs = resource.LastConnectionTestDurationMs,
+        LastConnectionErrorCode = resource.LastConnectionErrorCode,
+        LastConnectionErrorMessage = resource.LastConnectionErrorMessage,
+        CanDelete = resource.ReservedForTenantId is null &&
+            mapping is null &&
+            resource.Status is not (DatabaseResourceStatus.Reserved or DatabaseResourceStatus.Provisioning or DatabaseResourceStatus.Assigned) &&
+            backupCount == 0 &&
+            (job is null || job.Status is not (ProvisioningJobStatus.Pending or ProvisioningJobStatus.AwaitingDatabaseCapacity or ProvisioningJobStatus.Provisioning)),
+        DeletionBlockedReason = resource.ReservedForTenantId is not null ||
+            resource.Status is DatabaseResourceStatus.Reserved or DatabaseResourceStatus.Provisioning or DatabaseResourceStatus.Assigned
+                ? "DATABASE_RESOURCE_RESERVED"
+                : mapping is not null
+                    ? "DATABASE_RESOURCE_ASSIGNED"
+                    : job is not null && job.Status is (ProvisioningJobStatus.Pending or ProvisioningJobStatus.AwaitingDatabaseCapacity or ProvisioningJobStatus.Provisioning)
+                        ? "DATABASE_RESOURCE_PROVISIONING"
+                        : backupCount > 0 ? "DATABASE_RESOURCE_HAS_BACKUPS" : null,
+        CreatedAtUtc = resource.CreatedAt,
+        UpdatedAtUtc = resource.UpdatedAt,
+        HasProtectedConnection = !string.IsNullOrWhiteSpace(resource.EncryptedConnectionString)
     };
 
     private async Task<DatabaseConnectionTestDto> TestSqlConnectionAsync(string connectionString, string expectedDatabaseName, CancellationToken cancellationToken)
@@ -638,7 +743,11 @@ public sealed class PlatformDatabaseResourceDto
 {
     public Guid Id { get; init; }
     public string ResourceCode { get; init; } = string.Empty;
+    public string DatabaseName { get; init; } = string.Empty;
     public string Provider { get; init; } = string.Empty;
+    public string? ServerKey { get; init; }
+    public string? ServerHost { get; init; }
+    public int? ServerPort { get; init; }
     public DatabaseResourceStatus Status { get; init; }
     public string LifecycleStatus { get; init; } = string.Empty;
     public Guid? TenantId { get; init; }
@@ -658,7 +767,16 @@ public sealed class PlatformDatabaseResourceDto
     public int BackupCount { get; init; }
     public string? LastBackupStatus { get; init; }
     public DateTime? LastBackupCompletedAtUtc { get; init; }
+    public DateTime? LastConnectionTestAtUtc { get; init; }
+    public bool? LastConnectionTestSucceeded { get; init; }
+    public int? LastConnectionTestDurationMs { get; init; }
+    public string? LastConnectionErrorCode { get; init; }
+    public string? LastConnectionErrorMessage { get; init; }
     public bool HasProtectedConnection { get; init; }
+    public bool CanDelete { get; init; }
+    public string? DeletionBlockedReason { get; init; }
+    public DateTime CreatedAtUtc { get; init; }
+    public DateTime? UpdatedAtUtc { get; init; }
 }
 
 public sealed record DatabaseConnectionTestRequest(string? DatabaseName, string? ConnectionString);

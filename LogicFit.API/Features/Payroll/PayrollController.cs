@@ -15,6 +15,7 @@ namespace LogicFit.API.Features.Payroll;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageEmployees)]
+[Authorize(Policy = WorkspaceCapabilities.GymStaff)]
 public class PayrollController : ControllerBase
 {
     private readonly IMediator _mediator;

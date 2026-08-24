@@ -126,6 +126,11 @@ if (!rateLimitingManagedByGateway)
             SecurityPartition(context),
             partitionKey => CreateFixedWindowLimiter(
                 "sensitive-action", partitionKey, 5, TimeSpan.FromMinutes(15))));
+    options.AddPolicy("member-public-portal", context =>
+        RateLimitPartition.Get(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            partitionKey => CreateFixedWindowLimiter(
+                "member-public-portal", partitionKey, 30, TimeSpan.FromMinutes(15))));
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         RateLimitPartition.Get(
             context.User?.Identity?.IsAuthenticated == true
@@ -220,11 +225,6 @@ using (var scope = app.Services.CreateScope())
     var migrator = scope.ServiceProvider.GetRequiredService<StartupDatabaseMigrator>();
     await migrator.ApplyPendingMigrationsAsync(app.Lifetime.ApplicationStopping);
 
-    // Import any legacy App_Data keys before the Data Protection provider is first used. The
-    // central Platform database is authoritative from this point forward.
-    var keyRingBootstrapper = scope.ServiceProvider.GetRequiredService<DataProtectionKeyRingBootstrapper>();
-    await keyRingBootstrapper.SynchronizeAsync(app.Lifetime.ApplicationStopping);
-
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
 
     // Check if force reset of foods is requested (to fix identity issues)
@@ -259,7 +259,22 @@ if (!Directory.Exists(uploadsPath))
     Log.Information("Created uploads directory: {UploadsPath}", uploadsPath);
 }
 
-// Enable static files for file uploads
+// Payment proofs and uploaded documents are private. They remain retained on disk,
+// but can only be streamed by an authenticated feature endpoint. Do this before
+// UseStaticFiles so a direct /uploads/documents URL cannot bypass authorization.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/uploads/documents", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        await context.Response.CompleteAsync();
+        return;
+    }
+
+    await next();
+});
+
+// Enable static files for non-sensitive public assets.
 app.UseStaticFiles();
 
 app.UseCors("AppCors");

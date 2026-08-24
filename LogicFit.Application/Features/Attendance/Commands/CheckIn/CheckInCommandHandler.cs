@@ -66,8 +66,8 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Guid>
             .Where(s => s.ClientId == request.ClientId
                 && s.TenantId == tenantId
                 && s.Status == SubscriptionStatus.Active
-                && s.StartDate <= now
-                && s.EndDate >= now
+                && s.StartDate.Date <= now.Date
+                && s.EndDate.Date >= now.Date
                 && !s.IsDeleted)
             .OrderByDescending(s => s.EndDate)
             .FirstOrDefaultAsync(cancellationToken);
@@ -82,8 +82,8 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Guid>
             .AnyAsync(f => f.SubscriptionId == activeSubscription.Id
                 && f.TenantId == tenantId
                 && f.IsActive
-                && f.StartDate <= now
-                && f.EndDate > now
+                && f.StartDate.Date <= now.Date
+                && f.EndDate.Date >= now.Date
                 && !f.IsDeleted, cancellationToken);
 
         if (isFrozen)

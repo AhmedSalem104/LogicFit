@@ -38,7 +38,7 @@ public class RbacSeeder
             .ToArray(),
         [SystemRoles.Receptionist] = new[]
         {
-            Permissions.ViewMembers, Permissions.ManageMembers, Permissions.CreateMembers, Permissions.UpdateMembers, Permissions.DeleteMembers, Permissions.ManageAttendance,
+            Permissions.ViewMembers, Permissions.ManageMembers, Permissions.CreateMembers, Permissions.UpdateMembers, Permissions.DeleteMembers, Permissions.ManageAttendance, Permissions.ManageDayPasses,
             Permissions.ManageClientSubscriptions, Permissions.ManagePOS
         },
         [SystemRoles.Accountant] = new[]
@@ -54,7 +54,17 @@ public class RbacSeeder
         {
             Permissions.ViewMembers, Permissions.ManageAttendance, Permissions.ViewReports
         },
-        [SystemRoles.FreelanceOwner] = Permissions.TenantPermissions.ToArray(),
+        // Freelance workspaces manage clients, coaching delivery and their own
+        // finance. Gym infrastructure is deliberately not part of this role.
+        [SystemRoles.FreelanceOwner] = new[]
+        {
+            Permissions.ViewMembers, Permissions.ManageMembers, Permissions.CreateMembers,
+            Permissions.UpdateMembers, Permissions.DeleteMembers, Permissions.ManageCoaches,
+            Permissions.ManageClientSubscriptions,
+            Permissions.ManageFinance, Permissions.ViewReports, Permissions.ManageReports,
+            Permissions.ManageSettings, Permissions.ManageTenantBilling,
+            Permissions.CreateAndDownloadTenantBackup
+        },
         [SystemRoles.FreelanceCoach] = new[]
         {
             Permissions.ViewMembers, Permissions.CreateMembers, Permissions.UpdateMembers,
@@ -319,6 +329,39 @@ public class RbacSeeder
                     PermissionId = permId
                 });
             }
+
+            // Older deployments seeded FreelanceOwner with all tenant permissions.
+            // Remove only those stale grants for this system role and invalidate
+            // its existing sessions so the reduced set is effective immediately.
+            if (roleName == SystemRoles.FreelanceOwner)
+            {
+                var desiredIds = permissionCodes
+                    .Where(permissionsByCode.ContainsKey)
+                    .Select(code => permissionsByCode[code])
+                    .ToHashSet();
+                var staleMappings = await _context.RolePermissions
+                    .Where(rp => rp.RoleId == role.Id && !desiredIds.Contains(rp.PermissionId))
+                    .ToListAsync();
+                if (staleMappings.Count > 0)
+                {
+                    _context.RolePermissions.RemoveRange(staleMappings);
+                    var roleUserIds = await _context.UserRoleAssignments
+                        .IgnoreQueryFilters()
+                        .Where(assignment => assignment.RoleId == role.Id)
+                        .Select(assignment => assignment.UserId)
+                        .Distinct()
+                        .ToListAsync();
+                    var roleUsers = await _context.Set<User>()
+                        .IgnoreQueryFilters()
+                        .Where(user => roleUserIds.Contains(user.Id))
+                        .ToListAsync();
+                    foreach (var roleUser in roleUsers)
+                        roleUser.PermissionsVersion++;
+                    _logger.LogInformation(
+                        "Removed {Count} stale Gym permissions from FreelanceOwner and invalidated {UserCount} sessions.",
+                        staleMappings.Count, roleUsers.Count);
+                }
+            }
         }
 
         var unlabeledRoles = await _context.AppRoles.IgnoreQueryFilters().Where(r => r.NameAr == "").ToListAsync();
@@ -332,7 +375,7 @@ public class RbacSeeder
     {
         [Permissions.ViewMembers] = "عرض العملاء", [Permissions.ManageMembers] = "إدارة العملاء",
         [Permissions.CreateMembers] = "إضافة العملاء", [Permissions.UpdateMembers] = "تعديل العملاء", [Permissions.DeleteMembers] = "حذف العملاء",
-        [Permissions.ManageCoaches] = "إدارة المدربين", [Permissions.ManageAttendance] = "إدارة الحضور",
+        [Permissions.ManageCoaches] = "إدارة المدربين", [Permissions.ManageAttendance] = "إدارة الحضور", [Permissions.ManageDayPasses] = "إدارة الحصص اليومية",
         [Permissions.ManageClientSubscriptions] = "إدارة اشتراكات العملاء", [Permissions.ManagePOS] = "إدارة نقاط البيع",
         [Permissions.ManageInventory] = "إدارة المخزون", [Permissions.ManageEmployees] = "إدارة الموظفين", [Permissions.ManageBranches] = "إدارة الفروع",
         [Permissions.ManageFinance] = "إدارة المالية", [Permissions.ViewReports] = "عرض التقارير", [Permissions.ManageReports] = "إدارة التقارير",
@@ -352,7 +395,7 @@ public class RbacSeeder
     {
         Permissions.ViewMembers => "\u0639\u0631\u0636 \u0627\u0644\u0639\u0645\u0644\u0627\u0621", Permissions.ManageMembers => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0639\u0645\u0644\u0627\u0621",
         Permissions.CreateMembers => "\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0639\u0645\u0644\u0627\u0621", Permissions.UpdateMembers => "\u062a\u0639\u062f\u064a\u0644 \u0627\u0644\u0639\u0645\u0644\u0627\u0621", Permissions.DeleteMembers => "\u062d\u0630\u0641 \u0627\u0644\u0639\u0645\u0644\u0627\u0621",
-        Permissions.ManageCoaches => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u062f\u0631\u0628\u064a\u0646", Permissions.ManageAttendance => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u062d\u0636\u0648\u0631",
+        Permissions.ManageCoaches => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u062f\u0631\u0628\u064a\u0646", Permissions.ManageAttendance => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u062d\u0636\u0648\u0631", Permissions.ManageDayPasses => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u062d\u0635\u0635 \u0627\u0644\u064a\u0648\u0645\u064a\u0629",
         Permissions.ManageClientSubscriptions => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0634\u062a\u0631\u0627\u0643\u0627\u062a \u0627\u0644\u0639\u0645\u0644\u0627\u0621", Permissions.ManagePOS => "\u0625\u062f\u0627\u0631\u0629 \u0646\u0642\u0627\u0637 \u0627\u0644\u0628\u064a\u0639",
         Permissions.ManageInventory => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u062e\u0632\u0648\u0646", Permissions.ManageEmployees => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0648\u0638\u0641\u064a\u0646", Permissions.ManageBranches => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0641\u0631\u0648\u0639",
         Permissions.ManageFinance => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u0645\u0627\u0644\u064a\u0629", Permissions.ViewReports => "\u0639\u0631\u0636 \u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631", Permissions.ManageReports => "\u0625\u062f\u0627\u0631\u0629 \u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631",

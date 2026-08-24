@@ -1,11 +1,12 @@
+using System.Data.Common;
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Common.Services;
 using LogicFit.Application.Features.Auth.DTOs;
+using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.Exceptions;
 using MediatR;
-using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace LogicFit.Application.Features.Identity.Commands.SelectIdentityWorkspace;
@@ -51,8 +52,7 @@ public sealed class SelectIdentityWorkspaceCommandHandler
             _context, _dateTimeService, request.WorkspaceSelectionToken, cancellationToken);
         var membership = await _context.WorkspaceMemberships.IgnoreQueryFilters()
             // WorkspaceMembership and Tenant are platform-owned. User/Profile are tenant-owned
-            // and are intentionally not mapped by PlatformDbContext; loading them here caused a
-            // valid identity login to fail at the selection step with HTTP 500.
+            // and are intentionally loaded only after the database scope is opened.
             .Where(x => x.IdentityAccountId == selectionSession.IdentityAccountId &&
                         x.TenantId == request.WorkspaceId &&
                         x.Status == WorkspaceMembershipStatus.Active && !x.IsDeleted)
@@ -90,7 +90,17 @@ public sealed class SelectIdentityWorkspaceCommandHandler
             if (identityAccess.Mode == IdentityWorkspaceAccessMode.Blocked)
                 throw new TenantAccessException(identityAccess.Code ?? "WORKSPACE_ACCESS_DENIED", 403);
 
-            var auth = await _rbacService.GetUserAuthorizationAsync(membership.UserId, cancellationToken);
+            var workspaceType = await _context.Tenants
+                .IgnoreQueryFilters()
+                .Where(x => x.Id == request.WorkspaceId && !x.IsDeleted)
+                .Select(x => (WorkspaceType?)x.WorkspaceType)
+                .SingleOrDefaultAsync(cancellationToken)
+                ?? throw new TenantAccessException("WORKSPACE_NOT_FOUND", 404);
+
+            var auth = await _rbacService.GetUserAuthorizationForTenantAsync(
+                membership.UserId,
+                request.WorkspaceId,
+                cancellationToken);
             var accessToken = _jwtService.GenerateAccessToken(
                 membership.UserId,
                 user.Email,
@@ -114,6 +124,8 @@ public sealed class SelectIdentityWorkspaceCommandHandler
                 Roles = auth.Roles,
                 Permissions = auth.Permissions,
                 TenantId = membership.TenantId,
+                WorkspaceType = workspaceType,
+                Capabilities = WorkspaceCapabilities.For(workspaceType),
                 AccessToken = accessToken.Token,
                 RefreshToken = refreshToken.Token,
                 ExpiresAt = accessToken.ExpiresAt,

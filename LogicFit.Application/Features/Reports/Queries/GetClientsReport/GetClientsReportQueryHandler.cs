@@ -1,5 +1,6 @@
 using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Features.Reports.DTOs;
+using LogicFit.Application.Features.Reports.Services;
 using LogicFit.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -57,9 +58,33 @@ public class GetClientsReportQueryHandler : IRequestHandler<GetClientsReportQuer
                 Name = u.Profile != null ? u.Profile.FullName ?? u.Email : u.Email,
                 PhoneNumber = u.PhoneNumber,
                 TotalSessions = u.WorkoutSessions.Count(ws => !ws.IsDeleted),
-                TotalPaid = u.Subscriptions.Where(s => !s.IsDeleted).Sum(s => s.Plan.Price)
+                TotalPaid = 0
             })
             .ToListAsync(cancellationToken);
+
+        var topClientIds = topClients.Select(client => client.Id).ToArray();
+        var topClientSubscriptions = await _context.ClientSubscriptions
+            .AsNoTracking()
+            .Where(s => topClientIds.Contains(s.ClientId) && !s.IsDeleted)
+            .ToListAsync(cancellationToken);
+        var refundsBySubscription = await _context.WalletTransactions
+            .AsNoTracking()
+            .Where(t => t.TenantId == tenantId &&
+                        t.Type == TransactionType.Refund &&
+                        t.ReferenceType == SubscriptionRevenueCalculator.SubscriptionReferenceType &&
+                        t.ReferenceId.HasValue)
+            .GroupBy(t => t.ReferenceId!.Value)
+            .Select(g => new { SubscriptionId = g.Key, Amount = g.Sum(t => t.Amount) })
+            .ToDictionaryAsync(x => x.SubscriptionId, x => x.Amount, cancellationToken);
+
+        foreach (var client in topClients)
+        {
+            client.TotalPaid = topClientSubscriptions
+                .Where(subscription => subscription.ClientId == client.Id)
+                .Sum(subscription => SubscriptionRevenueCalculator.NetCollectedAmount(
+                    subscription,
+                    refundsBySubscription.GetValueOrDefault(subscription.Id)));
+        }
 
         // Monthly trend (last 6 months)
         var monthlyTrend = new List<MonthlyClientDto>();

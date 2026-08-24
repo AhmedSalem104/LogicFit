@@ -15,7 +15,7 @@ public sealed class IdentityWorkspaceSessionIssuerTests
     public async Task Identity_login_repairs_pending_owner_membership_for_an_active_gym_only()
     {
         await using var fixture = await TestFixture.CreateAsync();
-        var gym = new Tenant
+        var gym = new LogicFit.Domain.Entities.Tenant
         {
             Name = "Active Gym",
             Subdomain = $"active-gym-{Guid.NewGuid():N}",
@@ -77,7 +77,7 @@ public sealed class IdentityWorkspaceSessionIssuerTests
     {
         await using var fixture = await TestFixture.CreateAsync();
         var identity = NewIdentity("pending-owner");
-        var workspace = new Tenant
+        var workspace = new LogicFit.Domain.Entities.Tenant
         {
             Name = "Pending Gym",
             Subdomain = $"pending-gym-{Guid.NewGuid():N}",
@@ -127,7 +127,7 @@ public sealed class IdentityWorkspaceSessionIssuerTests
         };
     }
 
-    private static User NewUser(Tenant tenant, IdentityAccount identity, UserRole role) => new()
+    private static User NewUser(LogicFit.Domain.Entities.Tenant tenant, IdentityAccount identity, UserRole role) => new()
     {
         TenantId = tenant.Id,
         IdentityAccountId = identity.Id,

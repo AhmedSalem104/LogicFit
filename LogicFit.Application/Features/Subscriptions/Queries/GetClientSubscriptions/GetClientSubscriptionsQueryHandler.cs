@@ -22,7 +22,8 @@ public class GetClientSubscriptionsQueryHandler : IRequestHandler<GetClientSubsc
     public async Task<List<ClientSubscriptionDto>> Handle(GetClientSubscriptionsQuery request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
-        var currentUserId = Guid.Parse(_currentUserService.UserId!);
+        if (!Guid.TryParse(_currentUserService.UserId, out var currentUserId))
+            throw new LogicFit.Domain.Exceptions.ForbiddenException("An authenticated workspace user is required.");
         var role = await _context.Users.Where(u => u.Id == currentUserId && u.TenantId == tenantId)
             .Select(u => u.Role).FirstOrDefaultAsync(cancellationToken);
 
@@ -48,9 +49,10 @@ public class GetClientSubscriptionsQueryHandler : IRequestHandler<GetClientSubsc
 
         if (request.ExpiringWithinDays.HasValue)
         {
-            var expiryDate = DateTime.UtcNow.AddDays(request.ExpiringWithinDays.Value);
+            var today = DateTime.UtcNow.Date;
+            var expiryDate = today.AddDays(request.ExpiringWithinDays.Value);
             query = query.Where(s => s.Status == SubscriptionStatus.Active
-                && s.EndDate <= expiryDate && s.EndDate > DateTime.UtcNow);
+                && s.EndDate.Date <= expiryDate && s.EndDate.Date >= today);
         }
 
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))

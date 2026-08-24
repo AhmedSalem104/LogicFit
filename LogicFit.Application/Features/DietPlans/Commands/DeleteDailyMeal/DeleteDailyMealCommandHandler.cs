@@ -34,11 +34,15 @@ public class DeleteDailyMealCommandHandler : IRequestHandler<DeleteDailyMealComm
 
         await _accessService.EnsureCanManageMealAsync(request.Id, cancellationToken);
 
-        // Delete all items first
-        _context.MealItems.RemoveRange(meal.Items);
-
-        // Then delete the meal
-        _context.DailyMeals.Remove(meal);
+        // Keep meal-log references valid after a plan edit. The active-plan query
+        // excludes these records through the standard soft-delete filter.
+        meal.IsDeleted = true;
+        meal.DeletedAt = DateTime.UtcNow;
+        foreach (var item in meal.Items)
+        {
+            item.IsDeleted = true;
+            item.DeletedAt = DateTime.UtcNow;
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
 

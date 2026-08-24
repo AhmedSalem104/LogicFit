@@ -14,6 +14,7 @@ namespace LogicFit.API.Features.GymProfile;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageSettings)]
+[Authorize(Policy = WorkspaceCapabilities.GymSettings)]
 public class GymProfileController : ControllerBase
 {
     private readonly IMediator _mediator;

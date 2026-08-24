@@ -12,6 +12,7 @@ namespace LogicFit.API.Features.WorkspaceApplications;
 [ApiController]
 [Route("api/freelance/team/applications")]
 [Authorize(Policy = Permissions.ManageCoaches)]
+[Authorize(Policy = WorkspaceCapabilities.FreelanceTeam)]
 public sealed class FreelanceTeamApplicationsController : ControllerBase
 {
     private readonly IMediator _mediator;

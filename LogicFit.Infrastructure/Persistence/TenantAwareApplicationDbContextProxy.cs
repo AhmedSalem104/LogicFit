@@ -1,19 +1,15 @@
 using System.Data;
 using System.Reflection;
 using LogicFit.Application.Common.Interfaces;
-using LogicFit.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace LogicFit.Infrastructure.Persistence;
 
 /// <summary>
-/// Compatibility bridge for the existing application handlers while their dependency is being
-/// split into IPlatformDbContext and ITenantDbContext.  Platform-owned sets are served by the
-/// real PlatformDbContext.  Tenant-owned sets are served by the request-scoped TenantDbContext.
-/// The legacy context is used only for compatibility-only platform jobs that still need the old
-/// shared User projection and can never be selected for a resolved tenant request.
+/// Compatibility bridge for existing handlers. Platform-owned sets use PlatformDbContext;
+/// tenant-owned sets use the resolved TenantDbContext. A tenant request can never fall back to
+/// the legacy shared ApplicationDbContext.
 /// </summary>
 public class TenantAwareApplicationDbContextProxy : DispatchProxy
 {
@@ -83,41 +79,28 @@ public class TenantAwareApplicationDbContextProxy : DispatchProxy
 
     private DbContext ResolveContext(Type entityType)
     {
-        var platformContext = _platformContext
-            ?? throw new InvalidOperationException("The PlatformDbContext proxy is not initialized.");
-        var legacyContext = _legacyContext
-            ?? throw new InvalidOperationException("The legacy compatibility context is not initialized.");
-        var tenantService = _tenantService
-            ?? throw new InvalidOperationException("The tenant service is not initialized.");
-        var requestScope = _requestScope
-            ?? throw new InvalidOperationException("The tenant request scope is not initialized.");
-        var tenantAccessor = _tenantContextAccessor
-            ?? throw new InvalidOperationException("The tenant context accessor is not initialized.");
+        var platform = _platformContext ?? throw new InvalidOperationException("Platform context is not initialized.");
+        var legacy = _legacyContext ?? throw new InvalidOperationException("Legacy context is not initialized.");
+        var tenantService = _tenantService ?? throw new InvalidOperationException("Tenant service is not initialized.");
+        var requestScope = _requestScope ?? throw new InvalidOperationException("Tenant request scope is not initialized.");
+        var tenantAccessor = _tenantContextAccessor ?? throw new InvalidOperationException("Tenant context accessor is not initialized.");
 
         var isTenantOwned = DbContextOwnership.TenantEntities.Contains(entityType);
         var isPlatformOwned = DbContextOwnership.PlatformEntities.Contains(entityType);
         var hasResolvedTenant = tenantService.CurrentTenantId.HasValue && requestScope.Resolution is not null;
 
-        // Shared contracts are local projections: tenant requests must use the tenant copy,
-        // while platform requests use the canonical Platform copy.
         if (isTenantOwned && hasResolvedTenant)
             return tenantAccessor.GetRequiredContext();
 
         if (isPlatformOwned)
-            return platformContext;
+            return platform;
 
         if (isTenantOwned)
         {
-            // A tenant id without a mapping is never allowed to fall back to the shared store.
-            // TenantMiddleware/TenantDatabaseRoutingMiddleware normally returns 503 earlier;
-            // this guard protects background or non-HTTP callers as well.
             if (tenantService.CurrentTenantId.HasValue)
-                throw new InvalidOperationException(
-                    "The tenant database mapping is unavailable; shared database fallback is disabled.");
+                throw new InvalidOperationException("The tenant database mapping is unavailable; shared database fallback is disabled.");
 
-            // Platform reports and the provisioning compatibility bridge still read the legacy
-            // User projection until the explicit data-transfer job is completed.
-            return legacyContext;
+            return legacy;
         }
 
         throw new InvalidOperationException($"Entity '{entityType.Name}' has no database owner.");
@@ -127,29 +110,16 @@ public class TenantAwareApplicationDbContextProxy : DispatchProxy
     {
         var setMethod = typeof(DbContext)
             .GetMethods(BindingFlags.Instance | BindingFlags.Public)
-            .Single(method => method.Name == nameof(DbContext.Set) &&
-                method.IsGenericMethodDefinition &&
-                method.GetParameters().Length == 0);
+            .Single(method => method.Name == nameof(DbContext.Set) && method.IsGenericMethodDefinition && method.GetParameters().Length == 0);
         return setMethod.MakeGenericMethod(entityType).Invoke(context, null)
             ?? throw new InvalidOperationException($"Could not create a DbSet for '{entityType.Name}'.");
     }
 
     private static T GetArgument<T>(object?[]? args, int index)
-        => args is not null && index < args.Length && args[index] is T value
-            ? value
-            : default!;
+        => args is not null && index < args.Length && args[index] is T value ? value : default!;
 
     private Task<int> SaveChangesAsync(CancellationToken cancellationToken)
-    {
-        var platform = _platformContext!;
-        var legacy = _legacyContext!;
-        var tenant = _tenantContextAccessor!.Current;
-
-        // There is no distributed transaction between databases.  Saving each changed context
-        // preserves existing handlers during cutover; provisioning/workflow code must use an
-        // outbox/saga when it intentionally changes more than one store.
-        return SaveAllAsync(platform, legacy, tenant, cancellationToken);
-    }
+        => SaveAllAsync(_platformContext!, _legacyContext!, _tenantContextAccessor!.Current, cancellationToken);
 
     private static async Task<int> SaveAllAsync(
         PlatformDbContext platform,
@@ -170,26 +140,16 @@ public class TenantAwareApplicationDbContextProxy : DispatchProxy
     private Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
         => BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
 
-    private async Task<IDbContextTransaction> BeginTransactionAsync(
-        IsolationLevel isolationLevel,
-        CancellationToken cancellationToken)
+    private async Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken)
     {
         var transactions = new List<IDbContextTransaction>();
         try
         {
             transactions.Add(await _platformContext!.Database.BeginTransactionAsync(isolationLevel, cancellationToken));
             if (_requestScope!.Resolution is not null)
-            {
-                transactions.Add(await _tenantContextAccessor!.GetRequiredContext().Database
-                    .BeginTransactionAsync(isolationLevel, cancellationToken));
-            }
+                transactions.Add(await _tenantContextAccessor!.GetRequiredContext().Database.BeginTransactionAsync(isolationLevel, cancellationToken));
             else
-            {
-                // Unauthenticated identity flows can still update the compatibility User
-                // projection while the explicit transfer job is pending.  A resolved tenant
-                // request must never open or write the legacy shared connection.
                 transactions.Add(await _legacyContext!.Database.BeginTransactionAsync(isolationLevel, cancellationToken));
-            }
 
             return new CompositeDbContextTransaction(transactions);
         }
@@ -201,68 +161,50 @@ public class TenantAwareApplicationDbContextProxy : DispatchProxy
         }
     }
 
-    private sealed class CompositeDbContextTransaction(IReadOnlyList<IDbContextTransaction> transactions)
-        : IDbContextTransaction
+    private sealed class CompositeDbContextTransaction(IReadOnlyList<IDbContextTransaction> transactions) : IDbContextTransaction
     {
         private bool _completed;
-
         public Guid TransactionId { get; } = Guid.NewGuid();
 
         public void Commit()
         {
-            foreach (var transaction in transactions)
-                transaction.Commit();
+            foreach (var transaction in transactions) transaction.Commit();
             _completed = true;
         }
 
         public async Task CommitAsync(CancellationToken cancellationToken = default)
         {
-            foreach (var transaction in transactions)
-                await transaction.CommitAsync(cancellationToken);
+            foreach (var transaction in transactions) await transaction.CommitAsync(cancellationToken);
             _completed = true;
         }
 
         public void Rollback()
         {
-            foreach (var transaction in transactions.AsEnumerable().Reverse())
-                transaction.Rollback();
+            foreach (var transaction in transactions.AsEnumerable().Reverse()) transaction.Rollback();
             _completed = true;
         }
 
         public async Task RollbackAsync(CancellationToken cancellationToken = default)
         {
-            foreach (var transaction in transactions.AsEnumerable().Reverse())
-                await transaction.RollbackAsync(cancellationToken);
+            foreach (var transaction in transactions.AsEnumerable().Reverse()) await transaction.RollbackAsync(cancellationToken);
             _completed = true;
         }
 
         public System.Data.Common.DbTransaction GetDbTransaction()
-            => throw new NotSupportedException(
-                "A composite transaction spans multiple databases and has no single DbTransaction.");
+            => throw new NotSupportedException("A composite transaction spans multiple databases and has no single DbTransaction.");
 
         public void Dispose()
         {
             if (!_completed)
-            {
-                foreach (var transaction in transactions.AsEnumerable().Reverse())
-                    transaction.Rollback();
-            }
-
-            foreach (var transaction in transactions.AsEnumerable().Reverse())
-                transaction.Dispose();
+                foreach (var transaction in transactions.AsEnumerable().Reverse()) transaction.Rollback();
+            foreach (var transaction in transactions.AsEnumerable().Reverse()) transaction.Dispose();
         }
 
         public async ValueTask DisposeAsync()
         {
             if (!_completed)
-            {
-                foreach (var transaction in transactions.AsEnumerable().Reverse())
-                    await transaction.RollbackAsync();
-            }
-
-            foreach (var transaction in transactions.AsEnumerable().Reverse())
-                await transaction.DisposeAsync();
-
+                foreach (var transaction in transactions.AsEnumerable().Reverse()) await transaction.RollbackAsync();
+            foreach (var transaction in transactions.AsEnumerable().Reverse()) await transaction.DisposeAsync();
             GC.SuppressFinalize(this);
         }
     }

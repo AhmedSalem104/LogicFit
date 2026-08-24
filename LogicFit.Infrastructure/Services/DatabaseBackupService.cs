@@ -5,6 +5,7 @@ using LogicFit.Application.Common.Interfaces;
 using LogicFit.Application.Common.Services;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
+using LogicFit.Domain.Exceptions;
 using LogicFit.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.SqlServer.Dac;
-using LogicFit.Domain.Exceptions;
 
 namespace LogicFit.Infrastructure.Services;
 
@@ -139,9 +139,11 @@ public sealed class DatabaseBackupService(
             throw new InvalidOperationException("A backup batch is already running.");
 
         IAsyncDisposable? distributedLock = null;
+        SqlConnection? distributedLockConnection = null;
         try
         {
             distributedLock = await AcquireDistributedLockAsync(cancellationToken);
+            distributedLockConnection = await AcquireSqlCompatibilityLockAsync(cancellationToken);
             existing = await db.BackupBatches.Include(x => x.Artifacts)
                 .SingleOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
             if (existing is not null) return ToDto(existing);
@@ -204,7 +206,10 @@ public sealed class DatabaseBackupService(
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                logger.LogError("Backup batch {BackupBatchId} completed exports but could not persist its manifest ({ExceptionType}).", batch.Id, exception.GetType().Name);
+                logger.LogError(
+                    "Backup batch {BackupBatchId} completed exports but could not persist its manifest ({ExceptionType}).",
+                    batch.Id,
+                    exception.GetType().Name);
                 batch.Status = successful == 0 ? BackupBatchStatus.Failed : BackupBatchStatus.Partial;
                 batch.CompletedAtUtc = timeProvider.GetUtcNow().UtcDateTime;
                 batch.ErrorMessage = "BACKUP_MANIFEST_WRITE_FAILED";
@@ -251,6 +256,7 @@ public sealed class DatabaseBackupService(
         }
         finally
         {
+            await ReleaseDistributedLockAsync(distributedLockConnection);
             if (distributedLock is not null)
                 await distributedLock.DisposeAsync();
             ProcessLock.Release();
@@ -398,6 +404,57 @@ public sealed class DatabaseBackupService(
     {
         return await distributedLockProvider.TryAcquireAsync(DistributedLockResource, cancellationToken)
             ?? throw new InvalidOperationException("A backup batch is already running on another instance.");
+    }
+
+    private async Task<SqlConnection?> AcquireSqlCompatibilityLockAsync(CancellationToken cancellationToken)
+    {
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        if (string.IsNullOrWhiteSpace(connectionString)) return null;
+
+        var connection = new SqlConnection(connectionString);
+        try
+        {
+            await connection.OpenAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                DECLARE @result int;
+                EXEC @result = sys.sp_getapplock
+                    @Resource = @resource,
+                    @LockMode = 'Exclusive',
+                    @LockOwner = 'Session',
+                    @LockTimeout = 0;
+                SELECT @result;
+                """;
+            command.CommandTimeout = Math.Clamp(
+                configuration.GetValue("Backup:DistributedLockCommandTimeoutSeconds", 5),
+                1,
+                30);
+            var resource = command.Parameters.Add("@resource", SqlDbType.NVarChar, 255);
+            resource.Value = DistributedLockResource + ":Compatibility";
+            var value = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+            if (value < 0)
+                throw new InvalidOperationException("A backup batch is already running on another instance.");
+            return connection;
+        }
+        catch
+        {
+            await connection.DisposeAsync();
+            throw;
+        }
+    }
+
+    private static async Task ReleaseDistributedLockAsync(SqlConnection? connection)
+    {
+        if (connection is null) return;
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "EXEC sp_releaseapplock @Resource = @resource, @LockOwner = 'Session';";
+            command.Parameters.AddWithValue("@resource", DistributedLockResource + ":Compatibility");
+            await command.ExecuteNonQueryAsync();
+        }
+        catch { /* the session release is best-effort during shutdown */ }
+        await connection.DisposeAsync();
     }
 
     private async Task<bool> IsDuplicateIdempotencyAsync(string key, CancellationToken cancellationToken)

@@ -34,6 +34,13 @@ Without `PublicBaseUrl`, uploads return `/api/media/object?key=...`. That endpoi
 
 With `PublicBaseUrl`, only assets intentionally returned as public URLs (branding, logos and other non-sensitive images) use the CDN domain. Payment receipts, identity documents and other sensitive files should keep the authenticated API URL.
 
+Local sensitive documents are retained under `wwwroot/uploads/documents` for the configured
+retention period, but the API blocks that path before `UseStaticFiles`. Payment proofs are therefore
+retrieved only through their authenticated feature endpoint (`/api/platform/payment-requests/{id}/proof`
+for Platform review, with an optional retained version); a direct public `/uploads/documents/...`
+request returns `404`. Retention is separate from presentation: replacing a proof adds a version and
+does not delete the previous file or its audit metadata.
+
 ## Existing image fields
 
 Gym profile, branding assets, profile pictures, exercise images, body-measurement photos and payment proofs already call `IFileUploadService`; switching the provider therefore moves new uploads without changing their feature controllers. Existing `/uploads/...` records remain readable during migration. A storage migration job should copy those objects to the tenant-scoped R2 prefix and update their URL fields after a backup.

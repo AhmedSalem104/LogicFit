@@ -8,7 +8,7 @@ namespace LogicFit.Infrastructure.Services;
 /// Reads the active mapping and its resource exclusively from Platform DB.  It intentionally
 /// does not accept a database identifier or connection string from a request.
 /// </summary>
-public sealed class PlatformTenantDatabaseMappingReader(ApplicationDbContext dbContext) : ITenantDatabaseMappingReader
+public sealed class PlatformTenantDatabaseMappingReader(PlatformDbContext dbContext) : ITenantDatabaseMappingReader
 {
     public Task<TenantDatabaseMappingRecord?> FindActiveAsync(
         Guid tenantId,

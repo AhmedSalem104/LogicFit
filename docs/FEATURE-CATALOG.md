@@ -62,11 +62,14 @@ membership and other workspace associations are revoked.
 | لوحة المتابعة | مؤشرات المنصة وقائمة المساحات | `Features/Platform/Dashboard`، `/api/platform/dashboard/*` | صلاحيات Platform المناسبة |
 | إدارة المساحات | إنشاء، قائمة، اعتماد، تعليق، تفعيل وأرشفة الجيم/المساحة؛ تفعيل عضوية مالك الجيم المنتظرة مع اعتماد المساحة | `Features/Platform/Tenants`، `/api/platform/tenants/*` | `ManageTenants` |
 | طلبات مساحات العمل | إنشاء ومراجعة وطلب معلومات ورفض واعتماد/تجهيز وإعادة محاولة لكل من `Gym` و`FreelanceCoach` مع حالات الدفع والمساحة وقاعدة البيانات والاشتراك والوصول | `LogicFit.API/Features/Platform/WorkspaceApplications`، `/api/platform/workspace-applications/*` | `ManageTenants` |
+
+طلب الاستكمال لمساحة Gym أو FreelanceCoach يستخدم حقول payload المشتركة المسموحة، بينما تظل طلبات
+العضوية مقصورة على `FullName`؛ الحقول غير المعتمدة مثل `Address` لا تُقبل من الخادم.
 | الخطط والميزات | الخطط، feature catalog، overrides، quotas، dependencies | `Features/Platform/Plans` و`FeatureCatalog`، `/api/platform/plans/*` و`/api/platform/features/*` | `ManagePlans` / `ManageFeatures` |
 | اشتراكات الـSaaS | العرض، الاستهلاك، lifecycle، التمديد ومعاينة الترقية | `Features/Platform/Subscriptions`، `/api/platform/subscriptions/*` | `ManageSubscriptions` |
-| الفوترة اليدوية | طرق الدفع، طلبات إثبات الدفع، الاعتماد/الرفض، فواتير المنصة | `PaymentMethods` و`PaymentRequests` و`Invoices`، `/api/platform/payment-*` و`/api/platform/invoices` | صلاحيات الفوترة المركزية |
+| الفوترة اليدوية | طرق الدفع، طلبات إثبات الدفع، معاينة محمية، سجل إصدارات دائم مع SHA-256، الاعتماد/الرفض، فواتير المنصة؛ لا يعتمد دفع مساحة عمل بلا إثبات حالي | `PaymentMethods` و`PaymentRequests` و`Invoices`، `/api/platform/payment-*` و`/api/platform/invoices` | صلاحيات الفوترة المركزية |
 | مسؤولو المنصة وRBAC | إنشاء/تعطيل مسؤول، أدوار المنصة وخريطة صلاحياتها | `Administrators` و`Authorization`، `/api/platform/administrators/*` و`/api/platform/roles/*` | `PlatformOwner` |
-| المراقبة والتدقيق | alerts، audit logs، Outbox/jobs مع تنسيق متعدد النسخ، النسخ الاحتياطي والتقارير | `Alerts`، `Audit`، `Operations`، `Backups`، `Reports` | أدوار تشغيل المنصة |
+| المراقبة والتدقيق | alerts، audit logs، Outbox/jobs مع تنسيق متعدد النسخ، نسخ BACPAC مستقلة للمنصة أو مساحة عمل واحدة أو نطاق جماعي، والتقارير | `Alerts`، `Audit`، `Operations`، `Backups`، `Reports` | أدوار تشغيل المنصة |
 | عقد تشغيل لوحة المنصة | ملخصات مراجعة الطلبات والدفع، سعة Pool، Provisioning، النسخ والاستعادة، وتشخيص إصدار الـAPI | `Features/Platform/Dashboard`، `DatabaseResources`، `Diagnostics`، `Operations`؛ `/api/platform/dashboard/*`، `/api/platform/database-resources`، `/api/platform/diagnostics/version`، `/api/platform/operations/provisioning` | `ManagePlatformReports` / `ManagePlatformBackups` |
 | الإشعارات المركزية | عرض الإشعارات وتعليمها كمقروءة | `Features/Platform/Notifications` | مسؤول المنصة المستهدف |
 
@@ -93,6 +96,11 @@ membership and other workspace associations are revoked.
 كل بوابات الوصول. حجز الـDatabaseResource يتم ذريًا من الـPool، وتبقى connection material داخل
 الخادم، مع migrations و`CanConnect` وhealth check قبل إنشاء الـmapping. الطلبات التي تحتاج سعة أو
 إعادة محاولة لا تنشئ كيانات مكررة.
+
+إثبات الدفع جزء من السجل التشغيلي طويل الأجل: كل رفع ينشئ `PaymentProof` version جديدة مع اسم الملف
+والنوع والحجم و`SHA-256` ووقت الرفع، وتبقى النسخ السابقة محفوظة عند الاستبدال. مسارات المنصة
+المحمية تعرض metadata فقط في سجل التاريخ، وتسترجع الملف الحالي أو إصدارًا تاريخيًا دون كشف مفتاح
+التخزين؛ اعتماد الدفع منفصل عن اعتماد المساحة وبدء provisioning.
 
 ## تشغيل مساحة الجيم أو المدرب الحر
 
@@ -173,3 +181,35 @@ and state-action screens.
   history and legacy sequential child-save behavior are no longer the active path.
 - Backend migration: `20260810125711_CoachPlanExecutionFields`. Availability remains task-branch only
   until merge/release/deployment/health verification.
+
+### Workspace-specific product surface (Issue #296)
+
+The shared API now exposes a `WorkspaceCapabilities` contract derived from `WorkspaceType`.
+`Gym` keeps facilities, staff, attendance, inventory, POS, gate access, membership cards, gym
+membership plans, and gym reports. `FreelanceCoach` receives the coaching surface (clients,
+training, nutrition, progress, appointments, finance, reports) plus a small assistant-team
+surface, but not Gym-only features. Billing, settings, backups, and shared coaching components
+remain available when their existing permission and plan rules allow them.
+
+Gym-only controllers enforce the capability on the server; hiding a navigation item is not the
+security boundary. See [WORKSPACE-CAPABILITIES.md](WORKSPACE-CAPABILITIES.md) for the complete
+mapping and the `WORKSPACE_CAPABILITY_NOT_AVAILABLE` response contract. The implementation is
+merged into `develop`; production release still requires the approved migration, deployment,
+and post-release health verification.
+
+## Subscriber, membership, training and nutrition parity (Issue #313)
+
+| Capability | Backend contract | Business rule |
+|---|---|---|
+| Member identity and memberships | `Clients`, `ClientSubscriptions`, coach-client assignments | One member identity may have multiple memberships; tenant and ownership checks remain mandatory. |
+| Membership billing | Subscription create/update/renew/payment and `Payments` history | Payment rows are append-only, receipts are generated server-side, dates are inclusive, and duplicate/overlapping or overpaid operations are rejected. |
+| Training authoring | `WorkoutPrograms` aggregate create/update/duplicate/delete | Nested routines and exercises are saved atomically; `Version` prevents lost updates; removed children are soft-deleted. |
+| Nutrition authoring | `DietPlans` aggregate create/update/duplicate/delete | Nested meals and items are saved atomically; calculator metadata and notes are preserved; removed children remain available to history. |
+| Training execution | `WorkoutSessions`, `SessionSets`, client training overview | The client can execute only an active plan belonging to the active tenant and receives server-confirmed progress. |
+| Nutrition execution | `meal-logs`, nutrition summary, food/meal snapshots | Macros use the food's serving size and the consumed quantity; historical logs do not change when a plan child is removed. |
+| Measurements and readiness | `BodyMeasurements`, `clients/{id}/checkins` | Measurements are tenant-scoped; check-ins are unique per client/day and expose a calculated readiness score. |
+
+The implementation is tracked in Backend Issue #313 and Tenant UI Issue #102. The Platform Admin
+repository has no source or documentation impact from this feature. Generated endpoint details
+are in [API-ENDPOINT-CATALOG.md](API-ENDPOINT-CATALOG.md); the migration/release gate is documented
+in [OPERATIONS-AND-DEPLOYMENT.md](OPERATIONS-AND-DEPLOYMENT.md).

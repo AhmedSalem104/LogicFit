@@ -13,6 +13,7 @@ namespace LogicFit.API.Features.ProductCategories;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageInventory)]
+[Authorize(Policy = WorkspaceCapabilities.GymInventory)]
 public class ProductCategoriesController : ControllerBase
 {
     private readonly IMediator _mediator;

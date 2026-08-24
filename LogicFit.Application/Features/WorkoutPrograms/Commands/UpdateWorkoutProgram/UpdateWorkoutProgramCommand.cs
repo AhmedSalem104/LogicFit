@@ -16,5 +16,7 @@ public class UpdateWorkoutProgramCommand : IRequest<bool>
     public PlanStatus? Status { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public string? Notes { get; set; }
+    public int? ExpectedVersion { get; set; }
     public List<WorkoutRoutineInputDto>? Routines { get; set; }
 }

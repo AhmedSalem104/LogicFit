@@ -16,24 +16,12 @@ public sealed class TenantDatabaseRuntimeRoutingTests
         var tenantId = Guid.NewGuid();
         var tenantService = new StubTenantService { CurrentTenantId = tenantId };
         var requestScope = new TenantDatabaseRequestScope();
-        requestScope.Set(new TenantDatabaseResolution(
-            tenantId,
-            Guid.NewGuid(),
-            "test",
-            "tenant-db",
-            "Server=(localdb)\\MSSQLLocalDB;Database=TenantRoutingTest;Trusted_Connection=True;TrustServerCertificate=True;",
-            TenantDbContext.MigrationsAssemblyName,
-            DateTime.UtcNow));
+        requestScope.Set(CreateResolution(tenantId));
 
         using var platform = CreatePlatformContext();
         using var legacy = new ApplicationDbContextFactory().CreateDbContext([]);
         using var tenantAccessor = new TenantDatabaseContextAccessor(requestScope);
-        var context = TenantAwareApplicationDbContextProxy.Create(
-            platform,
-            legacy,
-            requestScope,
-            tenantAccessor,
-            tenantService);
+        var context = TenantAwareApplicationDbContextProxy.Create(platform, legacy, requestScope, tenantAccessor, tenantService);
 
         var currentContext = GetCurrentContext(context.Exercises);
 
@@ -42,49 +30,31 @@ public sealed class TenantDatabaseRuntimeRoutingTests
     }
 
     [Fact]
-    public void Platform_owned_sets_stay_on_platform_even_inside_a_tenant_request()
+    public void Platform_owned_sets_stay_on_platform_inside_a_tenant_request()
     {
         var tenantId = Guid.NewGuid();
         var tenantService = new StubTenantService { CurrentTenantId = tenantId };
         var requestScope = new TenantDatabaseRequestScope();
-        requestScope.Set(new TenantDatabaseResolution(
-            tenantId,
-            Guid.NewGuid(),
-            "test",
-            "tenant-db",
-            "Server=(localdb)\\MSSQLLocalDB;Database=TenantRoutingTest;Trusted_Connection=True;TrustServerCertificate=True;",
-            TenantDbContext.MigrationsAssemblyName,
-            null));
+        requestScope.Set(CreateResolution(tenantId));
 
         using var platform = CreatePlatformContext();
         using var legacy = new ApplicationDbContextFactory().CreateDbContext([]);
         using var tenantAccessor = new TenantDatabaseContextAccessor(requestScope);
-        var context = TenantAwareApplicationDbContextProxy.Create(
-            platform,
-            legacy,
-            requestScope,
-            tenantAccessor,
-            tenantService);
+        var context = TenantAwareApplicationDbContextProxy.Create(platform, legacy, requestScope, tenantAccessor, tenantService);
 
-        var currentContext = GetCurrentContext(context.TenantSubscriptions);
-
-        Assert.Same(platform, currentContext);
+        Assert.Same(platform, GetCurrentContext(context.TenantSubscriptions));
     }
 
     [Fact]
-    public void A_tenant_id_without_a_mapping_cannot_fall_back_to_the_shared_context()
+    public void Tenant_id_without_mapping_cannot_fall_back_to_the_shared_context()
     {
         var tenantService = new StubTenantService { CurrentTenantId = Guid.NewGuid() };
         var requestScope = new TenantDatabaseRequestScope();
+
         using var platform = CreatePlatformContext();
         using var legacy = new ApplicationDbContextFactory().CreateDbContext([]);
         using var tenantAccessor = new TenantDatabaseContextAccessor(requestScope);
-        var context = TenantAwareApplicationDbContextProxy.Create(
-            platform,
-            legacy,
-            requestScope,
-            tenantAccessor,
-            tenantService);
+        var context = TenantAwareApplicationDbContextProxy.Create(platform, legacy, requestScope, tenantAccessor, tenantService);
 
         var exception = Assert.Throws<InvalidOperationException>(() => _ = context.Exercises);
 
@@ -96,12 +66,9 @@ public sealed class TenantDatabaseRuntimeRoutingTests
     {
         var gymId = Guid.Parse("11111111-1111-1111-1111-111111111111");
         var freelanceId = Guid.Parse("22222222-2222-2222-2222-222222222222");
-        using var gym = new TenantDbContext(new DbContextOptionsBuilder<TenantDbContext>()
-            .UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=GymIsolationModel;Trusted_Connection=True;TrustServerCertificate=True;")
-            .Options, gymId);
-        using var freelance = new TenantDbContext(new DbContextOptionsBuilder<TenantDbContext>()
-            .UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=FreelanceIsolationModel;Trusted_Connection=True;TrustServerCertificate=True;")
-            .Options, freelanceId);
+
+        using var gym = CreateTenantContext(gymId);
+        using var freelance = CreateTenantContext(freelanceId);
 
         var gymFilter = gym.Model.FindEntityType(typeof(User))!.GetQueryFilter()!;
         var freelanceFilter = freelance.Model.FindEntityType(typeof(User))!.GetQueryFilter()!;
@@ -116,29 +83,42 @@ public sealed class TenantDatabaseRuntimeRoutingTests
     }
 
     [Fact]
-    public void Tenant_context_rejects_cross_workspace_role_assignments_before_database_io()
+    public void Tenant_context_rejects_null_or_cross_workspace_role_assignments()
     {
         var tenantId = Guid.NewGuid();
-        using var context = new TenantDbContext(new DbContextOptionsBuilder<TenantDbContext>()
-            .UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=TenantWriteBoundary;Trusted_Connection=True;TrustServerCertificate=True;")
-            .Options, tenantId);
+        using var context = CreateTenantContext(tenantId);
 
         context.UserRoleAssignments.Add(new UserRoleAssignment
         {
             UserId = Guid.NewGuid(),
             RoleId = Guid.NewGuid(),
-            TenantId = Guid.NewGuid()
+            TenantId = null
         });
 
         var exception = Assert.Throws<InvalidOperationException>(() => context.SaveChanges());
 
-        Assert.Contains("does not match", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("TenantDbContext scope", exception.Message, StringComparison.Ordinal);
     }
+
+    private static TenantDatabaseResolution CreateResolution(Guid tenantId)
+        => new(
+            tenantId,
+            Guid.NewGuid(),
+            "test",
+            "tenant-db",
+            "Server=(localdb)\\MSSQLLocalDB;Database=TenantRoutingTest;Trusted_Connection=True;TrustServerCertificate=True;",
+            TenantDbContext.MigrationsAssemblyName,
+            DateTime.UtcNow);
 
     private static PlatformDbContext CreatePlatformContext()
         => new(new DbContextOptionsBuilder<PlatformDbContext>()
             .UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=PlatformRoutingTest;Trusted_Connection=True;TrustServerCertificate=True;")
             .Options);
+
+    private static TenantDbContext CreateTenantContext(Guid tenantId)
+        => new(new DbContextOptionsBuilder<TenantDbContext>()
+            .UseSqlServer($"Server=(localdb)\\MSSQLLocalDB;Database=TenantIsolation_{tenantId:N};Trusted_Connection=True;TrustServerCertificate=True;")
+            .Options, tenantId);
 
     private static DbContext GetCurrentContext(object dbSet)
         => ((IInfrastructure<IServiceProvider>)dbSet)
@@ -149,7 +129,6 @@ public sealed class TenantDatabaseRuntimeRoutingTests
     private sealed class StubTenantService : ITenantService
     {
         public Guid? CurrentTenantId { get; set; }
-
         public Task SetTenantAsync(Guid tenantId) => Task.CompletedTask;
         public Task SetTenantBySubdomainAsync(string subdomain) => Task.CompletedTask;
         public Task<bool> SetTenantByCustomDomainAsync(string host) => Task.FromResult(false);

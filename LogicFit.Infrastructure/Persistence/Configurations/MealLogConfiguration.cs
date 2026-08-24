@@ -11,6 +11,9 @@ public class MealLogConfiguration : IEntityTypeConfiguration<MealLog>
         builder.ToTable("MealLogs");
 
         builder.HasKey(e => e.Id);
+        builder.Property(e => e.MealNameSnapshot).HasMaxLength(200);
+        builder.Property(e => e.FoodNameSnapshot).HasMaxLength(200);
+        builder.Property(e => e.FoodUnitSnapshot).HasMaxLength(40);
 
         builder.HasIndex(e => e.TenantId);
         builder.HasIndex(e => e.ClientId);

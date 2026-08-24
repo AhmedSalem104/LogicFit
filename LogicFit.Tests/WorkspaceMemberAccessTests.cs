@@ -153,9 +153,9 @@ public sealed class WorkspaceMemberAccessTests
             return new TestFixture(db, tenant, currentUser, clock);
         }
 
-        public async Task<Tenant> AddGymAsync(string prefix)
+        public async Task<LogicFit.Domain.Entities.Tenant> AddGymAsync(string prefix)
         {
-            var gym = new Tenant
+            var gym = new LogicFit.Domain.Entities.Tenant
             {
                 Name = prefix,
                 Subdomain = $"{prefix}-{Guid.NewGuid():N}",

@@ -21,6 +21,20 @@ public sealed record TenantBackupDownloadGrantDto(
     DateTime ExpiresAtUtc,
     string DownloadPath);
 
+public sealed record TenantBackupInspectionDto(
+    Guid ExportId,
+    bool IsValid,
+    string Format,
+    int EntryCount,
+    int DataEntryCount,
+    int TableCount,
+    bool HasModel,
+    bool HasOrigin,
+    long SizeBytes,
+    string? Sha256,
+    DateTime InspectedAtUtc,
+    string? ErrorCode);
+
 public sealed record TenantBackupDownload(string FileName, long SizeBytes, Stream Content);
 
 public interface ITenantBackupExportService
@@ -49,6 +63,12 @@ public interface ITenantBackupExportService
         CancellationToken cancellationToken = default);
 
     Task<TenantBackupExportDto> GetAsync(
+        Guid userId,
+        Guid tenantId,
+        Guid exportId,
+        CancellationToken cancellationToken = default);
+
+    Task<TenantBackupInspectionDto> InspectAsync(
         Guid userId,
         Guid tenantId,
         Guid exportId,

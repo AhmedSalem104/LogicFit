@@ -13,6 +13,7 @@ namespace LogicFit.API.Features.Maintenance;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageBranches)]
+[Authorize(Policy = WorkspaceCapabilities.GymFacilities)]
 public class MaintenanceController : ControllerBase
 {
     private readonly IMediator _mediator;

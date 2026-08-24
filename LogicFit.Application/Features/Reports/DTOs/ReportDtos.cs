@@ -85,6 +85,7 @@ public class MonthlyRevenueDto
     public string Month { get; set; } = string.Empty;
     public decimal Revenue { get; set; }
     public int SubscriptionCount { get; set; }
+    public int DayPassCount { get; set; }
 }
 
 // Workouts Report
@@ -168,6 +169,8 @@ public class FinancialReportDto
     public decimal GrowthPercentage { get; set; }
     public decimal AverageSubscriptionValue { get; set; }
     public decimal TotalWalletBalance { get; set; }
+    public decimal DayPassRevenue { get; set; }
+    public int DayPassCount { get; set; }
     public List<MonthlyRevenueDto> MonthlyRevenue { get; set; } = new();
     public List<PaymentMethodStatsDto> PaymentMethods { get; set; } = new();
 }

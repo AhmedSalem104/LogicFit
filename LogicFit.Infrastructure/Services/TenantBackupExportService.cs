@@ -138,6 +138,59 @@ public sealed class TenantBackupExportService(
         return await ToDtoAsync(export, cancellationToken);
     }
 
+    public async Task<TenantBackupInspectionDto> InspectAsync(
+        Guid userId,
+        Guid tenantId,
+        Guid exportId,
+        CancellationToken cancellationToken = default)
+    {
+        if (tenantId == Guid.Empty || userId == Guid.Empty)
+            throw new UnauthorizedException("An authenticated workspace user is required.");
+
+        var export = await context.TenantBackupExports.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Id == exportId && x.TenantId == tenantId &&
+                x.Status == TenantBackupExportStatus.Completed && x.DatabaseBackupId.HasValue, cancellationToken)
+            ?? throw new NotFoundException("Tenant backup export", exportId);
+        var artifact = await context.DatabaseBackups.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Id == export.DatabaseBackupId!.Value && x.TenantId == tenantId &&
+                x.Status == DatabaseBackupStatus.Completed && !string.IsNullOrWhiteSpace(x.StorageKey), cancellationToken)
+            ?? throw new ConflictException("TENANT_BACKUP_EXPORT_NOT_READY");
+
+        BackupDownload download;
+        try
+        {
+            download = backupService.OpenRead(artifact.StorageKey!);
+        }
+        catch (FileNotFoundException)
+        {
+            throw new NotFoundException("Tenant backup artifact", exportId);
+        }
+
+        BacpacInspectionResult result;
+        await using (download.Content)
+        {
+            result = await BacpacPackageInspector.InspectAsync(download.Content, cancellationToken);
+        }
+
+        var inspectedAt = clock.UtcNow;
+        SecurityAuditLog.Add(context, currentUser, clock, "TenantBackupInspected", result.IsValid, userId, tenantId);
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new TenantBackupInspectionDto(
+            exportId,
+            result.IsValid,
+            "BACPAC",
+            result.EntryCount,
+            result.DataEntryCount,
+            result.TableCount,
+            result.HasModel,
+            result.HasOrigin,
+            artifact.SizeBytes,
+            artifact.Sha256,
+            inspectedAt,
+            result.ErrorCode);
+    }
+
     public async Task<TenantBackupDownloadGrantDto> CreateDownloadGrantAsync(
         Guid userId,
         Guid tenantId,

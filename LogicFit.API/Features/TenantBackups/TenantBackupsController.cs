@@ -61,6 +61,13 @@ public sealed class TenantBackupsController(
         return Ok(await exportService.GetAsync(userId, tenantId, exportId, cancellationToken));
     }
 
+    [HttpGet("exports/{exportId:guid}/inspect")]
+    public async Task<ActionResult<TenantBackupInspectionDto>> Inspect(Guid exportId, CancellationToken cancellationToken)
+    {
+        var (userId, tenantId) = GetScope();
+        return Ok(await exportService.InspectAsync(userId, tenantId, exportId, cancellationToken));
+    }
+
     [HttpPost("exports/{exportId:guid}/download-grant")]
     [EnableRateLimiting("sensitive-action")]
     public async Task<ActionResult<TenantBackupDownloadGrantDto>> CreateDownloadGrant(

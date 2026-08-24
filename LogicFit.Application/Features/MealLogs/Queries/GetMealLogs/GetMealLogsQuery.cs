@@ -6,5 +6,7 @@ namespace LogicFit.Application.Features.MealLogs.Queries.GetMealLogs;
 /// <summary>The signed-in client's logged meals for a given day (defaults to today).</summary>
 public class GetMealLogsQuery : IRequest<List<MealLogDto>>
 {
+    public Guid? ClientId { get; set; }
     public DateTime? Date { get; set; }
+    public bool AllDates { get; set; }
 }

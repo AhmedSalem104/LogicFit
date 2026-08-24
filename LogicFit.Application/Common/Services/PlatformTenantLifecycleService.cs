@@ -440,6 +440,7 @@ public sealed class PlatformTenantLifecycleService(
             Id = tenant.Id,
             Name = tenant.Name,
             Subdomain = tenant.Subdomain,
+            WorkspaceType = tenant.WorkspaceType,
             Status = tenant.Status,
             Email = tenant.Email,
             PhoneNumber = tenant.PhoneNumber,

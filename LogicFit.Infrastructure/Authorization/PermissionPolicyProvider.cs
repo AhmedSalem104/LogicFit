@@ -24,6 +24,16 @@ public class PermissionPolicyProvider : IAuthorizationPolicyProvider
 
     public Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
     {
+        if (WorkspaceCapabilities.All.Contains(policyName, StringComparer.Ordinal))
+        {
+            var workspacePolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .AddRequirements(new WorkspaceCapabilityRequirement(policyName), new ActiveTenantRequirement())
+                .Build();
+
+            return Task.FromResult<AuthorizationPolicy?>(workspacePolicy);
+        }
+
         if (Permissions.All.Contains(policyName))
         {
             var policy = new AuthorizationPolicyBuilder()

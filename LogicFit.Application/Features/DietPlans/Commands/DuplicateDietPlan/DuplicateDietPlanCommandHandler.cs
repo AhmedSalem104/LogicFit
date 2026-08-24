@@ -59,7 +59,11 @@ public class DuplicateDietPlanCommandHandler : IRequestHandler<DuplicateDietPlan
             TargetCalories = originalPlan.TargetCalories,
             TargetProtein = originalPlan.TargetProtein,
             TargetCarbs = originalPlan.TargetCarbs,
-            TargetFats = originalPlan.TargetFats
+            TargetFats = originalPlan.TargetFats,
+            CalorieGoal = originalPlan.CalorieGoal,
+            CalorieAdjustment = originalPlan.CalorieAdjustment,
+            CalculatorMetadata = originalPlan.CalculatorMetadata,
+            Notes = originalPlan.Notes
         };
 
         // Clone meals
@@ -72,7 +76,8 @@ public class DuplicateDietPlanCommandHandler : IRequestHandler<DuplicateDietPlan
                 PlanId = newPlan.Id,
                 Name = originalMeal.Name,
                 OrderIndex = originalMeal.OrderIndex,
-                Time = originalMeal.Time
+                Time = originalMeal.Time,
+                Notes = originalMeal.Notes
             };
 
             // Clone meal items
@@ -85,6 +90,9 @@ public class DuplicateDietPlanCommandHandler : IRequestHandler<DuplicateDietPlan
                     MealId = newMeal.Id,
                     FoodId = originalItem.FoodId,
                     AssignedQuantity = originalItem.AssignedQuantity,
+                    ServingUnit = originalItem.ServingUnit,
+                    Notes = originalItem.Notes,
+                    FoodServingSizeSnapshot = originalItem.FoodServingSizeSnapshot,
                     CalcCalories = originalItem.CalcCalories,
                     CalcProtein = originalItem.CalcProtein,
                     CalcCarbs = originalItem.CalcCarbs,

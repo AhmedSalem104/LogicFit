@@ -19,7 +19,12 @@ public class ProductionDeploymentContractTests
         Assert.Contains("LOGICFIT_PRODUCTION_DB_CONNECTION", workflow);
         Assert.Contains("LOGICFIT_TEST_CONNECTION_STRING", workflow);
         Assert.Contains("mcr.microsoft.com/mssql/server:2022-latest", workflow);
-        Assert.Contains("logicfit-production-migration-plan", workflow);
+        Assert.Contains("logicfit-production-migration-topology", workflow);
+        Assert.Contains("Validate-EfMigrationTopology.ps1", workflow);
+        Assert.Contains("application-compatibility.sql", workflow);
+        var migrationGate = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "Validate-EfMigrationTopology.ps1"));
+        Assert.Contains("platform.sql", migrationGate);
+        Assert.Contains("tenant.sql", migrationGate);
         Assert.Contains("tree-equivalent to origin/master", workflow);
         Assert.Contains("needs.preflight.outputs.release_sha", workflow);
         Assert.Contains("DIAGNOSE-PRODUCTION-HEALTH", workflow);
@@ -30,6 +35,28 @@ public class ProductionDeploymentContractTests
         Assert.Contains("Probe with the application SQL provider", workflow);
         Assert.Contains("diagnose-webdeploy-health.ps1", workflow);
         Assert.Contains("Compare remote database identity", workflow);
+        Assert.Contains("Assert-NoTrackedSecrets.ps1", workflow);
+        Assert.Contains("Block high and critical NuGet vulnerabilities", workflow);
+        Assert.Contains("authenticated-e2e:", workflow);
+        Assert.Contains("needs: [preflight, authenticated-e2e]", workflow);
+        Assert.Contains("LOGICFIT_E2E_PLATFORM_TOKEN", workflow);
+        Assert.Contains("Invoke-AuthenticatedReleaseE2E.ps1 -Mode Release", workflow);
+    }
+
+    [Fact]
+    public void Authenticated_release_e2e_fails_closed_on_health_and_validates_token_context()
+    {
+        var script = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "Invoke-AuthenticatedReleaseE2E.ps1"));
+
+        Assert.Contains("Assert-Health", script, StringComparison.Ordinal);
+        Assert.Contains("/health", script, StringComparison.Ordinal);
+        Assert.Contains("active-workspace list", script, StringComparison.Ordinal);
+        Assert.Contains("selected.tenantId", script, StringComparison.Ordinal);
+        Assert.Contains("LOGICFIT_E2E_TENANT_A_ID must match LOGICFIT_E2E_WORKSPACE_ID", script, StringComparison.Ordinal);
+        Assert.Contains("/api/platform/diagnostics/version", script, StringComparison.Ordinal);
+        Assert.Contains("Platform-token positive smoke check expected HTTP 200", script, StringComparison.Ordinal);
+        Assert.Contains("refreshedProfile", script, StringComparison.Ordinal);
+        Assert.Contains("$_.Exception.Response", script, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -83,22 +110,13 @@ public class ProductionDeploymentContractTests
     }
 
     [Fact]
-    public void Protected_predeployment_backup_runs_in_process_and_uploads_only_private_files()
+    public void Repository_has_a_non_logging_secret_scan_release_gate()
     {
-        var workflow = File.ReadAllText(Path.Combine(RepositoryRoot, ".github", "workflows", "protected-backup.yml"));
-        var operatorProject = File.ReadAllText(Path.Combine(RepositoryRoot, "LogicFit.Operations", "LogicFit.Operations.csproj"));
-        var uploadScript = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "upload-private-backups.ps1"));
+        var script = File.ReadAllText(Path.Combine(RepositoryRoot, "Scripts", "Assert-NoTrackedSecrets.ps1"));
 
-        Assert.Contains("CREATE-PROTECTED-BACKUP", workflow, StringComparison.Ordinal);
-        Assert.Contains("environment: production", workflow, StringComparison.Ordinal);
-        Assert.Contains("LOGICFIT_PRODUCTION_DB_CONNECTION", workflow, StringComparison.Ordinal);
-        Assert.Contains("BackupScope.FullSystem", File.ReadAllText(Path.Combine(
-            RepositoryRoot, "LogicFit.Operations", "Program.cs")), StringComparison.Ordinal);
-        Assert.Contains("SHA256.HashDataAsync", File.ReadAllText(Path.Combine(
-            RepositoryRoot, "LogicFit.Operations", "Program.cs")), StringComparison.Ordinal);
-        Assert.Contains("App_Data\\PrivateBackups", uploadScript, StringComparison.Ordinal);
-        Assert.Contains("DoNotDeleteRule", uploadScript, StringComparison.Ordinal);
-        Assert.DoesNotContain("upload-artifact", workflow, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("LogicFit.Infrastructure.csproj", operatorProject, StringComparison.Ordinal);
+        Assert.Contains("git -C $root ls-files", script, StringComparison.Ordinal);
+        Assert.Contains("Write-Host", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("Write-Output $content", script, StringComparison.Ordinal);
+        Assert.Contains("appsettings\\.production\\.json", script, StringComparison.OrdinalIgnoreCase);
     }
 }

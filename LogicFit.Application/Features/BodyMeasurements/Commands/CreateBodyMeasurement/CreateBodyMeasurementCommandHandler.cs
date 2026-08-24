@@ -39,6 +39,8 @@ public class CreateBodyMeasurementCommandHandler : IRequestHandler<CreateBodyMea
         if (!currentUserRole.HasValue)
             throw new ForbiddenException("The authenticated user is not active in this workspace.");
 
+        Validate(request);
+
         var clientId = request.ClientId;
         if (currentUserRole == UserRole.Client)
         {
@@ -97,14 +99,21 @@ public class CreateBodyMeasurementCommandHandler : IRequestHandler<CreateBodyMea
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             ClientId = clientId,
-            DateRecorded = request.DateRecorded,
+            DateRecorded = request.DateRecorded == default ? DateTime.UtcNow.Date : request.DateRecorded.Date,
             WeightKg = request.WeightKg,
+            HeightCm = request.HeightCm,
+            ChestCm = request.ChestCm,
+            WaistCm = request.WaistCm,
+            HipsCm = request.HipsCm,
+            ArmsCm = request.ArmsCm,
+            ThighsCm = request.ThighsCm,
             SkeletalMuscleMass = request.SkeletalMuscleMass,
             BodyFatMass = request.BodyFatMass,
             BodyFatPercent = request.BodyFatPercent,
             TotalBodyWater = request.TotalBodyWater,
             Bmr = request.Bmr,
             VisceralFatLevel = request.VisceralFatLevel,
+            Notes = request.Notes?.Trim(),
             InbodyImageUrl = inbodyImageUrl,
             FrontPhotoUrl = frontPhotoUrl,
             SidePhotoUrl = sidePhotoUrl,
@@ -115,5 +124,18 @@ public class CreateBodyMeasurementCommandHandler : IRequestHandler<CreateBodyMea
         await _context.SaveChangesAsync(cancellationToken);
 
         return measurement.Id;
+    }
+
+    private static void Validate(CreateBodyMeasurementCommand request)
+    {
+        if (request.WeightKg < 0 || request.WeightKg > 1000) throw new ValidationException("WeightKg", "Weight must be between 0 and 1000 kg.");
+        foreach (var (value, field) in new[]
+        {
+            (request.HeightCm, "HeightCm"), (request.ChestCm, "ChestCm"), (request.WaistCm, "WaistCm"),
+            (request.HipsCm, "HipsCm"), (request.ArmsCm, "ArmsCm"), (request.ThighsCm, "ThighsCm")
+        })
+            if (value is < 0 or > 500) throw new ValidationException(field, "The measurement must be between 0 and 500 cm.");
+        if (request.BodyFatPercent is < 0 or > 100) throw new ValidationException("BodyFatPercent", "Body fat percentage must be between 0 and 100.");
+        if (request.Notes?.Length > 1000) throw new ValidationException("Notes", "Notes cannot exceed 1000 characters.");
     }
 }

@@ -2,7 +2,7 @@
 
 > **Source of truth:** this document is generated from the API controllers by `Scripts/Export-ApiEndpointCatalog.ps1`. Do not edit endpoint rows manually; change the controller, rerun the script, and include the refreshed catalog in the same Pull Request.
 
-Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
+Generated: `2026-08-24 09:57 UTC`  |  Total endpoints: **431**
 
 ## Contract rules
 
@@ -95,7 +95,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
 - **Inputs:** Body `command`: `PlatformPasswordLoginCommand` { `Email`: string; `Password`: string }<br>Handler signature: `[FromBody] PlatformPasswordLoginCommand command`
 - **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK<br>StatusCodes.Status401Unauthorized
-- **Response schema:** `AuthResponseDto` with fields: { `UserId`: Guid; `Email`: string?; `PhoneNumber`: string?; `FullName`: string?; `Role`: string; `Roles`: IReadOnlyList<string>; `Permissions`: IReadOnlyList<string>; `TenantId`: Guid; `AccessToken`: string; `ExpiresAt`: DateTime; `MustChangePassword`: bool }<br>No response body declared.
+- **Response schema:** `AuthResponseDto` with fields: { `UserId`: Guid; `Email`: string?; `PhoneNumber`: string?; `FullName`: string?; `Role`: string; `Roles`: IReadOnlyList<string>; `Permissions`: IReadOnlyList<string>; `TenantId`: Guid; `WorkspaceType`: WorkspaceType?; `Capabilities`: IReadOnlyList<string>; `AccessToken`: string; `ExpiresAt`: DateTime; `MustChangePassword`: bool }<br>No response body declared.
 - **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
@@ -121,7 +121,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
 - **Inputs:** No request input.
 - **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK<br>StatusCodes.Status401Unauthorized
-- **Response schema:** `AuthResponseDto` with fields: { `UserId`: Guid; `Email`: string?; `PhoneNumber`: string?; `FullName`: string?; `Role`: string; `Roles`: IReadOnlyList<string>; `Permissions`: IReadOnlyList<string>; `TenantId`: Guid; `AccessToken`: string; `ExpiresAt`: DateTime; `MustChangePassword`: bool }<br>No response body declared.
+- **Response schema:** `AuthResponseDto` with fields: { `UserId`: Guid; `Email`: string?; `PhoneNumber`: string?; `FullName`: string?; `Role`: string; `Roles`: IReadOnlyList<string>; `Permissions`: IReadOnlyList<string>; `TenantId`: Guid; `WorkspaceType`: WorkspaceType?; `Capabilities`: IReadOnlyList<string>; `AccessToken`: string; `ExpiresAt`: DateTime; `MustChangePassword`: bool }<br>No response body declared.
 - **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
@@ -257,7 +257,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
 - **Inputs:** Query `status`: `DatabaseResourceStatus?`<br>Query `tenantId`: `Guid?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] DatabaseResourceStatus? status = null, [FromQuery] Guid? tenantId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = PlatformPaging.DefaultPageSize`
 - **Declared response:** Task<ActionResult<PlatformPage<PlatformDatabaseResourceDto>>>
-- **Response schema:** `Task<ActionResult<PlatformPage<PlatformDatabaseResourceDto>>>` with fields: { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }
+- **Response schema:** `Task<ActionResult<PlatformPage<PlatformDatabaseResourceDto>>>` with fields: { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
@@ -268,9 +268,9 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
 - **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
-- **Inputs:** Body `request`: `CreateDatabaseResourceRequest` { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }<br>Handler signature: `[FromBody] CreateDatabaseResourceRequest request`
+- **Inputs:** Body `request`: `CreateDatabaseResourceRequest` { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }<br>Handler signature: `[FromBody] CreateDatabaseResourceRequest request`
 - **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
-- **Response schema:** `Task<ActionResult<PlatformDatabaseResourceDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }
+- **Response schema:** `Task<ActionResult<PlatformDatabaseResourceDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
@@ -296,7 +296,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
-- **Response schema:** `Task<ActionResult<PlatformDatabaseResourceDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }
+- **Response schema:** `Task<ActionResult<PlatformDatabaseResourceDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
@@ -307,13 +307,13 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
 - **Business benefit:** Corrects or configures data without creating duplicates or breaking existing relationships.
-- **Inputs:** Body `request`: `UpdateDatabaseResourceRequest` { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }<br>Handler signature: `Guid id, [FromBody] UpdateDatabaseResourceRequest request`
+- **Inputs:** Body `request`: `UpdateDatabaseResourceRequest` { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }<br>Handler signature: `Guid id, [FromBody] UpdateDatabaseResourceRequest request`
 - **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
-- **Response schema:** `Task<ActionResult<PlatformDatabaseResourceDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }
+- **Response schema:** `Task<ActionResult<PlatformDatabaseResourceDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate input, isolation, and RowVersion where required; return 400 for validation and 409 for conflicts.
 
-#### `POST /api/platform/database-resources/{id:guid}/backup` - `Backup`
+#### `POST /api/platform/database-resources/{id:guid}/backup` - `CreateBackup`
 
 - **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
 - **Business purpose:** Database resource allocation, connectivity, migrations, and mapping.
@@ -335,7 +335,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult<DatabaseResourceOperationDto>>
-- **Response schema:** `Task<ActionResult<DatabaseResourceOperationDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }
+- **Response schema:** `Task<ActionResult<DatabaseResourceOperationDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
@@ -346,9 +346,9 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
 - **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
-- **Inputs:** Body `request`: `RepairDatabaseResourceConnectionRequest` { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }<br>Handler signature: `Guid id, [FromBody] RepairDatabaseResourceConnectionRequest request`
+- **Inputs:** Body `request`: `RepairDatabaseResourceConnectionRequest` { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }<br>Handler signature: `Guid id, [FromBody] RepairDatabaseResourceConnectionRequest request`
 - **Declared response:** Task<ActionResult<DatabaseResourceOperationDto>>
-- **Response schema:** `Task<ActionResult<DatabaseResourceOperationDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }
+- **Response schema:** `Task<ActionResult<DatabaseResourceOperationDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
@@ -359,11 +359,24 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
-- **Inputs:** Body `request`: `SetDatabaseResourceStatusRequest` { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }<br>Handler signature: `Guid id, [FromBody] SetDatabaseResourceStatusRequest request`
+- **Inputs:** Body `request`: `SetDatabaseResourceStatusRequest` { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }<br>Handler signature: `Guid id, [FromBody] SetDatabaseResourceStatusRequest request`
 - **Declared response:** Task<ActionResult<PlatformDatabaseResourceDto>>
-- **Response schema:** `Task<ActionResult<PlatformDatabaseResourceDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }
+- **Response schema:** `Task<ActionResult<PlatformDatabaseResourceDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
+
+#### `POST /api/platform/database-resources/{id:guid}/test-connection` - `TestStoredConnection`
+
+- **Access:** JWT + Policy: `Permissions.ManagePlatformBackups`
+- **Business purpose:** Database resource allocation, connectivity, migrations, and mapping.
+- **Operation profile:** `Create / Command`
+- **Why it matters:** Creates an entity or executes a command inside a defined business module.
+- **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<DatabaseConnectionTestDto>>
+- **Response schema:** `Task<ActionResult<DatabaseConnectionTestDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
 #### `POST /api/platform/database-resources/test-connection` - `TestConnection`
 
@@ -372,9 +385,9 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
 - **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
-- **Inputs:** Body `request`: `DatabaseConnectionTestRequest` { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }<br>Handler signature: `[FromBody] DatabaseConnectionTestRequest request`
+- **Inputs:** Body `request`: `DatabaseConnectionTestRequest` { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }<br>Handler signature: `[FromBody] DatabaseConnectionTestRequest request`
 - **Declared response:** Task<ActionResult<DatabaseConnectionTestDto>>
-- **Response schema:** `Task<ActionResult<DatabaseConnectionTestDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `Provider`: string; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int; `LastBackupStatus`: string?; `LastBackupCompletedAtUtc`: DateTime?; `HasProtectedConnection`: bool }
+- **Response schema:** `Task<ActionResult<DatabaseConnectionTestDto>>` with fields: { `Id`: Guid; `ResourceCode`: string; `DatabaseName`: string; `Provider`: string; `ServerKey`: string?; `ServerHost`: string?; `ServerPort`: int?; `Status`: DatabaseResourceStatus; `LifecycleStatus`: string; `TenantId`: Guid?; `TenantName`: string?; `WorkspaceType`: string?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `SubscriptionEndDate`: DateTime?; `ProvisioningStatus`: ProvisioningJobStatus?; `ProvisioningError`: string?; `ReservedAtUtc`: DateTime?; `AssignedAtUtc`: DateTime?; `LastHealthCheckAtUtc`: DateTime?; `SizeBytes`: long?; `SchemaVersion`: string?; `LastError`: string?; `BackupCount`: int }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
@@ -724,9 +737,35 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
 - **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
-- **Inputs:** Handler signature: `Guid id`
+- **Inputs:** Query `version`: `int?`<br>Handler signature: `Guid id, [FromQuery] int? version`
 - **Declared response:** Task<IActionResult>
 - **Response schema:** `Task<IActionResult>`; body is action-specific or a file/blob.
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
+
+#### `POST /api/platform/payment-requests/{id:guid}/proof` - `UploadProof`
+
+- **Access:** JWT + Policy: `Permissions.ManagePaymentRequests`
+- **Business purpose:** Payments, invoices, subscriptions, and financial transitions.
+- **Operation profile:** `Create / Command`
+- **Why it matters:** Creates an entity or executes a command inside a defined business module.
+- **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
+- **Inputs:** Handler signature: `Guid id, [FromForm(Name = "proof")] IFormFile? proof`
+- **Declared response:** typeof(PaymentRequestDto), StatusCodes.Status200OK
+- **Response schema:** `PaymentRequestDto` with fields: { `Id`: Guid; `TenantId`: Guid; `TenantName`: string?; `PlanId`: Guid; `PlanName`: string?; `TenantSubscriptionId`: Guid?; `ApplicationRequestId`: Guid?; `IdentityAccountId`: Guid?; `BillingCycle`: BillingCycle; `PlanSnapshotJson`: string?; `ProofVersion`: int; `Operation`: PaymentRequestOperation; `Amount`: decimal; `Currency`: string; `PaymentMethodId`: Guid?; `TransactionNumber`: string?; `PaymentDate`: DateTime?; `ProofFileUrl`: string?; `Notes`: string?; `Status`: PaymentRequestStatus; `ReviewedBy`: string?; `ReviewedAt`: DateTime?; `RejectReason`: string?; `CreatedAt`: DateTime }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
+
+#### `GET /api/platform/payment-requests/{id:guid}/proofs` - `ProofHistory`
+
+- **Access:** JWT + Policy: `Permissions.ManagePaymentRequests`
+- **Business purpose:** Payments, invoices, subscriptions, and financial transitions.
+- **Operation profile:** `Read / Query`
+- **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
+- **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** typeof(IReadOnlyList<PaymentProofDto>), StatusCodes.Status200OK
+- **Response schema:** `IReadOnlyList<PaymentProofDto>` with fields: { `Id`: Guid; `Version`: int; `OriginalFileName`: string; `ContentType`: string; `SizeBytes`: long; `Sha256`: string; `IsCurrent`: bool; `UploadedBy`: string?; `UploadedAtUtc`: DateTime }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
@@ -1011,7 +1050,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
 - **Inputs:** Body `command`: `CreateTenantWithOwnerCommand` { `Name`: string; `Subdomain`: string?; `Email`: string?; `PhoneNumber`: string?; `OwnerEmail`: string; `OwnerPhoneNumber`: string?; `OwnerPassword`: string; `OwnerFullName`: string }<br>Handler signature: `[FromHeader(Name = "Idempotency-Key")] string? idempotencyKey, [FromBody] CreateTenantWithOwnerCommand command`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status201Created<br>StatusCodes.Status400BadRequest<br>StatusCodes.Status409Conflict<br>StatusCodes.Status503ServiceUnavailable
-- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }<br>No response body declared.<br>No response body declared.<br>No response body declared.
+- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `WorkspaceType`: WorkspaceType; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }<br>No response body declared.<br>No response body declared.<br>No response body declared.
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
@@ -1024,7 +1063,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
-- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }
+- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `WorkspaceType`: WorkspaceType; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
@@ -1037,7 +1076,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
-- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }
+- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `WorkspaceType`: WorkspaceType; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
@@ -1050,7 +1089,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
-- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }
+- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `WorkspaceType`: WorkspaceType; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
@@ -1102,7 +1141,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
-- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }
+- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `WorkspaceType`: WorkspaceType; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
@@ -1115,7 +1154,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
-- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }
+- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `WorkspaceType`: WorkspaceType; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
@@ -1128,7 +1167,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** typeof(PlatformTenantDto), StatusCodes.Status200OK
-- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }
+- **Response schema:** `PlatformTenantDto` with fields: { `Id`: Guid; `Name`: string; `Subdomain`: string?; `WorkspaceType`: WorkspaceType; `Status`: TenantStatus; `Email`: string?; `PhoneNumber`: string?; `MembersCount`: int; `CreatedAt`: DateTime; `IsDeleted`: bool; `DeletedAt`: DateTime? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
@@ -1143,7 +1182,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
 - **Inputs:** Query `applicationType`: `ApplicationType?`<br>Query `status`: `ApplicationRequestStatus?`<br>Query `paymentStatus`: `PaymentRequestStatus?`<br>Query `workspaceStatus`: `TenantStatus?`<br>Query `subscriptionStatus`: `TenantSubscriptionStatus?`<br>Query `provisioningStatus`: `ProvisioningJobStatus?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] ApplicationType? applicationType, [FromQuery] ApplicationRequestStatus? status, [FromQuery] PaymentRequestStatus? paymentStatus, [FromQuery] TenantStatus? workspaceStatus, [FromQuery] TenantSubscriptionStatus? subscriptionStatus, [FromQuery] ProvisioningJobStatus? provisioningStatus, [FromQuery] int page = 1, [FromQuery] int pageSize = 20`
 - **Declared response:** typeof(PagedResult<PlatformApplicationDto>), StatusCodes.Status200OK
-- **Response schema:** `PagedResult<PlatformApplicationDto>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string?; `ProvisioningStatus`: ProvisioningJobStatus?; `UserJourneyStage`: string }
+- **Response schema:** `PagedResult<PlatformApplicationDto>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `HasPaymentProof`: bool; `PaymentProofVersion`: int; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
@@ -1169,7 +1208,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
 - **Inputs:** Body `request`: `ConcurrencyRequest` { `RowVersion`: string; `Message`: string; `RequestedFields`: IReadOnlyList<string>; `Reason`: string }<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
 - **Declared response:** Task<ActionResult<PlatformApplicationDto>>
-- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string?; `ProvisioningStatus`: ProvisioningJobStatus?; `UserJourneyStage`: string }
+- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `HasPaymentProof`: bool; `PaymentProofVersion`: int; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
@@ -1182,7 +1221,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
 - **Inputs:** Body `request`: `ConcurrencyRequest` { `RowVersion`: string; `Message`: string; `RequestedFields`: IReadOnlyList<string>; `Reason`: string }<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
 - **Declared response:** Task<ActionResult<PlatformApplicationDto>>
-- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string?; `ProvisioningStatus`: ProvisioningJobStatus?; `UserJourneyStage`: string }
+- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `HasPaymentProof`: bool; `PaymentProofVersion`: int; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
@@ -1195,7 +1234,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
 - **Inputs:** Body `request`: `ConcurrencyRequest` { `RowVersion`: string; `Message`: string; `RequestedFields`: IReadOnlyList<string>; `Reason`: string }<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
 - **Declared response:** Task<ActionResult<PlatformApplicationDto>>
-- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string?; `ProvisioningStatus`: ProvisioningJobStatus?; `UserJourneyStage`: string }
+- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `HasPaymentProof`: bool; `PaymentProofVersion`: int; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
@@ -1208,7 +1247,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
 - **Inputs:** Body `request`: `RejectRequest` { `RowVersion`: string; `Message`: string; `RequestedFields`: IReadOnlyList<string>; `Reason`: string }<br>Handler signature: `Guid id, [FromBody] RejectRequest request`
 - **Declared response:** Task<ActionResult<PlatformApplicationDto>>
-- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string?; `ProvisioningStatus`: ProvisioningJobStatus?; `UserJourneyStage`: string }
+- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `HasPaymentProof`: bool; `PaymentProofVersion`: int; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
@@ -1221,7 +1260,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
 - **Inputs:** Body `request`: `RequestInformationRequest` { `RowVersion`: string; `Message`: string; `RequestedFields`: IReadOnlyList<string>; `Reason`: string }<br>Handler signature: `Guid id, [FromBody] RequestInformationRequest request`
 - **Declared response:** Task<ActionResult<PlatformApplicationDto>>
-- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string?; `ProvisioningStatus`: ProvisioningJobStatus?; `UserJourneyStage`: string }
+- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `HasPaymentProof`: bool; `PaymentProofVersion`: int; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
@@ -1234,7 +1273,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult<PlatformApplicationDto>>
-- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string?; `ProvisioningStatus`: ProvisioningJobStatus?; `UserJourneyStage`: string }
+- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `HasPaymentProof`: bool; `PaymentProofVersion`: int; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
@@ -1247,7 +1286,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Preserves lifecycle consistency, auditability, isolation, and idempotency for approval, provisioning, or suspension.
 - **Inputs:** Body `request`: `ConcurrencyRequest` { `RowVersion`: string; `Message`: string; `RequestedFields`: IReadOnlyList<string>; `Reason`: string }<br>Handler signature: `Guid id, [FromBody] ConcurrencyRequest request`
 - **Declared response:** Task<ActionResult<PlatformApplicationDto>>
-- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string?; `ProvisioningStatus`: ProvisioningJobStatus?; `UserJourneyStage`: string }
+- **Response schema:** `Task<ActionResult<PlatformApplicationDto>>` with fields: { `Id`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `ApplicationStatus`: ApplicationRequestStatus; `ApplicantEmail`: string; `ApplicantPhoneNumber`: string?; `WorkspaceIdentifier`: string?; `RequestedRole`: UserRole?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string>; `DecisionReason`: string?; `SubmittedAt`: DateTime?; `ReviewedAt`: DateTime?; `ReviewedBy`: string?; `ProvisionedWorkspaceId`: Guid?; `WorkspaceType`: WorkspaceType?; `PaymentRequestId`: Guid?; `PaymentStatus`: PaymentRequestStatus?; `HasPaymentProof`: bool; `PaymentProofVersion`: int; `WorkspaceStatus`: TenantStatus?; `SubscriptionStatus`: TenantSubscriptionStatus?; `DatabaseStatus`: DatabaseResourceStatus?; `DatabaseStatusCode`: string? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
@@ -1320,11 +1359,65 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate current state, RowVersion/idempotency, and authorization; return 409 for state conflicts.
 
+### AthleteCheckins
+
+#### `GET /api/clients/{clientId:guid}/checkins` - `Get`
+
+- **Access:** JWT required
+- **Business purpose:** LogicFit API module `AthleteCheckins`.
+- **Operation profile:** `Read / Query`
+- **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
+- **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
+- **Inputs:** Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `Guid clientId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
+- **Declared response:** typeof(List<AthleteCheckinDto>), StatusCodes.Status200OK
+- **Response schema:** `List<AthleteCheckinDto>` with fields: { `Id`: Guid; `TenantId`: Guid; `ClientId`: Guid; `ClientName`: string?; `CheckinDate`: DateTime; `SleepHours`: double?; `SleepQuality`: int?; `Fatigue`: int?; `Soreness`: int?; `Stress`: int?; `Mood`: int?; `RestingHeartRate`: int?; `Hrv`: double?; `BodyweightKg`: double?; `Notes`: string? }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
+
+#### `POST /api/clients/{clientId:guid}/checkins` - `Create`
+
+- **Access:** JWT required
+- **Business purpose:** LogicFit API module `AthleteCheckins`.
+- **Operation profile:** `Create / Command`
+- **Why it matters:** Creates an entity or executes a command inside a defined business module.
+- **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
+- **Inputs:** Body `command`: `CreateAthleteCheckinCommand` { `ClientId`: Guid; `CheckinDate`: DateTime; `SleepHours`: double?; `SleepQuality`: int?; `Fatigue`: int?; `Soreness`: int?; `Stress`: int?; `Mood`: int?; `RestingHeartRate`: int?; `Hrv`: double?; `BodyweightKg`: double?; `Notes`: string? }<br>Handler signature: `Guid clientId, [FromBody] CreateAthleteCheckinCommand command`
+- **Declared response:** typeof(Guid), StatusCodes.Status201Created
+- **Response schema:** `Guid`; concrete properties are not declared in a discoverable DTO.
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
+
+#### `DELETE /api/clients/{clientId:guid}/checkins/{id:guid}` - `Delete`
+
+- **Access:** JWT required
+- **Business purpose:** LogicFit API module `AthleteCheckins`.
+- **Operation profile:** `Delete / Remove`
+- **Why it matters:** Removes a configuration record or relationship that the domain explicitly allows to be deleted.
+- **Business benefit:** Cleans non-historical configuration without deleting immutable financial or operational history.
+- **Inputs:** Handler signature: `Guid clientId, Guid id`
+- **Declared response:** Task<ActionResult>
+- **Response schema:** `Task<ActionResult>`; body is action-specific or a file/blob.
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Enforce authorization, isolation, and duplicate prevention; use lifecycle or reversal for historical records.
+
+#### `PUT /api/clients/{clientId:guid}/checkins/{id:guid}` - `Update`
+
+- **Access:** JWT required
+- **Business purpose:** LogicFit API module `AthleteCheckins`.
+- **Operation profile:** `Update / Patch`
+- **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
+- **Business benefit:** Corrects or configures data without creating duplicates or breaking existing relationships.
+- **Inputs:** Body `command`: `UpdateAthleteCheckinCommand` { `Id`: Guid; `ClientId`: Guid; `SleepHours`: double?; `SleepQuality`: int?; `Fatigue`: int?; `Soreness`: int?; `Stress`: int?; `Mood`: int?; `RestingHeartRate`: int?; `Hrv`: double?; `BodyweightKg`: double?; `Notes`: string? }<br>Handler signature: `Guid clientId, Guid id, [FromBody] UpdateAthleteCheckinCommand command`
+- **Declared response:** Task<ActionResult>
+- **Response schema:** `Task<ActionResult>`; body is action-specific or a file/blob.
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Validate input, isolation, and RowVersion where required; return 400 for validation and 409 for conflicts.
+
 ### Attendance
 
 #### `GET /api/Attendance` - `GetAttendances`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -1337,7 +1430,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `DELETE /api/Attendance/{id}` - `DeleteAttendance`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.
@@ -1350,7 +1443,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Attendance/{id}/check-out` - `CheckOut`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.
@@ -1363,7 +1456,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Attendance/check-in` - `CheckIn`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.
@@ -1376,7 +1469,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Attendance/summary` - `GetAttendanceSummary`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -1424,7 +1517,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
 - **Inputs:** No request input.
 - **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK<br>StatusCodes.Status401Unauthorized
-- **Response schema:** `AuthResponseDto` with fields: { `UserId`: Guid; `Email`: string?; `PhoneNumber`: string?; `FullName`: string?; `Role`: string; `Roles`: IReadOnlyList<string>; `Permissions`: IReadOnlyList<string>; `TenantId`: Guid; `AccessToken`: string; `ExpiresAt`: DateTime; `MustChangePassword`: bool }<br>No response body declared.
+- **Response schema:** `AuthResponseDto` with fields: { `UserId`: Guid; `Email`: string?; `PhoneNumber`: string?; `FullName`: string?; `Role`: string; `Roles`: IReadOnlyList<string>; `Permissions`: IReadOnlyList<string>; `TenantId`: Guid; `WorkspaceType`: WorkspaceType?; `Capabilities`: IReadOnlyList<string>; `AccessToken`: string; `ExpiresAt`: DateTime; `MustChangePassword`: bool }<br>No response body declared.
 - **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
@@ -1439,7 +1532,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
 - **Inputs:** Query `clientId`: `Guid?`<br>Query `fromDate`: `DateTime?`<br>Query `toDate`: `DateTime?`<br>Handler signature: `[FromQuery] Guid? clientId, [FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate`
 - **Declared response:** Task<ActionResult<List<BodyMeasurementDto>>>
-- **Response schema:** `Task<ActionResult<List<BodyMeasurementDto>>>` with fields: { `Id`: Guid; `TenantId`: Guid; `ClientId`: Guid; `ClientName`: string?; `DateRecorded`: DateTime; `WeightKg`: double?; `SkeletalMuscleMass`: double?; `BodyFatMass`: double?; `BodyFatPercent`: double?; `TotalBodyWater`: double?; `Bmr`: double?; `VisceralFatLevel`: int?; `InbodyImageUrl`: string?; `FrontPhotoUrl`: string?; `SidePhotoUrl`: string?; `BackPhotoUrl`: string? }
+- **Response schema:** `Task<ActionResult<List<BodyMeasurementDto>>>` with fields: { `Id`: Guid; `TenantId`: Guid; `ClientId`: Guid; `ClientName`: string?; `DateRecorded`: DateTime; `WeightKg`: double?; `HeightCm`: double?; `ChestCm`: double?; `WaistCm`: double?; `HipsCm`: double?; `ArmsCm`: double?; `ThighsCm`: double?; `SkeletalMuscleMass`: double?; `BodyFatMass`: double?; `BodyFatPercent`: double?; `TotalBodyWater`: double?; `Bmr`: double?; `VisceralFatLevel`: int?; `Notes`: string?; `InbodyImageUrl`: string?; `FrontPhotoUrl`: string?; `SidePhotoUrl`: string?; `BackPhotoUrl`: string? }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
@@ -1450,7 +1543,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
 - **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
-- **Inputs:** Body `command`: `CreateBodyMeasurementCommand` { `ClientId`: Guid; `DateRecorded`: DateTime; `WeightKg`: double; `SkeletalMuscleMass`: double?; `BodyFatMass`: double?; `BodyFatPercent`: double?; `TotalBodyWater`: double?; `Bmr`: double?; `VisceralFatLevel`: int? }<br>Handler signature: `[FromBody] CreateBodyMeasurementCommand command`
+- **Inputs:** Body `command`: `CreateBodyMeasurementCommand` { `ClientId`: Guid; `DateRecorded`: DateTime; `WeightKg`: double; `HeightCm`: double?; `ChestCm`: double?; `WaistCm`: double?; `HipsCm`: double?; `ArmsCm`: double?; `ThighsCm`: double?; `SkeletalMuscleMass`: double?; `BodyFatMass`: double?; `BodyFatPercent`: double?; `TotalBodyWater`: double?; `Bmr`: double?; `VisceralFatLevel`: int?; `Notes`: string? }<br>Handler signature: `[FromBody] CreateBodyMeasurementCommand command`
 - **Declared response:** Task<ActionResult<Guid>>
 - **Response schema:** `Task<ActionResult<Guid>>`; body is action-specific or a file/blob.
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
@@ -1469,6 +1562,19 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Enforce authorization, isolation, and duplicate prevention; use lifecycle or reversal for historical records.
 
+#### `PUT /api/BodyMeasurements/{id}` - `UpdateBodyMeasurement`
+
+- **Access:** JWT required
+- **Business purpose:** Training, nutrition, measurements, and content libraries.
+- **Operation profile:** `Update / Patch`
+- **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
+- **Business benefit:** Corrects or configures data without creating duplicates or breaking existing relationships.
+- **Inputs:** Body `command`: `UpdateBodyMeasurementCommand` { `Id`: Guid; `WeightKg`: double?; `HeightCm`: double?; `ChestCm`: double?; `WaistCm`: double?; `HipsCm`: double?; `ArmsCm`: double?; `ThighsCm`: double?; `SkeletalMuscleMass`: double?; `BodyFatMass`: double?; `BodyFatPercent`: double?; `TotalBodyWater`: double?; `Bmr`: double?; `VisceralFatLevel`: int?; `InbodyImageUrl`: string?; `FrontPhotoUrl`: string?; `SidePhotoUrl`: string?; `BackPhotoUrl`: string?; `Notes`: string? }<br>Handler signature: `Guid id, [FromBody] UpdateBodyMeasurementCommand command`
+- **Declared response:** Task<ActionResult>
+- **Response schema:** `Task<ActionResult>`; body is action-specific or a file/blob.
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Validate input, isolation, and RowVersion where required; return 400 for validation and 409 for conflicts.
+
 #### `POST /api/BodyMeasurements/with-images` - `CreateBodyMeasurementWithImages`
 
 - **Access:** JWT required
@@ -1486,7 +1592,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Branches` - `GetBranches`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -1499,7 +1605,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Branches` - `CreateBranch`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -1512,7 +1618,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `DELETE /api/Branches/{id}` - `DeleteBranch`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Delete / Remove`
 - **Why it matters:** Removes a configuration record or relationship that the domain explicitly allows to be deleted.
@@ -1525,7 +1631,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Branches/{id}` - `GetBranch`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -1538,7 +1644,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/Branches/{id}` - `UpdateBranch`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -1551,7 +1657,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/Branches/{id}/operating-hours` - `SetOperatingHours`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -1754,7 +1860,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/ClassSchedules` - `GetSchedules`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -1767,7 +1873,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/ClassSchedules` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -1780,7 +1886,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/ClassSchedules/{id}/book` - `Book`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -1793,7 +1899,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/ClassSchedules/{id}/cancel` - `Cancel`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -1806,7 +1912,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/ClassSchedules/{id}/enrollments` - `GetEnrollments`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -1819,7 +1925,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/ClassSchedules/enrollments/{enrollmentId}/attended` - `MarkAttended`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.
@@ -1832,7 +1938,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/ClassSchedules/enrollments/{enrollmentId}/cancel` - `CancelEnrollment`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -1949,6 +2055,60 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
+### ClientFeedback
+
+#### `GET /api/member-feedback` - `List`
+
+- **Access:** JWT + Policies: `Permissions.ViewMembers` AND `WorkspaceCapabilities.GymExperience`
+- **Business purpose:** Client management, trainee portal, and coach relationships.
+- **Operation profile:** `Read / Query`
+- **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
+- **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
+- **Inputs:** Query `rating`: `int?`<br>Query `noteType`: `string?`<br>Query `status`: `string?`<br>Query `search`: `string?`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] int? rating, [FromQuery] string? noteType, [FromQuery] string? status, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20`
+- **Declared response:** Task<ActionResult<ClientFeedbackListResponse>>
+- **Response schema:** `Task<ActionResult<ClientFeedbackListResponse>>` with fields: { `Items`: IReadOnlyList<ClientFeedbackDto>; `Total`: int; `Page`: int; `PageSize`: int }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
+
+#### `POST /api/member-feedback` - `Submit`
+
+- **Access:** JWT required
+- **Business purpose:** Client management, trainee portal, and coach relationships.
+- **Operation profile:** `Create / Command`
+- **Why it matters:** Creates an entity or executes a command inside a defined business module.
+- **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
+- **Inputs:** Handler signature: `SubmitClientFeedbackRequest request`
+- **Declared response:** Task<ActionResult<ClientFeedbackDto>>
+- **Response schema:** `Task<ActionResult<ClientFeedbackDto>>` with fields: { `Id`: Guid; `ClientId`: Guid; `ClientName`: string?; `Email`: string?; `Rating`: int; `NoteType`: string; `Message`: string; `Status`: string; `SubmittedAt`: DateTime; `ReviewedAt`: DateTime? }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
+
+#### `POST /api/member-feedback/{id:guid}/review` - `Review`
+
+- **Access:** JWT + Policies: `Permissions.ManageMembers` AND `WorkspaceCapabilities.GymExperience`
+- **Business purpose:** Client management, trainee portal, and coach relationships.
+- **Operation profile:** `Create / Command`
+- **Why it matters:** Creates an entity or executes a command inside a defined business module.
+- **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
+- **Inputs:** Handler signature: `Guid id, ReviewClientFeedbackRequest request`
+- **Declared response:** Task<ActionResult<ClientFeedbackDto>>
+- **Response schema:** `Task<ActionResult<ClientFeedbackDto>>` with fields: { `Id`: Guid; `ClientId`: Guid; `ClientName`: string?; `Email`: string?; `Rating`: int; `NoteType`: string; `Message`: string; `Status`: string; `SubmittedAt`: DateTime; `ReviewedAt`: DateTime? }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
+
+#### `GET /api/member-feedback/summary` - `Summary`
+
+- **Access:** JWT + Policies: `Permissions.ViewMembers` AND `WorkspaceCapabilities.GymExperience`
+- **Business purpose:** Client management, trainee portal, and coach relationships.
+- **Operation profile:** `Read / Query`
+- **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
+- **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
+- **Inputs:** No request input.
+- **Declared response:** Task<ActionResult<ClientFeedbackSummaryDto>>
+- **Response schema:** `Task<ActionResult<ClientFeedbackSummaryDto>>` with fields: { `Total`: int; `AverageRating`: double; `NewCount`: int; `ResolvedCount`: int }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
+
 ### Clients
 
 #### `GET /api/Clients` - `GetClients`
@@ -2015,6 +2175,19 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Response schema:** `Task<ActionResult>`; body is action-specific or a file/blob.
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate input, isolation, and RowVersion where required; return 400 for validation and 409 for conflicts.
+
+#### `GET /api/Clients/{id}/training-overview` - `GetTrainingOverview`
+
+- **Access:** JWT required
+- **Business purpose:** Client management, trainee portal, and coach relationships.
+- **Operation profile:** `Read / Query`
+- **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
+- **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult<ClientTrainingOverviewDto>>
+- **Response schema:** `Task<ActionResult<ClientTrainingOverviewDto>>` with fields: { `Client`: ClientDto; `Subscriptions`: List<ClientSubscriptionDto>; `WorkoutPrograms`: List<WorkoutProgramDto>; `DietPlans`: List<DietPlanDto>; `Measurements`: List<BodyMeasurementDto>; `Checkins`: List<AthleteCheckinDto>; `WorkoutSessions`: List<WorkoutSessionDto>; `MealLogs`: List<MealLogDto> }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
 #### `POST /api/Clients/onboard` - `OnboardClient`
 
@@ -2206,7 +2379,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Commissions` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageFinance`
+- **Access:** JWT + Policies: `Permissions.ManageFinance` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -2219,7 +2392,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Commissions/rules` - `GetRules`
 
-- **Access:** JWT + Policy: `Permissions.ManageFinance`
+- **Access:** JWT + Policies: `Permissions.ManageFinance` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -2232,7 +2405,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Commissions/rules` - `CreateRule`
 
-- **Access:** JWT + Policy: `Permissions.ManageFinance`
+- **Access:** JWT + Policies: `Permissions.ManageFinance` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -2310,6 +2483,125 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
+### DayPasses
+
+#### `GET /api/day-passes` - `GetDayPasses`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Business purpose:** LogicFit API module `DayPasses`.
+- **Operation profile:** `Read / Query`
+- **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
+- **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
+- **Inputs:** Query `from`: `DateTime?`<br>Query `to`: `DateTime?`<br>Query `typeCode`: `string?`<br>Query `paymentMethod`: `PaymentMethod?`<br>Query `search`: `string?`<br>Query `includeVoided`: `bool`<br>Query `page`: `int`<br>Query `pageSize`: `int`<br>Handler signature: `[FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] string? typeCode, [FromQuery] PaymentMethod? paymentMethod, [FromQuery] string? search, [FromQuery] bool includeVoided = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 20`
+- **Declared response:** Task<ActionResult<DayPassListResponse>>
+- **Response schema:** `Task<ActionResult<DayPassListResponse>>` with fields: { `VisitorName`: string?; `VisitorPhone`: string?; `TypeCode`: string; `PaymentMethod`: PaymentMethod?; `VisitDate`: DateTime?; `Notes`: string?; `Types`: List<DayPassPricingInput>; `Code`: string?; `Name`: string?; `Price`: decimal; `IsActive`: bool; `SortOrder`: int }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
+
+#### `POST /api/day-passes` - `Create`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Business purpose:** LogicFit API module `DayPasses`.
+- **Operation profile:** `Create / Command`
+- **Why it matters:** Creates an entity or executes a command inside a defined business module.
+- **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
+- **Inputs:** Handler signature: `CreateDayPassRequest request`
+- **Declared response:** Task<ActionResult<DayPassDto>>
+- **Response schema:** `Task<ActionResult<DayPassDto>>` with fields: { `VisitorName`: string?; `VisitorPhone`: string?; `TypeCode`: string; `PaymentMethod`: PaymentMethod?; `VisitDate`: DateTime?; `Notes`: string?; `Types`: List<DayPassPricingInput>; `Code`: string?; `Name`: string?; `Price`: decimal; `IsActive`: bool; `SortOrder`: int }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
+
+#### `DELETE /api/day-passes/{id:guid}` - `Delete`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Business purpose:** LogicFit API module `DayPasses`.
+- **Operation profile:** `Delete / Remove`
+- **Why it matters:** Removes a configuration record or relationship that the domain explicitly allows to be deleted.
+- **Business benefit:** Cleans non-historical configuration without deleting immutable financial or operational history.
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult>
+- **Response schema:** `Task<ActionResult>`; body is action-specific or a file/blob.
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Enforce authorization, isolation, and duplicate prevention; use lifecycle or reversal for historical records.
+
+#### `PUT /api/day-passes/{id:guid}` - `Update`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Business purpose:** LogicFit API module `DayPasses`.
+- **Operation profile:** `Update / Patch`
+- **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
+- **Business benefit:** Corrects or configures data without creating duplicates or breaking existing relationships.
+- **Inputs:** Handler signature: `Guid id, UpdateDayPassRequest request`
+- **Declared response:** Task<ActionResult<DayPassDto>>
+- **Response schema:** `Task<ActionResult<DayPassDto>>` with fields: { `VisitorName`: string?; `VisitorPhone`: string?; `TypeCode`: string; `PaymentMethod`: PaymentMethod?; `VisitDate`: DateTime?; `Notes`: string?; `Types`: List<DayPassPricingInput>; `Code`: string?; `Name`: string?; `Price`: decimal; `IsActive`: bool; `SortOrder`: int }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Validate input, isolation, and RowVersion where required; return 400 for validation and 409 for conflicts.
+
+#### `POST /api/day-passes/{id:guid}/void` - `Void`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Business purpose:** LogicFit API module `DayPasses`.
+- **Operation profile:** `Create / Command`
+- **Why it matters:** Creates an entity or executes a command inside a defined business module.
+- **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult>
+- **Response schema:** `Task<ActionResult>`; body is action-specific or a file/blob.
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
+
+#### `POST /api/day-passes/{id:guid}/whatsapp-opened` - `MarkWhatsappOpened`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Business purpose:** LogicFit API module `DayPasses`.
+- **Operation profile:** `Create / Command`
+- **Why it matters:** Creates an entity or executes a command inside a defined business module.
+- **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
+- **Inputs:** Handler signature: `Guid id`
+- **Declared response:** Task<ActionResult>
+- **Response schema:** `Task<ActionResult>`; body is action-specific or a file/blob.
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
+
+#### `GET /api/day-passes/pricing` - `GetPricing`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Business purpose:** LogicFit API module `DayPasses`.
+- **Operation profile:** `Read / Query`
+- **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
+- **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
+- **Inputs:** No request input.
+- **Declared response:** Task<ActionResult<IReadOnlyList<DayPassTypeDto>>>
+- **Response schema:** `Task<ActionResult<IReadOnlyList<DayPassTypeDto>>>` with fields: { `VisitorName`: string?; `VisitorPhone`: string?; `TypeCode`: string; `PaymentMethod`: PaymentMethod?; `VisitDate`: DateTime?; `Notes`: string?; `Types`: List<DayPassPricingInput>; `Code`: string?; `Name`: string?; `Price`: decimal; `IsActive`: bool; `SortOrder`: int }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
+
+#### `PUT /api/day-passes/pricing` - `UpdatePricing`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Business purpose:** LogicFit API module `DayPasses`.
+- **Operation profile:** `Update / Patch`
+- **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
+- **Business benefit:** Corrects or configures data without creating duplicates or breaking existing relationships.
+- **Inputs:** Handler signature: `UpdateDayPassPricingRequest request`
+- **Declared response:** Task<ActionResult<IReadOnlyList<DayPassTypeDto>>>
+- **Response schema:** `Task<ActionResult<IReadOnlyList<DayPassTypeDto>>>` with fields: { `VisitorName`: string?; `VisitorPhone`: string?; `TypeCode`: string; `PaymentMethod`: PaymentMethod?; `VisitDate`: DateTime?; `Notes`: string?; `Types`: List<DayPassPricingInput>; `Code`: string?; `Name`: string?; `Price`: decimal; `IsActive`: bool; `SortOrder`: int }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Validate input, isolation, and RowVersion where required; return 400 for validation and 409 for conflicts.
+
+#### `GET /api/day-passes/summary` - `GetSummary`
+
+- **Access:** JWT + Policies: `Permissions.ManageDayPasses` AND `WorkspaceCapabilities.GymExperience`
+- **Business purpose:** LogicFit API module `DayPasses`.
+- **Operation profile:** `Read / Query`
+- **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
+- **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
+- **Inputs:** Query `from`: `DateTime?`<br>Query `to`: `DateTime?`<br>Handler signature: `[FromQuery] DateTime? from, [FromQuery] DateTime? to`
+- **Declared response:** Task<ActionResult<DayPassSummaryDto>>
+- **Response schema:** `Task<ActionResult<DayPassSummaryDto>>` with fields: { `VisitorName`: string?; `VisitorPhone`: string?; `TypeCode`: string; `PaymentMethod`: PaymentMethod?; `VisitDate`: DateTime?; `Notes`: string?; `Types`: List<DayPassPricingInput>; `Code`: string?; `Name`: string?; `Price`: decimal; `IsActive`: bool; `SortOrder`: int }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
+
 ### DietPlans
 
 #### `GET /api/DietPlans` - `GetDietPlans`
@@ -2321,7 +2613,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
 - **Inputs:** Query `coachId`: `Guid?`<br>Query `clientId`: `Guid?`<br>Query `status`: `PlanStatus?`<br>Handler signature: `[FromQuery] Guid? coachId, [FromQuery] Guid? clientId, [FromQuery] PlanStatus? status`
 - **Declared response:** Task<ActionResult<List<DietPlanDto>>>
-- **Response schema:** `Task<ActionResult<List<DietPlanDto>>>` with fields: { `Id`: Guid; `TenantId`: Guid; `CoachId`: Guid; `CoachName`: string?; `ClientId`: Guid; `ClientName`: string?; `Name`: string; `Description`: string?; `MealsPerDay`: int?; `StartDate`: DateTime; `EndDate`: DateTime?; `Status`: PlanStatus; `TargetCalories`: double?; `TargetProtein`: double?; `TargetCarbs`: double?; `TargetFats`: double?; `Meals`: List<DailyMealDto>; `PlanId`: Guid; `OrderIndex`: int; `Time`: string?; `Items`: List<MealItemDto>; `MealId`: Guid; `FoodId`: int; `FoodName`: string? }
+- **Response schema:** `Task<ActionResult<List<DietPlanDto>>>` with fields: { `Id`: Guid; `TenantId`: Guid; `CoachId`: Guid; `CoachName`: string?; `ClientId`: Guid; `ClientName`: string?; `Name`: string; `Description`: string?; `MealsPerDay`: int?; `StartDate`: DateTime; `EndDate`: DateTime?; `Status`: PlanStatus; `TargetCalories`: double?; `TargetProtein`: double?; `TargetCarbs`: double?; `TargetFats`: double?; `CalorieGoal`: string?; `CalorieAdjustment`: double?; `CalculatorMetadata`: string?; `Notes`: string?; `Version`: int; `Meals`: List<DailyMealDto>; `PlanId`: Guid; `OrderIndex`: int }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
@@ -2360,7 +2652,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult<DietPlanDto>>
-- **Response schema:** `Task<ActionResult<DietPlanDto>>` with fields: { `Id`: Guid; `TenantId`: Guid; `CoachId`: Guid; `CoachName`: string?; `ClientId`: Guid; `ClientName`: string?; `Name`: string; `Description`: string?; `MealsPerDay`: int?; `StartDate`: DateTime; `EndDate`: DateTime?; `Status`: PlanStatus; `TargetCalories`: double?; `TargetProtein`: double?; `TargetCarbs`: double?; `TargetFats`: double?; `Meals`: List<DailyMealDto>; `PlanId`: Guid; `OrderIndex`: int; `Time`: string?; `Items`: List<MealItemDto>; `MealId`: Guid; `FoodId`: int; `FoodName`: string? }
+- **Response schema:** `Task<ActionResult<DietPlanDto>>` with fields: { `Id`: Guid; `TenantId`: Guid; `CoachId`: Guid; `CoachName`: string?; `ClientId`: Guid; `ClientName`: string?; `Name`: string; `Description`: string?; `MealsPerDay`: int?; `StartDate`: DateTime; `EndDate`: DateTime?; `Status`: PlanStatus; `TargetCalories`: double?; `TargetProtein`: double?; `TargetCarbs`: double?; `TargetFats`: double?; `CalorieGoal`: string?; `CalorieAdjustment`: double?; `CalculatorMetadata`: string?; `Notes`: string?; `Version`: int; `Meals`: List<DailyMealDto>; `PlanId`: Guid; `OrderIndex`: int }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
@@ -2472,7 +2764,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Employees` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -2485,7 +2777,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Employees` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -2498,7 +2790,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/Employees/{id}` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -2511,7 +2803,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Employees/{id}/qr/regenerate` - `RegenerateQr`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -2524,7 +2816,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Employees/{id}/qr/revoke` - `RevokeQr`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -2537,7 +2829,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Employees/{id}/terminate` - `Terminate`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -2552,7 +2844,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Equipment` - `GetEquipment`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -2565,7 +2857,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Equipment` - `CreateEquipment`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -2578,7 +2870,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `DELETE /api/Equipment/{id}` - `DeleteEquipment`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Delete / Remove`
 - **Why it matters:** Removes a configuration record or relationship that the domain explicitly allows to be deleted.
@@ -2591,7 +2883,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/Equipment/{id}` - `UpdateEquipment`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -2604,7 +2896,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/Equipment/{id}/status` - `ChangeStatus`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.
@@ -2861,7 +3153,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/freelance/team/applications` - `Sponsor`
 
-- **Access:** JWT + Policy: `Permissions.ManageCoaches`
+- **Access:** JWT + Policies: `Permissions.ManageCoaches` AND `WorkspaceCapabilities.FreelanceTeam`
 - **Business purpose:** Gym and FreelanceCoach applications, review, and provisioning.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -2874,7 +3166,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/freelance/team/invites` - `Invite`
 
-- **Access:** JWT + Policy: `Permissions.ManageCoaches`
+- **Access:** JWT + Policies: `Permissions.ManageCoaches` AND `WorkspaceCapabilities.FreelanceTeam`
 - **Business purpose:** Gym and FreelanceCoach applications, review, and provisioning.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -2889,7 +3181,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/GateAccess/check-in-qr` - `CheckInByQr`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymGateAccess`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -2902,7 +3194,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/GateAccess/logs` - `GetLogs`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymGateAccess`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -2915,7 +3207,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/GateAccess/scan` - `Scan`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymGateAccess`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -2930,7 +3222,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/GroupClasses` - `GetClasses`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -2943,7 +3235,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/GroupClasses` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -2956,7 +3248,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `DELETE /api/GroupClasses/{id}` - `Delete`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Delete / Remove`
 - **Why it matters:** Removes a configuration record or relationship that the domain explicitly allows to be deleted.
@@ -2969,7 +3261,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/GroupClasses/{id}` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -2984,7 +3276,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/GymProfile` - `GetProfile`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Business purpose:** LogicFit API module `GymProfile`.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -2997,7 +3289,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/GymProfile` - `UpdateProfile`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Business purpose:** LogicFit API module `GymProfile`.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -3010,7 +3302,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/GymProfile/assets` - `UploadBrandAsset`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Business purpose:** LogicFit API module `GymProfile`.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3023,7 +3315,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `DELETE /api/GymProfile/assets/{id:guid}` - `DeleteBrandAsset`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Business purpose:** LogicFit API module `GymProfile`.
 - **Operation profile:** `Delete / Remove`
 - **Why it matters:** Removes a configuration record or relationship that the domain explicitly allows to be deleted.
@@ -3036,7 +3328,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/GymProfile/cover` - `UploadCover`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Business purpose:** LogicFit API module `GymProfile`.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3049,7 +3341,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/GymProfile/gallery` - `UploadGalleryImages`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Business purpose:** LogicFit API module `GymProfile`.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3062,7 +3354,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/GymProfile/logo` - `UploadLogo`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Business purpose:** LogicFit API module `GymProfile`.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3149,7 +3441,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
 - **Inputs:** Body `command`: `SelectIdentityWorkspaceCommand` { `WorkspaceSelectionToken`: string; `WorkspaceId`: Guid }<br>Handler signature: `[FromBody] SelectIdentityWorkspaceCommand command`
 - **Declared response:** typeof(AuthResponseDto), StatusCodes.Status200OK
-- **Response schema:** `AuthResponseDto` with fields: { `UserId`: Guid; `Email`: string?; `PhoneNumber`: string?; `FullName`: string?; `Role`: string; `Roles`: IReadOnlyList<string>; `Permissions`: IReadOnlyList<string>; `TenantId`: Guid; `AccessToken`: string; `ExpiresAt`: DateTime; `MustChangePassword`: bool }
+- **Response schema:** `AuthResponseDto` with fields: { `UserId`: Guid; `Email`: string?; `PhoneNumber`: string?; `FullName`: string?; `Role`: string; `Roles`: IReadOnlyList<string>; `Permissions`: IReadOnlyList<string>; `TenantId`: Guid; `WorkspaceType`: WorkspaceType?; `Capabilities`: IReadOnlyList<string>; `AccessToken`: string; `ExpiresAt`: DateTime; `MustChangePassword`: bool }
 - **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
@@ -3237,7 +3529,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Leaves` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3250,7 +3542,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Leaves` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3263,7 +3555,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Leaves/{id}/review` - `Review`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3278,7 +3570,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Maintenance` - `GetRecords`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Background jobs, Outbox messages, and operational monitoring.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3291,7 +3583,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Maintenance` - `CreateMaintenance`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Background jobs, Outbox messages, and operational monitoring.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3304,7 +3596,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Maintenance/{id}/resolve` - `Resolve`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Background jobs, Outbox messages, and operational monitoring.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3324,7 +3616,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
 - **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
-- **Inputs:** Query `date`: `DateTime?`<br>Handler signature: `[FromQuery] DateTime? date`
+- **Inputs:** Query `date`: `DateTime?`<br>Query `clientId`: `Guid?`<br>Handler signature: `[FromQuery] DateTime? date, [FromQuery] Guid? clientId`
 - **Declared response:** typeof(List<MealLogDto>), StatusCodes.Status200OK
 - **Response schema:** `List<MealLogDto>` with fields: { `Id`: Guid; `MealItemId`: Guid; `MealName`: string; `FoodName`: string; `Unit`: string?; `IsAlternative`: bool; `ConsumedQuantity`: double; `ConsumedAt`: DateTime; `Calories`: double; `Protein`: double; `Carbs`: double; `Fats`: double }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
@@ -3384,11 +3676,39 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
+### MemberPortal
+
+#### `POST /api/member-portal/feedback` - `SubmitFeedback`
+
+- **Access:** Anonymous (no token required)
+- **Business purpose:** LogicFit API module `MemberPortal`.
+- **Operation profile:** `Create / Command`
+- **Why it matters:** Creates an entity or executes a command inside a defined business module.
+- **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
+- **Inputs:** Body `request`: `MemberPortalFeedbackRequest` { `MembershipCode`: string; `Rating`: int; `NoteType`: string; `Message`: string; `Workspace`: MemberPortalWorkspace; `Member`: MemberPortalClient; `Card`: MemberPortalCard; `CurrentMembership`: MemberPortalMembership?; `Memberships`: IReadOnlyList<MemberPortalMembership>; `Payments`: IReadOnlyList<MemberPortalPayment>; `Attendance`: IReadOnlyList<MemberPortalAttendance>; `Freezes`: IReadOnlyList<MemberPortalFreeze>; `FinancialSummary`: MemberPortalFinancialSummary; `GeneratedAt`: DateTime }<br>Handler signature: `[FromBody] MemberPortalFeedbackRequest request`
+- **Declared response:** typeof(MemberPortalFeedbackResponse), StatusCodes.Status201Created
+- **Response schema:** `MemberPortalFeedbackResponse` with fields: { `MembershipCode`: string; `Rating`: int; `NoteType`: string; `Message`: string; `Workspace`: MemberPortalWorkspace; `Member`: MemberPortalClient; `Card`: MemberPortalCard; `CurrentMembership`: MemberPortalMembership?; `Memberships`: IReadOnlyList<MemberPortalMembership>; `Payments`: IReadOnlyList<MemberPortalPayment>; `Attendance`: IReadOnlyList<MemberPortalAttendance>; `Freezes`: IReadOnlyList<MemberPortalFreeze>; `FinancialSummary`: MemberPortalFinancialSummary; `GeneratedAt`: DateTime }
+- **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
+
+#### `POST /api/member-portal/lookup` - `Lookup`
+
+- **Access:** Anonymous (no token required)
+- **Business purpose:** LogicFit API module `MemberPortal`.
+- **Operation profile:** `Create / Command`
+- **Why it matters:** Creates an entity or executes a command inside a defined business module.
+- **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
+- **Inputs:** Body `request`: `MemberPortalLookupRequest` { `MembershipCode`: string; `Rating`: int; `NoteType`: string; `Message`: string; `Workspace`: MemberPortalWorkspace; `Member`: MemberPortalClient; `Card`: MemberPortalCard; `CurrentMembership`: MemberPortalMembership?; `Memberships`: IReadOnlyList<MemberPortalMembership>; `Payments`: IReadOnlyList<MemberPortalPayment>; `Attendance`: IReadOnlyList<MemberPortalAttendance>; `Freezes`: IReadOnlyList<MemberPortalFreeze>; `FinancialSummary`: MemberPortalFinancialSummary; `GeneratedAt`: DateTime }<br>Handler signature: `[FromBody] MemberPortalLookupRequest request`
+- **Declared response:** typeof(MemberPortalReport), StatusCodes.Status200OK
+- **Response schema:** `MemberPortalReport` with fields: { `MembershipCode`: string; `Rating`: int; `NoteType`: string; `Message`: string; `Workspace`: MemberPortalWorkspace; `Member`: MemberPortalClient; `Card`: MemberPortalCard; `CurrentMembership`: MemberPortalMembership?; `Memberships`: IReadOnlyList<MemberPortalMembership>; `Payments`: IReadOnlyList<MemberPortalPayment>; `Attendance`: IReadOnlyList<MemberPortalAttendance>; `Freezes`: IReadOnlyList<MemberPortalFreeze>; `FinancialSummary`: MemberPortalFinancialSummary; `GeneratedAt`: DateTime }
+- **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
+
 ### MembershipCards
 
 #### `GET /api/MembershipCards` - `GetCards`
 
-- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Access:** JWT + Policies: `Permissions.ManageMembers` AND `WorkspaceCapabilities.GymMembershipCards`
 - **Business purpose:** LogicFit API module `MembershipCards`.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3401,7 +3721,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/MembershipCards/{id}/revoke` - `RevokeCard`
 
-- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Access:** JWT + Policies: `Permissions.ManageMembers` AND `WorkspaceCapabilities.GymMembershipCards`
 - **Business purpose:** LogicFit API module `MembershipCards`.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3414,7 +3734,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/MembershipCards/issue` - `IssueCard`
 
-- **Access:** JWT + Policy: `Permissions.ManageMembers`
+- **Access:** JWT + Policies: `Permissions.ManageMembers` AND `WorkspaceCapabilities.GymMembershipCards`
 - **Business purpose:** LogicFit API module `MembershipCards`.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3604,7 +3924,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Payroll` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3617,7 +3937,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Payroll/{id}/approve` - `Approve`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.
@@ -3630,7 +3950,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Payroll/{id}/pay` - `Pay`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3643,7 +3963,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Payroll/generate` - `Generate`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3656,7 +3976,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/Payroll/items/{id}` - `UpdateItem`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -3671,7 +3991,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/ProductCategories` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3684,7 +4004,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/ProductCategories` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3697,7 +4017,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `DELETE /api/ProductCategories/{id}` - `Delete`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Delete / Remove`
 - **Why it matters:** Removes a configuration record or relationship that the domain explicitly allows to be deleted.
@@ -3710,7 +4030,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/ProductCategories/{id}` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -3725,7 +4045,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Products` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3738,7 +4058,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Products` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -3751,7 +4071,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `DELETE /api/Products/{id}` - `Delete`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Delete / Remove`
 - **Why it matters:** Removes a configuration record or relationship that the domain explicitly allows to be deleted.
@@ -3764,7 +4084,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/Products/{id}` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -3833,7 +4153,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/branch-comparison` - `GetBranchComparisonReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3846,7 +4166,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/class-attendance` - `GetClassAttendanceReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3859,7 +4179,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/clients` - `GetClientsReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3872,7 +4192,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/coach/dashboard` - `GetCoachDashboardReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.CoachingReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3885,7 +4205,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/coach/trainee/{clientId}` - `GetTraineeProgressReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.CoachingReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3898,7 +4218,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/coach/trainees` - `GetCoachTraineesReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.CoachingReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3911,7 +4231,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/commissions` - `GetCommissionReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3924,7 +4244,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/dashboard` - `GetDashboardReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3937,7 +4257,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/equipment-utilization` - `GetEquipmentUtilizationReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3963,7 +4283,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/financial` - `GetFinancialReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.CoachingFinance`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3974,9 +4294,22 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
+#### `GET /api/Reports/follow-up` - `GetFollowUpAlerts`
+
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports` AND `Permissions.ViewMembers`
+- **Business purpose:** Operational and financial indicators and reports.
+- **Operation profile:** `Read / Query`
+- **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
+- **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
+- **Inputs:** Query `expiringWithinDays`: `int`<br>Query `inactiveAfterDays`: `int`<br>Query `limit`: `int`<br>Handler signature: `[FromQuery] int expiringWithinDays = 7, [FromQuery] int inactiveAfterDays = 7, [FromQuery] int limit = 100`
+- **Declared response:** typeof(FollowUpAlertsDto), StatusCodes.Status200OK
+- **Response schema:** `FollowUpAlertsDto` with fields: { `GeneratedAtUtc`: DateTime; `Alerts`: List<FollowUpAlertItemDto>; `ClientId`: Guid; `ClientName`: string; `PhoneNumber`: string?; `Kind`: string; `Status`: string; `EndDate`: DateTime?; `AmountRemaining`: decimal; `DaysSinceLastVisit`: int?; `Priority`: int }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
+
 #### `GET /api/Reports/operations-dashboard` - `GetOperationsDashboard`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -3989,7 +4322,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/payroll-summary` - `GetPayrollSummaryReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4002,7 +4335,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/pos-sales` - `GetPosSalesReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4015,7 +4348,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/stock-valuation` - `GetStockValuationReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4028,7 +4361,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Reports/subscriptions` - `GetSubscriptionsReport`
 
-- **Access:** JWT + Policy: `Permissions.ViewReports`
+- **Access:** JWT + Policies: `Permissions.ViewReports` AND `WorkspaceCapabilities.GymReports`
 - **Business purpose:** Operational and financial indicators and reports.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4043,7 +4376,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Rooms` - `GetRooms`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4056,7 +4389,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Rooms` - `CreateRoom`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -4069,7 +4402,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `DELETE /api/Rooms/{id}` - `DeleteRoom`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Delete / Remove`
 - **Why it matters:** Removes a configuration record or relationship that the domain explicitly allows to be deleted.
@@ -4082,7 +4415,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/Rooms/{id}` - `UpdateRoom`
 
-- **Access:** JWT + Policy: `Permissions.ManageBranches`
+- **Access:** JWT + Policies: `Permissions.ManageBranches` AND `WorkspaceCapabilities.GymFacilities`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -4097,7 +4430,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Sales` - `GetSales`
 
-- **Access:** JWT + Policy: `Permissions.ManagePOS`
+- **Access:** JWT + Policies: `Permissions.ManagePOS` AND `WorkspaceCapabilities.GymPos`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4110,7 +4443,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Sales/checkout` - `Checkout`
 
-- **Access:** JWT + Policy: `Permissions.ManagePOS`
+- **Access:** JWT + Policies: `Permissions.ManagePOS` AND `WorkspaceCapabilities.GymPos`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -4125,7 +4458,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Shifts` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** LogicFit API module `Shifts`.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4138,7 +4471,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Shifts` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** LogicFit API module `Shifts`.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -4151,7 +4484,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Shifts/assign` - `Assign`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** LogicFit API module `Shifts`.
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.
@@ -4164,7 +4497,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Shifts/assignments` - `GetAssignments`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** LogicFit API module `Shifts`.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4179,7 +4512,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/staff-attendance` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4192,7 +4525,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/staff-attendance/{id}/check-out` - `CheckOut`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.
@@ -4205,7 +4538,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/staff-attendance/toggle-qr` - `ToggleByQr`
 
-- **Access:** JWT + Policy: `Permissions.ManageAttendance`
+- **Access:** JWT + Policies: `Permissions.ManageAttendance` AND `WorkspaceCapabilities.GymAttendance`
 - **Business purpose:** Attendance, appointments, classes, and scheduling.
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.
@@ -4220,7 +4553,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Stock` - `GetStock`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4233,7 +4566,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Stock/adjust` - `Adjust`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -4246,7 +4579,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Stock/movements` - `GetMovements`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4259,7 +4592,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Stock/transfer` - `Transfer`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -4404,7 +4737,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Subscriptions/plans` - `GetSubscriptionPlans`
 
-- **Access:** JWT + Policy: `Permissions.ManageClientSubscriptions`
+- **Access:** JWT + Policies: `Permissions.ManageClientSubscriptions` AND `WorkspaceCapabilities.GymMembershipPlans`
 - **Business purpose:** Payments, invoices, subscriptions, and financial transitions.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4417,7 +4750,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Subscriptions/plans` - `CreateSubscriptionPlan`
 
-- **Access:** JWT + Policy: `Permissions.ManageClientSubscriptions`
+- **Access:** JWT + Policies: `Permissions.ManageClientSubscriptions` AND `WorkspaceCapabilities.GymMembershipPlans`
 - **Business purpose:** Payments, invoices, subscriptions, and financial transitions.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -4430,7 +4763,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `DELETE /api/Subscriptions/plans/{id}` - `DeleteSubscriptionPlan`
 
-- **Access:** JWT + Policy: `Permissions.ManageClientSubscriptions`
+- **Access:** JWT + Policies: `Permissions.ManageClientSubscriptions` AND `WorkspaceCapabilities.GymMembershipPlans`
 - **Business purpose:** Payments, invoices, subscriptions, and financial transitions.
 - **Operation profile:** `Delete / Remove`
 - **Why it matters:** Removes a configuration record or relationship that the domain explicitly allows to be deleted.
@@ -4443,7 +4776,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Subscriptions/plans/{id}` - `GetSubscriptionPlan`
 
-- **Access:** JWT + Policy: `Permissions.ManageClientSubscriptions`
+- **Access:** JWT + Policies: `Permissions.ManageClientSubscriptions` AND `WorkspaceCapabilities.GymMembershipPlans`
 - **Business purpose:** Payments, invoices, subscriptions, and financial transitions.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4456,7 +4789,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/Subscriptions/plans/{id}` - `UpdateSubscriptionPlan`
 
-- **Access:** JWT + Policy: `Permissions.ManageClientSubscriptions`
+- **Access:** JWT + Policies: `Permissions.ManageClientSubscriptions` AND `WorkspaceCapabilities.GymMembershipPlans`
 - **Business purpose:** Payments, invoices, subscriptions, and financial transitions.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -4471,7 +4804,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/Suppliers` - `Get`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4484,7 +4817,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/Suppliers` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -4497,7 +4830,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `DELETE /api/Suppliers/{id}` - `Delete`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Delete / Remove`
 - **Why it matters:** Removes a configuration record or relationship that the domain explicitly allows to be deleted.
@@ -4510,7 +4843,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/Suppliers/{id}` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManageInventory`
+- **Access:** JWT + Policies: `Permissions.ManageInventory` AND `WorkspaceCapabilities.GymInventory`
 - **Business purpose:** Gym operations, facilities, finance, inventory, and staff.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -4525,7 +4858,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/TaxSettings` - `GetSettings`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Business purpose:** LogicFit API module `TaxSettings`.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -4538,7 +4871,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/TaxSettings` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Business purpose:** LogicFit API module `TaxSettings`.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -4551,7 +4884,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `DELETE /api/TaxSettings/{id}` - `Delete`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Business purpose:** LogicFit API module `TaxSettings`.
 - **Operation profile:** `Delete / Remove`
 - **Why it matters:** Removes a configuration record or relationship that the domain explicitly allows to be deleted.
@@ -4564,7 +4897,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `PUT /api/TaxSettings/{id}` - `Update`
 
-- **Access:** JWT + Policy: `Permissions.ManageSettings`
+- **Access:** JWT + Policies: `Permissions.ManageSettings` AND `WorkspaceCapabilities.GymSettings`
 - **Business purpose:** LogicFit API module `TaxSettings`.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -4641,6 +4974,19 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Response schema:** `Task<ActionResult<TenantBackupDownloadGrantDto>>` with fields: { `ExportId`: Guid; `DownloadToken`: string; `ExpiresAtUtc`: DateTime; `DownloadPath`: string }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
+
+#### `GET /api/tenant/backups/exports/{exportId:guid}/inspect` - `Inspect`
+
+- **Access:** JWT + Policy: `Permissions.CreateAndDownloadTenantBackup`
+- **Business purpose:** Backup creation, checksum verification, retry, and controlled restore.
+- **Operation profile:** `Read / Query`
+- **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
+- **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
+- **Inputs:** Handler signature: `Guid exportId`
+- **Declared response:** Task<ActionResult<TenantBackupInspectionDto>>
+- **Response schema:** `Task<ActionResult<TenantBackupInspectionDto>>` with fields: { `ExportId`: Guid; `IsValid`: bool; `Format`: string; `EntryCount`: int; `DataEntryCount`: int; `TableCount`: int; `HasModel`: bool; `HasOrigin`: bool; `SizeBytes`: long; `Sha256`: string?; `InspectedAtUtc`: DateTime; `ErrorCode`: string? }
+- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
 #### `POST /api/tenant/backups/reauthenticate` - `Reauthenticate`
 
@@ -4975,7 +5321,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
 - **Inputs:** Query `coachId`: `Guid?`<br>Query `clientId`: `Guid?`<br>Query `status`: `PlanStatus?`<br>Handler signature: `[FromQuery] Guid? coachId, [FromQuery] Guid? clientId, [FromQuery] PlanStatus? status`
 - **Declared response:** Task<ActionResult<List<WorkoutProgramDto>>>
-- **Response schema:** `Task<ActionResult<List<WorkoutProgramDto>>>` with fields: { `Id`: Guid; `TenantId`: Guid; `CoachId`: Guid; `CoachName`: string?; `ClientId`: Guid; `ClientName`: string?; `Name`: string; `Description`: string?; `Goal`: string?; `Difficulty`: string?; `DaysPerWeek`: int?; `Status`: PlanStatus; `StartDate`: DateTime; `EndDate`: DateTime?; `Routines`: List<ProgramRoutineDto>; `ProgramId`: Guid; `DayOfWeek`: int; `Exercises`: List<RoutineExerciseDto>; `RoutineId`: Guid; `ExerciseId`: int; `ExerciseName`: string?; `Sets`: int; `RepsMin`: int; `RepsMax`: int }
+- **Response schema:** `Task<ActionResult<List<WorkoutProgramDto>>>` with fields: { `Id`: Guid; `TenantId`: Guid; `CoachId`: Guid; `CoachName`: string?; `ClientId`: Guid; `ClientName`: string?; `Name`: string; `Description`: string?; `Goal`: string?; `Difficulty`: string?; `DaysPerWeek`: int?; `Status`: PlanStatus; `StartDate`: DateTime; `EndDate`: DateTime?; `Notes`: string?; `Version`: int; `Routines`: List<ProgramRoutineDto>; `ProgramId`: Guid; `DayOfWeek`: int; `Exercises`: List<RoutineExerciseDto>; `RoutineId`: Guid; `ExerciseId`: int; `ExerciseName`: string?; `Sets`: int }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
@@ -5014,7 +5360,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Business benefit:** Gives the UI and operators reliable information for decisions without changing server state.
 - **Inputs:** Handler signature: `Guid id`
 - **Declared response:** Task<ActionResult<WorkoutProgramDto>>
-- **Response schema:** `Task<ActionResult<WorkoutProgramDto>>` with fields: { `Id`: Guid; `TenantId`: Guid; `CoachId`: Guid; `CoachName`: string?; `ClientId`: Guid; `ClientName`: string?; `Name`: string; `Description`: string?; `Goal`: string?; `Difficulty`: string?; `DaysPerWeek`: int?; `Status`: PlanStatus; `StartDate`: DateTime; `EndDate`: DateTime?; `Routines`: List<ProgramRoutineDto>; `ProgramId`: Guid; `DayOfWeek`: int; `Exercises`: List<RoutineExerciseDto>; `RoutineId`: Guid; `ExerciseId`: int; `ExerciseName`: string?; `Sets`: int; `RepsMin`: int; `RepsMax`: int }
+- **Response schema:** `Task<ActionResult<WorkoutProgramDto>>` with fields: { `Id`: Guid; `TenantId`: Guid; `CoachId`: Guid; `CoachName`: string?; `ClientId`: Guid; `ClientName`: string?; `Name`: string; `Description`: string?; `Goal`: string?; `Difficulty`: string?; `DaysPerWeek`: int?; `Status`: PlanStatus; `StartDate`: DateTime; `EndDate`: DateTime?; `Notes`: string?; `Version`: int; `Routines`: List<ProgramRoutineDto>; `ProgramId`: Guid; `DayOfWeek`: int; `Exercises`: List<RoutineExerciseDto>; `RoutineId`: Guid; `ExerciseId`: int; `ExerciseName`: string?; `Sets`: int }
 - **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
@@ -5193,7 +5539,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/workspace-applications` - `Submit`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Business purpose:** Gym and FreelanceCoach applications, review, and provisioning.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -5201,12 +5547,12 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Inputs:** Form `form`: `SubmitWorkspaceApplicationForm`<br>Handler signature: `[FromForm] SubmitWorkspaceApplicationForm form, [FromForm(Name = "proof")] IFormFile? proof`
 - **Declared response:** typeof(ApplicationTrackingSessionDto), StatusCodes.Status201Created
 - **Response schema:** `ApplicationTrackingSessionDto` with fields: { `WorkspaceType`: WorkspaceType; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `DeliveryMode`: string?; `Specialties`: IReadOnlyList<string>; `Certifications`: IReadOnlyList<string>; `WelcomeMessage`: string?; `BookingSettings`: JsonElement?; `MustChangePassword`: bool; `ApplicationId`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `WorkspaceIdentifier`: string?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string> }
-- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
 #### `POST /api/workspace-applications/freelance` - `SubmitFreelance`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Business purpose:** Gym and FreelanceCoach applications, review, and provisioning.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -5214,12 +5560,12 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Inputs:** Body `command`: `SubmitFreelanceWorkspaceApplicationCommand` { `WorkspaceType`: WorkspaceType; `Email`: string; `PhoneNumber`: string?; `Password`: string; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `DeliveryMode`: string?; `Specialties`: IReadOnlyList<string>?; `Certifications`: IReadOnlyList<string>?; `WelcomeMessage`: string?; `BookingSettings`: System.Text.Json.JsonElement?; `PlanId`: Guid; `BillingCycle`: BillingCycle?; `PaymentAmount`: decimal?; `PaymentTransactionNumber`: string? }<br>Handler signature: `[FromBody] SubmitFreelanceWorkspaceApplicationCommand command`
 - **Declared response:** typeof(ApplicationTrackingSessionDto), StatusCodes.Status201Created
 - **Response schema:** `ApplicationTrackingSessionDto` with fields: { `WorkspaceType`: WorkspaceType; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `DeliveryMode`: string?; `Specialties`: IReadOnlyList<string>; `Certifications`: IReadOnlyList<string>; `WelcomeMessage`: string?; `BookingSettings`: JsonElement?; `MustChangePassword`: bool; `ApplicationId`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `WorkspaceIdentifier`: string?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string> }
-- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
 #### `GET /api/workspace-applications/plans` - `GetPlans`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Business purpose:** Gym and FreelanceCoach applications, review, and provisioning.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -5227,12 +5573,12 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Inputs:** No request input.
 - **Declared response:** typeof(List<PlanDto>), StatusCodes.Status200OK
 - **Response schema:** `List<PlanDto>` with fields: { `Id`: Guid; `Name`: string; `Description`: string?; `Price`: decimal; `Currency`: string; `BillingCycle`: BillingCycle; `DurationInDays`: int; `MaxMembers`: int?; `MaxCoaches`: int?; `MaxBranches`: int?; `MaxEmployees`: int?; `MaxStorageMB`: int?; `IsActive`: bool; `DisplayOrder`: int; `Features`: List<string> }
-- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
 #### `GET /api/workspace-applications/tracking` - `GetTrackingStatus`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Business purpose:** Gym and FreelanceCoach applications, review, and provisioning.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -5240,12 +5586,12 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Inputs:** No request input.
 - **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status200OK
 - **Response schema:** `ApplicationTrackingStatusDto` with fields: { `WorkspaceType`: WorkspaceType; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `DeliveryMode`: string?; `Specialties`: IReadOnlyList<string>; `Certifications`: IReadOnlyList<string>; `WelcomeMessage`: string?; `BookingSettings`: JsonElement?; `MustChangePassword`: bool; `ApplicationId`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `WorkspaceIdentifier`: string?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string> }
-- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Read-only; handle 401/403/404/429 and show explicit loading, empty, or error states.
 
 #### `PATCH /api/workspace-applications/tracking/fields` - `UpdateRequestedFields`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Business purpose:** Gym and FreelanceCoach applications, review, and provisioning.
 - **Operation profile:** `Update / Patch`
 - **Why it matters:** Updates an existing entity while preserving authorization and optimistic concurrency rules.
@@ -5253,12 +5599,25 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Inputs:** Body `System`: `IReadOnlyDictionary<string,`<br>Handler signature: `[FromBody] IReadOnlyDictionary<string, System.Text.Json.JsonElement> fields`
 - **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status200OK
 - **Response schema:** `ApplicationTrackingStatusDto` with fields: { `WorkspaceType`: WorkspaceType; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `DeliveryMode`: string?; `Specialties`: IReadOnlyList<string>; `Certifications`: IReadOnlyList<string>; `WelcomeMessage`: string?; `BookingSettings`: JsonElement?; `MustChangePassword`: bool; `ApplicationId`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `WorkspaceIdentifier`: string?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string> }
-- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Validate input, isolation, and RowVersion where required; return 400 for validation and 409 for conflicts.
+
+#### `POST /api/workspace-applications/tracking/payment-proof` - `UploadTrackingPaymentProof`
+
+- **Access:** Anonymous (no token required)
+- **Business purpose:** Gym and FreelanceCoach applications, review, and provisioning.
+- **Operation profile:** `Create / Command`
+- **Why it matters:** Creates an entity or executes a command inside a defined business module.
+- **Business benefit:** Turns user input into an audited server operation and links required entities transactionally where needed.
+- **Inputs:** Handler signature: `[FromForm(Name = "proof")] IFormFile? proof`
+- **Declared response:** typeof(ApplicationPaymentProofUploadedDto), StatusCodes.Status200OK
+- **Response schema:** `ApplicationPaymentProofUploadedDto` with fields: { `WorkspaceType`: WorkspaceType; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `DeliveryMode`: string?; `Specialties`: IReadOnlyList<string>; `Certifications`: IReadOnlyList<string>; `WelcomeMessage`: string?; `BookingSettings`: JsonElement?; `MustChangePassword`: bool; `ApplicationId`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `WorkspaceIdentifier`: string?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string> }
+- **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
 #### `POST /api/workspace-applications/tracking/resubmit` - `Resubmit`
 
-- **Access:** Server default (not declared explicitly)
+- **Access:** Anonymous (no token required)
 - **Business purpose:** Gym and FreelanceCoach applications, review, and provisioning.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -5266,7 +5625,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 - **Inputs:** No request input.
 - **Declared response:** typeof(ApplicationTrackingStatusDto), StatusCodes.Status200OK
 - **Response schema:** `ApplicationTrackingStatusDto` with fields: { `WorkspaceType`: WorkspaceType; `WorkspaceName`: string; `WorkspaceIdentifier`: string; `OwnerFullName`: string; `BrandName`: string?; `LogoUrl`: string?; `PhotoUrl`: string?; `CoverImageUrl`: string?; `BackgroundImageUrl`: string?; `PrimaryColor`: string?; `SecondaryColor`: string?; `Bio`: string?; `DeliveryMode`: string?; `Specialties`: IReadOnlyList<string>; `Certifications`: IReadOnlyList<string>; `WelcomeMessage`: string?; `BookingSettings`: JsonElement?; `MustChangePassword`: bool; `ApplicationId`: Guid; `ApplicationType`: ApplicationType; `Status`: ApplicationRequestStatus; `WorkspaceIdentifier`: string?; `InformationRequest`: string?; `RequestedFields`: IReadOnlyList<string> }
-- **Failure contract:** 401: missing or expired session Â· 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
+- **Failure contract:** 403: insufficient permission or workspace scope Â· 400: invalid input or rejected business rule Â· 404: resource missing or outside the visible scope Â· 409: state, RowVersion, or duplicate conflict Â· 429: rate limit exceeded Â· 500: unexpected server error; inspect state before retrying a mutation
 - **Safety/side effects:** Use validation, unique constraints, and idempotency for commands that may be retried.
 
 ### WorkspaceClientJoinCodes
@@ -5355,7 +5714,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `GET /api/workspace-members` - `List`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** LogicFit API module `WorkspaceMembers`.
 - **Operation profile:** `Read / Query`
 - **Why it matters:** Reads the authoritative state or data with tenant isolation and authorization.
@@ -5368,7 +5727,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/workspace-members` - `Create`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** LogicFit API module `WorkspaceMembers`.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -5381,7 +5740,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/workspace-members/{membershipId:guid}/activate` - `Activate`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** LogicFit API module `WorkspaceMembers`.
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.
@@ -5394,7 +5753,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/workspace-members/{membershipId:guid}/remove` - `Remove`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** LogicFit API module `WorkspaceMembers`.
 - **Operation profile:** `Create / Command`
 - **Why it matters:** Creates an entity or executes a command inside a defined business module.
@@ -5407,7 +5766,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/workspace-members/{membershipId:guid}/reset-password` - `ResetPassword`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** LogicFit API module `WorkspaceMembers`.
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.
@@ -5420,7 +5779,7 @@ Generated: `2026-08-17 14:35 UTC`  |  Total endpoints: **404**
 
 #### `POST /api/workspace-members/{membershipId:guid}/suspend` - `Suspend`
 
-- **Access:** JWT + Policy: `Permissions.ManageEmployees`
+- **Access:** JWT + Policies: `Permissions.ManageEmployees` AND `WorkspaceCapabilities.GymStaff`
 - **Business purpose:** LogicFit API module `WorkspaceMembers`.
 - **Operation profile:** `Workflow / Lifecycle Command`
 - **Why it matters:** Moves an entity through a sensitive business state or executes a workflow command instead of generic CRUD.

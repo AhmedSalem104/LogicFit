@@ -16,6 +16,7 @@ namespace LogicFit.API.Features.Employees;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageEmployees)]
+[Authorize(Policy = WorkspaceCapabilities.GymStaff)]
 public class EmployeesController : ControllerBase
 {
     private readonly IMediator _mediator;

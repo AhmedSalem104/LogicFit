@@ -3,14 +3,12 @@ using LogicFit.Application.Common.Interfaces;
 namespace LogicFit.Infrastructure.Persistence;
 
 /// <summary>
-/// Request-scoped result of resolving the authenticated workspace against Platform DB.  The
-/// decrypted connection string exists only in this scope and is never serialized or logged.
+/// Request-scoped result of resolving the authenticated workspace against the platform mapping.
+/// The decrypted connection string exists only in this scope and is never serialized or logged.
 /// </summary>
 public sealed class TenantDatabaseRequestScope
 {
     public TenantDatabaseResolution? Resolution { get; private set; }
-
-    public bool IsResolved => Resolution is not null;
 
     public void Set(TenantDatabaseResolution resolution)
     {
@@ -22,6 +20,5 @@ public sealed class TenantDatabaseRequestScope
         Resolution = resolution;
     }
 
-    public void Clear()
-        => Resolution = null;
+    public void Clear() => Resolution = null;
 }

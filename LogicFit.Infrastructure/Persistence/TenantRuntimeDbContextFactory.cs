@@ -4,9 +4,8 @@ using Microsoft.EntityFrameworkCore;
 namespace LogicFit.Infrastructure.Persistence;
 
 /// <summary>
-/// Builds a tenant context from a server-resolved mapping.  This is used by request routing and
-/// by controlled background jobs; it never accepts a database name or connection string from a
-/// client-facing command.
+/// Builds a tenant context only from a server-resolved mapping. Client input never supplies a
+/// database name or connection string.
 /// </summary>
 public static class TenantRuntimeDbContextFactory
 {

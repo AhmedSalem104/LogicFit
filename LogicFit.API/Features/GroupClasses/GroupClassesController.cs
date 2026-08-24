@@ -13,6 +13,7 @@ namespace LogicFit.API.Features.GroupClasses;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize(Policy = Permissions.ManageBranches)]
+[Authorize(Policy = WorkspaceCapabilities.GymFacilities)]
 public class GroupClassesController : ControllerBase
 {
     private readonly IMediator _mediator;

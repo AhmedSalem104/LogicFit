@@ -13,7 +13,8 @@ namespace LogicFit.Infrastructure.Services;
 /// no distributed transaction: the persistent job and idempotency key make retries safe.
 /// </summary>
 public sealed class WorkspaceProvisioningSaga(
-    ApplicationDbContext db,
+    PlatformDbContext platformDb,
+    ApplicationDbContext compatibilityDb,
     IDatabaseProvisioningProvider provider,
     IDateTimeService clock,
     ILogger<WorkspaceProvisioningSaga> logger) : IWorkspaceProvisioningSaga
@@ -22,7 +23,7 @@ public sealed class WorkspaceProvisioningSaga(
         Guid applicationRequestId,
         CancellationToken cancellationToken = default)
     {
-        var application = await db.ApplicationRequests
+        var application = await platformDb.ApplicationRequests
             .Include(x => x.IdentityAccount)
             .FirstOrDefaultAsync(x => x.Id == applicationRequestId, cancellationToken)
             ?? throw new InvalidOperationException("The workspace application was not found.");
@@ -30,12 +31,12 @@ public sealed class WorkspaceProvisioningSaga(
             throw new InvalidOperationException("The application has no central workspace placeholder.");
 
         var tenantId = application.ProvisionedWorkspaceId.Value;
-        var payment = await db.PaymentRequests
+        var payment = await platformDb.PaymentRequests
             .FirstOrDefaultAsync(x => x.ApplicationRequestId == applicationRequestId, cancellationToken);
         if (payment?.Status != PaymentRequestStatus.Approved)
             throw new InvalidOperationException("Payment approval is required before provisioning.");
 
-        var job = await db.ProvisioningJobs
+        var job = await platformDb.ProvisioningJobs
             .FirstOrDefaultAsync(x => x.ApplicationRequestId == applicationRequestId, cancellationToken);
         if (job?.Status == ProvisioningJobStatus.Completed)
             return new WorkspaceProvisioningOutcome(tenantId, applicationRequestId, job.Status, job.DatabaseResourceId);
@@ -48,7 +49,7 @@ public sealed class WorkspaceProvisioningSaga(
                 ApplicationRequestId = applicationRequestId,
                 IdempotencyKey = $"workspace-provisioning:{applicationRequestId}"
             };
-            db.ProvisioningJobs.Add(job);
+            platformDb.ProvisioningJobs.Add(job);
         }
 
         var now = clock.UtcNow;
@@ -57,11 +58,11 @@ public sealed class WorkspaceProvisioningSaga(
         job.StartedAtUtc ??= now;
         job.LastErrorCode = null;
         job.LastError = null;
-        var tenant = await db.Tenants.IgnoreQueryFilters()
+        var tenant = await platformDb.Tenants.IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.Id == tenantId, cancellationToken)
             ?? throw new InvalidOperationException("The workspace placeholder was not found.");
         tenant.Status = TenantStatus.Provisioning;
-        await db.SaveChangesAsync(cancellationToken);
+        await platformDb.SaveChangesAsync(cancellationToken);
 
         DatabaseProvisioningResult result;
         try
@@ -81,19 +82,19 @@ public sealed class WorkspaceProvisioningSaga(
             job.LastErrorCode = result.ErrorCode ?? "DATABASE_CAPACITY_UNAVAILABLE";
             job.NextAttemptAtUtc = now.AddHours(1);
             tenant.Status = TenantStatus.AwaitingDatabaseCapacity;
-            await db.SaveChangesAsync(cancellationToken);
+            await platformDb.SaveChangesAsync(cancellationToken);
             return new WorkspaceProvisioningOutcome(tenantId, applicationRequestId, job.Status, result.ResourceId, job.LastErrorCode);
         }
 
         if (result.Status != "Completed")
             return await MarkFailedAsync(job, tenant, applicationRequestId, tenantId, result.ErrorCode ?? "TENANT_PROVISIONING_FAILED", cancellationToken);
 
-        // ApplicationDbContext is still the compatibility host during the migration split. Keep
-        // a scalar bridge row with the same id as the tenant-local owner so existing membership
-        // foreign keys remain valid; the tenant database remains the operational source of truth.
+        // ApplicationDbContext is used here only as an explicit compatibility bridge for legacy
+        // rows. It is never selected as the operational context for a tenant request; the tenant
+        // database remains the source of truth for the owner and role assignment.
         var localUserId = result.LocalUserId ?? throw new InvalidOperationException("Provider did not return the local owner id.");
         var mustChangePassword = application.PayloadJson.Contains("\"mustChangePassword\":true", StringComparison.OrdinalIgnoreCase);
-        var compatibilityUser = await db.Set<User>().IgnoreQueryFilters()
+        var compatibilityUser = await compatibilityDb.Set<User>().IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.Id == localUserId, cancellationToken);
         if (compatibilityUser is null)
         {
@@ -109,8 +110,8 @@ public sealed class WorkspaceProvisioningSaga(
                 IsActive = true,
                 MustChangePassword = mustChangePassword
             };
-            db.Set<User>().Add(compatibilityUser);
-            db.UserProfiles.Add(new UserProfile
+            compatibilityDb.Set<User>().Add(compatibilityUser);
+            compatibilityDb.UserProfiles.Add(new UserProfile
             {
                 UserId = localUserId,
                 FullName = application.IdentityAccount.FullName
@@ -121,7 +122,9 @@ public sealed class WorkspaceProvisioningSaga(
             compatibilityUser.MustChangePassword = true;
         }
 
-        var membership = await db.WorkspaceMemberships.IgnoreQueryFilters()
+        await compatibilityDb.SaveChangesAsync(cancellationToken);
+
+        var membership = await platformDb.WorkspaceMemberships.IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.IdentityAccountId == application.IdentityAccountId, cancellationToken);
         if (membership is null)
         {
@@ -135,33 +138,34 @@ public sealed class WorkspaceProvisioningSaga(
                 ApprovedAt = now,
                 ApprovedBy = "provisioning-saga"
             };
-            db.WorkspaceMemberships.Add(membership);
+            platformDb.WorkspaceMemberships.Add(membership);
         }
         membership.Status = WorkspaceMembershipStatus.Active;
         membership.UserId = localUserId;
 
         var roleName = membership.Role == UserRole.FreelanceOwner ? SystemRoles.FreelanceOwner : SystemRoles.Owner;
-        var role = await db.AppRoles.IgnoreQueryFilters()
+        var role = await platformDb.AppRoles.IgnoreQueryFilters()
             .FirstOrDefaultAsync(x => x.TenantId == null && x.Name == roleName && !x.IsDeleted, cancellationToken);
-        if (role is not null && !await db.UserRoleAssignments.IgnoreQueryFilters()
+        if (role is not null && !await compatibilityDb.UserRoleAssignments.IgnoreQueryFilters()
                 .AnyAsync(x => x.UserId == membership.UserId && x.RoleId == role.Id && x.TenantId == tenantId, cancellationToken))
         {
-            db.UserRoleAssignments.Add(new UserRoleAssignment
+            compatibilityDb.UserRoleAssignments.Add(new UserRoleAssignment
             {
                 UserId = membership.UserId,
                 RoleId = role.Id,
                 TenantId = tenantId
             });
+            await compatibilityDb.SaveChangesAsync(cancellationToken);
         }
 
-        var subscription = await db.TenantSubscriptions
+        var subscription = await platformDb.TenantSubscriptions
             .FirstOrDefaultAsync(x => x.Id == payment.TenantSubscriptionId, cancellationToken)
             ?? throw new InvalidOperationException("The pending subscription was not found.");
         if (subscription.Status != TenantSubscriptionStatus.PendingActivation)
             throw new InvalidOperationException($"Subscription is {subscription.Status}, not PendingActivation.");
         var durationDays = subscription.PlanId == Guid.Empty
             ? 30
-            : await db.Plans.Where(x => x.Id == subscription.PlanId).Select(x => x.DurationInDays).FirstOrDefaultAsync(cancellationToken);
+            : await platformDb.Plans.Where(x => x.Id == subscription.PlanId).Select(x => x.DurationInDays).FirstOrDefaultAsync(cancellationToken);
         durationDays = durationDays <= 0 ? 30 : durationDays;
         subscription.Status = TenantSubscriptionStatus.Active;
         subscription.StartDate = now;
@@ -171,14 +175,14 @@ public sealed class WorkspaceProvisioningSaga(
         tenant.Status = TenantStatus.Active;
         job.Status = ProvisioningJobStatus.Completed;
         job.CompletedAtUtc = now;
-        db.OutboxMessages.Add(new OutboxMessage
+        platformDb.OutboxMessages.Add(new OutboxMessage
         {
             Type = "workspace.provisioning.completed",
             Payload = $"{{\"applicationId\":\"{applicationRequestId}\",\"tenantId\":\"{tenantId}\"}}",
             OccurredAtUtc = now,
             IdempotencyKey = $"workspace-provisioning:{applicationRequestId}:completed"
         });
-        await db.SaveChangesAsync(cancellationToken);
+        await platformDb.SaveChangesAsync(cancellationToken);
         return new WorkspaceProvisioningOutcome(tenantId, applicationRequestId, job.Status, result.ResourceId);
     }
 
@@ -195,7 +199,7 @@ public sealed class WorkspaceProvisioningSaga(
         job.LastError = "Provisioning failed; Platform retry is required.";
         job.NextAttemptAtUtc = clock.UtcNow.AddMinutes(Math.Min(60, Math.Max(5, job.AttemptCount * 5)));
         tenant.Status = TenantStatus.ProvisioningFailed;
-        await db.SaveChangesAsync(cancellationToken);
+        await platformDb.SaveChangesAsync(cancellationToken);
         return new WorkspaceProvisioningOutcome(tenantId, applicationRequestId, job.Status, job.DatabaseResourceId, errorCode);
     }
 }

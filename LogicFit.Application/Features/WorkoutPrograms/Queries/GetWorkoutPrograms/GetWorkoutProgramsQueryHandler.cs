@@ -78,12 +78,15 @@ public class GetWorkoutProgramsQueryHandler : IRequestHandler<GetWorkoutPrograms
                 Status = p.Status,
                 StartDate = p.StartDate,
                 EndDate = p.EndDate,
+                Notes = p.Notes,
+                Version = p.Version,
                 Routines = p.Routines.Select(r => new ProgramRoutineDto
                 {
                     Id = r.Id,
                     ProgramId = r.ProgramId,
                     Name = r.Name,
                     DayOfWeek = r.DayOfWeek,
+                    Notes = r.Notes,
                     Exercises = r.Exercises.Select(e => new RoutineExerciseDto
                     {
                         Id = e.Id,

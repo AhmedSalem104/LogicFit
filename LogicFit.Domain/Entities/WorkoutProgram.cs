@@ -15,6 +15,8 @@ public class WorkoutProgram : TenantAuditableEntity
     public PlanStatus Status { get; set; } = PlanStatus.Active;
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public string? Notes { get; set; }
+    public int Version { get; set; } = 1;
 
     // Navigation Properties
     public virtual User Coach { get; set; } = null!;

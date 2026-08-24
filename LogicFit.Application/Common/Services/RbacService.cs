@@ -1,4 +1,5 @@
 using LogicFit.Application.Common.Interfaces;
+using LogicFit.Domain.Authorization;
 using LogicFit.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,11 +15,28 @@ public class RbacService : IRbacService
     }
 
     public async Task<UserAuthorization> GetUserAuthorizationAsync(Guid userId, CancellationToken cancellationToken = default)
+        => await GetUserAuthorizationCoreAsync(userId, tenantId: null, cancellationToken);
+
+    public async Task<UserAuthorization> GetUserAuthorizationForTenantAsync(
+        Guid userId,
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+        => await GetUserAuthorizationCoreAsync(userId, tenantId, cancellationToken);
+
+    private async Task<UserAuthorization> GetUserAuthorizationCoreAsync(
+        Guid userId,
+        Guid? tenantId,
+        CancellationToken cancellationToken)
     {
         // IgnoreQueryFilters: role resolution runs during anonymous login before a tenant is set.
-        var roleIds = await _context.UserRoleAssignments
+        var roleAssignments = _context.UserRoleAssignments
             .IgnoreQueryFilters()
-            .Where(ur => ur.UserId == userId)
+            .Where(ur => ur.UserId == userId);
+
+        if (tenantId.HasValue)
+            roleAssignments = roleAssignments.Where(ur => ur.TenantId == tenantId.Value);
+
+        var roleIds = await roleAssignments
             .Select(ur => ur.RoleId)
             .ToListAsync(cancellationToken);
 
@@ -50,7 +68,23 @@ public class RbacService : IRbacService
 
         if (role == null)
         {
-            throw new InvalidOperationException($"System role '{systemRoleName}' is not seeded.");
+            // Client is a zero-permission system role. Some pre-RBAC tenant databases
+            // contain the operational tables but do not contain the reference role yet;
+            // create this safe role on demand so onboarding does not fail with HTTP 500.
+            // Permission-bearing roles remain a startup/provisioning seed responsibility.
+            if (!string.Equals(systemRoleName, SystemRoles.Client, StringComparison.Ordinal))
+                throw new InvalidOperationException($"System role '{systemRoleName}' is not seeded.");
+
+            role = new Role
+            {
+                TenantId = null,
+                Name = SystemRoles.Client,
+                NameAr = "عميل",
+                NormalizedName = SystemRoles.Client.ToUpperInvariant(),
+                Description = "System role: Client",
+                IsSystemRole = true
+            };
+            _context.AppRoles.Add(role);
         }
 
         var alreadyAssigned = await _context.UserRoleAssignments

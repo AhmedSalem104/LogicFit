@@ -48,11 +48,16 @@ directly in Production.
 
 The existing Platform Admin `/backups` screen is the operator entry point for the server-owned
 backup batches. `FullSystem` resolves the platform database and every active assigned tenant
-mapping; `AllTenants`, `AllGyms`, `AllFreelance`, `Platform`, and `SelectedTenants` are explicit
-alternatives. The dashboard loads active tenant labels for `SelectedTenants` and sends only their
-IDs; database names and connection material remain server-side. The server returns per-artifact
-status, size, safe storage key, SHA-256 and manifest reference. Batch start/finish events are
-written to the Platform Audit Log.
+mapping; `AllTenants`, `AllGyms`, `AllFreelance`, and `Platform` are explicit alternatives. The
+server returns per-artifact status, size, safe storage key, SHA-256 and manifest reference. Batch
+start/finish events are written to the Platform Audit Log.
+
+If `POST /api/platform/backups/batch` returns `503 BACKUP_SERVICE_UNAVAILABLE`,
+`BACKUP_DATABASE_UNAVAILABLE`, or `BACKUP_STORAGE_UNAVAILABLE`, inspect the protected batch history
+and `/api/platform/backups/status`, repair the reported database/storage dependency, and use the
+retry action for the recorded `Failed` or `Partial` batch. A raw `500` from this route is a release
+regression: collect the safe server log category and exception type, verify `/health`, and do not
+repeat the operation with a new idempotency key until the cause is fixed.
 
 If `POST /api/platform/backups/batch` returns `503 BACKUP_SERVICE_UNAVAILABLE`,
 `BACKUP_DATABASE_UNAVAILABLE`, or `BACKUP_STORAGE_UNAVAILABLE`, inspect the protected batch history
@@ -62,30 +67,14 @@ regression: collect the safe server log category and exception type, verify `/he
 repeat the operation with a new idempotency key until the cause is fixed.
 
 Creation and retry require confirmation. Retry is limited to `Failed` or `Partial` batches. The
-screen locks the action while confirmation or the request is in flight and sends an idempotency
-key for manual creation. It never renders connection material, credentials, raw exceptions, or
-absolute storage paths. Generated artifact and manifest keys are accepted by the protected
-download endpoint; retry re-runs only failed targets, including a platform-only failure without
-expanding the request to every tenant.
+screen never renders connection material, credentials, raw exceptions, or absolute storage paths.
 Restore capability is informational; `ManualOnly` must remain a manual operator handoff and does
 not authorize a mapping switch. A failed or missing batch must stop destructive or
 mapping-changing work until a verified backup and rollback plan exist.
 
-The readiness check validates protected values for resources that are currently `Reserved`,
-`Provisioning`, or `Assigned`. Faulted or otherwise unallocated pool rows remain an operator
-repair concern and are not request-routing dependencies. If an active mapping cannot be
-decrypted, backup target resolution fails closed with a safe error; it must never be silently
-omitted from a `FullSystem` batch.
-
 This implementation has no schema migration and no Production deployment. Before release, run CI,
 review the generated API catalog, verify the protected backup/migration/health/rollback gates, and
 perform a restore rehearsal only in an isolated target approved for that purpose.
-
-The resource screen treats `Maintenance`/`Retired` rows as disabled operator states and exposes
-the protected `Repair` action for them when the server lifecycle policy allows it. Repair is
-write-only for the connection value: the server tests connectivity, protects the value, updates
-the active mapping transactionally when allocated, and records the audit event. Summary cards are
-explicitly page-scoped; the table total is the authoritative count when pagination is active.
 
 ## بيئات ومكونات النشر
 
@@ -153,6 +142,22 @@ existing file to be overwritten. لا تُسجّل محتويات الملف
 
 1. راجع `git status` وتأكد أن النسخة المنشورة هي commit/branch المقصود؛ لا تخلط مجلد
    Visual Studio قديم مع GitHub.
+
+### Issue #321 - tenant boundary release gate
+
+The API now fails closed before authorization when an authenticated non-platform request has no
+valid tenant context. Tenant routes require the `LogicFitUsers` audience and signed `TenantId`,
+and an optional `X-Tenant-Id` header must match it. Platform routes are tenantless and require the
+`LogicFitPlatform` audience. After deployment, verify one authenticated tenant smoke request, one
+platform request, and negative checks for a platform token on a tenant route and a missing tenant
+claim. A build/test pass without these checks is not a production approval.
+
+The P0 remediation branch also routes tenant-owned `IApplicationDbContext` sets through the
+server-resolved `TenantDbContext`. `TenantDatabaseRoutingMiddleware` returns `503
+TENANT_DATABASE_UNAVAILABLE` when an assigned mapping cannot be resolved, and the compatibility
+proxy throws instead of falling back to the shared `ApplicationDbContext` for a resolved tenant.
+This runtime cutover must be reconciled with the current `master` deployment tree and verified
+against real staging mappings before merge; local contract tests do not replace that check.
 2. شغّل build/tests ومراجعة migrations:
 
 ```powershell
@@ -186,15 +191,6 @@ publish credentials:
   -ApproveDestructiveMigrationReview `
   -HealthCheckUrl https://your-host/health
 ```
-
-If production has no existing verified backup, create the release gate first with the protected
-workflow `.github/workflows/protected-backup.yml`. Dispatch it against the exact released
-`origin/master` SHA using `confirm=CREATE-PROTECTED-BACKUP`. It runs the central FullSystem backup
-service, verifies every BACPAC checksum, and transfers the private files to
-`App_Data/PrivateBackups` through the protected unified WebDeploy profile. It does not upload
-BACPAC data to GitHub and never prints connection material. Pass its reported
-`protected-webdeploy:<run-id>:<batch-id>` reference to the deployment workflow, then require HTTP
-200/Healthy after publishing.
 
 ### Wallet and stock concurrency rollout (Issue #195, unreleased)
 
@@ -292,6 +288,12 @@ review، more information، provisioning، provisioning failed/retry، active ac
 expired، وقاعدة بيانات غير متاحة. يجب أن تكون `/health` HTTP 200 و`Healthy` بعد كل تعديل/نشر؛
 لا تُختبر هذه الرحلة بإنشاء Tenant أو Mapping في Production دون backup ونافذة تشغيل معتمدة.
 
+تتضمن مراجعة الدفع في الإصدار المتوافق فحص `GET /api/platform/payment-requests/{id}/proof` ثم
+سجل `.../{id}/proofs` للتأكد من حفظ الإصدار والـSHA-256، وتجربة `?version=N` عند وجود أكثر من
+إصدار. لا يُسمح بـ`approve` لمساحة عمل بلا إثبات حالي، بينما يبقى `approve-workspace` قرارًا
+مستقلًا يبدأ التجهيز بعد اعتماد الدفع. عند استبدال الملف يجب أن يبقى الإصدار السابق قابلًا
+للاسترجاع وألا يظهر storage key أو connection material في الاستجابة أو السجلات.
+
 ### Redis cache and distributed request controls (Issue #197)
 
 The tenant-access gate uses `IDistributedCache`. In non-production environments without Redis it
@@ -374,3 +376,72 @@ schema/history, and keep the rollback plan. After deployment, require `/health` 
 expected healthy response before enabling the screens. Smoke-test aggregate workout/diet create and
 update, cross-tenant and unassigned access rejection, client session start/set/end, meal logging,
 and the no-partial-write retry behavior. This task branch is not production-verified yet.
+
+## Workspace capability release gate (Issue #296)
+
+This change adds server authorization policies and changes the seeded `FreelanceOwner` permission
+set, so it requires the normal migration-aware release process even though no new database table is
+needed. Before release, review the generated endpoint catalog, apply any pending migrations using
+the idempotent script, verify the seeder against a representative Gym and FreelanceCoach tenant,
+and take the approved backup.
+
+After deployment, require the protected `/health` endpoint to return HTTP 200 and the expected
+healthy response. Smoke-test workspace selection/refresh response capabilities, a FreelanceCoach
+request to every denied Gym endpoint (403 capability code), a Gym request to its allowed endpoints,
+and a cross-tenant request with a valid identity. The branch is not merged, deployed, or production
+verified by this document.
+
+## Subscriber, training and nutrition release gate (Issue #313)
+
+Before release, run the shared and tenant idempotent migration scripts for the parity migrations,
+review the SQL and backup/rollback plan, then verify schema history on a representative Gym and
+FreelanceCoach tenant. Do not mark a workspace active until its database is ready and health checks
+pass.
+
+Required smoke tests cover: member creation and multiple memberships; subscription create,
+payment, renew, freeze, cancel, and overpayment rejection; complete workout and nutrition
+aggregate create/update with stale-version rejection; soft deletion with historical session/meal
+log reads; serving-size macro calculation; measurement update; one-per-day check-in; and the
+combined client training overview. Repeat authorization tests with a different tenant, an
+unassigned coach, and a different client.
+
+The required local gates are:
+
+1. `dotnet build LogicFit.API/LogicFit.API.csproj --no-restore /m:1`.
+2. `dotnet test --no-restore /m:1`.
+3. Tenant Angular production build and unit tests.
+4. Generated API catalog review.
+5. Deployed `/health` HTTP 200 with body `Healthy`.
+
+This is an implementation branch until PR review, merge, migration application, deployment,
+and post-deployment smoke tests complete.
+
+## Production readiness gates (Issue #321)
+
+### Active health target (Issue #325)
+
+The currently deployed unified API host used by the Admin and Tenant frontends is
+`https://logicfit-saas-model.runasp.net`. Its anonymous `GET /health` endpoint must return
+HTTP 200 with the exact body `Healthy`. The retired `logicfit-platform.runasp.net` hostname has
+no DNS record and must not be used for a release health check. Keep
+`RUNASP_UNIFIED_HEALTHCHECK_URL` aligned with the active host and verify it from the protected
+workflow before any deployment claim.
+
+The backend CI and protected production preflight now run the tracked-secret scan and fail on
+High/Critical NuGet advisories. The protected deployment also depends on an authenticated E2E job
+using the `release-gates` environment. That job requires a safe non-production fixture account,
+two different tenant identifiers, and a platform token; it verifies identity login, workspace
+selection, tenant profile access, refresh-token rotation, cross-tenant header rejection, and the
+platform-token boundary. Credentials and tokens are read only from protected environment secrets
+and are never written to logs.
+
+The gate now checks the API health response before authentication, confirms that the configured
+workspace is in the identity's active-workspace list and that the selected token carries the same
+tenant id, validates the Platform token positively before testing its tenant denial, and uses the
+rotated access token for a second protected profile request. It remains a smoke/boundary gate;
+full create/update/payment/provisioning/backup mutation coverage still requires a disposable
+staging fixture.
+
+The E2E gate is intentionally fail-closed when its environment is not configured. Provisioning,
+payment approval, backup, and retry mutation scenarios still require a dedicated disposable
+staging fixture and are not represented as production-verified by the read-only smoke gate.

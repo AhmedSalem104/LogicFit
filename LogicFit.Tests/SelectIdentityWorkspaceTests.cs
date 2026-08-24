@@ -140,7 +140,7 @@ public sealed class SelectIdentityWorkspaceTests
 
         public async Task<WorkspaceData> SeedActiveWorkspaceAsync(bool includeUser = true)
         {
-            var tenant = new Tenant
+            var tenant = new LogicFit.Domain.Entities.Tenant
             {
                 Name = "Selection Gym",
                 Subdomain = $"selection-{Guid.NewGuid():N}",
@@ -202,7 +202,7 @@ public sealed class SelectIdentityWorkspaceTests
         }
     }
 
-    private sealed record WorkspaceData(Tenant Tenant, User User, string RawSessionToken);
+    private sealed record WorkspaceData(LogicFit.Domain.Entities.Tenant Tenant, User User, string RawSessionToken);
 
     private static string CreateRawSessionToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 

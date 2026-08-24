@@ -13,6 +13,7 @@ namespace LogicFit.API.Features.StaffAttendance;
 [ApiController]
 [Route("api/staff-attendance")]
 [Authorize(Policy = Permissions.ManageAttendance)]
+[Authorize(Policy = WorkspaceCapabilities.GymAttendance)]
 public sealed class StaffAttendanceController : ControllerBase
 {
     private readonly IApplicationDbContext _context;

@@ -28,10 +28,12 @@ public class LogMealCommandHandler : IRequestHandler<LogMealCommand, Guid>
     public async Task<Guid> Handle(LogMealCommand request, CancellationToken cancellationToken)
     {
         var tenantId = _tenantService.GetCurrentTenantId();
-        var clientId = Guid.Parse(_currentUserService.UserId!);
+        if (!Guid.TryParse(_currentUserService.UserId, out var clientId))
+            throw new ForbiddenException("An authenticated client is required.");
 
         var mealItem = await _context.MealItems
             .Include(mi => mi.Meal)
+            .Include(mi => mi.Food)
             .FirstOrDefaultAsync(mi => mi.Id == request.MealItemId && mi.TenantId == tenantId, cancellationToken)
             ?? throw new NotFoundException("MealItem", request.MealItemId);
 
@@ -50,6 +52,13 @@ public class LogMealCommandHandler : IRequestHandler<LogMealCommand, Guid>
                 throw new NotFoundException("Food", request.AlternativeFoodId.Value);
         }
 
+        var food = mealItem.Food;
+        if (request.AlternativeFoodId.HasValue)
+        {
+            food = await _context.Foods.FirstAsync(f => f.Id == request.AlternativeFoodId.Value, cancellationToken);
+        }
+        var servingSize = food.ServingSize is > 0 ? food.ServingSize.Value : 100d;
+
         var log = new MealLog
         {
             Id = Guid.NewGuid(),
@@ -58,7 +67,15 @@ public class LogMealCommandHandler : IRequestHandler<LogMealCommand, Guid>
             MealItemId = mealItem.Id,
             ConsumedQuantity = request.ConsumedQuantity,
             ConsumedAt = request.ConsumedAt ?? _dateTimeService.UtcNow,
-            AlternativeFoodId = request.AlternativeFoodId
+            AlternativeFoodId = request.AlternativeFoodId,
+            MealNameSnapshot = mealItem.Meal.Name,
+            FoodNameSnapshot = food.Name,
+            FoodUnitSnapshot = food.ServingUnit,
+            FoodServingSizeSnapshot = servingSize,
+            FoodCaloriesSnapshot = food.CaloriesPer100g,
+            FoodProteinSnapshot = food.ProteinPer100g,
+            FoodCarbsSnapshot = food.CarbsPer100g,
+            FoodFatsSnapshot = food.FatsPer100g
         };
 
         _context.MealLogs.Add(log);
