@@ -128,4 +128,24 @@ public sealed class ProductionRemediationContractTests
         Assert.Contains("IF OBJECT_ID", migration, StringComparison.Ordinal);
         Assert.DoesNotContain("DROP INDEX IX_ApplicationRequests_TargetScopeKey_ApplicationType", migration, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Startup_seeding_is_serialized_and_does_not_allow_destructive_food_reset_from_environment()
+    {
+        var seeder = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "LogicFit.Infrastructure",
+            "Persistence",
+            "DataSeeder.cs"));
+        var program = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            "LogicFit.API",
+            "Program.cs"));
+
+        Assert.Contains("IDistributedLockProvider", seeder, StringComparison.Ordinal);
+        Assert.Contains("LogicFit:PlatformDataSeeder", seeder, StringComparison.Ordinal);
+        Assert.Contains("TryAcquireAsync", seeder, StringComparison.Ordinal);
+        Assert.Contains("another API worker", seeder, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("RESET_FOODS", program, StringComparison.Ordinal);
+    }
 }

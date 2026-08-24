@@ -1,4 +1,5 @@
 using System.Text.Json;
+using LogicFit.Application.Common.Interfaces;
 using LogicFit.Domain.Entities;
 using LogicFit.Domain.Enums;
 using LogicFit.Domain.ValueObjects;
@@ -9,8 +10,11 @@ namespace LogicFit.Infrastructure.Persistence;
 
 public class DataSeeder
 {
+    private const string StartupSeedLockResource = "LogicFit:PlatformDataSeeder";
+
     private readonly ApplicationDbContext _context;
     private readonly ILogger<DataSeeder> _logger;
+    private readonly IDistributedLockProvider _distributedLockProvider;
     private readonly RbacSeeder _rbacSeeder;
     private readonly PlanSeeder _planSeeder;
     private readonly DatabaseResourceSeeder _databaseResourceSeeder;
@@ -21,13 +25,15 @@ public class DataSeeder
         ILogger<DataSeeder> logger,
         RbacSeeder rbacSeeder,
         PlanSeeder planSeeder,
-        DatabaseResourceSeeder databaseResourceSeeder)
+        DatabaseResourceSeeder databaseResourceSeeder,
+        IDistributedLockProvider distributedLockProvider)
     {
         _context = context;
         _logger = logger;
         _rbacSeeder = rbacSeeder;
         _planSeeder = planSeeder;
         _databaseResourceSeeder = databaseResourceSeeder;
+        _distributedLockProvider = distributedLockProvider;
         // Check multiple possible locations for seed data
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         _seedDataPath = Path.Combine(baseDir, "SeedData");
@@ -42,6 +48,17 @@ public class DataSeeder
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
+        await using var seedLease = await _distributedLockProvider.TryAcquireAsync(
+            StartupSeedLockResource,
+            cancellationToken);
+
+        if (seedLease is null)
+        {
+            _logger.LogInformation(
+                "Startup data seeding is already running on another API worker; this worker will continue without reseeding.");
+            return;
+        }
+
         try
         {
             await _databaseResourceSeeder.SeedAsync(cancellationToken);

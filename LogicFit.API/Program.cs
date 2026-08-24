@@ -232,13 +232,6 @@ using (var scope = app.Services.CreateScope())
 
     var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
 
-    // Check if force reset of foods is requested (to fix identity issues)
-    var resetFoods = Environment.GetEnvironmentVariable("RESET_FOODS");
-    if (!string.IsNullOrEmpty(resetFoods) && resetFoods.Equals("true", StringComparison.OrdinalIgnoreCase))
-    {
-        await seeder.ForceResetFoodsAsync();
-    }
-
     await seeder.SeedAsync();
 }
 
