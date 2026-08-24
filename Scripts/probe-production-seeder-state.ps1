@@ -38,6 +38,15 @@ FROM (
     HAVING COUNT_BIG(*) > 1
 ) AS duplicates
 '@
+    Invoke-SafeCount 'DomainUserRows' 'SELECT COUNT_BIG(*) FROM [dbo].[DomainUsers]'
+    Invoke-SafeCount 'DomainUserRoleEightRows' 'SELECT COUNT_BIG(*) FROM [dbo].[DomainUsers] WHERE [Role] = 8'
+    Invoke-SafeCount 'DomainUserExpectedColumns' @'
+SELECT COUNT_BIG(*)
+FROM [INFORMATION_SCHEMA].[COLUMNS]
+WHERE [TABLE_SCHEMA] = ''dbo''
+  AND [TABLE_NAME] = ''DomainUsers''
+  AND [COLUMN_NAME] IN (''TenantId'', ''Role'', ''IsDeleted'')
+'@
     Invoke-SafeCount 'PlatformOwnerRows' @'
 SELECT COUNT_BIG(*)
 FROM [dbo].[DomainUsers]
