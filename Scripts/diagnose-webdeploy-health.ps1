@@ -78,17 +78,12 @@ try {
     if ($null -eq $aspNetCore) {
         throw "Remote web.config has no aspNetCore entry."
     }
-    $environmentVariables = @($aspNetCore.SelectNodes('./environmentVariables/environmentVariable'))
-    $hasResetFoodsOverride = @($environmentVariables | Where-Object {
-        [string]::Equals([string]$_.GetAttribute('name'), 'RESET_FOODS', [StringComparison]::OrdinalIgnoreCase)
-    }).Count -gt 0
     $stdoutSetting = [string]$aspNetCore.GetAttribute('stdoutLogEnabled')
     $stdoutEnabled = $stdoutSetting.Equals('true', [StringComparison]::OrdinalIgnoreCase)
     $hostingModelConfigured = -not [string]::IsNullOrWhiteSpace([string]$aspNetCore.GetAttribute('hostingModel'))
     Write-Host "Remote IIS aspNetCore metadata is present: True."
     Write-Host "Remote IIS stdout logging enabled: $stdoutEnabled."
     Write-Host "Remote IIS hosting model is configured: $hostingModelConfigured."
-    Write-Host "Remote IIS RESET_FOODS environment override present: $hasResetFoodsOverride."
     if (-not [string]::IsNullOrWhiteSpace($HealthCheckUrl)) {
         $healthUri = [Uri]$HealthCheckUrl
         if ($healthUri.Scheme -ne 'https') { throw "Diagnostic health URL must use HTTPS." }

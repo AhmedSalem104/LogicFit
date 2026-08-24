@@ -195,44 +195,6 @@ function Write-SafeLogCategories(
         TimeoutException = '(?i)\bTimeoutException\b|timed out|timeout'
         InvalidOperationException = '(?i)\bInvalidOperationException\b'
     }
-    # Keep startup diagnosis actionable without emitting exception messages, SQL, emails,
-    # connection strings, or other production data. These identifiers are source-level stage
-    # names only and are safe to publish as bounded diagnostic output.
-    $startupStagePatterns = [ordered]@{
-        DatabaseResourceSeeder = '(?i)DatabaseResourceSeeder'
-        TenantSeed = '(?i)SeedTenantsAsync|TenantDatabaseSeeder|TenantReferenceCatalogSeeder'
-        MuscleSeed = '(?i)SeedMusclesAsync'
-        ExerciseSeed = '(?i)SeedExercisesAsync'
-        FoodSeed = '(?i)SeedFoodsAsync|ForceResetFoodsAsync'
-        UserSeed = '(?i)SeedUsersAsync'
-        RbacSeed = '(?i)RbacSeeder|SeedPermissionsAsync|SeedRolesAndMappingsAsync|BackfillUserRolesAsync'
-        PlatformOwnerBootstrap = '(?i)SeedPlatformAsync|PlatformOwnerBootstrap'
-        PlanSeed = '(?i)PlanSeeder|SeedFeaturesAsync|SeedPlansAsync'
-        DataProtectionKeyRing = '(?i)DataProtectionKeyRingBootstrapper'
-    }
-    $startupFailurePatterns = [ordered]@{
-        MissingJwtSecret = '(?i)JWT Secret not configured|JwtSettings.*Secret.*(missing|required|not configured)'
-        MissingRequiredService = '(?i)Unable to resolve service for type|No service for type.*registered|Cannot consume scoped service'
-        MigrationVerificationFailure = '(?i)Database migration verification failed|pending migrations.*verification'
-        MigrationApplyFailure = '(?i)Database startup migration failed|MigrateAsync|migration.*(failed|exception)'
-        DataProtectionKeyStoreFailure = '(?i)Data Protection key store|empty XML key|PersistKeysToDbContext|DataProtectionKeyRingBootstrapper'
-        DataProtectionDirectoryFailure = '(?i)Data Protection.*(directory|folder|path)|FileSystemXmlRepository.*(access|permission|failed)'
-        DatabaseResourceSeederFailure = '(?i)(?:DatabaseResourceSeeder|database resource).{0,160}(?:failed|error|exception|invalid)|(?:failed|error|exception|invalid).{0,160}(?:DatabaseResourceSeeder|database resource)'
-        TenantSeedFailure = '(?i)(?:SeedTenants|tenants\.json).{0,160}(?:failed|error|exception|not found)|(?:failed|error|exception).{0,160}(?:SeedTenants|tenants\.json)'
-        MuscleSeedFailure = '(?i)(?:SeedMuscles|muscles\.json).{0,160}(?:failed|error|exception|not found)|(?:failed|error|exception).{0,160}(?:SeedMuscles|muscles\.json)'
-        ExerciseSeedFailure = '(?i)(?:SeedExercises|exercises\.json).{0,160}(?:failed|error|exception|not found)|(?:failed|error|exception).{0,160}(?:SeedExercises|exercises\.json)'
-        FoodSeedFailure = '(?i)(?:SeedFoods|foods\.json).{0,160}(?:failed|error|exception|not found)|(?:failed|error|exception).{0,160}(?:SeedFoods|foods\.json)'
-        RbacSeedFailure = '(?i)(?:RbacSeeder|RBAC|system role|Platform Owner).{0,160}(?:failed|error|exception|missing)|(?:failed|error|exception|missing).{0,160}(?:RbacSeeder|RBAC|system role|Platform Owner)'
-        PlanSeedFailure = '(?i)(?:PlanSeeder|Plan/Feature|plan.*feature).{0,160}(?:failed|error|exception)|(?:failed|error|exception).{0,160}(?:PlanSeeder|Plan/Feature|plan.*feature)'
-        SeederFailure = '(?i)Data seeding|An error occurred while seeding the database'
-        MissingPlatformOwnerIdentity = '(?i)Platform Owner references a missing IdentityAccount'
-        ConflictingPlatformOwnerIdentity = '(?i)Platform bootstrap email and phone belong to different identities'
-        EmptyDataProtectionKey = '(?i)central Data Protection key store contains an empty XML key'
-        InvalidDatabaseResourceDefinition = '(?i)Every DatabaseResourcePool resource requires DatabaseName and ConnectionString'
-        DatabaseNameMismatch = '(?i)configured connection string database does not match'
-        InvalidDatabaseResourceConnection = '(?i)configured connection string .* is invalid'
-        RedisConfigurationFailure = '(?i)Redis.*(required|configured|invalid)|Redis connection'
-    }
     $text = ($Files | ForEach-Object {
         try { Get-Content -LiteralPath $_.FullName -Tail 10000 -ErrorAction SilentlyContinue } catch { }
     }) -join "`n"
@@ -242,49 +204,6 @@ function Write-SafeLogCategories(
     if ($signatures.Count -eq 0) { $signatures = @('NoKnownSafeSignature') }
     $exceptionTypes = @($exceptionPatterns.Keys | Where-Object { $text -match $exceptionPatterns[$_] })
     if ($exceptionTypes.Count -eq 0) { $exceptionTypes = @('NoKnownExceptionType') }
-    $startupStages = @($startupStagePatterns.Keys | Where-Object { $text -match $startupStagePatterns[$_] })
-    if ($startupStages.Count -eq 0) { $startupStages = @('NoKnownStartupStage') }
-    $startupFailures = @($startupFailurePatterns.Keys | Where-Object { $text -match $startupFailurePatterns[$_] })
-    if ($startupFailures.Count -eq 0) { $startupFailures = @('NoKnownStartupFailure') }
-    $seederProgressPatterns = [ordered]@{
-        SeedStarted = '(?i)Seed data path:'
-        TenantsCompleted = '(?i)Tenants already seeded|Seeded \d+ tenants'
-        MusclesCompleted = '(?i)Muscles:\s+\d+ added,\s+\d+ updated'
-        ExercisesCompleted = '(?i)Exercises:\s+\d+ added,\s+\d+ updated'
-        FoodsCompleted = '(?i)Foods:\s+\d+ added,\s+\d+ updated'
-        UsersCompleted = '(?i)Users already seeded|Seeded \d+ users'
-        RbacCompleted = '(?i)RBAC seeding completed'
-        PlansCompleted = '(?i)Plan/Feature seeding completed'
-        SeedCompleted = '(?i)Data seeding completed successfully'
-    }
-    $seederProgressHits = foreach ($name in $seederProgressPatterns.Keys) {
-        $matches = [regex]::Matches($text, $seederProgressPatterns[$name])
-        if ($matches.Count -gt 0) {
-            [pscustomobject]@{ Name = $name; Index = $matches[$matches.Count - 1].Index }
-        }
-    }
-    $lastSeederProgress = if (@($seederProgressHits).Count -gt 0) {
-        (@($seederProgressHits) | Sort-Object Index | Select-Object -Last 1).Name
-    } else {
-        'NoKnownSeederProgress'
-    }
-    $seedFailureMatches = [regex]::Matches($text, '(?i)An error occurred while seeding the database|Data seeding.*(failed|error)')
-    $seedCompletionMatches = [regex]::Matches($text, '(?i)Data seeding completed successfully')
-    $lastSeedFailureIndex = if ($seedFailureMatches.Count -gt 0) {
-        $seedFailureMatches[$seedFailureMatches.Count - 1].Index
-    } else { -1 }
-    $lastSeedCompletionIndex = if ($seedCompletionMatches.Count -gt 0) {
-        $seedCompletionMatches[$seedCompletionMatches.Count - 1].Index
-    } else { -1 }
-    $seedEventOrder = if ($lastSeedFailureIndex -lt 0 -and $lastSeedCompletionIndex -lt 0) {
-        'NoSeedOutcome'
-    } elseif ($lastSeedFailureIndex -gt $lastSeedCompletionIndex) {
-        'SeederFailureAfterLastCompletion'
-    } elseif ($lastSeedCompletionIndex -gt $lastSeedFailureIndex) {
-        'SeederCompletionAfterLastFailure'
-    } else {
-        'SeederFailureAndCompletionSamePosition'
-    }
     $safeSqlDetails = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
     foreach ($line in ($text -split "`r?`n")) {
         $trimmed = $line.Trim()
@@ -329,10 +248,6 @@ function Write-SafeLogCategories(
     Write-Host "Safe log categories: $($categories -join ', ')."
     Write-Host "Safe log signatures: $($signatures -join ', ')."
     Write-Host "Safe exception types: $($exceptionTypes -join ', ')."
-    Write-Host "Safe startup stages: $($startupStages -join ', ')."
-    Write-Host "Safe startup failure ids: $($startupFailures -join ', ')."
-    Write-Host "Safe last seeder progress id: $lastSeederProgress."
-    Write-Host "Safe seeder event order: $seedEventOrder."
     Write-Host "Safe SQL details: $($safeSqlDetails -join ', ')."
 }
 
@@ -354,14 +269,10 @@ try {
     $hasRedisOverride = @($environmentVariables | Where-Object {
         [string]$_.GetAttribute('name') -match '^Redis(__|:)?'
     }).Count -gt 0
-    $hasResetFoodsOverride = @($environmentVariables | Where-Object {
-        [string]::Equals([string]$_.GetAttribute('name'), 'RESET_FOODS', [StringComparison]::OrdinalIgnoreCase)
-    }).Count -gt 0
     $hasProcessTarget = -not [string]::IsNullOrWhiteSpace([string]$aspNetCore.GetAttribute('processPath')) -and
         -not [string]::IsNullOrWhiteSpace([string]$aspNetCore.GetAttribute('arguments'))
     Write-Host "Remote IIS connection-string environment override present: $hasConnectionOverride."
     Write-Host "Remote IIS Redis environment override present: $hasRedisOverride."
-    Write-Host "Remote IIS RESET_FOODS environment override present: $hasResetFoodsOverride."
     Write-Host "Remote IIS process target metadata present: $hasProcessTarget."
 
     $logDirectory = Resolve-LogDirectory ([string]$aspNetCore.GetAttribute('stdoutLogFile'))

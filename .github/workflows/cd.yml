@@ -410,58 +410,6 @@ jobs:
           }
           Write-Host "Production readiness endpoint passed."
 
-  diagnose-seeder-state:
-    if: ${{ inputs.confirm == 'DIAGNOSE-PRODUCTION-HEALTH' && inputs.image_tag == 'diagnostic-seeder-state' }}
-    runs-on: windows-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Read production seeder state without writing
-        shell: powershell
-        env:
-          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
-        run: .\Scripts\probe-production-seeder-state.ps1
-
-  diagnose-webconfig-state:
-    if: ${{ inputs.confirm == 'DIAGNOSE-PRODUCTION-HEALTH' && inputs.image_tag == 'diagnostic-webconfig-state' }}
-    runs-on: windows-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Select protected unified profile
-        shell: powershell
-        env:
-          UNIFIED_PROFILE_B64: ${{ secrets.RUNASP_UNIFIED_PUBLISH_SETTINGS_B64 }}
-          HEALTH_URL: ${{ secrets.RUNASP_UNIFIED_HEALTHCHECK_URL }}
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:UNIFIED_PROFILE_B64) -or [string]::IsNullOrWhiteSpace($env:HEALTH_URL)) {
-            throw 'Protected unified diagnostic inputs are missing.'
-          }
-          $profilePath = "$env:RUNNER_TEMP/webconfig-diagnostic.publishSettings"
-          $payload = $env:UNIFIED_PROFILE_B64.Trim()
-          $xmlStart = $payload.IndexOf('<')
-          if ($xmlStart -ge 0) {
-            [IO.File]::WriteAllText($profilePath, $payload.Substring($xmlStart), [Text.UTF8Encoding]::new($false))
-          }
-          else {
-            [IO.File]::WriteAllBytes($profilePath, [Convert]::FromBase64String($payload))
-          }
-          "WEBCONFIG_PROFILE_PATH=$profilePath" >> $env:GITHUB_ENV
-          "WEBCONFIG_HEALTH_URL=$env:HEALTH_URL" >> $env:GITHUB_ENV
-
-      - name: Read web.config and server config safely
-        shell: powershell
-        env:
-          LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
-        run: |
-          .\Scripts\diagnose-webdeploy-health.ps1 `
-            -PublishSettingsPath $env:WEBCONFIG_PROFILE_PATH `
-            -ExpectedSite ${{ inputs.recovery_expected_site }} `
-            -ExpectedConnectionString $env:LOGICFIT_PRODUCTION_DB_CONNECTION `
-            -HealthCheckUrl $env:WEBCONFIG_HEALTH_URL
-
   diagnose-monster-logs:
     if: ${{ inputs.confirm == 'DIAGNOSE-MONSTER-LOGS' }}
     runs-on: windows-latest
@@ -517,7 +465,6 @@ jobs:
           "MONSTER_LOG_PROFILE_PATH=$profilePath" >> $env:GITHUB_ENV
 
       - name: Inspect compiled migration state without writing
-        if: ${{ inputs.image_tag != 'diagnostic-stage-capture' }}
         shell: powershell
         env:
           LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
@@ -533,14 +480,12 @@ jobs:
             --verbosity minimal
 
       - name: Compare applied migration history without writing
-        if: ${{ inputs.image_tag != 'diagnostic-stage-capture' }}
         shell: powershell
         env:
           LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
         run: .\Scripts\probe-production-migration-state.ps1
 
       - name: Inspect candidate workspace state without writing
-        if: ${{ inputs.image_tag != 'diagnostic-stage-capture' }}
         shell: powershell
         env:
           LOGICFIT_PRODUCTION_DB_CONNECTION: ${{ secrets.LOGICFIT_PRODUCTION_DB_CONNECTION }}
@@ -553,13 +498,12 @@ jobs:
           EXPECTED_SITE: ${{ inputs.recovery_expected_site }}
           MANAGEMENT_HOST_OVERRIDE: ${{ inputs.recovery_management_host_override }}
           ALLOW_UNTRUSTED: ${{ inputs.recovery_allow_untrusted_certificate }}
-          DIAGNOSTIC_FAST_CAPTURE: ${{ inputs.image_tag == 'diagnostic-stage-capture' && 'true' || 'false' }}
         run: |
           $arguments = @{
             PublishSettingsPath = $env:MONSTER_LOG_PROFILE_PATH
             ExpectedSite = $env:EXPECTED_SITE
             HealthCheckUrl = $env:MONSTER_LOG_HEALTH_URL
-            CaptureAttempts = if ($env:DIAGNOSTIC_FAST_CAPTURE -eq 'true') { 8 } else { 36 }
+            CaptureAttempts = 36
           }
           if (-not [string]::IsNullOrWhiteSpace($env:MANAGEMENT_HOST_OVERRIDE)) {
             $arguments.ManagementHostOverride = $env:MANAGEMENT_HOST_OVERRIDE
